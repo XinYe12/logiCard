@@ -1,0 +1,47 @@
+# Normalise everything to LF in the repo so Unity YAML and C# diffs stay
+# stable across machines (Windows dev box + any other checkout).
+* text=auto eol=lf
+
+*.cs        text eol=lf diff=csharp
+*.md        text eol=lf
+*.json      text eol=lf
+*.txt       text eol=lf
+*.asmdef    text eol=lf
+*.asmref    text eol=lf
+*.gitignore text eol=lf
+
+# Unity serialised assets: force text so merges are reviewable.
+*.meta      text eol=lf
+*.unity     text eol=lf
+*.asset     text eol=lf
+*.prefab    text eol=lf
+*.mat       text eol=lf
+*.controller text eol=lf
+*.anim      text eol=lf
+*.physicMaterial text eol=lf
+*.shadergraph text eol=lf
+*.inputactions text eol=lf
+
+# Binaries — never touch these.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.psd  binary
+*.tga  binary
+*.fbx  binary
+*.obj  binary
+*.blend binary
+*.wav  binary
+*.mp3  binary
+*.ogg  binary
+*.ttf  binary
+*.otf  binary
+*.dll  binary
+*.so   binary
+*.a    binary
+*.aar  binary
+*.exe  binary
+*.apk  binary
+*.aab  binary
+*.unitypackage binary

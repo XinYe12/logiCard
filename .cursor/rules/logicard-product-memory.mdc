@@ -1,0 +1,47 @@
+---
+description: logiCard confirmed product decisions — always apply; gate passed, impl active
+alwaysApply: true
+---
+
+# logiCard — confirmed memory (D9)
+
+Full detail: `docs/PRODUCT_MEMORY.md`.
+
+## Phase (C14)
+
+**Pre-implementation gate PASSED (2026-07-29).** Unity implementation is ACTIVE. Follow `docs/SCHEDULE.md` Day 1+. Design changes still require user confirm → C# row in PRODUCT_MEMORY.
+
+## Save-file rule (C26)
+
+If it is not CONFIRMED in PRODUCT_MEMORY, it is not locked.
+
+## Time glossary (C27)
+
+- **Time Resource** = game budget seconds (planning math).
+- **Playback Duration** = cinema length on screen (tunable; may compress).
+- **Real-world** = physical wall-clock only.
+
+## Digital time (C28)
+
+Continuous Time Resource — no 12-tick clock. Host ghost sim; ReplayTape playback.
+
+## Orientation (C30)
+
+**Portrait only, one-handed.** Phone upright, single-thumb play. Android portrait lock (no autorotate); Windows uses the same portrait-aspect layout in a tall window. Board on top, every primary action (Lock In, Adrenaline, cards, path taps) in the bottom thumb zone. All older "landscape" notes are void.
+
+## High-speed rail / 高铁 (C31)
+
+Side-of-map rail. Board + ride; Shoot while riding; car bulletproof; **1× per match**. Confirmed design, **not** Slice 1–3 Must-Have — implement only after Move/Shoot/Clock/doors are green. Numerics still OPEN in PRODUCT_MEMORY.
+
+## Other CONFIRMED (short)
+
+- Unity + Fusion Host; Win+Android; demo 1v1
+- Move + Shoot = base verbs; cards = Bandage/Interact/Flashbang/Adrenaline
+- Juggernaut pays +1 tick switching Snap↔Hold Angle (mirrors stance penalty); Scout pays 0 (C25)
+- Slice 1 first: visible Move + Shoot on Time Resource scrubber
+- Desk-Lamp Diorama art (C29); primitives OK for demo
+- Attack/Defend labels; Scout/Juggernaut attrs
+
+## Day focus
+
+Follow `docs/SCHEDULE.md`. Day 1 scaffold done; Day 2+ = grid, scrubber, Program Move/Shoot.

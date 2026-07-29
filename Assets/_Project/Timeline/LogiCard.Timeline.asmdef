@@ -1,0 +1,16 @@
+{
+    "name": "LogiCard.Timeline",
+    "rootNamespace": "LogiCard.Timeline",
+    "references": [
+        "LogiCard.Sim"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
