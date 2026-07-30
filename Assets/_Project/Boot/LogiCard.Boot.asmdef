@@ -1,0 +1,20 @@
+{
+    "name": "LogiCard.Boot",
+    "rootNamespace": "LogiCard.Boot",
+    "references": [
+        "LogiCard.Sim",
+        "LogiCard.Net",
+        "LogiCard.Timeline",
+        "LogiCard.Board",
+        "LogiCard.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

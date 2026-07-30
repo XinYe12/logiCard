@@ -8,43 +8,50 @@ namespace LogiCard.Tests.EditMode
     public sealed class PhaseStateMachineTests
     {
         [Test]
-        public void NewStateMachine_StartsInProgram()
+        public void NewStateMachine_StartsInAllot()
         {
             var stateMachine = new PhaseStateMachine();
 
-            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.Program));
+            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.Allot));
         }
 
         [Test]
-        public void Advance_MovesThroughRevealThenExecute()
+        public void Advance_MovesThroughProgramRevealExecuteAftermath()
         {
             var stateMachine = new PhaseStateMachine();
+
+            stateMachine.Advance();
+            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.Program));
 
             stateMachine.Advance();
             Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.Reveal));
 
             stateMachine.Advance();
             Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.Execute));
+
+            stateMachine.Advance();
+            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.Aftermath));
         }
 
         [Test]
-        public void TryAdvance_ReturnsFalseAtExecute()
+        public void TryAdvance_FromAftermath_ReturnsToAllot()
         {
             var stateMachine = new PhaseStateMachine();
-            stateMachine.Advance();
-            stateMachine.Advance();
+            AdvanceTo(stateMachine, RoundPhase.Aftermath);
+
+            Assert.That(stateMachine.TryAdvance(), Is.True);
+            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.Allot));
+        }
+
+        [Test]
+        public void TryAdvance_ReturnsFalseAtMatchOver()
+        {
+            var stateMachine = new PhaseStateMachine();
+            AdvanceTo(stateMachine, RoundPhase.Aftermath);
+            Assert.That(stateMachine.TryTransitionTo(RoundPhase.MatchOver), Is.True);
 
             Assert.That(stateMachine.TryAdvance(), Is.False);
-            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.Execute));
-        }
-
-        [Test]
-        public void Advance_ThrowsAtExecute()
-        {
-            var stateMachine = new PhaseStateMachine();
-            stateMachine.Advance();
-            stateMachine.Advance();
-
+            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.MatchOver));
             Assert.Throws<InvalidOperationException>(() => stateMachine.Advance());
         }
 
@@ -58,16 +65,26 @@ namespace LogiCard.Tests.EditMode
 
             stateMachine.Advance();
 
-            Assert.That(stateMachine.TryTransitionTo(RoundPhase.Program), Is.False);
-            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.Reveal));
+            Assert.That(stateMachine.TryTransitionTo(RoundPhase.Allot), Is.False);
+            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.Program));
+        }
+
+        [Test]
+        public void Aftermath_CanTransitionToMatchOver()
+        {
+            var stateMachine = new PhaseStateMachine();
+            AdvanceTo(stateMachine, RoundPhase.Aftermath);
+
+            Assert.That(stateMachine.TryTransitionTo(RoundPhase.MatchOver), Is.True);
+            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.MatchOver));
         }
 
         [Test]
         public void PhaseChanged_ReportsPreviousAndNewPhases()
         {
             var stateMachine = new PhaseStateMachine();
-            RoundPhase observedPrevious = RoundPhase.Execute;
-            RoundPhase observedNext = RoundPhase.Program;
+            RoundPhase observedPrevious = RoundPhase.MatchOver;
+            RoundPhase observedNext = RoundPhase.Allot;
             int eventCount = 0;
             stateMachine.PhaseChanged += (previous, next) =>
             {
@@ -79,30 +96,30 @@ namespace LogiCard.Tests.EditMode
             stateMachine.Advance();
 
             Assert.That(eventCount, Is.EqualTo(1));
-            Assert.That(observedPrevious, Is.EqualTo(RoundPhase.Program));
-            Assert.That(observedNext, Is.EqualTo(RoundPhase.Reveal));
+            Assert.That(observedPrevious, Is.EqualTo(RoundPhase.Allot));
+            Assert.That(observedNext, Is.EqualTo(RoundPhase.Program));
         }
 
         [Test]
-        public void RejectedTransitionsAndProgramReset_DoNotRaiseEvent()
+        public void RejectedTransitionsAndAllotReset_DoNotRaiseEvent()
         {
             var stateMachine = new PhaseStateMachine();
             int eventCount = 0;
             stateMachine.PhaseChanged += (_, __) => eventCount++;
 
             stateMachine.Reset();
-            stateMachine.TryTransitionTo(RoundPhase.Program);
+            stateMachine.TryTransitionTo(RoundPhase.Allot);
             stateMachine.TryTransitionTo(RoundPhase.Execute);
 
             Assert.That(eventCount, Is.EqualTo(0));
         }
 
         [Test]
-        public void Reset_ReturnsToProgramAndRaisesEventOnlyWhenChanged()
+        public void Reset_ReturnsToAllotAndRaisesEventOnlyWhenChanged()
         {
             var stateMachine = new PhaseStateMachine();
-            RoundPhase observedPrevious = RoundPhase.Program;
-            RoundPhase observedNext = RoundPhase.Execute;
+            RoundPhase observedPrevious = RoundPhase.Allot;
+            RoundPhase observedNext = RoundPhase.MatchOver;
             int eventCount = 0;
             stateMachine.PhaseChanged += (previous, next) =>
             {
@@ -116,10 +133,21 @@ namespace LogiCard.Tests.EditMode
             stateMachine.Reset();
             stateMachine.Reset();
 
-            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.Program));
+            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(RoundPhase.Allot));
             Assert.That(eventCount, Is.EqualTo(1));
-            Assert.That(observedPrevious, Is.EqualTo(RoundPhase.Reveal));
-            Assert.That(observedNext, Is.EqualTo(RoundPhase.Program));
+            Assert.That(observedPrevious, Is.EqualTo(RoundPhase.Program));
+            Assert.That(observedNext, Is.EqualTo(RoundPhase.Allot));
+        }
+
+        private static void AdvanceTo(PhaseStateMachine stateMachine, RoundPhase target)
+        {
+            int guard = 0;
+            while (stateMachine.CurrentPhase != target && guard++ < 8)
+            {
+                stateMachine.Advance();
+            }
+
+            Assert.That(stateMachine.CurrentPhase, Is.EqualTo(target));
         }
     }
 }

@@ -1,0 +1,229 @@
+using System.Collections.Generic;
+using LogiCard.Net;
+using LogiCard.Sim;
+using NUnit.Framework;
+
+namespace LogiCard.Tests.EditMode
+{
+    /// <summary>
+    /// Day 4 resolve rules: a locked payload becomes ghost movement, line-of-sight checks and
+    /// wound outcomes, with no engine or randomness involved.
+    /// </summary>
+    [TestFixture]
+    public sealed class GhostResolverTests
+    {
+        private const int Attacker = 1;
+        private const int Defender = 2;
+
+        private static GridBoard NewBoard()
+        {
+            return new GridBoard(5, 5, new[] { Floor.Ground });
+        }
+
+        private static ActionNode Move(float seconds, int x, int y)
+        {
+            return new ActionNode(ActionVerb.Move, seconds, new GridCoordinate(x, y), StanceType.Walk);
+        }
+
+        private static ActionNode Shoot(float seconds, int x, int y)
+        {
+            return new ActionNode(ActionVerb.Shoot, seconds, new GridCoordinate(x, y), StanceType.Walk);
+        }
+
+        private static GhostInput Input(int pawnId, GridCoordinate start, params ActionNode[] nodes)
+        {
+            return new GhostInput(pawnId, start, new TimelinePayload(new List<ActionNode>(nodes)));
+        }
+
+        private static List<TapeEvent> EventsOfType(ReplayTape tape, TapeEventType type)
+        {
+            var found = new List<TapeEvent>();
+            foreach (TapeEvent tapeEvent in tape.Events)
+            {
+                if (tapeEvent.Type == type)
+                {
+                    found.Add(tapeEvent);
+                }
+            }
+
+            return found;
+        }
+
+        [Test]
+        public void MoveArrivesOnItsScheduledTileAtItsExecuteTime()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Move(4f, 0, 2)),
+            });
+
+            ScheduledPath track = tape.Tracks[Attacker];
+            Assert.That(track.Evaluate(0f).ToNearestCoordinate(), Is.EqualTo(new GridCoordinate(0, 0)));
+            Assert.That(track.Evaluate(4f).ToNearestCoordinate(), Is.EqualTo(new GridCoordinate(0, 2)));
+            Assert.That(tape.EndSeconds, Is.EqualTo(4f).Within(0.0001f));
+
+            List<TapeEvent> arrivals = EventsOfType(tape, TapeEventType.MoveArrive);
+            Assert.That(arrivals.Count, Is.EqualTo(1));
+            Assert.That(arrivals[0].Seconds, Is.EqualTo(4f).Within(0.0001f));
+            Assert.That(arrivals[0].Coordinate, Is.EqualTo(new GridCoordinate(0, 2)));
+        }
+
+        /// <summary>
+        /// The bug the preview path has and the resolver must not: a Shoot spends Time Resource
+        /// without covering distance, so the following Move may not start early.
+        /// </summary>
+        [Test]
+        public void ShootBetweenMovesHoldsPositionThroughItsWindow()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Move(2f, 0, 1), Shoot(4f, 3, 1), Move(6f, 0, 2)),
+            });
+
+            ScheduledPath track = tape.Tracks[Attacker];
+            Assert.That(track.Evaluate(2f).Y, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(track.Evaluate(3f).Y, Is.EqualTo(1f).Within(0.0001f), "Pawn drifted during its shoot window.");
+            Assert.That(track.Evaluate(4f).Y, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(track.Evaluate(6f).Y, Is.EqualTo(2f).Within(0.0001f));
+        }
+
+        [Test]
+        public void ShotOnTheAimedTileWoundsItsOccupant()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 2)),
+                Input(Defender, new GridCoordinate(0, 2)),
+            });
+
+            List<TapeEvent> wounds = EventsOfType(tape, TapeEventType.Wounded);
+            Assert.That(wounds.Count, Is.EqualTo(1));
+            Assert.That(wounds[0].PawnId, Is.EqualTo(Defender));
+            Assert.That(wounds[0].TargetPawnId, Is.EqualTo(Attacker));
+            Assert.That(wounds[0].Seconds, Is.EqualTo(2f).Within(0.0001f));
+            Assert.That(EventsOfType(tape, TapeEventType.ShootFire).Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ShotAtAnEmptyTileFiresWithoutWounding()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 4)),
+                Input(Defender, new GridCoordinate(0, 2)),
+            });
+
+            Assert.That(EventsOfType(tape, TapeEventType.ShootFire).Count, Is.EqualTo(1));
+            Assert.That(EventsOfType(tape, TapeEventType.Wounded), Is.Empty);
+        }
+
+        [Test]
+        public void ShotThroughAnImpassableTileDoesNotWound()
+        {
+            GridBoard board = NewBoard();
+            board[new GridCoordinate(0, 1)] = new Tile(false);
+            var resolver = new GhostResolver(board);
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 2)),
+                Input(Defender, new GridCoordinate(0, 2)),
+            });
+
+            Assert.That(EventsOfType(tape, TapeEventType.ShootFire).Count, Is.EqualTo(1));
+            Assert.That(EventsOfType(tape, TapeEventType.Wounded), Is.Empty);
+        }
+
+        [Test]
+        public void ShotMissesATargetThatHasAlreadyMovedOn()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 2)),
+                Input(Defender, new GridCoordinate(0, 2), Move(1f, 3, 2)),
+            });
+
+            Assert.That(EventsOfType(tape, TapeEventType.Wounded), Is.Empty);
+        }
+
+        /// <summary>Trading Snap Shots on the same second wounds both sides (paper D5 §IV).</summary>
+        [Test]
+        public void SimultaneousShotsWoundBothSides()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 2)),
+                Input(Defender, new GridCoordinate(0, 2), Shoot(2f, 0, 0)),
+            });
+
+            List<TapeEvent> wounds = EventsOfType(tape, TapeEventType.Wounded);
+            Assert.That(wounds.Count, Is.EqualTo(2));
+            Assert.That(EventsOfType(tape, TapeEventType.Killed), Is.Empty);
+        }
+
+        [Test]
+        public void SecondWoundOnTheSamePawnBecomesKilled()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 2), Shoot(4f, 0, 2)),
+                Input(Defender, new GridCoordinate(0, 2)),
+            });
+
+            Assert.That(EventsOfType(tape, TapeEventType.Wounded).Count, Is.EqualTo(1));
+            List<TapeEvent> killed = EventsOfType(tape, TapeEventType.Killed);
+            Assert.That(killed.Count, Is.EqualTo(1));
+            Assert.That(killed[0].Seconds, Is.EqualTo(4f).Within(0.0001f));
+        }
+
+        [Test]
+        public void EventsAreOrderedByTimeResourceSecond()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Move(2f, 0, 1), Shoot(4f, 0, 3), Move(6f, 0, 2)),
+                Input(Defender, new GridCoordinate(0, 3), Shoot(4f, 0, 1)),
+            });
+
+            for (int i = 1; i < tape.Events.Count; i++)
+            {
+                Assert.That(tape.Events[i].Seconds, Is.GreaterThanOrEqualTo(tape.Events[i - 1].Seconds));
+            }
+        }
+
+        [Test]
+        public void ResolvingTheSameInputsTwiceProducesTheSameTape()
+        {
+            GhostInput[] inputs =
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Move(2f, 0, 1), Shoot(4f, 0, 3)),
+                Input(Defender, new GridCoordinate(0, 3), Shoot(4f, 0, 1)),
+            };
+
+            ReplayTape first = new GhostResolver(NewBoard()).Resolve(inputs);
+            ReplayTape second = new GhostResolver(NewBoard()).Resolve(inputs);
+
+            Assert.That(second.Events.Count, Is.EqualTo(first.Events.Count));
+            for (int i = 0; i < first.Events.Count; i++)
+            {
+                Assert.That(second.Events[i].ToString(), Is.EqualTo(first.Events[i].ToString()));
+            }
+        }
+    }
+}

@@ -1,81 +1,76 @@
 # D8: Schedule + Milestone DoD — 14-Day Implementation
 
 **Doc ID:** D8  
-**Status:** Drafted 2026-07-29  
-**Depends on:** [VERTICAL_SLICE.md](VERTICAL_SLICE.md), [TDD.md](TDD.md), [GDD.md](GDD.md), [SCOPE.md](SCOPE.md)  
+**Status:** Revised 2026-07-30 — **C34 Polished Core Demo** (art-protected remaining days)  
+**Depends on:** [VERTICAL_SLICE.md](VERTICAL_SLICE.md), [TDD.md](TDD.md), [GDD.md](GDD.md), [SCOPE.md](SCOPE.md), [ART_DIRECTION.md](ART_DIRECTION.md)  
 **Assumes:** Pre-implementation gate passed; ~6 focused hours/day (~84h).
 
 Clock starts on **Implementation Day 1** (first Unity scaffold commit), not calendar date of this doc.
 
 ---
 
-## Ship bar (end of Day 14)
+## Ship bar (end of Day 14) — C34
 
 Must have:
 
-1. **Windows build** playable 1v1 through Program → Reveal → Time Resource resolve → Playback → visible outcomes.
-2. **Android APK** that can join the same Fusion room as Windows (cross-play) **or**, if net slips, Android at least runs Slice 2+ local playback — **prefer full cross-play**; cut content before cutting Android entirely (**C6**).  
-3. Slice pipeline proven: Move + Shoot base verbs → timeline → Clock → visible board (**C24**).  
+1. **Windows build** playable locally through Allot (Time Card) → Program → Reveal → Time Resource resolve → Playback → Aftermath → next round.  
+2. Core combat readable: path/stance Move, Snap/Hold Shoot, wounds/death, **one door** changes move or LoS once.  
+3. **Desk-Lamp Diorama presentation floor** met ([ART_DIRECTION.md](ART_DIRECTION.md) § Demo art floor) — cold observer does not call it a default Unity prototype.  
 4. README case study + 60–90s capture video.  
 5. Repo pushed with docs + architecture notes.
 
-Nice-to-have (not ship blockers): bots (**C19**), full GDD Section 9, clay polish.
+Nice-to-have (not ship blockers): Android smoke build, bots (**C19**), optional DoF/SSS, Fusion online (**C5** deferred).
 
 ---
 
-## Milestone map (aligned to D7 slices)
+## Milestone map (C34)
 
 | Milestone | Days | Theme | Exit criteria |
 |-----------|------|--------|----------------|
-| **M0** | 1 | Project + folders | Unity project, Win+Android in Build Settings, `.gitignore`, `_Project` folders per TDD, Character/Card SO stubs |
-| **M1 / Slice 1** | 2–4 | Pipeline proof | Schedule Move + Shoot → Lock/Reveal → Time Resource resolve → Playback shows move + shoot; LoS Wound; cold observer test |
-| **M2 / Slice 2** | 5–7 | Path + stance + RPS | Real path-draw UI; Sprint/Walk/Crawl; Snap vs Hold Angle; Windows playable end-to-end local or hotseat |
-| **M3 / Slice 3** | 8–10 | Wound + map interact | Wound/Bandage/Otherwise→Stop; doors; second gadget optional; Android **portrait one-handed** UI pass started (**C30**) |
-| **M4 / Slice 4** | 11–12 | Net + gadgets | Fusion Host 1v1; `TimelinePayload` → ghost sim → `ReplayTape` playback; vent/monitor and/or Flashbang/Adrenaline as time allows |
-| **M5 Ship** | 13–14 | Builds + portfolio | Win + Android artifacts, friend playtest, README + video |
+| **M0** | 1 | Project + folders | Unity project, platforms listed, folders, stubs |
+| **M1 / Slice 1** | 2–4 | Pipeline proof | Time Card + Move + Shoot → Playback; second round; LoS Wound stub |
+| **M2 / Core Combat** | 5–7 | Path, RPS, door | Stance bands; Snap vs Hold; one door; local match end-to-end |
+| **M3 / Diorama Art** | 8–11 | Presentation | URP/lighting, board/UI identity, clay motion/VFX, tactile audio |
+| **M4 / Ship** | 12–14 | Build + portfolio | Windows candidate, playtest, capture, README |
 
-If behind: **freeze at last green Slice**; do not start next Slice. Cut order: gadgets → vent/monitor → doors → stance polish → **never** cut Clock visibility or Move/Shoot proof.
+If behind: **freeze at last green milestone**; do not start the next. Cut order: Android smoke → door reopen nuance → Crawl AV nuance → optional DoF/SSS → **never** cut Time Card loop, Move/Shoot readability, warm diorama composition, yarn path, physical shot feedback, or Windows build stability (**C34**).
 
 ---
 
 ## Day-by-day
 
-### Week 1 — Prove the tape
+### Week 1 — Prove the tape + core combat
 
 | Day | Focus | DoD (exit) |
 |-----|--------|------------|
-| **1** | Unity 6 project; Win + Android modules; **portrait lock (C30)**; gitignore; `Assets/_Project/{Net,Sim,Timeline,UI,Board,Characters,Cards}`; empty Bootstrap scene; ScriptableObject stubs (Character Scout/Heavy, CardData) | Project opens; both platforms listed; portrait-only in Player Settings; folders committed |
-| **2** | Grid board 5×5; pawn; **Time Resource timeline scrubber**; phase enum Program/Reveal/Execute (local) | Scrubber advances; phases switch with debug buttons |
-| **3** | Program UI: schedule Move (click destination) + Shoot (pick direction/tile); Lock; build `TimelinePayload` locally | Payload prints/logs with ExecuteTime + GridPosition + Stance + Modifier |
-| **4** | **Slice 1 complete:** local Host-style ghost resolve (even offline) + playback moves/shoots; Wound stub text on hit | **M1:** D7 Slice 1 checklist all checked (except net) |
+| **1** | Unity 6 project; Win + Android modules; **portrait lock (C30)**; gitignore; `_Project` folders; Bootstrap; SO stubs | Project opens; platforms listed; portrait-only; folders committed |
+| **2** | Grid board 5×5; pawn; **Time Resource timeline scrubber**; phase enum (local) | Scrubber advances; phases switch |
+| **3** | Program UI: schedule Move + Shoot; Lock; build `TimelinePayload` locally | Payload logs ExecuteTime + GridPosition + Stance + Modifier |
+| **3b** | **Match lifecycle (C33):** shared pool; Time Card allotment; Allot→…→Aftermath; carry state | Two consecutive rounds playable |
+| **4** | **Slice 1 green:** ghost resolve + playback; Wound stub; cold-observer Move/Shoot/Time Card test — **no new breadth** | **M1:** D7 Slice 1 checklist |
+| **5** | Path drawing (waypoints) + time allotment → stance band | Sprint/Walk/Crawl change Move timing on Clock |
+| **6** | Hold Angle vs Snap Shot; mutual same-second rule | RPS readable in one playtest |
+| **7** | **One-door** micro-map (contextual open/close; blocks move + LoS); local match E2E | **M2:** Core Combat local playable |
 
-### Week 1 continued — Path & stance
-
-| Day | Focus | DoD |
-|-----|--------|-----|
-| **5** | Path drawing (waypoints) + time allotment → stance band; replace hardcode stance | Sprint/Walk/Crawl change Move timing on Clock |
-| **6** | Hold Angle vs Snap Shot; Shoot as base verb modes; mutual same-tick rule | RPS readable in one playtest |
-| **7** | Buffer / bugfix; Android smoke build (empty or Slice 1 scene OK); playtest notes | **M2:** Slice 2 stable on Windows; Android project builds once |
-
-### Week 2 — Depth, net, ship
+### Week 2 — Diorama art pass + ship
 
 | Day | Focus | DoD |
 |-----|--------|-----|
-| **8** | Wound states + Bandage + Otherwise Invalid→Stop | Wounded surcharge or bleed rule plays; invalid Move→Stop |
-| **9** | Doors (block move/LoS); Interact; optional attic stub | Door changes a fight once |
-| **10** | Buffer + Android **portrait one-handed** UI pass (thumb zone, safe area, ≥48dp targets, tap-then-tap card placement) | **M3:** Slice 3 playable; phone playable single-thumb held upright |
-| **11** | Photon Fusion Host Mode: create/join 1v1; RPC `TimelinePayload`; Host ghost → `ReplayTape` sync | Two clients: Program → same playback tape |
-| **12** | Vent and/or Monitor and/or Flashbang/Adrenaline (pick by remaining time); disconnect handling stub | **M4:** online 1v1 completes a full round |
-| **13** | Windows + Android release-candidate builds; friend playtest; crash pass | Both artifacts run; notes filed |
-| **14** | README case study; architecture diagram; 60–90s video; GitHub polish | **M5:** portfolio ship |
+| **8** | Render/art foundation: **URP** migration, portrait camera composition, diorama base, warm lighting, material palette | Board reads as desk diorama under lamp light |
+| **9** | Board/UI identity: handmade board dressing, painted grid, **yarn/chalk** paths, cardstock Time Card, AR scrubber polish | Paths + Time Card match ART_DIRECTION floor |
+| **10** | Character/VFX motion: clay pawn silhouettes, **stepped** playback, physical muzzle flash, wound splat | Move vs Shoot vs hit visually distinct |
+| **11** | Audio + feedback: tactile foley, transitions, hit feedback, visual hierarchy pass | Footsteps / shot / Time Card / Lock In distinct |
+| **12** | Windows release-candidate; optional Android smoke; perf — drop costly FX before readability | **M3→ship candidate** Windows build runs |
+| **13** | Cold observer + friend playtest; fix comprehension & presentation blockers only | Findings filed; blockers fixed |
+| **14** | Final Windows build; 60–90s capture; README/case study; screenshots | **M4:** portfolio ship |
 
 ---
 
 ## Cadence
 
 - **Daily:** ≥1 commit; tick checkboxes in this file when a Day DoD is met.  
-- **Playtests:** end of Day 4 (Slice 1), Day 7 (Slice 2), Day 11–12 (net). Three written findings each.  
-- **Scope knife owner:** you — when late, drop Later-list features first (see cut order above).
+- **Playtests:** end of Day 4 (Slice 1), Day 7 (Core Combat), Day 13 (presentation). Three written findings each.  
+- **Scope knife owner:** you — when late, follow **C34** cut order above.
 
 ---
 
@@ -84,17 +79,18 @@ If behind: **freeze at last green Slice**; do not start next Slice. Cut order: g
 - [x] Day 1 — project + folders  
 - [x] Day 2 — grid + clock + phases  
 - [x] Day 3 — Program Move/Shoot + local payload  
-- [ ] Day 4 — **M1 Slice 1**  
+- [x] Day 3b — Match pool / Time Card lifecycle (**C33**)  
+- [ ] Day 4 — **M1 Slice 1** (cold observer; no new breadth)  
 - [ ] Day 5 — path + stance  
 - [ ] Day 6 — Snap vs Hold Angle  
-- [ ] Day 7 — **M2** + Android smoke  
-- [ ] Day 8 — Wound / Bandage / Otherwise  
-- [ ] Day 9 — Doors / Interact  
-- [ ] Day 10 — **M3** + Android UI  
-- [ ] Day 11 — Fusion 1v1 tape pipeline  
-- [ ] Day 12 — **M4** gadgets/map as able  
-- [ ] Day 13 — dual builds + playtest  
-- [ ] Day 14 — **M5** README + video  
+- [ ] Day 7 — **M2** one door + local E2E  
+- [ ] Day 8 — URP + diorama lighting foundation  
+- [ ] Day 9 — board/UI identity (yarn, Time Card)  
+- [ ] Day 10 — clay motion + physical VFX  
+- [ ] Day 11 — audio + feedback  
+- [ ] Day 12 — Windows candidate (+ optional Android smoke)  
+- [ ] Day 13 — playtest / presentation bugfix  
+- [ ] Day 14 — **M4** README + video  
 
 ---
 
@@ -102,9 +98,10 @@ If behind: **freeze at last green Slice**; do not start next Slice. Cut order: g
 
 | Risk | Hits days | Mitigation in schedule |
 |------|-----------|-------------------------|
-| Fusion learning curve | 11–12 | Offline ghost+tape identical API by Day 4; swap transport Day 11 |
-| Path UI overruns | 5–6 | Keep Day 3 click-destination forever if needed |
-| Android SDK pain | 7, 10, 13 | Smoke on Day 7; don’t wait until 13 |
-| Scope creep (full GDD) | any | Slice freeze rule |
+| Art pass overrun | 8–11 | Required floor only; cut optional DoF/SSS first (**C34**) |
+| Path UI overruns | 5–6 | Keep Day 3 click-destination if needed; yarn is Day 9 |
+| URP migration pain | 8 | Start Day 8 early; primitives stay playable until materials land |
+| Scope creep (full old GDD) | any | **C34** freeze: no Fusion/gear cards/attic in 14-day ship |
+| Android SDK pain | 12 | Smoke only if Windows candidate is already green |
 
-Detail register: [RISKS.md](RISKS.md) (D11 — draft next if missing).
+Detail register: [RISKS.md](RISKS.md).

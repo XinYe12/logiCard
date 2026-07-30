@@ -1,14 +1,14 @@
 # Core Loop Sheet
 
 **Doc ID:** D3  
-**Status:** Updated 2026-07-28 — path/stance + Character Cards (aligned to GDD)
-**Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [GDD.md](GDD.md)
+**Status:** Updated 2026-07-30 — Time Card match loop (**C33**) + Polished Core Demo (**C34**)  
+**Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [GDD.md](GDD.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md)
 
 ---
 
 ## One-line loop
 
-**Pick Character → secretly draw path + allot Time Resource (stance) + drop tactic cards → lock → reveal → Host resolves Time Resource → Playback (compressed OK) → wound/kill or next round.**
+**Pick Character → play Time Card (commit N from match pool) → secretly draw path + stance + schedule Shoot (+ optional door) inside N → lock → reveal → resolve Time Resource → Playback → Aftermath → next Time Card (or Match Over).**
 
 ---
 
@@ -16,20 +16,24 @@
 
 | Role | Meaning in demo |
 |------|-----------------|
-| Attacker / Defender | Spawn labels (**C18**); same tactic deck; Character preset may differ |
-| Players | 1v1 online. Bot = nice-to-have (**C19**) |
+| Attacker / Defender | Spawn labels (**C18**); Character preset may differ |
+| Players | **1v1 local** for 14-day ship (**C34**). Online Fusion = post-demo. Bot = nice-to-have (**C19**) |
 
 ---
 
 ## Timeline model (demo)
 
 - **Character Card:** Speed / Agility / Strength (Scout / Juggernaut).
+- **Time Card:** commits **N** from shared match pool (**C33**) — not a gear card.
 - **Movement:** path + time slider → Sprint / Tactical Walk / Stealth Crawl (**not** a card) (**C21**).
-- **Shoot:** aim + time slider → Snap Shot / Hold Angle (**not** a card either — base verb, same pattern as Movement) (**C25**).
-- **Cards:** remaining gear/tactics on path — Bandage / Interact / Flashbang / Adrenaline (max 3/round).
-- Shared continuous **Time Resource** timeline (demo round window placeholder **60s**).
+- **Shoot:** aim + time slider → Snap Shot / Hold Angle (**not** a card) (**C25**).
+- **Door:** one contextual open/close on the 5×5 board (blocks move + LoS) — not a full Interact card system (**C34**).
+- One shared **match Time Resource pool** (demo **900s / 15 min**). Both sides program inside each round’s **N**.
 - **Playback Duration** separate from Time Resource (**C27**).
 - Program phase limited in **real-world** seconds (30s).
+- **Presentation:** Desk-Lamp Diorama required floor (**C29** / **C34**).
+
+**Deferred from 14-day ship:** Bandage / Flashbang / Adrenaline / Interact-as-card / Otherwise library / attic / vent / monitor / 高铁.
 
 ---
 
@@ -37,49 +41,57 @@
 
 ```mermaid
 flowchart LR
-  spawn[Spawn_sides] --> program[Program_Timeline]
+  spawn[Spawn_sides] --> allot[Allot_TimeCard]
+  allot --> program[Program_Timeline]
   program --> lock[Lock_Ready]
   lock --> reveal[Reveal_Timelines]
-  reveal --> clock[MasterClock_1to12]
-  clock --> check{Someone_eliminated}
-  check -->|yes| endRound[End_Round]
-  check -->|no| program
+  reveal --> resolve[TimeResource_Resolve]
+  resolve --> aftermath[Aftermath]
+  aftermath -->|pool_left_and_alive| allot
+  aftermath -->|dead_or_pool_empty| matchOver[Match_Over]
 ```
 
 ### 1. Spawn
-- Place both pawns on map (Attacker vs Defender spawns).
+- Place both pawns on the **5×5 ground** map (Attacker vs Defender spawns).
 - Both fully visible (FoW Out).
+- Match pool starts full (demo 900s). Round 1 Time Card chooser = Attacker.
 
-### 2. Program Timeline (all players simultaneous)
+### 2. Allot (Time Card)
+- Current chooser commits **N** seconds from the remaining match pool (`N` ∈ `[MinRoundSeconds, Remaining]`).
+- **N is spent in full** when played; unused seconds inside the round window are burned.
+- Chooser alternates each round (Attacker ↔ Defender). Both sides still Program simultaneously inside **N** — only the allotment choice is turn-taking (**C33**).
+
+### 3. Program Timeline (all players simultaneous)
 **Player decides:**
 - Character already chosen pre-match
-- Path waypoints + time allotment (stance) — base Move verb
+- Path waypoints + time allotment (stance) — base Move verb, against the round's **N**
 - Aim + time allotment (mode) — base Shoot verb
-- Up to 3 cards on path/timeline (Bandage / Interact / Flashbang / Adrenaline)
-- Otherwise Invalid→Stop where attached
+- Optional door open/close booked on the timeline from a legal tile
 
 **Player does not:**
 - Play a Walk/Dash card
 - Play a Snap Shot/Hold Angle card
 - Aim with twitch controls
+- Draw Bandage/Flashbang/Adrenaline (post-demo)
 
-### 3. Lock
-- Each player Ready / timer auto-lock (timer number TBD in GDD; UI must show waiting state).
+### 4. Lock
+- Each player Ready / timer auto-lock (UI must show waiting state; local demo may auto-advance).
 
-### 4. Reveal
+### 5. Reveal
 - Both timelines become visible (supports success metric: read cause/effect).
 
-### 5. Time Resource resolve + Playback
-- Host steps continuous Time Resource; clients present via ReplayTape.
+### 6. Time Resource resolve + Playback
+- Authority steps continuous Time Resource; UI presents via ReplayTape.
 - **Playback Duration** may compress long Time Resource spans so cinema stays watchable.
-- Op outcomes update pawn positions, interactions, wounds/elim.
+- Outcomes update pawn positions, door state, wounds/elim.
 
-### 6. Otherwise (demo)
-- If an op’s target/path is **invalid** at resolve time → fire Otherwise **`→ Stop`** (prove carryover / no wasted ghost action). Richer Otherwise = Later.
+### 7. Invalid moves (demo simplification)
+- Blocked path / closed door → stop before the block. Full Otherwise card library = post-demo (**C34**).
 
-### 7. End check
-- If a player is **eliminated** → round over (demo win).
-- Else → return to Program for another round on same map state (or reset — prefer **continue on same state** unless GDD says reset).
+### 8. Aftermath / End check
+- If a player is **eliminated** → Match Over (demo win).
+- Else if the remaining pool cannot fund `MinRoundSeconds` → Match Over.
+- Else → return to **Allot** for another round on **carried** map state (positions + wounds) (**C33**).
 
 ---
 
@@ -87,45 +99,38 @@ flowchart LR
 
 **Base verbs (not cards):**
 - **Movement:** path + stance — Sprint (evades Snap) / Tactical Walk / Stealth Crawl.
-- **Shoot:** aim + mode — Snap Shot (wound; misses Sprint) / Hold Angle (lethal; beats Sprint).
+- **Shoot:** aim + mode — Snap Shot (wound; misses Sprint; aimed tile only — **C32**) / Hold Angle (lethal; hits Sprint).
 
-**Cards** (see GDD):
+**Map action:**
+- **Door** — open/close; Strength affects Time Resource cost (see GDD).
 
-| Card | Role in RPS / cornering |
-|------|-------------------------|
-| **Bandage** | Clear Wounded |
-| **Interact** | Doors / Vent / Monitor (Strength affects doors) |
-| **Flashbang** | Stun room; 1/match |
-| **Adrenaline** | Instant −1 tick; 1/match |
+**Post-demo cards** (confirmed design, not 14-day ship): Bandage, Interact-as-card, Flashbang, Adrenaline.
 
 ---
 
 ## Map loop (how space enters decisions)
 
-- **5×5 ground + 5×5 attic**
-- **Doors:** area denial (block move + LoS)
-- **Vent:** floor swap
-- **Monitor:** highlight opponent (FoW still Off)
+- **5×5 ground** + **one door** (demo ship).
+- Attic / Vent / Monitor / 高铁 = Later (**C34** / **C31**).
 
 ---
 
 ## What “fun” must prove in 15 minutes
 
 1. **Time Resource** ordering is readable on the scrubber (cause → effect).  
-2. **Playback Duration** never confuses players into thinking TR seconds = wall-clock animation length.
-2. Walk / Dash / Snap / Hold Angle feel like **mind-game RPS**, not arithmetic.  
-3. Wounded pressure + Bandage deadline matters.  
-4. Doors + Vent change the duel obviously.  
-5. Invalid → Otherwise Stop is readable.
+2. **Playback Duration** never confuses players into thinking TR seconds = wall-clock animation length.  
+3. Walk / Sprint / Snap / Hold Angle feel like **mind-game RPS**, not arithmetic.  
+4. The **door** changes a fight once.  
+5. The board reads as a **desk-lamp diorama**, not a default Unity prototype (**C34**).
 
 ---
 
 ## Explicitly not in this loop (Out / Later)
 
-FoW, decoys, extraction, loot acts, classes, alarm track, 4v4, polished clay art.
+FoW, decoys, extraction, loot, classes beyond attrs, alarm track, 4v4, Fusion online, full Android polish, gear cards, Otherwise library, attic/vent/monitor, final SSS/thumbprint clay.
 
 ---
 
 ## Open for tuning only
 
-Exact map door placements, spawn coords, room definitions for Flashbang — set in map data during implementation; GDD owns behavior.
+Exact door placement, spawn coords, stance/shoot numeric magnitudes — set during implementation; GDD owns behavior.

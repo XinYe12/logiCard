@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace LogiCard.Sim
@@ -15,6 +16,18 @@ namespace LogiCard.Sim
             X = x;
             Y = y;
             Floor = floor;
+        }
+
+        /// <summary>
+        /// Tile a pawn counts as occupying while mid-move, used when the resolver has to decide
+        /// whether a shot fired at an instant finds a body standing there.
+        /// </summary>
+        public GridCoordinate ToNearestCoordinate()
+        {
+            return new GridCoordinate(
+                (int)Math.Round(X, MidpointRounding.AwayFromZero),
+                (int)Math.Round(Y, MidpointRounding.AwayFromZero),
+                Floor);
         }
     }
 
@@ -57,6 +70,40 @@ namespace LogiCard.Sim
                 running += TimeResourceMath.SegmentSeconds(waypoints[i - 1], waypoints[i], baseSecondsPerTile, stance);
                 path.nodes.Add(waypoints[i]);
                 path.arrivalSeconds.Add(running);
+            }
+
+            return path;
+        }
+
+        /// <summary>
+        /// Builds a path from waypoints that already carry their arrival second. The ghost resolver
+        /// needs this because a Shoot between two Moves consumes Time Resource without covering
+        /// distance, so arrival seconds cannot be recomputed from distance alone.
+        /// </summary>
+        public static ScheduledPath FromTimedWaypoints(
+            IReadOnlyList<GridCoordinate> waypoints,
+            IReadOnlyList<float> arrivalSeconds)
+        {
+            var path = new ScheduledPath();
+            if (waypoints == null || arrivalSeconds == null || waypoints.Count == 0)
+            {
+                return path;
+            }
+
+            if (waypoints.Count != arrivalSeconds.Count)
+            {
+                throw new ArgumentException("Each waypoint needs exactly one arrival second.", nameof(arrivalSeconds));
+            }
+
+            for (int i = 0; i < waypoints.Count; i++)
+            {
+                if (i > 0 && arrivalSeconds[i] < arrivalSeconds[i - 1])
+                {
+                    throw new ArgumentException("Arrival seconds must not decrease.", nameof(arrivalSeconds));
+                }
+
+                path.nodes.Add(waypoints[i]);
+                path.arrivalSeconds.Add(arrivalSeconds[i]);
             }
 
             return path;

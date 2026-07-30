@@ -1,44 +1,48 @@
-# D4: Game Design Document (v0.1) — 2-Week Demo
+# D4: Game Design Document (v0.2) — Polished Core Demo
 
 **Doc ID:** D4  
-**Status:** Revised 2026-07-29 — Shoot promoted from card to base verb (mirrors Move)  
-**Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [CORE_LOOP.md](CORE_LOOP.md)
+**Status:** Revised 2026-07-30 — **C34 Polished Core Demo** (art + tight gameplay); Time Card match loop (**C33**)  
+**Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [CORE_LOOP.md](CORE_LOOP.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md)
 
-This document defines rules, numeric tuning, and content for the 14-day prototype. Focus: **Timeline Programming** math, continuous **Time Resource** sync, **path/stance movement**, and tactical **cornering**.
+This document defines rules, numeric tuning, and content for the **14-day portfolio prototype**. Focus: a **readable timeline duel** that looks like a handmade desk-lamp miniature — not a feature checklist.
 
-**Core model (supersedes “Walk/Dash as cards”, then “Snap/Hold Angle as cards”):**
+**Core model:**
 1. **Character Card** sets base attributes (Speed / Agility / Strength).  
-2. **Movement** = draw path + allot time → stance (Sprint / Tactical Walk / Stealth Crawl). Base verb, not a card.
-3. **Shoot** = aim (target tile / LoS direction) + allot time → mode (Snap Shot / Hold Angle). Base verb, not a card — same attribute-driven pattern as Movement.
-4. **Deck cards** = remaining Gear / Special Tactics dropped onto the path/timeline: Bandage, Interact, Flashbang, Adrenaline.
+2. **Time Card** commits **N** seconds from a shared match Time Resource pool (**C33**).  
+3. **Movement** = draw path + allot time → stance (Sprint / Tactical Walk / Stealth Crawl). Base verb, not a card.  
+4. **Shoot** = aim (target tile / LoS) + allot time → mode (Snap Shot / Hold Angle). Base verb, not a card.  
+5. **One door** = contextual map action (open/close) that blocks move + LoS — **not** a full Interact card system for this ship.
+
+Gear cards (Bandage / Flashbang / Adrenaline / Interact-as-card), Otherwise Stop, attic/vent/monitor, Fusion online, and full Android polish are **post-demo** (**C34**).
 
 ---
 
 ## 1. Structure & Match Flow
 
-- **Player Count:** 1v1 (Attacker vs Defender) — spawn labels; same *rules*; Character Cards may differ (Section 2).
+- **Player Count:** 1v1 (Attacker vs Defender) — spawn labels; same *rules*; Character Cards may differ (Section 2). Local play for the 14-day ship; online is post-demo (**C34**).
 - **Win Condition:** Opponent Physical State → **Dead**.
-- **Map:** Two stacked **5×5** grids (Ground + Attic). Demo distances use **tiles** (1 tile ≈ abstract meter for Speed math).
-- **Match Loop:**
+- **Map:** One **5×5** ground grid for the demo ship. Attic / vent / monitor deferred (**C34**). Distances use **tiles**.
+- **Match Loop (C33 / C4):**
   1. **Select Character Card** (pre-match).
-  2. **Program Phase (30s):** Draw path(s), allot time (stance), drop tactic cards on the timeline/path, lock.
-  3. **Reveal Phase:** Paths + cards face-up.
-  4. **Execution Phase:** Host resolves continuous **Time Resource** timeline; clients play **ReplayTape** using separate **Playback Duration** (may be compressed). See glossary in [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md) (**C27**).
-  5. Repeat until Dead.
+  2. **Allot (Time Card):** current chooser commits **N** from the shared match pool (round 1 = Attacker; then alternates). **N spent in full.**
+  3. **Program Phase (30 real-world seconds):** Both sides simultaneously draw path(s), allot stance time, schedule Shoot mode(s), optionally toggle the door from a legal tile; lock.
+  4. **Reveal Phase:** Paths + scheduled actions face-up.
+  5. **Execution Phase:** Host (local authority for demo) resolves continuous **Time Resource**; clients/UI play **ReplayTape** using separate **Playback Duration** (**C27**).
+  6. **Aftermath:** Carry positions + wounds; if pool can fund another MinRound and nobody is Dead → next Allot; else Match Over.
 
 ---
 
 ## 2. The Character Card (Base Attributes)
 
-Before the match, each player selects a **Character Card (Loadout)**. Attributes convert the shared time budget into map action.
+Before the match, each player selects a **Character Card (Loadout)**. Attributes convert the round allotment **N** into map action.
 
 | Attribute | Meaning | Demo examples |
 |-----------|---------|----------------|
-| **Speed** | How far they move per unit time allotted | Scout: **1.5 tiles / tick** · Juggernaut: **0.75 tiles / tick** *(demo-tuned; fantasy “m/s” maps to tiles/tick)* |
-| **Agility (Handling)** | Transition cost between states (raise gun after sprint, vault, etc.) — also scales **Shoot mode** transition (Snap ↔ Hold Angle) since both are "gun handling" | Scout: **fast** transitions · Juggernaut: **slow** *(demo: flat +0 / +1 tick penalties on stance-change and shoot-mode-change — table in Section 6; exact Shoot-mode scaling still OPEN, ticks below are placeholders)* |
-| **Strength** | Physical interaction time | Kick locked door: Scout **slow/pry** · Juggernaut **fast/kick** *(demo: Interact Door cost modified by Strength — Section 6)* |
+| **Speed** | How far they move per unit time allotted | Scout: **1.5 tiles / s base** · Juggernaut: **0.75 tiles / s base** *(demo-tuned; legacy docs said “tiles/tick” — digital uses continuous seconds)* |
+| **Agility (Handling)** | Transition cost between stances and between Shoot modes (Snap ↔ Hold Angle) | Scout: **0s** · Juggernaut: **+1s** once when leaving Sprint / when switching Snap ↔ Hold (**C25**; placeholder magnitude) |
+| **Strength** | Physical interaction time | Door open/close: Scout **slower** · Juggernaut **faster** (Section 6) |
 
-**Demo cast (IN):** two presets both sides may pick — **Scout** and **Juggernaut** (same Move/Shoot base verbs + same deck of remaining cards; different attributes only).
+**Demo cast (IN):** **Scout** and **Juggernaut** (same Move/Shoot verbs; different attributes only).
 
 ---
 
@@ -48,7 +52,7 @@ There is **no Walk card**. Movement is built-in programming:
 
 ### 3.1 Draw the Path
 - Select your character → draw a **waypoint path** through legal tiles to a destination (orthogonal grid; no diagonal).
-- Path cannot enter closed doors or illegal tiles; if blocked at resolve → **Invalid** (Otherwise).
+- Path cannot enter a **closed door** or illegal tiles; if blocked at resolve → movement fails at the block (demo: stop before the door — full Otherwise card library is post-demo).
 
 ### 3.2 Allot the Time
 - Game computes path length (tiles).
@@ -56,49 +60,45 @@ There is **no Walk card**. Movement is built-in programming:
 
 | Stance | Relative allotment | Effects (demo) |
 |--------|--------------------|----------------|
-| **Sprint** | Fastest (minimal time for distance) | Loud; **cannot fire** while sprinting; treated as **Evasive** vs Snap Shot (like old Dash) |
-| **Tactical Walk** | Medium | Gun up / ready; can combine with ready-fire tactics; **not** evasive |
-| **Stealth Crawl** | Slowest (max time sink) | Silent; **immune to motion-sensor style reveals** (Monitor still highlights if used — FoW Out anyway); not evasive vs lethal Hold Angle |
+| **Sprint** | Fastest (minimal time for distance) | Loud; **cannot fire** while sprinting; **evasive** vs Snap Shot |
+| **Tactical Walk** | Medium | Gun up / ready; can Shoot; **not** evasive |
+| **Stealth Crawl** | Slowest (max time sink) | Silent; not evasive vs Hold Angle |
 
-Exact slider breakpoints derive from Time Resource: `seconds = tiles * BaseSpeed * StanceMult` (align with paper D5). Must be readable on the **timeline scrubber**. Playback Duration is independent (**C27**).
+Exact slider breakpoints derive from Time Resource: `seconds = tiles * BaseSecondsPerTile * StanceMult` (align with paper D5). Must be readable on the **timeline scrubber**. Playback Duration is independent (**C27**).
 
 ### 3.3 Collision
-- Cannot share a tile. Forced enter occupied / closed door → movement **Invalid**.
+- Cannot share a tile. Forced enter occupied / closed door → movement blocked at that edge.
 
 ---
 
 ## 3A. How Shooting Works (UI & Rules)
 
-There is **no Snap Shot / Hold Angle card**. Like Movement, Shooting is built-in programming — a base verb every Character has, driven by attributes, not something drawn or held.
+There is **no Snap Shot / Hold Angle card**. Shooting is a base verb every Character has.
 
 ### 3A.1 Aim
-- Select a scheduled moment (a path waypoint, or a stationary point) → declare a **shoot** action aimed down a tile/LoS direction.
-- Requires LoS at resolve time; no LoS at the scheduled tick → **Invalid** (Otherwise).
+- Declare a **shoot** action aimed at a **tile** (or LoS direction that resolves to a tile).
+- Requires clear LoS at resolve time (**C32** Bresenham, same floor, doors block).
 
 ### 3A.2 Allot the Time → Mode
-- Time allotted for the shoot action forces a **Mode**, mirroring Stance:
 
 | Mode | Relative allotment | Effects (demo) |
 |------|--------------------|-----------------|
-| **Snap Shot** | Fast (minimal time) | Wounds on hit; **misses** targets in **Sprint** stance |
-| **Hold Angle** | Slow (aim-lock window) | Lethal on hit; **hits** targets in **Sprint** stance |
+| **Snap Shot** | Fast (minimal time) | Wounds on hit; **misses** targets in **Sprint** stance; hits only the **aimed tile** at completion (**C32**) |
+| **Hold Angle** | Slow (aim-lock window) | Lethal on hit; **hits** targets in **Sprint** stance; covers the aimed lane for its window (Day 6 detail) |
 
-Base Time Resource costs (Section 6) are placeholders; exact Agility scaling still **OPEN** — must stay readable on the timeline scrubber, same as Stance bands.
+Base Time Resource costs (Section 6) are placeholders; Agility scaling (**C25**) must stay readable on the scrubber.
 
 ---
 
-## 4. What Cards Are For Now
+## 4. Door (Map Action — Not a Gear Card)
 
-Cards are the remaining **Gear and Special Tactics** — everything that isn't the two base verbs (Move, Shoot). Drop them onto the **movement path / timeline** at chosen clock times (or path waypoints).
+For the 14-day ship, **one door** on the 5×5 board:
 
-Examples:
-- **Flashbang** at a breach moment before a door.
-- **Bandage** — force stop for scheduled duration to clear bleed.
-- **Interact** — open/close a door, use the vent, use the monitor.
-
-Movement and Shoot are **not** cards; cards modify / interrupt / arm the path around them.
-
-**Otherwise (demo):** `If Invalid → Stop` — remaining time on the failed segment/card becomes wait; continue next segment/card.
+- Scheduled as a **contextual map action** from the pawn’s current/adjacent tile during Program (tap door → open/close at a booked Time Resource second).
+- **Closed** blocks movement through that edge and **blocks LoS** across it.
+- **Open** allows move + LoS.
+- Strength modifies open/close Time Resource cost (Section 6).
+- This is **not** the full Interact card / vent / monitor kit (**C34**).
 
 ---
 
@@ -108,17 +108,14 @@ Movement and Shoot are **not** cards; cards modify / interrupt / arm the path ar
 | State | Effect |
 |-------|--------|
 | **Healthy** | Normal. |
-| **Wounded** | All scheduled **card** costs and **movement/shoot allotments** pay **+1 tick** surcharge (efficiency crippled). Must **Bandage** by end of **next** round or **bleed out → Dead**. |
-| **Dead** | Eliminated (Hold Angle lethality / bleed-out / mutual kill). |
+| **Wounded** | Visible wounded state; second wound (or Hold Angle lethal) → **Dead**. *(Full +1s surcharge and Bandage-by-next-round bleed are **post-demo** under C34 — demo still shows wound → death so combat stakes read.)* |
+| **Dead** | Eliminated (Hold Angle lethality / second wound / mutual kill). |
 
 ### Shooting & LoS
-- Same floor only; orthogonal LoS; blocked by closed doors.
-- **Snap Shot** (Shoot mode, Section 3A): completes → target **Wounded**; **misses** targets in **Sprint** stance during that tick.
-- **Hold Angle** (Shoot mode, Section 3A): lethal; **hits Sprint**; duration as scheduled on timeline.
-- **Mutual lethal** same tick → **Draw**.
-
-### Instant
-- **Adrenaline (1/match):** during Execution, −1 tick on **currently active** segment/card.
+- Same floor only; orthogonal Bresenham LoS; blocked by closed doors (**C32**).
+- **Snap Shot:** completes → target on aimed tile **Wounded** if LoS; **misses Sprint**.
+- **Hold Angle:** lethal on LoS hit; **hits Sprint**; duration as scheduled.
+- **Mutual lethal** same second → **Draw**.
 
 ---
 
@@ -126,76 +123,80 @@ Movement and Shoot are **not** cards; cards modify / interrupt / arm the path ar
 
 | Attribute | Value | Notes |
 |-----------|-------|-------|
-| **Time Resource window (demo round)** | 60 seconds (placeholder) | Continuous budget this Program→Execute; ~15-min match = OPEN |
+| **Match Time Resource pool** | **900 seconds** (15 min) | Shared; Time Cards carve rounds (**C33**) |
+| **Min round / Time Card** | **30 seconds** | Clamp floor |
 | **Program Timer** | 30 **real-world** seconds | Wall-clock planning (**C27**) |
-| **Playback Duration** | Tunable | Cinema length ≠ Time Resource; do not force long TR = long wall animation |
-| **Max cards / round** | 3 | Gear only — Move/Shoot not counted |
-| **Instant uses** | 1 / match | Adrenaline |
-| **Otherwise** | Invalid → Stop | Demo default |
+| **Playback Duration** | Tunable per-TR-second rate | Cinema length ≠ Time Resource |
+| **Otherwise / gear cards** | — | Deferred (**C34**) |
 
-**Removed:** discrete 12-tick Master Clock @ 1.5s/tick (**C28**).
+**Removed:** discrete 12-tick Master Clock; fixed 60s-per-round-only model (superseded by C33).
 
 ### Character presets (demo)
 
-| Preset | Speed (tiles/tick) | Agility | Strength (door Interact base) |
-|--------|--------------------|---------|--------------------------------|
-| Scout | 1.5 | Stance change penalty **0**; Shoot-mode change penalty **0** | Door Interact **4 ticks** |
-| Juggernaut | 0.75 | Stance change penalty **+1 tick** once when leaving Sprint; Shoot-mode change penalty **+1 tick** once when switching Snap ↔ Hold Angle | Door Interact **2 ticks** |
+| Preset | Base move | Agility | Door open/close |
+|--------|-----------|---------|-----------------|
+| Scout | 1.0 s / tile Walk baseline *(tune)* | Stance / Shoot-mode change **0s** | Door **4s** |
+| Juggernaut | 2.0 s / tile Walk baseline *(tune)* | Stance leave-Sprint **+1s**; Snap↔Hold **+1s** | Door **2s** |
 
-Shoot-mode penalty mirrors the stance penalty (same Agility, same shape) — placeholder magnitude, tune together during playtesting.
+Placeholder magnitudes — tune in playtest. Legacy “tiles/tick” tables map to continuous seconds.
 
-### Shoot modes (base verb, not a card — Section 3A)
+### Shoot modes (base verb)
 
 | Mode | Base cost / duration | Effect |
 |------|----------------------|--------|
-| **Snap Shot** | 2 ticks | Wound on LoS; misses Sprint |
-| **Hold Angle** | 3 ticks (aim lock window) | Lethal on LoS; hits Sprint |
+| **Snap Shot** | **2s** | Wound on LoS to aimed tile; misses Sprint |
+| **Hold Angle** | **3s** aim lock | Lethal on LoS; hits Sprint |
 
-### Cards (remaining shared deck — gear/gadgets)
+### Deferred cards (post-demo — do not implement for C34 ship)
 
-| Card | Base cost / duration | Effect |
-|------|----------------------|--------|
-| **Bandage** | 3 ticks (must be stationary) | Clear Wounded |
-| **Interact** | 2 ticks base (doors modified by Strength) | Door / Vent / Monitor (current or adjacent tile) |
-| **Throw Flashbang** | 3 ticks; **1/match** | Target room; Stun = +3 ticks to target’s **active** segment/card |
-| **Adrenaline** | Instant; **1/match** | −1 tick active segment/card |
-
-**Removed as cards:** Tactical Walk / Dash — replaced by **path + stance** (Section 3). Snap Shot / Hold Angle — replaced by **Shoot verb** (aim + time → mode, Section 3A), same pattern as Move.
+| Card | Notes |
+|------|-------|
+| Bandage / Interact-as-card / Flashbang / Adrenaline | Confirmed long-term design; **out of 14-day ship** |
 
 ---
 
-## 7. Map Elements (Demo)
+## 7. Map Elements
 
-| Element | Behavior |
-|---------|----------|
-| **Doors** | Interact open/close; closed blocks move + LoS; Strength affects Interact time |
-| **Vent (×1)** | Interact → teleport mirrored other floor |
-| **Monitor (×1)** | Interact → highlight opponent for rest of round |
-
-### Later map (confirmed design — C31)
-
-| Element | Behavior |
-|---------|----------|
-| **高铁 / High-speed rail (×1 track, side of map)** | Board and ride as transport; rider **may Shoot while riding**; **car is bulletproof**; **1 use per match**. Numerics OPEN. Not required for Slice 1–3. |
+| Element | 14-day ship |
+|---------|-------------|
+| **One Door** | Contextual open/close; blocks move + LoS when closed |
+| **5×5 ground** | Yes |
+| Attic / Vent / Monitor | **Post-demo** |
+| 高铁 / High-speed rail (**C31**) | Confirmed design; **post-demo** |
 
 ---
 
-## 8. Out of Scope (v0.1)
+## 8. Presentation (ship requirement — C34)
 
-- FoW (both always visible).
-- Numeric HP bars / armor / facing cone (360° vision).
-- Free continuous meters off-grid (demo stays **tile grid** with Speed as tiles/tick).
-- Full 15-minute real-time single budget across whole match (demo uses **per-round 12-tick** clock; fantasy “15-minute budget” = product vision for Later).
-- Gear progression, loot, class kits beyond Scout/Juggernaut attrs, hostages, extraction.
-- Final clay art (primitives OK).
+The demo must read as a **Desk-Lamp Diorama**, not a default Unity prototype. Binding art/audio floor lives in [ART_DIRECTION.md](ART_DIRECTION.md) § Demo art floor. Summary:
+
+- Board on a physical base in a dark void; warm desk-lamp lighting; clay-like materials.
+- Yarn/chalk paths; cardstock Time Card; AR scrubber contrast.
+- Stepped pawn motion; physical muzzle flash; clay wound splat.
+- Tactile foley for move, shot, Time Card, Lock In.
+
+Full SSS, thumbprint maps, and bespoke character rigs remain optional.
 
 ---
 
-## 9. Acceptance
+## 9. Out of Scope (14-day ship — C34)
 
-1. Pick Character → Program path+stance (Move) + aim+mode (Shoot) + ≤3 cards in 30 **real-world** s → Reveal → continuous Time Resource resolve + Playback.  
-2. Stance bands readable; affect Snap / noise rules.  
-3. Scout vs Juggernaut feel different.  
-4. Wound / Bandage / Hold Angle / Snap / Flashbang / Adrenaline / Otherwise Stop work.  
-5. Doors / Vent / Monitor work.  
-6. Cause/effect readable on **Time Resource timeline** (Playback may be faster).
+- Photon Fusion online multiplayer (**C5** deferred).
+- Full Android polish / dual-platform ship (**C6** → Windows polished; Android smoke optional).
+- FoW, decoys, facing cones, numeric HP bars, armor.
+- Gear cards: Bandage, Flashbang, Adrenaline, Interact-as-card.
+- Otherwise library; attic; vent; monitor; loot; 高铁.
+- Final Link’s Awakening–level clay shaders / complex mocap.
+
+---
+
+## 10. Acceptance (14-day ship)
+
+1. A new player can complete **at least two Time Card rounds** locally (Allot → Program → Reveal → Execute → Aftermath → Allot).  
+2. Path + stance and Snap / Hold produce understandable tactical consequences on the **Time Resource scrubber**.  
+3. **One door** materially changes movement or LoS at least once.  
+4. Without narration, an observer reads the scene as a **handmade desk-lamp miniature** — not stock Unity primitives.  
+5. Move, Shoot, hit, Time Card, and Lock In each have **distinct** visual and/or audio feedback.  
+6. **Windows build** runs reliably and is presentation-ready for a 60–90s capture.
+
+Scout vs Juggernaut feel different; cause/effect order remains readable even when Playback Duration compresses Time Resource.

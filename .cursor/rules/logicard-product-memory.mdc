@@ -27,21 +27,33 @@ Continuous Time Resource — no 12-tick clock. Host ghost sim; ReplayTape playba
 
 ## Orientation (C30)
 
-**Portrait only, one-handed.** Phone upright, single-thumb play. Android portrait lock (no autorotate); Windows uses the same portrait-aspect layout in a tall window. Board on top, every primary action (Lock In, Adrenaline, cards, path taps) in the bottom thumb zone. All older "landscape" notes are void.
+**Portrait only, one-handed.** Phone upright, single-thumb play. Android portrait lock (no autorotate); Windows uses the same portrait-aspect layout in a tall window. Board on top, every primary action (Lock In, Time Card, path taps) in the bottom thumb zone. All older "landscape" notes are void.
 
 ## High-speed rail / 高铁 (C31)
 
-Side-of-map rail. Board + ride; Shoot while riding; car bulletproof; **1× per match**. Confirmed design, **not** Slice 1–3 Must-Have — implement only after Move/Shoot/Clock/doors are green. Numerics still OPEN in PRODUCT_MEMORY.
+Side-of-map rail. Board + ride; Shoot while riding; car bulletproof; **1× per match**. Confirmed design, **deferred from 14-day ship (C34)**. Numerics still OPEN in PRODUCT_MEMORY.
+
+## Snap Shot targeting (C32)
+
+Snap resolves at its **completion** second and wounds only a pawn on the **aimed tile** with clear LoS — it does not sweep the line. Lanes are Hold Angle's job (Day 6). LoS = integer Bresenham on tiles, same floor, endpoints excluded; **never** a physics raycast.
+
+## Match pool / Time Card (C33)
+
+One **shared** match Time Resource pool (demo **900s**). Each round one side plays a **Time Card** committing **N** seconds; round 1 = Attacker, then **alternates**. Both sides Program simultaneously inside **N**. **N spent in full** (unused burned). Positions + wounds **carry** across rounds. Match ends on Dead or when pool cannot fund another MinRound. Time Card ≠ gear card.
+
+## Polished Core Demo (C34)
+
+14-day ship = **local Windows** vertical slice: Desk-Lamp Diorama **required art floor** + tight core (Time Card, path/stance Move, Snap/Hold, wounds/death, one door). **Out:** Fusion, full Android polish, Bandage/Otherwise/vent/monitor/Flashbang/Adrenaline/attic/loot/高铁. C5/C6 remain long-term. Cut Android smoke / door nuance / Crawl AV / optional DoF before ever cutting Time Card, Move/Shoot readability, diorama look, yarn path, shot feedback, or Windows stability.
 
 ## Other CONFIRMED (short)
 
-- Unity + Fusion Host; Win+Android; demo 1v1
-- Move + Shoot = base verbs; cards = Bandage/Interact/Flashbang/Adrenaline
+- Unity; long-term Fusion Host + Win+Android; **demo ship = polished Windows 1v1 local**
+- Move + Shoot = base verbs; gear cards deferred from 14-day ship
 - Juggernaut pays +1 tick switching Snap↔Hold Angle (mirrors stance penalty); Scout pays 0 (C25)
 - Slice 1 first: visible Move + Shoot on Time Resource scrubber
-- Desk-Lamp Diorama art (C29); primitives OK for demo
+- Desk-Lamp Diorama art (**C29**) is a **ship requirement** under C34, not optional polish
 - Attack/Defend labels; Scout/Juggernaut attrs
 
 ## Day focus
 
-Follow `docs/SCHEDULE.md`. Day 1 scaffold done; Day 2+ = grid, scrubber, Program Move/Shoot.
+Follow `docs/SCHEDULE.md`. Day 1–3b done; remaining days protect core combat then a dedicated diorama art pass (C34).

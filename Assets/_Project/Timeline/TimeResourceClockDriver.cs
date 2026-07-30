@@ -11,11 +11,11 @@ namespace LogiCard.Timeline
     /// </summary>
     public sealed class TimeResourceClockDriver : MonoBehaviour
     {
-        [Tooltip("Time Resource budget in continuous seconds (C20 placeholder until confirmed).")]
+        [Tooltip("Time Resource budget for the current round (set from MatchClock.RoundAllotment).")]
         public float BudgetSeconds = 60f;
 
-        [Tooltip("Real-world seconds to play the full Time Resource budget (Playback Duration, C27).")]
-        public float PlaybackSecondsForFullBudget = 8f;
+        [Tooltip("Real-world seconds of Playback Duration per one Time Resource second (C27/C33).")]
+        public float PlaybackSecondsPerTimeResourceSecond = 8f / 60f;
 
         private TimeResourceClock _clock;
         private bool _isPlaying;
@@ -67,6 +67,15 @@ namespace LogiCard.Timeline
             RaiseTimeChanged();
         }
 
+        /// <summary>Rebuilds the underlying clock when the round allotment changes (C33).</summary>
+        public void ApplyBudget(float budgetSeconds)
+        {
+            BudgetSeconds = budgetSeconds < 0f ? 0f : budgetSeconds;
+            _clock = new TimeResourceClock(BudgetSeconds);
+            _isPlaying = false;
+            RaiseTimeChanged();
+        }
+
         private void Update()
         {
             if (!_isPlaying || _clock == null)
@@ -74,7 +83,8 @@ namespace LogiCard.Timeline
                 return;
             }
 
-            if (PlaybackSecondsForFullBudget <= 0f || _clock.Budget <= 0f)
+            float rate = PlaybackSecondsPerTimeResourceSecond;
+            if (rate <= 0f || _clock.Budget <= 0f)
             {
                 _clock.Seek(_clock.Budget);
                 _isPlaying = false;
@@ -82,7 +92,7 @@ namespace LogiCard.Timeline
                 return;
             }
 
-            float deltaTimeResource = Time.deltaTime * (_clock.Budget / PlaybackSecondsForFullBudget);
+            float deltaTimeResource = Time.deltaTime / rate;
             _clock.Advance(deltaTimeResource);
             RaiseTimeChanged();
 
@@ -118,9 +128,9 @@ namespace LogiCard.Timeline
                 BudgetSeconds = 0f;
             }
 
-            if (PlaybackSecondsForFullBudget < 0f)
+            if (PlaybackSecondsPerTimeResourceSecond < 0f)
             {
-                PlaybackSecondsForFullBudget = 0f;
+                PlaybackSecondsPerTimeResourceSecond = 0f;
             }
 
             // Rebuild when the Inspector budget changes in edit mode / after domain reload.

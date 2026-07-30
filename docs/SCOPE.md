@@ -1,73 +1,75 @@
 # 2-Week Demo Scope
 
 **Doc ID:** D2  
-**Status:** Updated 2026-07-27 — aligned to GDD v0.1 revision (wound/RPS kit)  
-**Goal:** Prove **timeline math**, **Time Resource scrubber UI**, **cornering/RPS**, and **2.5D map interaction**.
+**Status:** Updated 2026-07-30 — **C34 Polished Core Demo** (art + tight gameplay)  
+**Goal:** Ship a **portfolio-ready local Windows** vertical slice: Desk-Lamp Diorama presentation + readable Time Card / Move / Shoot duel.
 
-Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.md)
+Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.md) · Art floor: [ART_DIRECTION.md](ART_DIRECTION.md)
 
 ---
 
 ## IN (Must Have for Demo)
 
 ### The Diorama Micro-Map
-- **5×5 ground** + **5×5 attic** stacked grids.
+- **5×5 ground** board on a physical base in a dark void.
+- **One door** that blocks move + LoS when closed (contextual open/close).
 
-### Interactive Map Elements
-- **Doors:** open/close via Interact; block move + LoS when closed.
-- **1 Vent:** Interact → teleport to mirrored other-floor tile.
-- **1 Monitor Terminal:** Interact → highlight opponent for rest of round (FoW still Out).
+### Presentation (required — C34 / C29)
+- Warm desk-lamp lighting, clay-like materials, yarn/chalk paths.
+- Cardstock Time Card + tactile thumb-zone HUD; clean AR Time Resource scrubber.
+- Stepped pawn motion; physical muzzle flash; clay wound splat.
+- Basic tactile foley (footsteps, shot, Time Card, Lock In).
+- Detail floor: [ART_DIRECTION.md](ART_DIRECTION.md) § Demo art floor.
 
-### Multiplayer
-- **1v1 online:** Attacker vs Defender.
-- **Attack/Defend:** Labels + spawn sides only — same kit (**C18**).
+### Multiplayer / platforms
+- **1v1 local** (Attacker vs Defender labels + spawns — **C18**).
+- **Windows** polished ship build.
+- **Android:** optional smoke build only if time remains — not a polish target for Day 14 (**C34**).
 - **Bots:** Nice-to-have (**C19**), not Must-Have.
+- **Fusion online:** deferred (**C5** / **C34**).
 
 ### Core Game Loop
-- **Program (30 real-world seconds) → Reveal → continuous Time Resource resolve → Playback** (Playback Duration tunable) → repeat until Dead.
+- **Allot (Time Card) → Program (30 real-world s) → Reveal → continuous Time Resource resolve → Playback → Aftermath** → repeat until Dead or pool empty (**C33** / **C4**).
 
 ### Visual timeline
 - Continuous **Time Resource** scrubber (seconds); readable cause/effect. Not a 12-tick discrete clock.
 
 ### Tiny / Tactical programming (IN)
 - **Character Card** pick (Scout / Juggernaut).
-- **Path + time allotment** → stance (Sprint / Tactical Walk / Stealth Crawl). **No Walk/Dash cards.**
-- **Aim + time allotment** → Shoot mode (Snap Shot / Hold Angle). **No Snap/Hold cards** — base verb, same pattern as movement.
-- **Cards** (max 3/round) dropped on path: Bandage, Interact, Flashbang (1/match), Adrenaline (1/match instant).
-- **Otherwise:** Invalid → Stop.
-- Health states: Healthy / Wounded / Dead.
-
-### Visual Master Clock
-- *(Superseded)* Use continuous **Time Resource** timeline scrubber — see above. **C28**.
+- **Time Card** allotment from shared **900s** match pool.
+- **Path + time allotment** → stance (Sprint / Tactical Walk / Stealth Crawl).
+- **Aim + time allotment** → Shoot mode (Snap Shot / Hold Angle).
+- Health states: Healthy / Wounded / Dead (simplified wound stakes — Bandage deferred).
 
 ### Win Condition
-- Opponent reaches **Dead** (headshot / bled out). Mutual lethal same tick → **Draw**.
+- Opponent reaches **Dead**. Mutual lethal same second → **Draw**.
 
 ---
 
-## OUT (Do NOT Build for Demo)
+## OUT (Do NOT Build for 14-day ship — C34)
 
-- Final clay art/shaders/rigging/complex animation (primitives OK).
-- Fog of war & decoys (both fully visible).
-- Sprawl maps; laser grids; alarms; hostages; extraction.
-- Gear progression, loot, asymmetrical classes.
-- Escalation/noise track.
-- Full 2–8 / 4v4.
-- Facing/turning radius (360° vision).
-- Armor / multi-hit numeric HP bars.
+- Photon Fusion online multiplayer.
+- Full Android UI/polish / dual-platform feature parity.
+- Attic floor, vent, monitor.
+- Gear cards: Bandage, Interact-as-card, Flashbang, Adrenaline.
+- Otherwise Invalid→Stop library.
+- Final SSS / thumbprint maps / complex character rigs (optional if time; not required).
+- Fog of war & decoys; sprawl maps; laser grids; alarms; hostages; extraction.
+- Gear progression, loot, asymmetrical classes beyond Scout/Juggernaut attrs.
+- Escalation/noise track; full 2–8 / 4v4; facing/turning radius; armor / HP bars.
+- 高铁 / high-speed rail (**C31** — confirmed design, post-demo).
 
 ---
 
 ## LATER (Post-Demo Roadmap)
 
-- Polished clay/diorama presentation.
+- Fusion Host 1v1 + Android cross-play polish (**C5** / **C6**).
+- Attic + vent + monitor; Bandage / Otherwise / Flashbang / Adrenaline.
+- Full clay SSS, thumbprints, bespoke models.
 - Hidden movement, decoys, Defense bluffing.
-- 3-Act heist structure; extraction/loot.
-- Asymmetrical classes.
-- Full 8-player / 4v4.
-- Onion map; acoustic listen zones.
+- 3-Act heist structure; extraction/loot; asymmetrical classes; 4v4.
 - Richer Otherwise library.
-- **High-speed rail / 高铁 (**C31**):** side track; board + ride; Shoot while riding; bulletproof car; **1× per match**. Confirmed design — ship only after Slice Move/Shoot/Clock/doors are green.
+- **High-speed rail / 高铁 (**C31**).**
 
 ---
 
@@ -75,4 +77,5 @@ Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.m
 
 1. Attack/Defend = labels + spawns (**C18**).  
 2. Bots = nice to have (**C19**).  
-3. Personal timelines + shared continuous **Time Resource** clock; **Playback Duration** separate (**C27**).
+3. Personal timelines + shared continuous **Time Resource** clock; **Playback Duration** separate (**C27**).  
+4. **C34** supersedes older “primitives OK / full GDD Section 9” ship language for the 14-day artifact.

@@ -32,8 +32,9 @@ namespace LogiCard.Timeline
         }
 
         /// <summary>
-        /// Debug/authoring entry point. The state machine is forward-only, so reaching an
-        /// earlier phase rewinds to Program first.
+        /// Debug/authoring entry point. The state machine is mostly forward-only; reaching an
+        /// earlier phase rewinds to Allot first. Bounded against the Aftermath→Allot cycle.
+        /// MatchOver is only reachable from Aftermath via an explicit edge.
         /// </summary>
         public void GoTo(RoundPhase target)
         {
@@ -42,9 +43,24 @@ namespace LogiCard.Timeline
                 return;
             }
 
-            if (target == RoundPhase.Program)
+            if (target == RoundPhase.Allot)
             {
                 _machine.Reset();
+                return;
+            }
+
+            if (target == RoundPhase.MatchOver)
+            {
+                if (_machine.CurrentPhase != RoundPhase.Aftermath)
+                {
+                    if (!AdvanceUntil(RoundPhase.Aftermath))
+                    {
+                        _machine.Reset();
+                        AdvanceUntil(RoundPhase.Aftermath);
+                    }
+                }
+
+                _machine.TryTransitionTo(RoundPhase.MatchOver);
                 return;
             }
 
@@ -59,15 +75,20 @@ namespace LogiCard.Timeline
 
         private bool AdvanceUntil(RoundPhase target)
         {
-            while (_machine.CurrentPhase != target)
+            // Aftermath → Allot is a cycle; never walk more steps than there are distinct phases.
+            const int MaxSteps = 8;
+            int steps = 0;
+            while (_machine.CurrentPhase != target && steps < MaxSteps)
             {
                 if (!_machine.TryAdvance())
                 {
                     return false;
                 }
+
+                steps++;
             }
 
-            return true;
+            return _machine.CurrentPhase == target;
         }
 
         private void OnMachinePhaseChanged(RoundPhase previous, RoundPhase next)
