@@ -83,7 +83,7 @@ If behind: **freeze at last green Slice**; do not start next Slice. Cut order: g
 
 - [x] Day 1 — project + folders  
 - [x] Day 2 — grid + clock + phases  
-- [ ] Day 3 — Program Move/Shoot + local payload  
+- [x] Day 3 — Program Move/Shoot + local payload  
 - [ ] Day 4 — **M1 Slice 1**  
 - [ ] Day 5 — path + stance  
 - [ ] Day 6 — Snap vs Hold Angle  

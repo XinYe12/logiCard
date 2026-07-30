@@ -1,11 +1,7 @@
 {
-    "name": "LogiCard.Timeline",
-    "rootNamespace": "LogiCard.Timeline",
-    "references": [
-        "LogiCard.Sim",
-        "LogiCard.Net",
-        "LogiCard.Cards"
-    ],
+    "name": "LogiCard.Cards",
+    "rootNamespace": "LogiCard.Cards",
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

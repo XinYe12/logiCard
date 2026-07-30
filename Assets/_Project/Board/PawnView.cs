@@ -32,6 +32,11 @@ namespace LogiCard.Board
             ApplyTime(0f);
         }
 
+        public void SetPath(ScheduledPath path)
+        {
+            Path = path;
+        }
+
         public void ApplyTime(float timeResourceSeconds)
         {
             if (_board == null || Path == null)

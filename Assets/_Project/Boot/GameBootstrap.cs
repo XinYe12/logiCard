@@ -8,11 +8,13 @@ using UnityEngine;
 namespace LogiCard.Boot
 {
     /// <summary>
-    /// Day 2 vertical slice scaffold: builds the 5x5 board, two pawns on hardcoded
-    /// schedules, the continuous Time Resource clock and the portrait HUD.
+    /// Vertical slice scaffold: builds the 5x5 board, the continuous Time Resource clock,
+    /// the portrait HUD, and two pawns — the attacker is player-programmed via
+    /// BoardInputController (Day 3), the defender stays on a hardcoded schedule until
+    /// Day 11 networking supplies a second local input source.
     ///
     /// Everything is constructed at runtime on purpose — Slice 1-2 changes shape daily and
-    /// code is easier to diff than scene YAML. Real Program input arrives Day 3.
+    /// code is easier to diff than scene YAML.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public sealed class GameBootstrap : MonoBehaviour
@@ -30,6 +32,7 @@ namespace LogiCard.Boot
         private BoardView _board;
         private TimeResourceClockDriver _clock;
         private RoundPhaseController _phase;
+        private BoardInputController _attackerInput;
         private readonly List<PawnView> _pawns = new List<PawnView>();
 
         private void Awake()
@@ -47,7 +50,7 @@ namespace LogiCard.Boot
 
             var hud = new GameObject("ProgramHud").AddComponent<ProgramHud>();
             hud.transform.SetParent(transform, false);
-            hud.Init(_clock, _phase);
+            hud.Init(_clock, _phase, _attackerInput);
 
             _clock.TimeChanged += ApplyTimeToPawns;
             ApplyTimeToPawns(0f);
@@ -71,22 +74,31 @@ namespace LogiCard.Boot
 
         private void BuildPawns()
         {
-            // Scout: 1s per tile base, walking an L. Juggernaut: 2s per tile, shorter route.
+            // Attacker (Scout, 1s/tile) is player-programmed from Day 3 onward: it starts
+            // stationary at its home tile and is scheduled via BoardInputController clicks.
+            var attackerHome = new GridCoordinate(0, 0);
+            const float attackerSecondsPerTile = 1f;
             ScheduledPath attackerPath = ScheduledPath.FromWaypoints(
-                new List<GridCoordinate> { new GridCoordinate(0, 0), new GridCoordinate(2, 0), new GridCoordinate(2, 3) },
-                baseSecondsPerTile: 1f,
+                new List<GridCoordinate> { attackerHome },
+                baseSecondsPerTile: attackerSecondsPerTile,
                 stance: StanceType.Walk);
 
+            // Defender (Juggernaut, 2s per tile) stays hardcoded until Day 11 networking
+            // gives a second local input source.
             ScheduledPath defenderPath = ScheduledPath.FromWaypoints(
                 new List<GridCoordinate> { new GridCoordinate(4, 4), new GridCoordinate(4, 2), new GridCoordinate(2, 2) },
                 baseSecondsPerTile: 2f,
                 stance: StanceType.Walk);
 
-            _pawns.Add(SpawnPawn("Pawn_Attacker", new Color(0.90f, 0.35f, 0.28f), attackerPath));
+            PawnView attacker = SpawnPawn("Pawn_Attacker", new Color(0.90f, 0.35f, 0.28f), attackerPath);
+            _pawns.Add(attacker);
             _pawns.Add(SpawnPawn("Pawn_Defender", new Color(0.32f, 0.58f, 0.86f), defenderPath));
 
-            Debug.Log($"[logiCard] Attacker move ends at {attackerPath.EndSeconds:0.0}s TR; " +
-                      $"defender at {defenderPath.EndSeconds:0.0}s TR.");
+            _attackerInput = attacker.gameObject.AddComponent<BoardInputController>();
+            _attackerInput.Init(attacker, _phase, attackerHome, attackerSecondsPerTile, timeResourceBudgetSeconds);
+
+            Debug.Log($"[logiCard] Attacker home {attackerHome}, budget {timeResourceBudgetSeconds:0.0}s TR; " +
+                      $"defender move ends at {defenderPath.EndSeconds:0.0}s TR.");
         }
 
         private PawnView SpawnPawn(string name, Color color, ScheduledPath path)

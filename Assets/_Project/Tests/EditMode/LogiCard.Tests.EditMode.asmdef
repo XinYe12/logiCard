@@ -4,6 +4,8 @@
     "references": [
         "LogiCard.Sim",
         "LogiCard.Timeline",
+        "LogiCard.Net",
+        "LogiCard.Cards",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

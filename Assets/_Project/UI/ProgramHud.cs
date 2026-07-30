@@ -1,4 +1,7 @@
 using System.Collections;
+using LogiCard.Board;
+using LogiCard.Net;
+using LogiCard.Sim;
 using LogiCard.Timeline;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -25,6 +28,7 @@ namespace LogiCard.UI
 
         private TimeResourceClockDriver _clock;
         private RoundPhaseController _phase;
+        private BoardInputController _input;
 
         private Text _phaseLabel;
         private Text _programTimerLabel;
@@ -32,13 +36,17 @@ namespace LogiCard.UI
         private Slider _scrubber;
         private Button _playButton;
         private Text _playButtonLabel;
+        private Button _moveModeButton;
+        private Button _shootModeButton;
+        private Text _queueText;
         private Font _font;
         private bool _suppressSliderCallback;
 
-        public void Init(TimeResourceClockDriver clock, RoundPhaseController phase)
+        public void Init(TimeResourceClockDriver clock, RoundPhaseController phase, BoardInputController input)
         {
             _clock = clock;
             _phase = phase;
+            _input = input;
             _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             EnsureEventSystem();
@@ -48,9 +56,11 @@ namespace LogiCard.UI
 
             _clock.TimeChanged += OnClockTime;
             _phase.PhaseChanged += OnPhaseChanged;
+            _input.QueueChanged += OnQueueChanged;
 
             OnPhaseChanged(_phase.Phase);
             OnClockTime(_clock.CurrentSeconds);
+            OnQueueChanged(_input.Program);
         }
 
         private void OnDestroy()
@@ -63,6 +73,11 @@ namespace LogiCard.UI
             if (_phase != null)
             {
                 _phase.PhaseChanged -= OnPhaseChanged;
+            }
+
+            if (_input != null)
+            {
+                _input.QueueChanged -= OnQueueChanged;
             }
         }
 
@@ -151,6 +166,12 @@ namespace LogiCard.UI
             CreatePhaseButton(zone, "Reveal", RoundPhase.Reveal, 1);
             CreatePhaseButton(zone, "Execute", RoundPhase.Execute, 2);
 
+            // Move/Shoot mode toggle + queued-action readout (Day 3 Program UI).
+            CreateModeButtons(zone);
+            _queueText = CreateText(zone, "QueueReadout", "Used 0.0 / 0.0s", 28, TextAnchor.UpperLeft, Ink);
+            Anchor(_queueText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f),
+                new Vector2(32f, -600f), new Vector2(-32f, -348f));
+
             _playButton = CreateButton(zone, "PlayButton", "Play", PanelMid, Ink, 34, OnPlayPressed);
             Anchor(_playButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(0f, 0f),
                 new Vector2(32f, 32f), new Vector2(272f, 140f));
@@ -171,6 +192,19 @@ namespace LogiCard.UI
             float x = 32f + (index * 248f);
             Anchor(b.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(0f, 1f),
                 new Vector2(x, -256f), new Vector2(x + 232f, -172f));
+        }
+
+        private void CreateModeButtons(RectTransform parent)
+        {
+            _moveModeButton = CreateButton(parent, "Mode_Move", "MOVE", PanelMid, Ink, 32, () => SetMode(ActionVerb.Move));
+            Anchor(_moveModeButton.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(32f, -340f), new Vector2(280f, -256f));
+
+            _shootModeButton = CreateButton(parent, "Mode_Shoot", "SHOOT", PanelMid, Ink, 32, () => SetMode(ActionVerb.Shoot));
+            Anchor(_shootModeButton.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(296f, -340f), new Vector2(544f, -256f));
+
+            RefreshModeButtons();
         }
 
         // ---------- behaviour ----------
@@ -194,8 +228,60 @@ namespace LogiCard.UI
             }
         }
 
+        private void SetMode(ActionVerb mode)
+        {
+            _input.Mode = mode;
+            RefreshModeButtons();
+        }
+
+        private void RefreshModeButtons()
+        {
+            if (_moveModeButton == null || _input == null)
+            {
+                return;
+            }
+
+            _moveModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.Move ? Accent : PanelMid;
+            _shootModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.Shoot ? Accent : PanelMid;
+        }
+
+        private void OnQueueChanged(PawnProgram program)
+        {
+            if (_queueText == null)
+            {
+                return;
+            }
+
+            string text = $"Used {program.UsedSeconds:0.0} / {program.BudgetSeconds:0.0}s";
+            for (int i = 0; i < program.Nodes.Count; i++)
+            {
+                ActionNode node = program.Nodes[i];
+                text += $"\n{i + 1}: {node.Verb} -> {node.GridPosition} @{node.ExecuteTime:0.0}s";
+            }
+
+            _queueText.text = text;
+        }
+
         private void OnLockInPressed()
         {
+            const float budgetEpsilon = 0.001f;
+            if (_input.Program.UsedSeconds > _input.Program.BudgetSeconds + budgetEpsilon)
+            {
+                Debug.LogWarning("[logiCard] Lock In blocked: program exceeds Time Resource budget.");
+                return;
+            }
+
+            TimelinePayload payload = _input.Program.Build();
+            Debug.Log($"[logiCard] TimelinePayload locked: {payload.Nodes.Count} action(s).");
+            foreach (ActionNode node in payload.Nodes)
+            {
+                string modifier = node.Modifier != null ? node.Modifier.displayName : "none";
+                Debug.Log($"[logiCard]   {node.Verb} @ {node.ExecuteTime:0.00}s -> {node.GridPosition} " +
+                          $"stance={StanceMath.Label(node.Stance)} modifier={modifier}");
+            }
+
+            _input.CommitToPlayback();
+
             StopAllCoroutines();
             StartCoroutine(LockInRoutine());
         }

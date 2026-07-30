@@ -37,6 +37,7 @@ namespace LogiCard.Board
                 tile.transform.localPosition = LocalFromPlanar(new PlanarPosition(coord.X, coord.Y, coord.Floor));
                 tile.transform.localScale = new Vector3(TileSize * 0.94f, TileThickness, TileSize * 0.94f);
                 tile.GetComponent<MeshRenderer>().sharedMaterial = ((coord.X + coord.Y) % 2 == 0) ? light : dark;
+                tile.AddComponent<TileMarker>().Init(coord);
             }
         }
 
