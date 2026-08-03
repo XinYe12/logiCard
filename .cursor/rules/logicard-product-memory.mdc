@@ -39,7 +39,7 @@ Snap resolves at its **completion** second and wounds only a pawn on the **aimed
 
 ## Match pool / Time Card (C33)
 
-One **shared** match Time Resource pool (demo **900s**). Each round one side plays a **Time Card** committing **N** seconds; round 1 = Attacker, then **alternates**. Both sides Program simultaneously inside **N**. **N spent in full** (unused burned). Positions + wounds **carry** across rounds. Match ends on Dead or when pool cannot fund another MinRound. Time Card ≠ gear card.
+One **shared** match Time Resource pool (demo **900s**). Each round one side plays a **Time Card** committing **N** seconds; round 1 = Attacker, then **alternates**. Both sides Program simultaneously inside **N**. **N spent in full** (unused burned). Positions + wounds **carry** across rounds. Match ends on Dead or when pool cannot fund another MinRound. Time Card ≠ gear card. **Numerics:** MinRoundSeconds = 30s (GDD §6); Allot UI presets 30s/60s/120s/ALL IN (remaining) + custom slider clamped to `[MinRoundSeconds, Remaining]`.
 
 ## Polished Core Demo (C34)
 
@@ -53,6 +53,15 @@ One **shared** match Time Resource pool (demo **900s**). Each round one side pla
 - Slice 1 first: visible Move + Shoot on Time Resource scrubber
 - Desk-Lamp Diorama art (**C29**) is a **ship requirement** under C34, not optional polish
 - Attack/Defend labels; Scout/Juggernaut attrs
+
+## Long-term map, objective, revive (C35–C38)
+
+**None of these change the 14-day demo** (`C17`/`C34` stay grid-based, tile/Bresenham LoS, Dead-only win, Healthy→Wounded→Dead). Long-term only:
+
+- **C35 (map):** Continuous movement replaces the grid. Host's quantized continuous sim is resolve authority; NavMesh/client tooling is authoring aid only, **never** resolve truth (mirrors C32's "never a physics raycast"). LoS = ray-vs-wall-edge visibility. Numerics OPEN.
+- **C36 (destruction):** Discrete breach states (Intact → Damaged → Breached), not physics fracture. Breach = schedulable timed action, same shape as Shoot/Door; state carries across rounds like wounds/positions (C33). Numerics OPEN.
+- **C37 (win condition):** Asymmetric objective ("Channel" verb, vault/cashbox-style) restoring VISION's original Asymmetric Heist pillar; primary post-demo win. Channel cancels on Downed/Dead/displacement. **Does not amend C20/C33** — demo win stays Opponent Dead / mutual-lethal-draw. Numerics OPEN.
+- **C38 (revive/martyr):** Adds Downed state (Healthy → Wounded → Downed → Dead) — long-term only, demo keeps binary Healthy→Wounded→Dead (`WoundsUntilDead = 2`). Revive targets a **tile** (mirrors C32 Snap Shot targeting), not a unit ref. One locked archetype — **Detonator**: AoE event on Downed→Dead (finishing blow only, not first knockdown). Wider martyr roster stays unlocked. Numerics OPEN.
 
 ## Day focus
 

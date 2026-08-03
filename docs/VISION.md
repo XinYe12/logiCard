@@ -56,6 +56,15 @@ The **Time Resource** timeline UI must be visual and intuitive enough that a new
 | C15 | **Cards → timeline**; timeline = gameplay + Master Clock execution |
 | C16 | **Attack vs Defend PvP**; bots fill for testing |
 
+## Long-Term Systems (Post-Demo)
+
+Confirmed direction for the full game, none of it required or built for the 14-day demo (see `PRODUCT_MEMORY.md` C35–C38 for detail):
+
+- **Continuous movement** over a navmesh, replacing the tile grid (**C35**).
+- **Destructible geometry** as discrete breach states — the map as a weapon, made literal (**C36**).
+- **Asymmetric objective win condition** (vault/cashbox-style) — the actual long-term realization of the "Asymmetric Heist" pillar above, once the demo's elimination-only win ships (**C37**).
+- **Revive**, via a Downed state and a tile-targeted revive action, plus a "Detonator" martyr archetype that turns a finished-off ally into a tactical weapon (**C38**).
+
 ## Out of this doc
 
 Exact numbers, full card lists, FoW rules, net architecture — GDD / TDD / Scope / Core loop.

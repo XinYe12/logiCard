@@ -4,6 +4,8 @@
 **Status:** Revised 2026-07-30 — **C34 Polished Core Demo** (art + tight gameplay); Time Card match loop (**C33**)  
 **Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [CORE_LOOP.md](CORE_LOOP.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md)
 
+**Scope note:** the tile/grid rules below (5×5 board, orthogonal Bresenham LoS, Healthy→Wounded→Dead) describe the **14-day demo only**. The long-term map/win/revive model differs — continuous movement, destructible geometry, an asymmetric objective win, and a Downed+revive+Detonator system — see `PRODUCT_MEMORY.md` **C35–C38**.
+
 This document defines rules, numeric tuning, and content for the **14-day portfolio prototype**. Focus: a **readable timeline duel** that looks like a handmade desk-lamp miniature — not a feature checklist.
 
 **Core model:**
@@ -125,6 +127,7 @@ For the 14-day ship, **one door** on the 5×5 board:
 |-----------|-------|-------|
 | **Match Time Resource pool** | **900 seconds** (15 min) | Shared; Time Cards carve rounds (**C33**) |
 | **Min round / Time Card** | **30 seconds** | Clamp floor |
+| **Time Card presets (Allot UI)** | **30s / 60s / 120s / ALL IN** (remaining pool) + custom slider | Slider ranges `[MinRoundSeconds, Remaining]`; ALL IN commits whatever pool remains |
 | **Program Timer** | 30 **real-world** seconds | Wall-clock planning (**C27**) |
 | **Playback Duration** | Tunable per-TR-second rate | Cinema length ≠ Time Resource |
 | **Otherwise / gear cards** | — | Deferred (**C34**) |

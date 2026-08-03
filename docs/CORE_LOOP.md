@@ -127,7 +127,7 @@ flowchart LR
 
 ## Explicitly not in this loop (Out / Later)
 
-FoW, decoys, extraction, loot, classes beyond attrs, alarm track, 4v4, Fusion online, full Android polish, gear cards, Otherwise library, attic/vent/monitor, final SSS/thumbprint clay.
+FoW, decoys, extraction, loot, classes beyond attrs, alarm track, 4v4, Fusion online, full Android polish, gear cards, Otherwise library, attic/vent/monitor, final SSS/thumbprint clay. Long-term only, not this loop: continuous movement/navmesh (**C35**), destructible breach-state geometry (**C36**), asymmetric objective win (**C37**), Downed state + revive + Detonator (**C38**).
 
 ---
 

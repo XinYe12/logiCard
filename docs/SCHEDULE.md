@@ -35,6 +35,8 @@ Nice-to-have (not ship blockers): Android smoke build, bots (**C19**), optional 
 
 If behind: **freeze at last green milestone**; do not start the next. Cut order: Android smoke → door reopen nuance → Crawl AV nuance → optional DoF/SSS → **never** cut Time Card loop, Move/Shoot readability, warm diorama composition, yarn path, physical shot feedback, or Windows build stability (**C34**).
 
+**Day 3b is absorbed, not a 15th calendar day.** M1/Slice 1 still spans **Days 2–4** — 3b is scoped as same-day-or-buffer insert work within that window (C33 filled a gap C4 already implied but D8 never scheduled), not an extra day tacked onto the plan. Total implementation remains **14 calendar days**; the Day 14 ship date is unchanged.
+
 ---
 
 ## Day-by-day

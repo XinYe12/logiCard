@@ -70,6 +70,10 @@ Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.m
 - 3-Act heist structure; extraction/loot; asymmetrical classes; 4v4.
 - Richer Otherwise library.
 - **High-speed rail / 高铁 (**C31**).**
+- Continuous movement + navmesh, replacing the grid model (**C35**).
+- Destructible geometry via discrete breach states (**C36**).
+- Asymmetric objective win condition (vault/cashbox-style), restoring the Asymmetric Heist pillar (**C37**).
+- Downed state + tile-targeted revive + Detonator martyr archetype (**C38**).
 
 ---
 
