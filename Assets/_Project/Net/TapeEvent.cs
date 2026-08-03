@@ -3,7 +3,7 @@ using LogiCard.Sim;
 namespace LogiCard.Net
 {
     /// <summary>
-    /// Discrete outcomes a <see cref="ReplayTape"/> can carry. Invalid is reserved for Day 7+
+    /// Discrete outcomes a <see cref="ReplayTape"/> can carry. Invalid is reserved for post-demo
     /// Otherwise Stop; Hold Angle lethality uses <see cref="Killed"/> (Day 6).
     /// </summary>
     public enum TapeEventType
@@ -13,6 +13,8 @@ namespace LogiCard.Net
         Wounded = 2,
         Killed = 3,
         Invalid = 4,
+        DoorOpened = 5,
+        DoorClosed = 6,
     }
 
     /// <summary>

@@ -23,12 +23,16 @@ namespace LogiCard.Sim
     {
         private readonly Dictionary<Floor, Tile[,]> tilesByFloor;
         private readonly Floor[] floors;
+        private readonly Dictionary<GridCoordinate, Door> doorsByCoordinate = new Dictionary<GridCoordinate, Door>();
+        private readonly List<Door> doors = new List<Door>();
 
         public int Width { get; }
 
         public int Height { get; }
 
         public IReadOnlyList<Floor> Floors => floors;
+
+        public IReadOnlyList<Door> Doors => doors;
 
         public GridBoard(int width = 5, int height = 5, IEnumerable<Floor> floors = null)
         {
@@ -122,6 +126,50 @@ namespace LogiCard.Sim
 
             tile = tilesByFloor[coordinate.Floor][coordinate.X, coordinate.Y];
             return true;
+        }
+
+        /// <summary>
+        /// Registers a door and immediately applies its <see cref="Door.InitialState"/> to the
+        /// door's tile (Closed ⇒ impassable, Open ⇒ ordinary floor).
+        /// </summary>
+        public void RegisterDoor(Door door)
+        {
+            if (door == null)
+            {
+                throw new ArgumentNullException(nameof(door));
+            }
+
+            EnsureInBounds(door.Coordinate);
+            if (doorsByCoordinate.ContainsKey(door.Coordinate))
+            {
+                throw new InvalidOperationException($"A door is already registered at {door.Coordinate}.");
+            }
+
+            doorsByCoordinate.Add(door.Coordinate, door);
+            doors.Add(door);
+            this[door.Coordinate] = new Tile(door.InitialState == DoorState.Open);
+        }
+
+        public bool TryGetDoor(GridCoordinate coordinate, out Door door)
+        {
+            return doorsByCoordinate.TryGetValue(coordinate, out door);
+        }
+
+        /// <summary>
+        /// Tile-state copy used by <see cref="LogiCard.Net.GhostResolver"/> as a resolve-local
+        /// scratch board (Day 7 research note §F/H2, Option 1) — doors toggle mid-resolve without
+        /// mutating the shared board instance. Door registrations are not copied; scratch boards
+        /// only need passability, never door identity.
+        /// </summary>
+        public GridBoard Clone()
+        {
+            var clone = new GridBoard(Width, Height, floors);
+            foreach (GridCoordinate coordinate in GetAllCoordinates())
+            {
+                clone[coordinate] = this[coordinate];
+            }
+
+            return clone;
         }
 
         public IEnumerable<GridCoordinate> GetAllCoordinates()

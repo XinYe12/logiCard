@@ -37,6 +37,10 @@ Side-of-map rail. Board + ride; Shoot while riding; car bulletproof; **1× per m
 
 Snap resolves at its **completion** second and wounds only a pawn on the **aimed tile** with clear LoS — it does not sweep the line. Lanes are Hold Angle's job (Day 6). LoS = integer Bresenham on tiles, same floor, endpoints excluded; **never** a physics raycast.
 
+## Move authoring (C21, amended 2026-08-03)
+
+**Supersedes the original allot-seconds-to-derive-stance model.** Player taps waypoints (each tap adds one; consecutive waypoints auto-connect via shortest legal orthogonal route — player controls route shape, not a single system shortest-path). Player picks Sprint/Walk/Crawl **directly**, no time-allotment slider. Cost (`tiles × BaseSecondsPerTile × StanceMult`) is computed and deducted automatically the instant the Move is scheduled; HUD shows running used/budget, never a pre-commit value. Matches how Shoot already worked (pick Snap/Hold, cost follows).
+
 ## Match pool / Time Card (C33)
 
 One **shared** match Time Resource pool (demo **900s**). Each round one side plays a **Time Card** committing **N** seconds; round 1 = Attacker, then **alternates**. Both sides Program simultaneously inside **N**. **N spent in full** (unused burned). Positions + wounds **carry** across rounds. Match ends on Dead or when pool cannot fund another MinRound. Time Card ≠ gear card. **Numerics:** MinRoundSeconds = 30s (GDD §6); Allot UI presets 30s/60s/120s/ALL IN (remaining) + custom slider clamped to `[MinRoundSeconds, Remaining]`.

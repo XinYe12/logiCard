@@ -3,7 +3,7 @@
 **Think of this as the game’s save file.**  
 If a rule or feature is not listed under **CONFIRMED**, it is not locked — do not build it as if it were.
 
-**Last updated:** 2026-08-03 (**C35–C38 long-term vision** — continuous movement, destructible geometry, objective win, revive/Downed/martyr; 14-day demo scope C17/C34 unaffected)
+**Last updated:** 2026-08-03 (**C21 amended** — multi-waypoint path authoring + automatic Time Resource cost, no manual allotment slider; **C35–C38 long-term vision** — continuous movement, destructible geometry, objective win, revive/Downed/martyr; 14-day demo scope C17/C34 unaffected)
 
 **Rule:** Only **CONFIRMED** is binding. Sync `.cursor/rules/logicard-product-memory.mdc` when CONFIRMED changes.
 
@@ -71,7 +71,7 @@ Full paths: see [`PRE_IMPLEMENTATION.md`](PRE_IMPLEMENTATION.md).
 | C18 | Labels + spawns; same gear deck |
 | C19 | Demo bots nice-to-have |
 | C20 | **Demo numerics (continuous):** Match pool **900s** via Time Cards (**C33**); Program phase **30 real-world seconds**; Move/Shoot costs in Time Resource seconds (placeholders OK); stance combat; Snap/Hold; wounds → Dead (Bandage deferred — **C34**); mutual lethal = draw. **No 12-tick clock.** |
-| C21 | Path + time → Stance |
+| C21 | **Path + Stance → automatic Time Resource cost (amended 2026-08-03 — supersedes the original allot-seconds-to-derive-stance model):** player builds a Move by tapping a sequence of **waypoints** on the board — each tap adds one; consecutive waypoints connect leg-by-leg via the shortest legal orthogonal route, so the player isn't forced to tap every intermediate tile, but chooses the route's shape by where the waypoints land, not a single system-computed shortest path to one destination. Player picks **Sprint / Tactical Walk / Stealth Crawl directly** — there is no manual time-allotment slider or a step where the player pre-commits seconds. Cost (`tiles × BaseSecondsPerTile × StanceMult`) is computed and **deducted from the round's Time Resource automatically** the instant the Move is scheduled; the HUD shows the running used/budget total, never a pre-commit allotment value. Brings Move in line with Shoot, which already worked this way (pick Snap/Hold, cost follows). |
 | C22 | Paper D5 done |
 | C23 | Payload → Host ghost → ReplayTape → playback |
 | C24 | Slice 1: schedule Move + Shoot in **Time Resource**; Lock/Reveal; playback shows move + shoot; observer reads cause/effect on the **timeline scrubber** (not tick 1–12) |

@@ -9,9 +9,10 @@ using UnityEngine.EventSystems;
 namespace LogiCard.Board
 {
     /// <summary>
-    /// Program input for one pawn (Day 5): raycasts board tiles, drafts an orthogonal waypoint
-    /// path, allots stance time, and commits Move/Shoot into a <see cref="PawnProgram"/>.
-    /// Origin and budget refresh each round from carried state + Time Card (C33).
+    /// Program input for one pawn: raycasts board tiles, drafts a multi-waypoint path (each tap
+    /// appends a waypoint) at a directly picked stance, and commits Move/Shoot into a
+    /// <see cref="PawnProgram"/>. Cost is automatic — no time-allotment step (C21, amended
+    /// 2026-08-03). Origin and budget refresh each round from carried state + Time Card (C33).
     /// </summary>
     public sealed class BoardInputController : MonoBehaviour
     {
@@ -137,26 +138,6 @@ namespace LogiCard.Board
             return true;
         }
 
-        /// <summary>Allots Time Resource seconds on the current draft → stance band (C21).</summary>
-        public bool TryAllotDraftSeconds(float seconds)
-        {
-            if (_locked || Program == null || !Program.HasDraft)
-            {
-                return false;
-            }
-
-            if (!Program.TryAllotDraftSeconds(seconds, out string reason))
-            {
-                Debug.Log($"[logiCard] Allot draft rejected: {reason}");
-                return false;
-            }
-
-            _preferredStance = Program.DraftStance;
-            RefreshPreview();
-            QueueChanged?.Invoke(Program);
-            return true;
-        }
-
         public bool TrySetDraftStance(StanceType stance)
         {
             if (_locked || Program == null)
@@ -239,7 +220,7 @@ namespace LogiCard.Board
 
             string reason;
             bool queued = Mode == ActionVerb.Move
-                ? Program.TryExtendOrReplaceDraft(coordinate, out reason)
+                ? Program.TryAddWaypoint(coordinate, out reason)
                 : Program.TryQueueShoot(coordinate, out reason, _preferredShootMode);
 
             if (!queued)

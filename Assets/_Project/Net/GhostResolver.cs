@@ -115,25 +115,28 @@ namespace LogiCard.Net
         private void ResolveShots(Dictionary<int, GhostTrack> tracks, List<int> order, List<TapeEvent> events)
         {
             var shots = new List<ShotIntent>();
+            var doorToggles = new List<DoorToggleIntent>();
             for (int i = 0; i < order.Count; i++)
             {
                 GhostTrack track = tracks[order[i]];
                 foreach (ActionNode node in track.Nodes)
                 {
-                    if (node.Verb != ActionVerb.Shoot)
+                    if (node.Verb == ActionVerb.Shoot)
                     {
-                        continue;
-                    }
+                        ShootMode mode = node.ShootMode == ShootMode.None ? ShootMode.SnapShot : node.ShootMode;
+                        float cost = ShootCost.SecondsFor(mode);
+                        float windowStart = node.ExecuteTime - cost;
+                        if (windowStart < 0f)
+                        {
+                            windowStart = 0f;
+                        }
 
-                    ShootMode mode = node.ShootMode == ShootMode.None ? ShootMode.SnapShot : node.ShootMode;
-                    float cost = ShootCost.SecondsFor(mode);
-                    float windowStart = node.ExecuteTime - cost;
-                    if (windowStart < 0f)
+                        shots.Add(new ShotIntent(order[i], node.ExecuteTime, windowStart, node.GridPosition, mode));
+                    }
+                    else if (node.Verb == ActionVerb.Door)
                     {
-                        windowStart = 0f;
+                        doorToggles.Add(new DoorToggleIntent(order[i], node.ExecuteTime, node.GridPosition, node.Door));
                     }
-
-                    shots.Add(new ShotIntent(order[i], node.ExecuteTime, windowStart, node.GridPosition, mode));
                 }
             }
 
@@ -143,21 +146,50 @@ namespace LogiCard.Net
                 ? a.CompleteSeconds.CompareTo(b.CompleteSeconds)
                 : a.ShooterId.CompareTo(b.ShooterId));
 
+            // Door toggles land before same-instant shots resolve (Day 7 research note §H5): a
+            // door closing at the exact second a shot completes blocks that shot.
+            doorToggles.Sort((a, b) => a.ExecuteTime != b.ExecuteTime
+                ? a.ExecuteTime.CompareTo(b.ExecuteTime)
+                : a.PawnId.CompareTo(b.PawnId));
+
+            // Resolve-local scratch board (Day 7, Option 1): doors mutate this copy in ExecuteTime
+            // order as the sweep below reaches them, never the shared _board instance.
+            GridBoard scratch = _board.Clone();
+
             var hits = new List<ResolvedHit>();
-            int index = 0;
-            while (index < shots.Count)
+            int shotIndex = 0;
+            int doorIndex = 0;
+            while (shotIndex < shots.Count || doorIndex < doorToggles.Count)
             {
-                int groupEnd = index + 1;
-                while (groupEnd < shots.Count
-                       && shots[groupEnd].CompleteSeconds - shots[index].CompleteSeconds <= _simultaneityEpsilon)
+                bool doorNext = doorIndex < doorToggles.Count
+                    && (shotIndex >= shots.Count || doorToggles[doorIndex].ExecuteTime <= shots[shotIndex].CompleteSeconds);
+
+                if (doorNext)
                 {
-                    groupEnd++;
+                    int doorGroupEnd = doorIndex + 1;
+                    while (doorGroupEnd < doorToggles.Count
+                           && doorToggles[doorGroupEnd].Coordinate == doorToggles[doorIndex].Coordinate
+                           && doorToggles[doorGroupEnd].ExecuteTime - doorToggles[doorIndex].ExecuteTime <= _simultaneityEpsilon)
+                    {
+                        doorGroupEnd++;
+                    }
+
+                    ApplyDoorGroup(doorToggles, doorIndex, doorGroupEnd, scratch, events);
+                    doorIndex = doorGroupEnd;
+                    continue;
+                }
+
+                int shotGroupEnd = shotIndex + 1;
+                while (shotGroupEnd < shots.Count
+                       && shots[shotGroupEnd].CompleteSeconds - shots[shotIndex].CompleteSeconds <= _simultaneityEpsilon)
+                {
+                    shotGroupEnd++;
                 }
 
                 hits.Clear();
-                for (int i = index; i < groupEnd; i++)
+                for (int i = shotIndex; i < shotGroupEnd; i++)
                 {
-                    ResolveShot(shots[i], tracks, order, events, hits);
+                    ResolveShot(shots[i], tracks, order, events, hits, scratch);
                 }
 
                 for (int i = 0; i < hits.Count; i++)
@@ -165,7 +197,36 @@ namespace LogiCard.Net
                     ApplyHit(hits[i], tracks, events);
                 }
 
-                index = groupEnd;
+                shotIndex = shotGroupEnd;
+            }
+        }
+
+        /// <summary>
+        /// Applies every toggle in a same-instant, same-door group to <paramref name="scratch"/> and
+        /// logs one tape event per attempt. Close wins over Open within the group (Day 7 research
+        /// note §H5) — a simultaneous Open/Close on the same door ends up Closed.
+        /// </summary>
+        private static void ApplyDoorGroup(
+            List<DoorToggleIntent> toggles, int start, int end, GridBoard scratch, List<TapeEvent> events)
+        {
+            bool anyClose = false;
+            for (int i = start; i < end; i++)
+            {
+                if (toggles[i].Action == DoorAction.Close)
+                {
+                    anyClose = true;
+                    break;
+                }
+            }
+
+            DoorAction resultingAction = anyClose ? DoorAction.Close : DoorAction.Open;
+            GridCoordinate coordinate = toggles[start].Coordinate;
+            scratch[coordinate] = new Tile(resultingAction == DoorAction.Open);
+
+            for (int i = start; i < end; i++)
+            {
+                TapeEventType type = toggles[i].Action == DoorAction.Open ? TapeEventType.DoorOpened : TapeEventType.DoorClosed;
+                events.Add(new TapeEvent(toggles[i].ExecuteTime, toggles[i].PawnId, type, toggles[i].Coordinate));
             }
         }
 
@@ -174,29 +235,31 @@ namespace LogiCard.Net
             Dictionary<int, GhostTrack> tracks,
             List<int> order,
             List<TapeEvent> events,
-            List<ResolvedHit> hits)
+            List<ResolvedHit> hits,
+            GridBoard board)
         {
             GhostTrack shooter = tracks[shot.ShooterId];
             events.Add(new TapeEvent(shot.CompleteSeconds, shot.ShooterId, TapeEventType.ShootFire, shot.Aim));
 
             if (shot.Mode == ShootMode.HoldAngle)
             {
-                ResolveHoldAngle(shot, shooter, tracks, order, hits);
+                ResolveHoldAngle(shot, shooter, tracks, order, hits, board);
                 return;
             }
 
-            ResolveSnapShot(shot, shooter, tracks, order, hits);
+            ResolveSnapShot(shot, shooter, tracks, order, hits, board);
         }
 
-        private void ResolveSnapShot(
+        private static void ResolveSnapShot(
             ShotIntent shot,
             GhostTrack shooter,
             Dictionary<int, GhostTrack> tracks,
             List<int> order,
-            List<ResolvedHit> hits)
+            List<ResolvedHit> hits,
+            GridBoard board)
         {
             GridCoordinate origin = shooter.TileAt(shot.CompleteSeconds);
-            if (!GridLineOfSight.HasLineOfSight(_board, origin, shot.Aim))
+            if (!GridLineOfSight.HasLineOfSight(board, origin, shot.Aim))
             {
                 return;
             }
@@ -230,7 +293,8 @@ namespace LogiCard.Net
             GhostTrack shooter,
             Dictionary<int, GhostTrack> tracks,
             List<int> order,
-            List<ResolvedHit> hits)
+            List<ResolvedHit> hits,
+            GridBoard board)
         {
             GridCoordinate origin = shooter.TileAt(shot.WindowStartSeconds);
 
@@ -243,7 +307,7 @@ namespace LogiCard.Net
                 }
 
                 GhostTrack victim = tracks[victimId];
-                if (!TryFindHoldContact(shot, origin, victim, out float contactSeconds, out GridCoordinate contactTile))
+                if (!TryFindHoldContact(shot, origin, victim, board, out float contactSeconds, out GridCoordinate contactTile))
                 {
                     continue;
                 }
@@ -257,6 +321,7 @@ namespace LogiCard.Net
             ShotIntent shot,
             GridCoordinate origin,
             GhostTrack victim,
+            GridBoard board,
             out float contactSeconds,
             out GridCoordinate contactTile)
         {
@@ -293,7 +358,7 @@ namespace LogiCard.Net
                     continue;
                 }
 
-                if (!GridLineOfSight.HasLineOfSight(_board, origin, tile))
+                if (!GridLineOfSight.HasLineOfSight(board, origin, tile))
                 {
                     continue;
                 }
@@ -353,6 +418,25 @@ namespace LogiCard.Net
                 WindowStartSeconds = windowStartSeconds;
                 Aim = aim;
                 Mode = mode;
+            }
+        }
+
+        private readonly struct DoorToggleIntent
+        {
+            public int PawnId { get; }
+
+            public float ExecuteTime { get; }
+
+            public GridCoordinate Coordinate { get; }
+
+            public DoorAction Action { get; }
+
+            public DoorToggleIntent(int pawnId, float executeTime, GridCoordinate coordinate, DoorAction action)
+            {
+                PawnId = pawnId;
+                ExecuteTime = executeTime;
+                Coordinate = coordinate;
+                Action = action;
             }
         }
 

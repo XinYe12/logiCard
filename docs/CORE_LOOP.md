@@ -25,8 +25,8 @@
 
 - **Character Card:** Speed / Agility / Strength (Scout / Juggernaut).
 - **Time Card:** commits **N** from shared match pool (**C33**) — not a gear card.
-- **Movement:** path + time slider → Sprint / Tactical Walk / Stealth Crawl (**not** a card) (**C21**).
-- **Shoot:** aim + time slider → Snap Shot / Hold Angle (**not** a card) (**C25**).
+- **Movement:** multi-waypoint path (tap to add each waypoint) + direct Sprint / Tactical Walk / Stealth Crawl pick → automatic Time Resource cost (**not** a card) (**C21**, amended 2026-08-03 — no manual time-allotment slider).
+- **Shoot:** aim + direct Snap Shot / Hold Angle pick → automatic Time Resource cost (**not** a card) (**C25**).
 - **Door:** one contextual open/close on the 5×5 board (blocks move + LoS) — not a full Interact card system (**C34**).
 - One shared **match Time Resource pool** (demo **900s / 15 min**). Both sides program inside each round’s **N**.
 - **Playback Duration** separate from Time Resource (**C27**).
@@ -64,14 +64,15 @@ flowchart LR
 ### 3. Program Timeline (all players simultaneous)
 **Player decides:**
 - Character already chosen pre-match
-- Path waypoints + time allotment (stance) — base Move verb, against the round's **N**
-- Aim + time allotment (mode) — base Shoot verb
+- Multi-waypoint path (tap to add each waypoint) + direct stance pick, no time allotment — base Move verb, against the round's **N**
+- Aim + direct mode pick, no time allotment — base Shoot verb
 - Optional door open/close booked on the timeline from a legal tile
 
 **Player does not:**
 - Play a Walk/Dash card
 - Play a Snap Shot/Hold Angle card
 - Aim with twitch controls
+- Manually allot seconds to a Move or Shoot before it's scheduled — cost is automatic (**C21**)
 - Draw Bandage/Flashbang/Adrenaline (post-demo)
 
 ### 4. Lock

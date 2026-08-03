@@ -61,11 +61,9 @@ namespace LogiCard.UI
         private Button _holdButton;
         private GameObject _moveStanceControls;
         private GameObject _shootModeControls;
-        private Text _stanceAllotLabel;
-        private Slider _stanceAllotSlider;
+        private Text _stanceLabel;
         private Text _shootModeLabel;
         private Text _queueText;
-        private bool _suppressStanceSliderCallback;
         private Text _outcomeLabel;
         private GameObject _programControls;
         private GameObject _allotPanel;
@@ -327,7 +325,9 @@ namespace LogiCard.UI
         }
 
         /// <summary>
-        /// Day 5–6: Move shows stance allotment; Shoot shows Snap / Hold Angle (C21 / C25).
+        /// Move shows a direct Sprint/Walk/Crawl pick; Shoot shows Snap / Hold Angle. Both are
+        /// direct choices with automatic cost — no time-allotment slider for either (C21, amended
+        /// 2026-08-03; C25).
         /// </summary>
         private void BuildStanceRow(RectTransform zone, ref float cursor)
         {
@@ -339,12 +339,8 @@ namespace LogiCard.UI
             Stretch(moveRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             float moveCursor = rowTop;
-            _stanceAllotLabel = CreateText(moveRt, "StanceAllotLabel", "STANCE  Walk", 28, TextAnchor.MiddleLeft, Ink);
-            PlaceRow(_stanceAllotLabel.rectTransform, ref moveCursor, 40f, 8f);
-
-            _stanceAllotSlider = CreateSlider(moveRt, "StanceAllotSlider");
-            PlaceRow(_stanceAllotSlider.GetComponent<RectTransform>(), ref moveCursor, 48f, 12f);
-            _stanceAllotSlider.onValueChanged.AddListener(OnStanceAllotSliderMoved);
+            _stanceLabel = CreateText(moveRt, "StanceLabel", "STANCE  Walk", 28, TextAnchor.MiddleLeft, Ink);
+            PlaceRow(_stanceLabel.rectTransform, ref moveCursor, 40f, 8f);
 
             _sprintButton = CreateButton(moveRt, "Stance_Sprint", "SPRINT", PanelMid, Ink, 28,
                 () => SetStanceBand(StanceType.Sprint));
@@ -370,7 +366,6 @@ namespace LogiCard.UI
             float shootCursor = rowTop;
             _shootModeLabel = CreateText(shootRt, "ShootModeLabel", "SHOOT  Snap · 2s — tap a tile on your row/col", 28, TextAnchor.MiddleLeft, Ink);
             PlaceRow(_shootModeLabel.rectTransform, ref shootCursor, 40f, 8f);
-            shootCursor -= 48f + 12f;
 
             _snapButton = CreateButton(shootRt, "Shoot_Snap", "SNAP  2s", PanelMid, Ink, 32,
                 () => SetShootMode(ShootMode.SnapShot));
@@ -380,7 +375,9 @@ namespace LogiCard.UI
                 () => SetShootMode(ShootMode.HoldAngle));
             PlaceSplitCell(_holdButton.GetComponent<RectTransform>(), shootCursor, StanceRowHeight, 1, 2);
 
-            cursor = rowTop - 40f - 8f - 48f - 12f - StanceRowHeight - RowGap;
+            // Move and Shoot controls occupy the same zone rect (toggled via SetActive), both now
+            // the same height with no slider on either side, so a single formula covers both.
+            cursor = rowTop - 40f - 8f - StanceRowHeight - RowGap;
             RefreshVerbContextControls(_input != null ? _input.Program : null);
         }
 
@@ -505,29 +502,6 @@ namespace LogiCard.UI
             RefreshVerbContextControls(_input.Program);
         }
 
-        private void OnStanceAllotSliderMoved(float normalized)
-        {
-            if (_suppressStanceSliderCallback || _input == null || _input.Program == null)
-            {
-                return;
-            }
-
-            PawnProgram program = _input.Program;
-            if (!program.HasDraft)
-            {
-                StanceType stance = StanceAllotment.FromAllottedSeconds(
-                    1f, program.BaseSecondsPerTile, StanceAllotment.LerpAllotment(1f, program.BaseSecondsPerTile, normalized));
-                _input.TrySetDraftStance(stance);
-                RefreshVerbContextControls(program);
-                return;
-            }
-
-            float seconds = StanceAllotment.LerpAllotment(
-                program.DraftTileCount, program.BaseSecondsPerTile, normalized);
-            _input.TryAllotDraftSeconds(seconds);
-            RefreshVerbContextControls(_input.Program);
-        }
-
         private void RefreshModeButtons()
         {
             if (_moveModeButton == null || _input == null)
@@ -584,7 +558,7 @@ namespace LogiCard.UI
 
         private void RefreshStanceControls(PawnProgram program)
         {
-            if (_stanceAllotLabel == null || program == null)
+            if (_stanceLabel == null || program == null)
             {
                 return;
             }
@@ -593,21 +567,9 @@ namespace LogiCard.UI
             float tiles = program.HasDraft ? program.DraftTileCount : 1f;
             float cost = StanceAllotment.CostForTiles(tiles, program.BaseSecondsPerTile, stance);
 
-            _stanceAllotLabel.text = program.HasDraft
+            _stanceLabel.text = program.HasDraft
                 ? $"PATH {program.DraftTileCount} tile(s) · {StanceMath.Label(stance)} · {cost:0.0}s — SET PATH to book"
-                : $"STANCE  {StanceMath.Label(stance)} · {cost:0.0}s / tile — tap path, then allot";
-
-            _suppressStanceSliderCallback = true;
-            if (_stanceAllotSlider != null)
-            {
-                float allotted = program.HasDraft
-                    ? program.DraftAllottedSeconds
-                    : StanceAllotment.CostForTiles(1f, program.BaseSecondsPerTile, stance);
-                _stanceAllotSlider.SetValueWithoutNotify(
-                    StanceAllotment.Normalize(tiles, program.BaseSecondsPerTile, allotted));
-            }
-
-            _suppressStanceSliderCallback = false;
+                : $"STANCE  {StanceMath.Label(stance)} · {cost:0.0}s / tile — tap the board to build a path";
 
             if (_sprintButton != null)
             {

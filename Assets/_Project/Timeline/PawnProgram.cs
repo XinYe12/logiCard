@@ -5,9 +5,11 @@ using LogiCard.Sim;
 namespace LogiCard.Timeline
 {
     /// <summary>
-    /// Running Program-phase state for one pawn: draft a waypoint path, allot Time Resource →
-    /// stance (C21), then commit Move/Shoot against the round budget into a
-    /// <see cref="TimelinePayload"/> (TDD D6 §2/§3). Pure C# so it is unit-testable without a scene.
+    /// Running Program-phase state for one pawn: draft a multi-waypoint path (each tap appends a
+    /// waypoint, connected via the shortest leg between it and the previous one) and a directly
+    /// picked stance, then commit Move/Shoot/Door against the round budget into a
+    /// <see cref="TimelinePayload"/> (TDD D6 §2/§3). Cost is automatic — there is no time-allotment
+    /// step (C21, amended 2026-08-03). Pure C# so it is unit-testable without a scene.
     /// </summary>
     public sealed class PawnProgram
     {
@@ -23,7 +25,7 @@ namespace LogiCard.Timeline
         /// <summary>Stance of the last committed action (or the starting stance before any).</summary>
         public StanceType CurrentStance { get; private set; }
 
-        /// <summary>Stance forced by the current draft's time allotment.</summary>
+        /// <summary>Stance directly picked for the current draft (C21).</summary>
         public StanceType DraftStance { get; private set; }
 
         /// <summary>Snap or Hold used for the next queued Shoot (C25).</summary>
@@ -34,6 +36,9 @@ namespace LogiCard.Timeline
         public float BudgetSeconds { get; }
 
         public float BaseSecondsPerTile { get; }
+
+        /// <summary>Base Time Resource cost to Open or Close the map door (GDD §4/§6, Strength).</summary>
+        public float DoorInteractSeconds { get; }
 
         public IReadOnlyList<ActionNode> Nodes => _nodes;
 
@@ -51,7 +56,8 @@ namespace LogiCard.Timeline
             float baseSecondsPerTile,
             float budgetSeconds,
             StanceType startingStance = StanceType.Walk,
-            GridBoard board = null)
+            GridBoard board = null,
+            float doorInteractBaseSeconds = 4f)
         {
             CurrentPosition = start;
             BaseSecondsPerTile = baseSecondsPerTile;
@@ -59,12 +65,15 @@ namespace LogiCard.Timeline
             CurrentStance = startingStance;
             DraftStance = startingStance;
             CurrentShootMode = ShootMode.SnapShot;
+            DoorInteractSeconds = doorInteractBaseSeconds;
             _board = board ?? new GridBoard(5, 5, new[] { Floor.Ground });
         }
 
         /// <summary>
         /// Replaces the draft with the shortest orthogonal route to <paramref name="destination"/>.
-        /// Does not spend budget until <see cref="TryCommitDraft"/>.
+        /// Used by <see cref="TryQueueMove"/> for scripted/single-shot moves. Interactive per-tap
+        /// authoring goes through <see cref="TryAddWaypoint"/> instead, which appends rather than
+        /// replaces. Does not spend budget until <see cref="TryCommitDraft"/>.
         /// </summary>
         public bool TryDraftPath(GridCoordinate destination, out string rejectionReason)
         {
@@ -82,57 +91,48 @@ namespace LogiCard.Timeline
 
             _draftWaypoints.Clear();
             _draftWaypoints.AddRange(_pathBuffer);
-            ApplyDraftAllotment(StanceAllotment.CostForTiles(_draftWaypoints.Count, BaseSecondsPerTile, DraftStance));
+            RecomputeDraftCost();
             rejectionReason = null;
             return true;
         }
 
         /// <summary>
-        /// Extends the draft by one orthogonal step when <paramref name="tile"/> is a neighbour of
-        /// the draft tip (or of <see cref="CurrentPosition"/> when the draft is empty).
-        /// Non-adjacent taps fall back to <see cref="TryDraftPath"/>.
+        /// Adds one waypoint to the draft (C21, amended 2026-08-03): the shortest legal orthogonal
+        /// route from the draft's current tip (or <see cref="CurrentPosition"/> if the draft is
+        /// empty) to <paramref name="tile"/> is appended. The player controls the route's shape by
+        /// choosing where waypoints land — the system fills in each leg, it never replaces the whole
+        /// draft with its own single shortest path to one destination. Re-tapping the immediately
+        /// previous waypoint undoes it.
         /// </summary>
-        public bool TryExtendOrReplaceDraft(GridCoordinate tile, out string rejectionReason)
+        public bool TryAddWaypoint(GridCoordinate tile, out string rejectionReason)
         {
             GridCoordinate tip = HasDraft ? _draftWaypoints[_draftWaypoints.Count - 1] : CurrentPosition;
-            if (tile.Floor == tip.Floor && tip.ManhattanDistanceTo(tile) == 1)
+
+            // Backtrack one waypoint if the player re-taps the previous stop.
+            if (HasDraft && tile == (DraftTileCount == 1 ? CurrentPosition : _draftWaypoints[DraftTileCount - 2]))
             {
-                if (!_board.InBounds(tile) || !_board.GetTile(tile).IsPassable)
-                {
-                    rejectionReason = "Tile is not passable.";
-                    return false;
-                }
-
-                // Backtrack one step if the player re-taps the previous tile.
-                if (HasDraft && tile == (DraftTileCount == 1 ? CurrentPosition : _draftWaypoints[DraftTileCount - 2]))
-                {
-                    _draftWaypoints.RemoveAt(_draftWaypoints.Count - 1);
-                    if (HasDraft)
-                    {
-                        ApplyDraftAllotment(StanceAllotment.CostForTiles(DraftTileCount, BaseSecondsPerTile, DraftStance));
-                    }
-                    else
-                    {
-                        DraftAllottedSeconds = 0f;
-                    }
-
-                    rejectionReason = null;
-                    return true;
-                }
-
-                if (tile == CurrentPosition || _draftWaypoints.Contains(tile))
-                {
-                    rejectionReason = "Path already visits that tile.";
-                    return false;
-                }
-
-                _draftWaypoints.Add(tile);
-                ApplyDraftAllotment(StanceAllotment.CostForTiles(DraftTileCount, BaseSecondsPerTile, DraftStance));
+                _draftWaypoints.RemoveAt(_draftWaypoints.Count - 1);
+                RecomputeDraftCost();
                 rejectionReason = null;
                 return true;
             }
 
-            return TryDraftPath(tile, out rejectionReason);
+            if (tile == tip || _draftWaypoints.Contains(tile))
+            {
+                rejectionReason = "Path already visits that tile.";
+                return false;
+            }
+
+            if (!OrthogonalPathfinder.TryFindPath(_board, tip, tile, _pathBuffer))
+            {
+                rejectionReason = "No orthogonal path to that tile.";
+                return false;
+            }
+
+            _draftWaypoints.AddRange(_pathBuffer);
+            RecomputeDraftCost();
+            rejectionReason = null;
+            return true;
         }
 
         public void ClearDraft()
@@ -141,23 +141,7 @@ namespace LogiCard.Timeline
             DraftAllottedSeconds = 0f;
         }
 
-        /// <summary>
-        /// Sets the draft's Time Resource allotment and forces Sprint / Walk / Crawl from the bands.
-        /// </summary>
-        public bool TryAllotDraftSeconds(float allottedSeconds, out string rejectionReason)
-        {
-            if (!HasDraft)
-            {
-                rejectionReason = "No draft path to allot.";
-                return false;
-            }
-
-            ApplyDraftAllotment(allottedSeconds);
-            rejectionReason = null;
-            return true;
-        }
-
-        /// <summary>Snaps the draft allotment to an exact stance band cost.</summary>
+        /// <summary>Sets the draft's stance directly — no time-allotment step (C21).</summary>
         public bool TrySetDraftStance(StanceType stance, out string rejectionReason)
         {
             if (!HasDraft)
@@ -167,19 +151,23 @@ namespace LogiCard.Timeline
             }
 
             DraftStance = stance;
-            DraftAllottedSeconds = StanceAllotment.CostForTiles(DraftTileCount, BaseSecondsPerTile, stance);
+            RecomputeDraftCost();
             rejectionReason = null;
             return true;
         }
 
-        /// <summary>Preferred stance used when a fresh draft is created (defaults allotment to this band).</summary>
+        /// <summary>Preferred stance used when a fresh draft is created.</summary>
         public void SetPreferredStance(StanceType stance)
         {
             DraftStance = stance;
-            if (HasDraft)
-            {
-                DraftAllottedSeconds = StanceAllotment.CostForTiles(DraftTileCount, BaseSecondsPerTile, stance);
-            }
+            RecomputeDraftCost();
+        }
+
+        private void RecomputeDraftCost()
+        {
+            DraftAllottedSeconds = HasDraft
+                ? StanceAllotment.CostForTiles(DraftTileCount, BaseSecondsPerTile, DraftStance)
+                : 0f;
         }
 
         public void SetShootMode(ShootMode mode)
@@ -299,6 +287,57 @@ namespace LogiCard.Timeline
             return true;
         }
 
+        /// <summary>
+        /// Books an Open or Close on <paramref name="doorTile"/> — a base map action (GDD §4), not
+        /// a gear card, legal from the pawn's current tile or an orthogonal neighbour of it.
+        /// </summary>
+        public bool TryQueueDoor(GridCoordinate doorTile, DoorAction action, out string rejectionReason)
+        {
+            if (HasDraft && !TryCommitDraft(out rejectionReason))
+            {
+                return false;
+            }
+
+            if (!_board.TryGetDoor(doorTile, out _))
+            {
+                rejectionReason = "Tile is not a registered door.";
+                return false;
+            }
+
+            if (!IsCurrentOrAdjacent(doorTile))
+            {
+                rejectionReason = "Door must be on the pawn's current or adjacent tile.";
+                return false;
+            }
+
+            if (!TryReserve(DoorInteractSeconds, out rejectionReason))
+            {
+                return false;
+            }
+
+            _nodes.Add(new ActionNode(ActionVerb.Door, UsedSeconds, doorTile, CurrentStance, doorAction: action));
+            rejectionReason = null;
+            return true;
+        }
+
+        private bool IsCurrentOrAdjacent(GridCoordinate tile)
+        {
+            if (tile == CurrentPosition)
+            {
+                return true;
+            }
+
+            foreach (GridCoordinate neighbour in CurrentPosition.GetOrthogonalNeighbours())
+            {
+                if (neighbour == tile)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public TimelinePayload Build()
         {
             return new TimelinePayload(_nodes);
@@ -338,12 +377,6 @@ namespace LogiCard.Timeline
             }
 
             return ScheduledPath.FromTimedWaypoints(waypoints, arrivals);
-        }
-
-        private void ApplyDraftAllotment(float allottedSeconds)
-        {
-            DraftStance = StanceAllotment.FromAllottedSeconds(DraftTileCount, BaseSecondsPerTile, allottedSeconds);
-            DraftAllottedSeconds = StanceAllotment.CostForTiles(DraftTileCount, BaseSecondsPerTile, DraftStance);
         }
 
         private bool CanReserve(float cost, out string rejectionReason)

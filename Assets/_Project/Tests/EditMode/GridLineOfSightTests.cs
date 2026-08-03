@@ -96,7 +96,7 @@ namespace LogiCard.Tests.EditMode
                 tiles.Add(step);
             }
 
-            Assert.That(tiles, Does.Not.Contain(new GridCoordinate(0, 0)));
+            CollectionAssert.DoesNotContain(tiles, new GridCoordinate(0, 0));
             Assert.That(tiles, Is.EqualTo(new[]
             {
                 new GridCoordinate(0, 1),

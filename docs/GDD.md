@@ -1,7 +1,7 @@
 # D4: Game Design Document (v0.2) — Polished Core Demo
 
 **Doc ID:** D4  
-**Status:** Revised 2026-07-30 — **C34 Polished Core Demo** (art + tight gameplay); Time Card match loop (**C33**)  
+**Status:** Revised 2026-08-03 — **C21 amended** (multi-waypoint path + automatic Time Resource cost, no allotment slider); Revised 2026-07-30 — **C34 Polished Core Demo** (art + tight gameplay); Time Card match loop (**C33**)  
 **Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [CORE_LOOP.md](CORE_LOOP.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md)
 
 **Scope note:** the tile/grid rules below (5×5 board, orthogonal Bresenham LoS, Healthy→Wounded→Dead) describe the **14-day demo only**. The long-term map/win/revive model differs — continuous movement, destructible geometry, an asymmetric objective win, and a Downed+revive+Detonator system — see `PRODUCT_MEMORY.md` **C35–C38**.
@@ -52,21 +52,22 @@ Before the match, each player selects a **Character Card (Loadout)**. Attributes
 
 There is **no Walk card**. Movement is built-in programming:
 
-### 3.1 Draw the Path
-- Select your character → draw a **waypoint path** through legal tiles to a destination (orthogonal grid; no diagonal).
+### 3.1 Draw the Path (amended 2026-08-03, C21)
+- Select your character → tap a tile to add a **waypoint**; tap again elsewhere to add another. The path is the ordered sequence of tapped waypoints, not a single system-computed shortest route to one destination.
+- Consecutive waypoints connect leg-by-leg via the shortest legal orthogonal route between them, so the player isn't forced to tap every intermediate tile — but the player chooses the **shape** of the route (which corners to go around, which order to visit tiles) by choosing where the waypoints land, rather than the system always picking its own single path.
 - Path cannot enter a **closed door** or illegal tiles; if blocked at resolve → movement fails at the block (demo: stop before the door — full Otherwise card library is post-demo).
 
-### 3.2 Allot the Time
-- Game computes path length (tiles).
-- Using **Speed**, UI offers a **time-allotment slider** for that path segment. Allotted time vs distance forces a **Stance**:
+### 3.2 Pick a Stance → Automatic Cost (amended 2026-08-03, C21 — supersedes the original time-allotment-slider model)
+- Player picks **Sprint / Tactical Walk / Stealth Crawl directly** for the path. There is no manual time-allotment slider or step where the player pre-commits seconds — the player never chooses "how much time to allot"; they choose a stance, and cost follows.
 
-| Stance | Relative allotment | Effects (demo) |
-|--------|--------------------|----------------|
-| **Sprint** | Fastest (minimal time for distance) | Loud; **cannot fire** while sprinting; **evasive** vs Snap Shot |
-| **Tactical Walk** | Medium | Gun up / ready; can Shoot; **not** evasive |
-| **Stealth Crawl** | Slowest (max time sink) | Silent; not evasive vs Hold Angle |
+| Stance | Effects (demo) |
+|--------|----------------|
+| **Sprint** | Fastest; loud; **cannot fire** while sprinting; **evasive** vs Snap Shot |
+| **Tactical Walk** | Medium; gun up / ready; can Shoot; **not** evasive |
+| **Stealth Crawl** | Slowest; silent; not evasive vs Hold Angle |
 
-Exact slider breakpoints derive from Time Resource: `seconds = tiles * BaseSecondsPerTile * StanceMult` (align with paper D5). Must be readable on the **timeline scrubber**. Playback Duration is independent (**C27**).
+- Cost is computed automatically — `seconds = tiles * BaseSecondsPerTile * StanceMult` per leg (align with paper D5), summed across every leg of the waypoint path — and **deducted from the round's Time Resource the instant the Move is scheduled**. The HUD/scrubber shows the running used/budget total as it depletes; it never shows a pre-commit allotment value to confirm. Must stay readable on the **timeline scrubber**. Playback Duration is independent (**C27**).
+- Shoot (§3A.2) already worked this way — pick Snap or Hold, cost follows automatically — so this brings Move in line with Shoot rather than introducing a second new pattern.
 
 ### 3.3 Collision
 - Cannot share a tile. Forced enter occupied / closed door → movement blocked at that edge.

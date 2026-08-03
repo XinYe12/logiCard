@@ -103,7 +103,9 @@ namespace LogiCard.Tests.PlayMode
 
         protected static T FindByName<T>(string name) where T : Component
         {
-            foreach (T candidate in Object.FindObjectsByType<T>(FindObjectsSortMode.None))
+            // Include inactive so verb-context controls (e.g. ShootModeControls while Move is
+            // selected) are still findable by name — they exist, just hidden.
+            foreach (T candidate in Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
                 if (candidate.gameObject.name == name)
                 {

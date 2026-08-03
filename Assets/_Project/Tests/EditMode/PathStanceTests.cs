@@ -57,23 +57,6 @@ namespace LogiCard.Tests.EditMode
     public sealed class StanceAllotmentTests
     {
         [Test]
-        public void FromAllottedSeconds_SnapsToNearestBand()
-        {
-            const float tiles = 2f;
-            const float baseSec = 1f;
-
-            Assert.That(
-                StanceAllotment.FromAllottedSeconds(tiles, baseSec, StanceAllotment.MinSeconds(tiles, baseSec)),
-                Is.EqualTo(StanceType.Sprint));
-            Assert.That(
-                StanceAllotment.FromAllottedSeconds(tiles, baseSec, StanceAllotment.CostForTiles(tiles, baseSec, StanceType.Walk)),
-                Is.EqualTo(StanceType.Walk));
-            Assert.That(
-                StanceAllotment.FromAllottedSeconds(tiles, baseSec, StanceAllotment.MaxSeconds(tiles, baseSec)),
-                Is.EqualTo(StanceType.Crawl));
-        }
-
-        [Test]
         public void CostForTiles_MatchesTimeResourceMathMultipliers()
         {
             Assert.That(StanceAllotment.CostForTiles(3f, 1f, StanceType.Sprint), Is.EqualTo(3f));

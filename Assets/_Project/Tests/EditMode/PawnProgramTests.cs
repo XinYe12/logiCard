@@ -57,26 +57,56 @@ namespace LogiCard.Tests.EditMode
         }
 
         [Test]
-        public void DraftAllotment_ForcesCrawlBand()
+        public void DraftThenSetStanceCrawl_UsesCrawlCost()
         {
             var program = new PawnProgram(new GridCoordinate(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
             program.TryDraftPath(new GridCoordinate(3, 0), out _);
 
-            float crawlCost = StanceAllotment.MaxSeconds(3f, 1f);
-            Assert.That(program.TryAllotDraftSeconds(crawlCost, out _), Is.True);
+            float crawlCost = StanceAllotment.CostForTiles(3f, 1f, StanceType.Crawl);
+            Assert.That(program.TrySetDraftStance(StanceType.Crawl, out _), Is.True);
             Assert.That(program.DraftStance, Is.EqualTo(StanceType.Crawl));
             Assert.That(program.DraftAllottedSeconds, Is.EqualTo(crawlCost));
         }
 
         [Test]
-        public void ExtendDraft_AddsAdjacentWaypoint()
+        public void AddWaypoint_AdjacentTile_AppendsOneStep()
         {
             var program = new PawnProgram(new GridCoordinate(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
 
-            Assert.That(program.TryExtendOrReplaceDraft(new GridCoordinate(1, 0), out _), Is.True);
-            Assert.That(program.TryExtendOrReplaceDraft(new GridCoordinate(1, 1), out _), Is.True);
+            Assert.That(program.TryAddWaypoint(new GridCoordinate(1, 0), out _), Is.True);
+            Assert.That(program.TryAddWaypoint(new GridCoordinate(1, 1), out _), Is.True);
             Assert.That(program.DraftTileCount, Is.EqualTo(2));
             Assert.That(program.DraftWaypoints[1], Is.EqualTo(new GridCoordinate(1, 1)));
+        }
+
+        /// <summary>
+        /// The actual C21 behavior change: a non-adjacent tap appends the shortest leg from the
+        /// draft's tip, rather than replacing the whole draft with one system-computed path.
+        /// </summary>
+        [Test]
+        public void AddWaypoint_NonAdjacentTile_AppendsShortestLegFromTip()
+        {
+            var program = new PawnProgram(new GridCoordinate(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+
+            Assert.That(program.TryAddWaypoint(new GridCoordinate(0, 2), out _), Is.True);
+            Assert.That(program.DraftTileCount, Is.EqualTo(2), "First waypoint: shortest leg from (0,0).");
+
+            Assert.That(program.TryAddWaypoint(new GridCoordinate(2, 2), out _), Is.True);
+            Assert.That(program.DraftTileCount, Is.EqualTo(4), "Second waypoint appends its own leg from (0,2), not a fresh path from (0,0).");
+            Assert.That(program.DraftWaypoints[2], Is.EqualTo(new GridCoordinate(1, 2)));
+            Assert.That(program.DraftWaypoints[3], Is.EqualTo(new GridCoordinate(2, 2)));
+        }
+
+        [Test]
+        public void AddWaypoint_RetapPreviousWaypoint_Backtracks()
+        {
+            var program = new PawnProgram(new GridCoordinate(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+            program.TryAddWaypoint(new GridCoordinate(1, 0), out _);
+            program.TryAddWaypoint(new GridCoordinate(2, 0), out _);
+
+            Assert.That(program.TryAddWaypoint(new GridCoordinate(1, 0), out _), Is.True);
+            Assert.That(program.DraftTileCount, Is.EqualTo(1));
+            Assert.That(program.DraftWaypoints[0], Is.EqualTo(new GridCoordinate(1, 0)));
         }
 
         [Test]
