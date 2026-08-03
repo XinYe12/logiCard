@@ -1,7 +1,7 @@
 # D8: Schedule + Milestone DoD — 14-Day Implementation
 
 **Doc ID:** D8  
-**Status:** Revised 2026-07-30 — **C34 Polished Core Demo** (art-protected remaining days)  
+**Status:** Revised 2026-08-03 — **continuous-space pivot inserted** (C35/C39, see [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)) — art pass now **compressed**, not full-scope, to keep Day 14; Revised 2026-07-30 — **C34 Polished Core Demo** (art-protected remaining days)  
 **Depends on:** [VERTICAL_SLICE.md](VERTICAL_SLICE.md), [TDD.md](TDD.md), [GDD.md](GDD.md), [SCOPE.md](SCOPE.md), [ART_DIRECTION.md](ART_DIRECTION.md)  
 **Assumes:** Pre-implementation gate passed; ~6 focused hours/day (~84h).
 
@@ -29,13 +29,14 @@ Nice-to-have (not ship blockers): Android smoke build, bots (**C19**), optional 
 |-----------|------|--------|----------------|
 | **M0** | 1 | Project + folders | Unity project, platforms listed, folders, stubs |
 | **M1 / Slice 1** | 2–4 | Pipeline proof | Time Card + Move + Shoot → Playback; second round; LoS Wound stub |
-| **M2 / Core Combat** | 5–7 | Path, RPS, door | Stance bands; Snap vs Hold; one door; local match end-to-end |
-| **M3 / Diorama Art** | 8–11 | Presentation | URP/lighting, board/UI identity, clay motion/VFX, tactile audio |
+| **M2 / Core Combat** | 5–7 | Path, RPS, door | Stance bands; Snap vs Hold; one door; local match end-to-end (grid-based — later retargeted by M2.5) |
+| **M2.5 / Continuous Pivot** | 7b–7g | Grid → continuous | See Phase 1–6 in [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md) — geometry primitives, resolver/authoring retarget, Unity view retarget, whole-project-green |
+| **M3 / Diorama Art** | 8–11 (**compressed**) | Presentation | URP/lighting, board/UI identity, clay motion/VFX, tactile audio — scope trimmed per the cut order below to absorb M2.5's cost without moving Day 14 |
 | **M4 / Ship** | 12–14 | Build + portfolio | Windows candidate, playtest, capture, README |
 
-If behind: **freeze at last green milestone**; do not start the next. Cut order: Android smoke → door reopen nuance → Crawl AV nuance → optional DoF/SSS → **never** cut Time Card loop, Move/Shoot readability, warm diorama composition, yarn path, physical shot feedback, or Windows build stability (**C34**).
+If behind: **freeze at last green milestone**; do not start the next. Cut order: Android smoke → door reopen nuance → Crawl AV nuance → optional DoF/SSS → **never** cut Time Card loop, Move/Shoot readability, warm diorama composition, yarn path, physical shot feedback, or Windows build stability (**C34**). **As of the continuous pivot (2026-08-03), this cut order is expected to be used more aggressively than originally planned** — M2.5 (~5.5–7.5 engineer-days) eats most of the runway that was going to Week 2's art pass; that tradeoff was made explicitly (see `CONTINUOUS_PIVOT_PLAN.md` §F), not discovered late.
 
-**Day 3b is absorbed, not a 15th calendar day.** M1/Slice 1 still spans **Days 2–4** — 3b is scoped as same-day-or-buffer insert work within that window (C33 filled a gap C4 already implied but D8 never scheduled), not an extra day tacked onto the plan. Total implementation remains **14 calendar days**; the Day 14 ship date is unchanged.
+**Day 3b is absorbed, not a 15th calendar day.** M1/Slice 1 still spans **Days 2–4** — 3b is scoped as same-day-or-buffer insert work within that window (C33 filled a gap C4 already implied but D8 never scheduled), not an extra day tacked onto the plan. **M2.5 (7b–7g) works the same way** — inserted days, not a 15th-day extension; Day 14 ship date is unchanged, absorbed by compressing M3 instead.
 
 ---
 
@@ -53,8 +54,13 @@ If behind: **freeze at last green milestone**; do not start the next. Cut order:
 | **5** | Path drawing (waypoints) + time allotment → stance band | Sprint/Walk/Crawl change Move timing on Clock |
 | **6** | Hold Angle vs Snap Shot; mutual same-second rule | RPS readable in one playtest |
 | **7** | **One-door** micro-map (contextual open/close; blocks move + LoS); local match E2E | **M2:** Core Combat local playable |
+| **7b** | Continuous pivot Phase 1: geometry primitives (`PlanarPosition`, `Segment`, `ArenaBoard`, `ContinuousLineOfSight`, `ContinuousPathfinder`) — handed to a second agent in a parallel worktree | New EditMode suites green in isolation; no other file touched |
+| **7c** | Continuous pivot Phase 2: Sim/Net consumer retarget (`ScheduledPath`, `GhostResolver`, `Door`, `ActionNode`, `TapeEvent`) | `Sim`/`Net` compile + pass; `Timeline`/`Board`/`Boot` not yet green |
+| **7d** | Continuous pivot Phase 3: `PawnProgram` retarget; revisit-tile guard removed; draft cost → Euclidean sum | `Timeline` compiles + passes |
+| **7e–7f** | Continuous pivot Phase 4: Unity view/composition-root retarget (`BoardView`, `BoardInputController`, `GameBootstrap`, `RoundPlayback`); old grid files deleted | **First whole-project-green checkpoint since before 7c** |
+| **7g** | Continuous pivot Phase 5–6: HUD wording + PlayMode test rewrite (parallelizable), tuning pass on `HitRadius`/`LaneHalfWidth`/`InteractRadius` | **M2.5:** continuous-space pivot complete, cold-observer playtest of the "door changes a fight once" bar |
 
-### Week 2 — Diorama art pass + ship
+### Week 2 — Diorama art pass (compressed — see M2.5 cost above) + ship
 
 | Day | Focus | DoD |
 |-----|--------|-----|
@@ -71,7 +77,7 @@ If behind: **freeze at last green milestone**; do not start the next. Cut order:
 ## Cadence
 
 - **Daily:** ≥1 commit; tick checkboxes in this file when a Day DoD is met.  
-- **Playtests:** end of Day 4 (Slice 1), Day 7 (Core Combat), Day 13 (presentation). Three written findings each.  
+- **Playtests:** end of Day 4 (Slice 1), Day 7 (Core Combat, grid), Day 7g (**M2.5** continuous pivot — same "door changes a fight once" bar, continuous version), Day 13 (presentation). Three written findings each.  
 - **Scope knife owner:** you — when late, follow **C34** cut order above.
 
 ---
@@ -86,7 +92,12 @@ If behind: **freeze at last green milestone**; do not start the next. Cut order:
 - [ ] Day 5 — path + stance  
 - [ ] Day 6 — Snap vs Hold Angle  
 - [ ] Day 7 — **M2** one door + local E2E  
-- [ ] Day 8 — URP + diorama lighting foundation  
+- [ ] Day 7b — continuous pivot Phase 1 (geometry primitives)  
+- [ ] Day 7c — continuous pivot Phase 2 (Sim/Net retarget)  
+- [ ] Day 7d — continuous pivot Phase 3 (PawnProgram retarget)  
+- [ ] Day 7e–7f — continuous pivot Phase 4 (Unity views, whole-project-green)  
+- [ ] Day 7g — **M2.5** continuous pivot Phase 5–6 (HUD/tests, tuning)  
+- [ ] Day 8 — URP + diorama lighting foundation (compressed scope)  
 - [ ] Day 9 — board/UI identity (yarn, Time Card)  
 - [ ] Day 10 — clay motion + physical VFX  
 - [ ] Day 11 — audio + feedback  
@@ -105,5 +116,6 @@ If behind: **freeze at last green milestone**; do not start the next. Cut order:
 | URP migration pain | 8 | Start Day 8 early; primitives stay playable until materials land |
 | Scope creep (full old GDD) | any | **C34** freeze: no Fusion/gear cards/attic in 14-day ship |
 | Android SDK pain | 12 | Smoke only if Windows candidate is already green |
+| Continuous pivot overrun | 7b–7g | Phase 1 and Phase 5 run in parallel worktrees to compress the critical path; if still behind, art pass (8–11) absorbs the overflow per the cut order — Day 14 ship date does not move |
 
 Detail register: [RISKS.md](RISKS.md).

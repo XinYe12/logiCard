@@ -1,10 +1,10 @@
 # D4: Game Design Document (v0.2) — Polished Core Demo
 
 **Doc ID:** D4  
-**Status:** Revised 2026-08-03 — **C21 amended** (multi-waypoint path + automatic Time Resource cost, no allotment slider); Revised 2026-07-30 — **C34 Polished Core Demo** (art + tight gameplay); Time Card match loop (**C33**)  
-**Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [CORE_LOOP.md](CORE_LOOP.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md)
+**Status:** Revised 2026-08-03 — **continuous-space pivot** (C35 promoted to demo scope + C39 technical decisions — see [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)); C21 amended (multi-waypoint path + automatic Time Resource cost, no allotment slider); Revised 2026-07-30 — **C34 Polished Core Demo** (art + tight gameplay); Time Card match loop (**C33**)  
+**Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [CORE_LOOP.md](CORE_LOOP.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md), [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)
 
-**Scope note:** the tile/grid rules below (5×5 board, orthogonal Bresenham LoS, Healthy→Wounded→Dead) describe the **14-day demo only**. The long-term map/win/revive model differs — continuous movement, destructible geometry, an asymmetric objective win, and a Downed+revive+Detonator system — see `PRODUCT_MEMORY.md` **C35–C38**.
+**Scope note:** the board is **continuous position**, not a discrete grid (**C35/C39**, amended 2026-08-03 — this reverses an earlier "long-term only" framing after a cold-observer playtest). Distances/costs below still use the same numeric footprint and formulas the grid version used (`[0,4]×[0,4]`, `seconds = distance × BaseSecondsPerTile × StanceMult`) — only the underlying coordinate/LoS/pathfinding math changed, from tile-based to continuous. Full phased implementation: [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md). Destructible geometry, an asymmetric objective win, and a Downed+revive+Detonator system remain **long-term-only**, not part of this pivot — see `PRODUCT_MEMORY.md` **C36–C38**.
 
 This document defines rules, numeric tuning, and content for the **14-day portfolio prototype**. Focus: a **readable timeline duel** that looks like a handmade desk-lamp miniature — not a feature checklist.
 
@@ -12,7 +12,7 @@ This document defines rules, numeric tuning, and content for the **14-day portfo
 1. **Character Card** sets base attributes (Speed / Agility / Strength).  
 2. **Time Card** commits **N** seconds from a shared match Time Resource pool (**C33**).  
 3. **Movement** = draw path + allot time → stance (Sprint / Tactical Walk / Stealth Crawl). Base verb, not a card.  
-4. **Shoot** = aim (target tile / LoS) + allot time → mode (Snap Shot / Hold Angle). Base verb, not a card.  
+4. **Shoot** = aim (free-aim point + LoS — **C35/C39**) + allot time → mode (Snap Shot / Hold Angle). Base verb, not a card.  
 5. **One door** = contextual map action (open/close) that blocks move + LoS — **not** a full Interact card system for this ship.
 
 Gear cards (Bandage / Flashbang / Adrenaline / Interact-as-card), Otherwise Stop, attic/vent/monitor, Fusion online, and full Android polish are **post-demo** (**C34**).
@@ -23,11 +23,11 @@ Gear cards (Bandage / Flashbang / Adrenaline / Interact-as-card), Otherwise Stop
 
 - **Player Count:** 1v1 (Attacker vs Defender) — spawn labels; same *rules*; Character Cards may differ (Section 2). Local play for the 14-day ship; online is post-demo (**C34**).
 - **Win Condition:** Opponent Physical State → **Dead**.
-- **Map:** One **5×5** ground grid for the demo ship. Attic / vent / monitor deferred (**C34**). Distances use **tiles**.
+- **Map:** One **continuous ground arena** for the demo ship (`[0,4]×[0,4]` footprint — same numeric size the old 5×5 grid used). Attic / vent / monitor deferred (**C34**). Distances are **continuous (Euclidean)**, not tile counts (**C35/C39**).
 - **Match Loop (C33 / C4):**
   1. **Select Character Card** (pre-match).
   2. **Allot (Time Card):** current chooser commits **N** from the shared match pool (round 1 = Attacker; then alternates). **N spent in full.**
-  3. **Program Phase (30 real-world seconds):** Both sides simultaneously draw path(s), allot stance time, schedule Shoot mode(s), optionally toggle the door from a legal tile; lock.
+  3. **Program Phase (30 real-world seconds):** Both sides simultaneously draw path(s), allot stance time, schedule Shoot mode(s), optionally toggle the door from within `InteractRadius`; lock.
   4. **Reveal Phase:** Paths + scheduled actions face-up.
   5. **Execution Phase:** Host (local authority for demo) resolves continuous **Time Resource**; clients/UI play **ReplayTape** using separate **Playback Duration** (**C27**).
   6. **Aftermath:** Carry positions + wounds; if pool can fund another MinRound and nobody is Dead → next Allot; else Match Over.
@@ -40,7 +40,7 @@ Before the match, each player selects a **Character Card (Loadout)**. Attributes
 
 | Attribute | Meaning | Demo examples |
 |-----------|---------|----------------|
-| **Speed** | How far they move per unit time allotted | Scout: **1.5 tiles / s base** · Juggernaut: **0.75 tiles / s base** *(demo-tuned; legacy docs said “tiles/tick” — digital uses continuous seconds)* |
+| **Speed** | How far they move per second (continuous distance, not tile count — **C35/C39**) | Scout: **1.5 units / s base** · Juggernaut: **0.75 units / s base** *(same numeric magnitude as the old "tiles/s"; demo-tuned)* |
 | **Agility (Handling)** | Transition cost between stances and between Shoot modes (Snap ↔ Hold Angle) | Scout: **0s** · Juggernaut: **+1s** once when leaving Sprint / when switching Snap ↔ Hold (**C25**; placeholder magnitude) |
 | **Strength** | Physical interaction time | Door open/close: Scout **slower** · Juggernaut **faster** (Section 6) |
 
@@ -52,10 +52,11 @@ Before the match, each player selects a **Character Card (Loadout)**. Attributes
 
 There is **no Walk card**. Movement is built-in programming:
 
-### 3.1 Draw the Path (amended 2026-08-03, C21)
-- Select your character → tap a tile to add a **waypoint**; tap again elsewhere to add another. The path is the ordered sequence of tapped waypoints, not a single system-computed shortest route to one destination.
-- Consecutive waypoints connect leg-by-leg via the shortest legal orthogonal route between them, so the player isn't forced to tap every intermediate tile — but the player chooses the **shape** of the route (which corners to go around, which order to visit tiles) by choosing where the waypoints land, rather than the system always picking its own single path.
-- Path cannot enter a **closed door** or illegal tiles; if blocked at resolve → movement fails at the block (demo: stop before the door — full Otherwise card library is post-demo).
+### 3.1 Draw the Path (amended 2026-08-03, C21 + C35/C39)
+- Select your character → tap anywhere on the continuous board to add a **waypoint**; tap again elsewhere to add another. The path is the ordered sequence of tapped waypoints, not a single system-computed shortest route to one destination.
+- Consecutive waypoints connect leg-by-leg via the shortest legal route between them (continuous, any direction — not orthogonal-only), so the player isn't forced to tap every intermediate point — but the player chooses the **shape** of the route (which way to go around an obstacle, which order to visit points) by choosing where the waypoints land, rather than the system always picking its own single path.
+- **Revisiting or crossing a previously-tapped point is legal** — no restriction against a route that loops back on itself.
+- Path cannot cross a **closed door**'s segment or leave the arena bounds; if blocked at resolve → movement fails at the block (demo: stop before the door — full Otherwise card library is post-demo).
 
 ### 3.2 Pick a Stance → Automatic Cost (amended 2026-08-03, C21 — supersedes the original time-allotment-slider model)
 - Player picks **Sprint / Tactical Walk / Stealth Crawl directly** for the path. There is no manual time-allotment slider or step where the player pre-commits seconds — the player never chooses "how much time to allot"; they choose a stance, and cost follows.
@@ -66,11 +67,12 @@ There is **no Walk card**. Movement is built-in programming:
 | **Tactical Walk** | Medium; gun up / ready; can Shoot; **not** evasive |
 | **Stealth Crawl** | Slowest; silent; not evasive vs Hold Angle |
 
-- Cost is computed automatically — `seconds = tiles * BaseSecondsPerTile * StanceMult` per leg (align with paper D5), summed across every leg of the waypoint path — and **deducted from the round's Time Resource the instant the Move is scheduled**. The HUD/scrubber shows the running used/budget total as it depletes; it never shows a pre-commit allotment value to confirm. Must stay readable on the **timeline scrubber**. Playback Duration is independent (**C27**).
+- Cost is computed automatically — `seconds = distance * BaseSecondsPerTile * StanceMult` per leg (distance now Euclidean, not a tile count — **C35/C39**; align with paper D5's rate), summed across every leg of the waypoint path — and **deducted from the round's Time Resource the instant the Move is scheduled**. The HUD/scrubber shows the running used/budget total as it depletes; it never shows a pre-commit allotment value to confirm. Must stay readable on the **timeline scrubber**. Playback Duration is independent (**C27**).
 - Shoot (§3A.2) already worked this way — pick Snap or Hold, cost follows automatically — so this brings Move in line with Shoot rather than introducing a second new pattern.
 
 ### 3.3 Collision
-- Cannot share a tile. Forced enter occupied / closed door → movement blocked at that edge.
+- Closed door segment blocks movement across it (§4).
+- **Pawn-vs-pawn collision on a continuous board is OPEN** — the old "cannot share a tile" rule doesn't translate directly (there's no tile to share). Not addressed by `CONTINUOUS_PIVOT_PLAN.md`'s Phase 1–6; needs a decision before Phase 6 tuning (e.g., a minimum-separation radius, or no pawn-vs-pawn blocking at all since wounds already come from Shoot, not contact).
 
 ---
 
@@ -78,16 +80,16 @@ There is **no Walk card**. Movement is built-in programming:
 
 There is **no Snap Shot / Hold Angle card**. Shooting is a base verb every Character has.
 
-### 3A.1 Aim
-- Declare a **shoot** action aimed at a **tile** (or LoS direction that resolves to a tile).
-- Requires clear LoS at resolve time (**C32** Bresenham, same floor, doors block).
+### 3A.1 Aim (amended 2026-08-03, C35/C39 — free-aim point)
+- Declare a **shoot** action aimed at any **point** on the board — not a tile, and not a row/column-locked direction. This is a deliberate design choice (Decision 1 in `CONTINUOUS_PIVOT_PLAN.md`): the player is still betting on a *place*, not locking onto a specific pawn, matching the blind-programming bluff the row/column rule used to give.
+- Requires clear LoS at resolve time (**C32**'s rules carry over; LoS math is now continuous segment-vs-obstacle intersection, not Bresenham — **C35/C39**), same floor, doors block.
 
 ### 3A.2 Allot the Time → Mode
 
 | Mode | Relative allotment | Effects (demo) |
 |------|--------------------|-----------------|
-| **Snap Shot** | Fast (minimal time) | Wounds on hit; **misses** targets in **Sprint** stance; hits only the **aimed tile** at completion (**C32**) |
-| **Hold Angle** | Slow (aim-lock window) | Lethal on hit; **hits** targets in **Sprint** stance; covers the aimed lane for its window (Day 6 detail) |
+| **Snap Shot** | Fast (minimal time) | Wounds on hit; **misses** targets in **Sprint** stance; hits any pawn within **`HitRadius`** of the aim point at completion (**C32**, radius replaces "aimed tile" per **C39**) |
+| **Hold Angle** | Slow (aim-lock window) | Lethal on hit; **hits** targets in **Sprint** stance; covers a **`LaneHalfWidth`**-wide lane along the origin→aim line for its window (**C39** — analytic sweep, not tile membership) |
 
 Base Time Resource costs (Section 6) are placeholders; Agility scaling (**C25**) must stay readable on the scrubber.
 
@@ -95,10 +97,10 @@ Base Time Resource costs (Section 6) are placeholders; Agility scaling (**C25**)
 
 ## 4. Door (Map Action — Not a Gear Card)
 
-For the 14-day ship, **one door** on the 5×5 board:
+For the 14-day ship, **one door** on the continuous arena (a wall **segment** with a gap, amended 2026-08-03 — was a grid tile, see **C35/C39**):
 
-- Scheduled as a **contextual map action** from the pawn’s current/adjacent tile during Program (tap door → open/close at a booked Time Resource second).
-- **Closed** blocks movement through that edge and **blocks LoS** across it.
+- Scheduled as a **contextual map action** when the pawn is within **`InteractRadius`** of the door's segment during Program (tap door → open/close at a booked Time Resource second) — replaces the old "current/adjacent tile" rule.
+- **Closed** blocks movement across the segment and **blocks LoS** across it.
 - **Open** allows move + LoS.
 - Strength modifies open/close Time Resource cost (Section 6).
 - This is **not** the full Interact card / vent / monitor kit (**C34**).
@@ -115,9 +117,9 @@ For the 14-day ship, **one door** on the 5×5 board:
 | **Dead** | Eliminated (Hold Angle lethality / second wound / mutual kill). |
 
 ### Shooting & LoS
-- Same floor only; orthogonal Bresenham LoS; blocked by closed doors (**C32**).
-- **Snap Shot:** completes → target on aimed tile **Wounded** if LoS; **misses Sprint**.
-- **Hold Angle:** lethal on LoS hit; **hits Sprint**; duration as scheduled.
+- Same floor only; continuous segment-vs-obstacle LoS (was orthogonal Bresenham — **C35/C39**); blocked by closed doors (**C32**).
+- **Snap Shot:** completes → any target within `HitRadius` of the aim point **Wounded** if LoS; **misses Sprint**.
+- **Hold Angle:** lethal on LoS hit within `LaneHalfWidth` of the aim line; **hits Sprint**; duration as scheduled.
 - **Mutual lethal** same second → **Draw**.
 
 ---
@@ -139,16 +141,16 @@ For the 14-day ship, **one door** on the 5×5 board:
 
 | Preset | Base move | Agility | Door open/close |
 |--------|-----------|---------|-----------------|
-| Scout | 1.0 s / tile Walk baseline *(tune)* | Stance / Shoot-mode change **0s** | Door **4s** |
-| Juggernaut | 2.0 s / tile Walk baseline *(tune)* | Stance leave-Sprint **+1s**; Snap↔Hold **+1s** | Door **2s** |
+| Scout | 1.0 s / unit Walk baseline *(tune)* | Stance / Shoot-mode change **0s** | Door **4s** |
+| Juggernaut | 2.0 s / unit Walk baseline *(tune)* | Stance leave-Sprint **+1s**; Snap↔Hold **+1s** | Door **2s** |
 
-Placeholder magnitudes — tune in playtest. Legacy “tiles/tick” tables map to continuous seconds.
+Placeholder magnitudes — tune in playtest. "unit" = continuous board distance at the same numeric scale the old "tile" did (**C35/C39**).
 
 ### Shoot modes (base verb)
 
 | Mode | Base cost / duration | Effect |
 |------|----------------------|--------|
-| **Snap Shot** | **2s** | Wound on LoS to aimed tile; misses Sprint |
+| **Snap Shot** | **2s** | Wound on LoS within `HitRadius` of the aim point; misses Sprint |
 | **Hold Angle** | **3s** aim lock | Lethal on LoS; hits Sprint |
 
 ### Deferred cards (post-demo — do not implement for C34 ship)
@@ -163,8 +165,8 @@ Placeholder magnitudes — tune in playtest. Legacy “tiles/tick” tables map 
 
 | Element | 14-day ship |
 |---------|-------------|
-| **One Door** | Contextual open/close; blocks move + LoS when closed |
-| **5×5 ground** | Yes |
+| **One Door** | Contextual open/close (radius-based interact — **C39**); blocks move + LoS when closed |
+| **Continuous ground arena** (`[0,4]×[0,4]` footprint) | Yes |
 | Attic / Vent / Monitor | **Post-demo** |
 | 高铁 / High-speed rail (**C31**) | Confirmed design; **post-demo** |
 

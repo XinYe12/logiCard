@@ -1,7 +1,7 @@
 # 2-Week Demo Scope
 
 **Doc ID:** D2  
-**Status:** Updated 2026-07-30 — **C34 Polished Core Demo** (art + tight gameplay)  
+**Status:** Updated 2026-08-03 — continuous-space pivot (**C35/C39**, see [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)); Updated 2026-07-30 — **C34 Polished Core Demo** (art + tight gameplay)  
 **Goal:** Ship a **portfolio-ready local Windows** vertical slice: Desk-Lamp Diorama presentation + readable Time Card / Move / Shoot duel.
 
 Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.md) · Art floor: [ART_DIRECTION.md](ART_DIRECTION.md)
@@ -11,8 +11,8 @@ Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.m
 ## IN (Must Have for Demo)
 
 ### The Diorama Micro-Map
-- **5×5 ground** board on a physical base in a dark void.
-- **One door** that blocks move + LoS when closed (contextual open/close).
+- **Continuous ground arena** (`[0,4]×[0,4]` footprint — was a 5×5 grid, see **C35/C39**) on a physical base in a dark void.
+- **One door** (wall segment, radius-based interact) that blocks move + LoS when closed (contextual open/close).
 
 ### Presentation (required — C34 / C29)
 - Warm desk-lamp lighting, clay-like materials, yarn/chalk paths.
@@ -37,8 +37,8 @@ Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.m
 ### Tiny / Tactical programming (IN)
 - **Character Card** pick (Scout / Juggernaut).
 - **Time Card** allotment from shared **900s** match pool.
-- **Path + time allotment** → stance (Sprint / Tactical Walk / Stealth Crawl).
-- **Aim + time allotment** → Shoot mode (Snap Shot / Hold Angle).
+- **Multi-waypoint path** (tap to add each waypoint, continuous — **C21/C35**) + direct stance pick (Sprint / Tactical Walk / Stealth Crawl), automatic cost.
+- **Free-aim point** (**C39**) + direct Shoot mode pick (Snap Shot / Hold Angle), automatic cost.
 - Health states: Healthy / Wounded / Dead (simplified wound stakes — Bandage deferred).
 
 ### Win Condition
@@ -70,7 +70,6 @@ Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.m
 - 3-Act heist structure; extraction/loot; asymmetrical classes; 4v4.
 - Richer Otherwise library.
 - **High-speed rail / 高铁 (**C31**).**
-- Continuous movement + navmesh, replacing the grid model (**C35**).
 - Destructible geometry via discrete breach states (**C36**).
 - Asymmetric objective win condition (vault/cashbox-style), restoring the Asymmetric Heist pillar (**C37**).
 - Downed state + tile-targeted revive + Detonator martyr archetype (**C38**).
@@ -83,3 +82,4 @@ Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.m
 2. Bots = nice to have (**C19**).  
 3. Personal timelines + shared continuous **Time Resource** clock; **Playback Duration** separate (**C27**).  
 4. **C34** supersedes older “primitives OK / full GDD Section 9” ship language for the 14-day artifact.
+5. **C35/C39 (2026-08-03):** the board is continuous, not a grid — reverses C35's original "long-term only" framing. Art/polish pass (Days 8–14) is now planned **compressed** to absorb the pivot's cost, per the schedule-handling call in `CONTINUOUS_PIVOT_PLAN.md`.

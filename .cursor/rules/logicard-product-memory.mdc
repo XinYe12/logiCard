@@ -33,13 +33,13 @@ Continuous Time Resource — no 12-tick clock. Host ghost sim; ReplayTape playba
 
 Side-of-map rail. Board + ride; Shoot while riding; car bulletproof; **1× per match**. Confirmed design, **deferred from 14-day ship (C34)**. Numerics still OPEN in PRODUCT_MEMORY.
 
-## Snap Shot targeting (C32)
+## Snap Shot targeting (C32, LoS math superseded 2026-08-03 by C35/C39)
 
-Snap resolves at its **completion** second and wounds only a pawn on the **aimed tile** with clear LoS — it does not sweep the line. Lanes are Hold Angle's job (Day 6). LoS = integer Bresenham on tiles, same floor, endpoints excluded; **never** a physics raycast.
+Snap resolves at its **completion** second and wounds only near the **aimed point** (free-aim, not a tile — C39) with clear LoS — it does not sweep the line. Lanes are Hold Angle's job. LoS was integer Bresenham on tiles; is now continuous segment-vs-obstacle intersection (C35/C39) — the "never a physics raycast" rule carries over unchanged, only the math changed from grid to continuous.
 
-## Move authoring (C21, amended 2026-08-03)
+## Move authoring (C21, amended 2026-08-03; coordinate type superseded same day by C35/C39)
 
-**Supersedes the original allot-seconds-to-derive-stance model.** Player taps waypoints (each tap adds one; consecutive waypoints auto-connect via shortest legal orthogonal route — player controls route shape, not a single system shortest-path). Player picks Sprint/Walk/Crawl **directly**, no time-allotment slider. Cost (`tiles × BaseSecondsPerTile × StanceMult`) is computed and deducted automatically the instant the Move is scheduled; HUD shows running used/budget, never a pre-commit value. Matches how Shoot already worked (pick Snap/Hold, cost follows).
+**Supersedes the original allot-seconds-to-derive-stance model.** Player taps waypoints (each tap adds one; consecutive waypoints auto-connect via the shortest legal route — now continuous/Euclidean, not grid-orthogonal, per C35/C39 — player controls route shape, not a single system shortest-path). **Revisiting/crossing a previously-tapped point is legal** — no duplicate-tile guard. Player picks Sprint/Walk/Crawl **directly**, no time-allotment slider. Cost (`distance × BaseSecondsPerTile × StanceMult`, distance now Euclidean not tile-count) is computed and deducted automatically the instant the Move is scheduled; HUD shows running used/budget, never a pre-commit value. Matches how Shoot already worked (pick Snap/Hold, cost follows).
 
 ## Match pool / Time Card (C33)
 
@@ -58,15 +58,20 @@ One **shared** match Time Resource pool (demo **900s**). Each round one side pla
 - Desk-Lamp Diorama art (**C29**) is a **ship requirement** under C34, not optional polish
 - Attack/Defend labels; Scout/Juggernaut attrs
 
-## Long-term map, objective, revive (C35–C38)
+## Continuous-space pivot (C35 promoted 2026-08-03 + C39)
 
-**None of these change the 14-day demo** (`C17`/`C34` stay grid-based, tile/Bresenham LoS, Dead-only win, Healthy→Wounded→Dead). Long-term only:
+**C35 is NO LONGER long-term-only** — after a cold-observer playtest of the grid demo, continuous movement is now current 14-day ship scope. `C17` amended to match (continuous arena, same `[0,4]×[0,4]` footprint, radius-based door, free-aim shoot). Full phased plan: `docs/CONTINUOUS_PIVOT_PLAN.md`.
 
-- **C35 (map):** Continuous movement replaces the grid. Host's quantized continuous sim is resolve authority; NavMesh/client tooling is authoring aid only, **never** resolve truth (mirrors C32's "never a physics raycast"). LoS = ray-vs-wall-edge visibility. Numerics OPEN.
+**C39 locks the technical decisions:** free-aim Shoot targeting (no row/column, no pawn-ID lock — `HitRadius`/`LaneHalfWidth`); schedule handling = compress the art/polish pass, keep Day 14 ship; pathfinding = visibility graph + Dijkstra (not navmesh); Door interaction = radius-based (`ArenaBoard.TryGetNearestDoor`); Hold Angle contact = analytic segment-vs-lane sweep (not instant-probing — the grid version's sampling only worked by tile-density coincidence); `Floor` field kept, no per-floor obstacle infra (attic still out of scope); board scale unchanged.
+
+## Long-term map-adjacent, objective, revive (C36–C38 — still long-term only)
+
+**None of these change the 14-day demo** (which now uses continuous position per C35/C39, but still Dead-only win, Healthy→Wounded→Dead). Long-term only:
+
 - **C36 (destruction):** Discrete breach states (Intact → Damaged → Breached), not physics fracture. Breach = schedulable timed action, same shape as Shoot/Door; state carries across rounds like wounds/positions (C33). Numerics OPEN.
 - **C37 (win condition):** Asymmetric objective ("Channel" verb, vault/cashbox-style) restoring VISION's original Asymmetric Heist pillar; primary post-demo win. Channel cancels on Downed/Dead/displacement. **Does not amend C20/C33** — demo win stays Opponent Dead / mutual-lethal-draw. Numerics OPEN.
-- **C38 (revive/martyr):** Adds Downed state (Healthy → Wounded → Downed → Dead) — long-term only, demo keeps binary Healthy→Wounded→Dead (`WoundsUntilDead = 2`). Revive targets a **tile** (mirrors C32 Snap Shot targeting), not a unit ref. One locked archetype — **Detonator**: AoE event on Downed→Dead (finishing blow only, not first knockdown). Wider martyr roster stays unlocked. Numerics OPEN.
+- **C38 (revive/martyr):** Adds Downed state (Healthy → Wounded → Downed → Dead) — long-term only, demo keeps binary Healthy→Wounded→Dead (`WoundsUntilDead = 2`). Revive targets a **tile/point** (mirrors C32 Snap Shot targeting), not a unit ref. One locked archetype — **Detonator**: AoE event on Downed→Dead (finishing blow only, not first knockdown). Wider martyr roster stays unlocked. Numerics OPEN.
 
 ## Day focus
 
-Follow `docs/SCHEDULE.md`. Day 1–3b done; remaining days protect core combat then a dedicated diorama art pass (C34).
+Follow `docs/SCHEDULE.md`. Day 1–7 groundwork done (Move/Shoot/Door/Time Card all implemented on the old grid model); **continuous-space pivot in progress** — see `docs/CONTINUOUS_PIVOT_PLAN.md` — art pass (C34) now compressed to absorb the pivot's cost, Day 14 ship date unchanged.

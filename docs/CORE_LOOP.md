@@ -1,8 +1,8 @@
 # Core Loop Sheet
 
 **Doc ID:** D3  
-**Status:** Updated 2026-07-30 — Time Card match loop (**C33**) + Polished Core Demo (**C34**)  
-**Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [GDD.md](GDD.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md)
+**Status:** Updated 2026-08-03 — continuous-space pivot (**C35/C39**); Updated 2026-07-30 — Time Card match loop (**C33**) + Polished Core Demo (**C34**)  
+**Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [GDD.md](GDD.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md), [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)
 
 ---
 
@@ -27,7 +27,7 @@
 - **Time Card:** commits **N** from shared match pool (**C33**) — not a gear card.
 - **Movement:** multi-waypoint path (tap to add each waypoint) + direct Sprint / Tactical Walk / Stealth Crawl pick → automatic Time Resource cost (**not** a card) (**C21**, amended 2026-08-03 — no manual time-allotment slider).
 - **Shoot:** aim + direct Snap Shot / Hold Angle pick → automatic Time Resource cost (**not** a card) (**C25**).
-- **Door:** one contextual open/close on the 5×5 board (blocks move + LoS) — not a full Interact card system (**C34**).
+- **Door:** one contextual open/close on the continuous arena, radius-based interact (blocks move + LoS) — not a full Interact card system (**C34** / **C39**).
 - One shared **match Time Resource pool** (demo **900s / 15 min**). Both sides program inside each round’s **N**.
 - **Playback Duration** separate from Time Resource (**C27**).
 - Program phase limited in **real-world** seconds (30s).
@@ -52,7 +52,7 @@ flowchart LR
 ```
 
 ### 1. Spawn
-- Place both pawns on the **5×5 ground** map (Attacker vs Defender spawns).
+- Place both pawns on the **continuous ground arena** (`[0,4]×[0,4]` footprint — Attacker vs Defender spawns).
 - Both fully visible (FoW Out).
 - Match pool starts full (demo 900s). Round 1 Time Card chooser = Attacker.
 
@@ -66,7 +66,7 @@ flowchart LR
 - Character already chosen pre-match
 - Multi-waypoint path (tap to add each waypoint) + direct stance pick, no time allotment — base Move verb, against the round's **N**
 - Aim + direct mode pick, no time allotment — base Shoot verb
-- Optional door open/close booked on the timeline from a legal tile
+- Optional door open/close booked on the timeline from within `InteractRadius`
 
 **Player does not:**
 - Play a Walk/Dash card
@@ -100,7 +100,7 @@ flowchart LR
 
 **Base verbs (not cards):**
 - **Movement:** path + stance — Sprint (evades Snap) / Tactical Walk / Stealth Crawl.
-- **Shoot:** aim + mode — Snap Shot (wound; misses Sprint; aimed tile only — **C32**) / Hold Angle (lethal; hits Sprint).
+- **Shoot:** free-aim point + mode — Snap Shot (wound; misses Sprint; `HitRadius` of the aim point — **C32/C39**) / Hold Angle (lethal; hits Sprint; `LaneHalfWidth`).
 
 **Map action:**
 - **Door** — open/close; Strength affects Time Resource cost (see GDD).
@@ -111,7 +111,7 @@ flowchart LR
 
 ## Map loop (how space enters decisions)
 
-- **5×5 ground** + **one door** (demo ship).
+- **Continuous ground arena** (`[0,4]×[0,4]`) + **one door** (demo ship — **C35/C39**, amended 2026-08-03).
 - Attic / Vent / Monitor / 高铁 = Later (**C34** / **C31**).
 
 ---
@@ -128,7 +128,7 @@ flowchart LR
 
 ## Explicitly not in this loop (Out / Later)
 
-FoW, decoys, extraction, loot, classes beyond attrs, alarm track, 4v4, Fusion online, full Android polish, gear cards, Otherwise library, attic/vent/monitor, final SSS/thumbprint clay. Long-term only, not this loop: continuous movement/navmesh (**C35**), destructible breach-state geometry (**C36**), asymmetric objective win (**C37**), Downed state + revive + Detonator (**C38**).
+FoW, decoys, extraction, loot, classes beyond attrs, alarm track, 4v4, Fusion online, full Android polish, gear cards, Otherwise library, attic/vent/monitor, final SSS/thumbprint clay. Long-term only, not this loop: destructible breach-state geometry (**C36**), asymmetric objective win (**C37**), Downed state + revive + Detonator (**C38**). **Continuous movement is now IN this loop** (**C35** promoted 2026-08-03 — no longer long-term-only, see `CONTINUOUS_PIVOT_PLAN.md`).
 
 ---
 
