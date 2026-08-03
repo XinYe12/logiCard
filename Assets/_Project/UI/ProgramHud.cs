@@ -19,12 +19,13 @@ namespace LogiCard.UI
     public sealed class ProgramHud : MonoBehaviour
     {
         public const float TopStripHeight = 0.10f;
-        public const float ThumbZoneHeight = 0.40f;
+        public const float ThumbZoneHeight = 0.44f;
 
         private const float Pad = 32f;
         private const float Gap = 16f;
         private const float RowGap = 24f;
         private const float VerbRowHeight = 116f;
+        private const float StanceRowHeight = 100f;
         private const float DebugRowHeight = 72f;
         private const float ActionRowHeight = 132f;
         private const float TransportButtonWidth = 200f;
@@ -52,7 +53,19 @@ namespace LogiCard.UI
         private Text _playButtonLabel;
         private Button _moveModeButton;
         private Button _shootModeButton;
+        private Button _sprintButton;
+        private Button _walkButton;
+        private Button _crawlButton;
+        private Button _setPathButton;
+        private Button _snapButton;
+        private Button _holdButton;
+        private GameObject _moveStanceControls;
+        private GameObject _shootModeControls;
+        private Text _stanceAllotLabel;
+        private Slider _stanceAllotSlider;
+        private Text _shootModeLabel;
         private Text _queueText;
+        private bool _suppressStanceSliderCallback;
         private Text _outcomeLabel;
         private GameObject _programControls;
         private GameObject _allotPanel;
@@ -236,6 +249,7 @@ namespace LogiCard.UI
             _scrubber.onValueChanged.AddListener(OnScrubberMoved);
 
             BuildVerbRow(rt, ref cursor);
+            BuildStanceRow(rt, ref cursor);
 
             if (_showPhaseDebugControls)
             {
@@ -310,6 +324,64 @@ namespace LogiCard.UI
 
             cursor -= VerbRowHeight + RowGap;
             RefreshModeButtons();
+        }
+
+        /// <summary>
+        /// Day 5–6: Move shows stance allotment; Shoot shows Snap / Hold Angle (C21 / C25).
+        /// </summary>
+        private void BuildStanceRow(RectTransform zone, ref float cursor)
+        {
+            float rowTop = cursor;
+
+            _moveStanceControls = new GameObject("MoveStanceControls", typeof(RectTransform));
+            var moveRt = _moveStanceControls.GetComponent<RectTransform>();
+            moveRt.SetParent(zone, false);
+            Stretch(moveRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            float moveCursor = rowTop;
+            _stanceAllotLabel = CreateText(moveRt, "StanceAllotLabel", "STANCE  Walk", 28, TextAnchor.MiddleLeft, Ink);
+            PlaceRow(_stanceAllotLabel.rectTransform, ref moveCursor, 40f, 8f);
+
+            _stanceAllotSlider = CreateSlider(moveRt, "StanceAllotSlider");
+            PlaceRow(_stanceAllotSlider.GetComponent<RectTransform>(), ref moveCursor, 48f, 12f);
+            _stanceAllotSlider.onValueChanged.AddListener(OnStanceAllotSliderMoved);
+
+            _sprintButton = CreateButton(moveRt, "Stance_Sprint", "SPRINT", PanelMid, Ink, 28,
+                () => SetStanceBand(StanceType.Sprint));
+            PlaceSplitCell(_sprintButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 0, 4);
+
+            _walkButton = CreateButton(moveRt, "Stance_Walk", "WALK", PanelMid, Ink, 28,
+                () => SetStanceBand(StanceType.Walk));
+            PlaceSplitCell(_walkButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 1, 4);
+
+            _crawlButton = CreateButton(moveRt, "Stance_Crawl", "CRAWL", PanelMid, Ink, 28,
+                () => SetStanceBand(StanceType.Crawl));
+            PlaceSplitCell(_crawlButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 2, 4);
+
+            _setPathButton = CreateButton(moveRt, "SetPathButton", "SET PATH", Accent, new Color(0.1f, 0.09f, 0.07f), 28,
+                () => _input.TryCommitDraftPath());
+            PlaceSplitCell(_setPathButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 3, 4);
+
+            _shootModeControls = new GameObject("ShootModeControls", typeof(RectTransform));
+            var shootRt = _shootModeControls.GetComponent<RectTransform>();
+            shootRt.SetParent(zone, false);
+            Stretch(shootRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            float shootCursor = rowTop;
+            _shootModeLabel = CreateText(shootRt, "ShootModeLabel", "SHOOT  Snap · 2s — tap a tile on your row/col", 28, TextAnchor.MiddleLeft, Ink);
+            PlaceRow(_shootModeLabel.rectTransform, ref shootCursor, 40f, 8f);
+            shootCursor -= 48f + 12f;
+
+            _snapButton = CreateButton(shootRt, "Shoot_Snap", "SNAP  2s", PanelMid, Ink, 32,
+                () => SetShootMode(ShootMode.SnapShot));
+            PlaceSplitCell(_snapButton.GetComponent<RectTransform>(), shootCursor, StanceRowHeight, 0, 2);
+
+            _holdButton = CreateButton(shootRt, "Shoot_Hold", "HOLD  3s", PanelMid, Ink, 32,
+                () => SetShootMode(ShootMode.HoldAngle));
+            PlaceSplitCell(_holdButton.GetComponent<RectTransform>(), shootCursor, StanceRowHeight, 1, 2);
+
+            cursor = rowTop - 40f - 8f - 48f - 12f - StanceRowHeight - RowGap;
+            RefreshVerbContextControls(_input != null ? _input.Program : null);
         }
 
         /// <summary>Day 2 phase-jump aid. Off by default so the thumb zone shows only real player actions.</summary>
@@ -411,8 +483,49 @@ namespace LogiCard.UI
 
         private void SetMode(ActionVerb mode)
         {
+            if (mode == ActionVerb.Shoot)
+            {
+                _input.TryCommitDraftPath();
+            }
+
             _input.Mode = mode;
             RefreshModeButtons();
+            RefreshVerbContextControls(_input.Program);
+        }
+
+        private void SetStanceBand(StanceType stance)
+        {
+            _input.TrySetDraftStance(stance);
+            RefreshVerbContextControls(_input.Program);
+        }
+
+        private void SetShootMode(ShootMode mode)
+        {
+            _input.PreferredShootMode = mode;
+            RefreshVerbContextControls(_input.Program);
+        }
+
+        private void OnStanceAllotSliderMoved(float normalized)
+        {
+            if (_suppressStanceSliderCallback || _input == null || _input.Program == null)
+            {
+                return;
+            }
+
+            PawnProgram program = _input.Program;
+            if (!program.HasDraft)
+            {
+                StanceType stance = StanceAllotment.FromAllottedSeconds(
+                    1f, program.BaseSecondsPerTile, StanceAllotment.LerpAllotment(1f, program.BaseSecondsPerTile, normalized));
+                _input.TrySetDraftStance(stance);
+                RefreshVerbContextControls(program);
+                return;
+            }
+
+            float seconds = StanceAllotment.LerpAllotment(
+                program.DraftTileCount, program.BaseSecondsPerTile, normalized);
+            _input.TryAllotDraftSeconds(seconds);
+            RefreshVerbContextControls(_input.Program);
         }
 
         private void RefreshModeButtons()
@@ -426,6 +539,89 @@ namespace LogiCard.UI
             _shootModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.Shoot ? Accent : PanelMid;
         }
 
+        private void RefreshVerbContextControls(PawnProgram program)
+        {
+            bool shooting = _input != null && _input.Mode == ActionVerb.Shoot;
+            if (_moveStanceControls != null)
+            {
+                _moveStanceControls.SetActive(!shooting);
+            }
+
+            if (_shootModeControls != null)
+            {
+                _shootModeControls.SetActive(shooting);
+            }
+
+            if (shooting)
+            {
+                RefreshShootModeControls(program);
+            }
+            else
+            {
+                RefreshStanceControls(program);
+            }
+        }
+
+        private void RefreshShootModeControls(PawnProgram program)
+        {
+            if (_shootModeLabel == null || _input == null)
+            {
+                return;
+            }
+
+            ShootMode mode = _input.PreferredShootMode;
+            float cost = ShootCost.SecondsFor(mode);
+            _shootModeLabel.text = mode == ShootMode.HoldAngle
+                ? $"HOLD ANGLE  {cost:0}s — covers the aim lane; lethal; hits Sprint"
+                : $"SNAP SHOT  {cost:0}s — aimed tile only; wounds; misses Sprint";
+
+            if (_snapButton != null)
+            {
+                _snapButton.GetComponent<Image>().color = mode == ShootMode.SnapShot ? Accent : PanelMid;
+                _holdButton.GetComponent<Image>().color = mode == ShootMode.HoldAngle ? Accent : PanelMid;
+            }
+        }
+
+        private void RefreshStanceControls(PawnProgram program)
+        {
+            if (_stanceAllotLabel == null || program == null)
+            {
+                return;
+            }
+
+            StanceType stance = program.HasDraft ? program.DraftStance : (_input != null ? _input.PreferredStance : StanceType.Walk);
+            float tiles = program.HasDraft ? program.DraftTileCount : 1f;
+            float cost = StanceAllotment.CostForTiles(tiles, program.BaseSecondsPerTile, stance);
+
+            _stanceAllotLabel.text = program.HasDraft
+                ? $"PATH {program.DraftTileCount} tile(s) · {StanceMath.Label(stance)} · {cost:0.0}s — SET PATH to book"
+                : $"STANCE  {StanceMath.Label(stance)} · {cost:0.0}s / tile — tap path, then allot";
+
+            _suppressStanceSliderCallback = true;
+            if (_stanceAllotSlider != null)
+            {
+                float allotted = program.HasDraft
+                    ? program.DraftAllottedSeconds
+                    : StanceAllotment.CostForTiles(1f, program.BaseSecondsPerTile, stance);
+                _stanceAllotSlider.SetValueWithoutNotify(
+                    StanceAllotment.Normalize(tiles, program.BaseSecondsPerTile, allotted));
+            }
+
+            _suppressStanceSliderCallback = false;
+
+            if (_sprintButton != null)
+            {
+                _sprintButton.GetComponent<Image>().color = stance == StanceType.Sprint ? Accent : PanelMid;
+                _walkButton.GetComponent<Image>().color = stance == StanceType.Walk ? Accent : PanelMid;
+                _crawlButton.GetComponent<Image>().color = stance == StanceType.Crawl ? Accent : PanelMid;
+            }
+
+            if (_setPathButton != null)
+            {
+                _setPathButton.interactable = program.HasDraft;
+            }
+        }
+
         private void OnQueueChanged(PawnProgram program)
         {
             if (_queueText == null || program == null)
@@ -434,18 +630,27 @@ namespace LogiCard.UI
             }
 
             string text = $"Used {program.UsedSeconds:0.0} / {program.BudgetSeconds:0.0}s";
-            if (program.Nodes.Count == 0)
+            if (program.HasDraft)
             {
-                text += "\n\nTap a tile to schedule a Move or Shoot.";
+                text += $"\nDRAFT {program.DraftTileCount} tile(s) · {StanceMath.Label(program.DraftStance)} · {program.DraftAllottedSeconds:0.0}s";
+            }
+
+            if (program.Nodes.Count == 0 && !program.HasDraft)
+            {
+                text += "\n\nTap tiles to draw a path, allot stance, SET PATH. Or Shoot.";
             }
 
             for (int i = 0; i < program.Nodes.Count; i++)
             {
                 ActionNode node = program.Nodes[i];
-                text += $"\n{i + 1}: {node.Verb} -> {node.GridPosition} @{node.ExecuteTime:0.0}s";
+                string detail = node.Verb == ActionVerb.Shoot
+                    ? ShootModeMath.Label(node.ShootMode)
+                    : StanceMath.Label(node.Stance);
+                text += $"\n{i + 1}: {node.Verb} -> {node.GridPosition} @{node.ExecuteTime:0.0}s ({detail})";
             }
 
             _queueText.text = text;
+            RefreshVerbContextControls(program);
         }
 
         private void OnLockInPressed()
@@ -468,7 +673,8 @@ namespace LogiCard.UI
             {
                 string modifier = node.Modifier != null ? node.Modifier.displayName : "none";
                 Debug.Log($"[logiCard]   {node.Verb} @ {node.ExecuteTime:0.00}s -> {node.GridPosition} " +
-                          $"stance={StanceMath.Label(node.Stance)} modifier={modifier}");
+                          $"stance={StanceMath.Label(node.Stance)} shoot={ShootModeMath.Label(node.ShootMode)} " +
+                          $"modifier={modifier}");
             }
 
             _input.CommitToPlayback();

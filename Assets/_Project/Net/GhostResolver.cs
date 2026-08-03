@@ -29,19 +29,15 @@ namespace LogiCard.Net
 
     /// <summary>
     /// Turns locked <see cref="TimelinePayload"/>s into a <see cref="ReplayTape"/> (C23): the offline
-    /// stand-in for the Fusion Host's authoritative ghost sim. Day 11 changes who calls this and how
-    /// the tape travels, not what it computes.
+    /// stand-in for the Fusion Host's authoritative ghost sim.
     ///
-    /// Resolve is a pure function of (board, inputs) — no UnityEngine.Time, no Random, no physics —
-    /// so the same inputs always produce the same outcomes on every machine.
+    /// Resolve is a pure function of (board, inputs) — no UnityEngine.Time, no Random, no physics.
     ///
-    /// Slice 1 rules, deliberately narrow:
-    /// - <see cref="ActionNode.ExecuteTime"/> is a *completion* second, matching what PawnProgram
-    ///   books: a Move arrives at it, a Snap Shot's window ends at it.
-    /// - A Snap Shot resolves at that instant, and hits only a pawn standing on the aimed tile with
-    ///   clear line of sight. Covering a line over time is Hold Angle's job (Day 6).
-    /// - Simultaneous shots are grouped so a mutual exchange wounds both sides (paper D5 §IV).
-    /// - A wound has no mechanical consequence yet: no surcharge, no re-timing, no bleed (Day 8).
+    /// Combat (Days 4–6):
+    /// - <see cref="ActionNode.ExecuteTime"/> is a *completion* second.
+    /// - Snap Shot: aimed tile only at completion (C32); wounds; misses Sprint.
+    /// - Hold Angle: covers the aim lane across its window; lethal; hits Sprint.
+    /// - Simultaneous shots in a group are judged before wounds apply (mutual exchange / mutual lethal).
     /// </summary>
     public sealed class GhostResolver
     {
@@ -75,7 +71,6 @@ namespace LogiCard.Net
                 }
             }
 
-            // Dictionary iteration order is not guaranteed, so every later pass walks sorted ids.
             order.Sort();
             ResolveShots(tracks, order, events);
 
@@ -93,11 +88,6 @@ namespace LogiCard.Net
             return new ReplayTape(paths, events, endWounds);
         }
 
-        /// <summary>
-        /// Replays one pawn's nodes into a timed path. A Shoot contributes a waypoint at the pawn's
-        /// current tile so its window is spent standing still, instead of the pawn drifting early
-        /// into the following Move.
-        /// </summary>
         private static GhostTrack CompileTrack(GhostInput input, List<TapeEvent> events)
         {
             var ordered = new List<ActionNode>(input.Payload != null ? input.Payload.Nodes : NoNodes);
@@ -130,15 +120,27 @@ namespace LogiCard.Net
                 GhostTrack track = tracks[order[i]];
                 foreach (ActionNode node in track.Nodes)
                 {
-                    if (node.Verb == ActionVerb.Shoot)
+                    if (node.Verb != ActionVerb.Shoot)
                     {
-                        shots.Add(new ShotIntent(order[i], node.ExecuteTime, node.GridPosition));
+                        continue;
                     }
+
+                    ShootMode mode = node.ShootMode == ShootMode.None ? ShootMode.SnapShot : node.ShootMode;
+                    float cost = ShootCost.SecondsFor(mode);
+                    float windowStart = node.ExecuteTime - cost;
+                    if (windowStart < 0f)
+                    {
+                        windowStart = 0f;
+                    }
+
+                    shots.Add(new ShotIntent(order[i], node.ExecuteTime, windowStart, node.GridPosition, mode));
                 }
             }
 
-            shots.Sort((a, b) => a.Seconds != b.Seconds
-                ? a.Seconds.CompareTo(b.Seconds)
+            // Sort by resolve instant: Snap at completion; Hold also stamps consequences at first
+            // contact, but the fire event is still listed at completion for scrubber readability.
+            shots.Sort((a, b) => a.CompleteSeconds != b.CompleteSeconds
+                ? a.CompleteSeconds.CompareTo(b.CompleteSeconds)
                 : a.ShooterId.CompareTo(b.ShooterId));
 
             var hits = new List<ResolvedHit>();
@@ -146,13 +148,12 @@ namespace LogiCard.Net
             while (index < shots.Count)
             {
                 int groupEnd = index + 1;
-                while (groupEnd < shots.Count && shots[groupEnd].Seconds - shots[index].Seconds <= _simultaneityEpsilon)
+                while (groupEnd < shots.Count
+                       && shots[groupEnd].CompleteSeconds - shots[index].CompleteSeconds <= _simultaneityEpsilon)
                 {
                     groupEnd++;
                 }
 
-                // Every shot in the group is judged before any wound lands, so trading shots on the
-                // same second is symmetric rather than first-id-wins.
                 hits.Clear();
                 for (int i = index; i < groupEnd; i++)
                 {
@@ -176,10 +177,26 @@ namespace LogiCard.Net
             List<ResolvedHit> hits)
         {
             GhostTrack shooter = tracks[shot.ShooterId];
-            events.Add(new TapeEvent(shot.Seconds, shot.ShooterId, TapeEventType.ShootFire, shot.Target));
+            events.Add(new TapeEvent(shot.CompleteSeconds, shot.ShooterId, TapeEventType.ShootFire, shot.Aim));
 
-            GridCoordinate origin = shooter.TileAt(shot.Seconds);
-            if (!GridLineOfSight.HasLineOfSight(_board, origin, shot.Target))
+            if (shot.Mode == ShootMode.HoldAngle)
+            {
+                ResolveHoldAngle(shot, shooter, tracks, order, hits);
+                return;
+            }
+
+            ResolveSnapShot(shot, shooter, tracks, order, hits);
+        }
+
+        private void ResolveSnapShot(
+            ShotIntent shot,
+            GhostTrack shooter,
+            Dictionary<int, GhostTrack> tracks,
+            List<int> order,
+            List<ResolvedHit> hits)
+        {
+            GridCoordinate origin = shooter.TileAt(shot.CompleteSeconds);
+            if (!GridLineOfSight.HasLineOfSight(_board, origin, shot.Aim))
             {
                 return;
             }
@@ -193,32 +210,118 @@ namespace LogiCard.Net
                 }
 
                 GhostTrack victim = tracks[victimId];
-                if (victim.TileAt(shot.Seconds) != shot.Target)
+                if (victim.TileAt(shot.CompleteSeconds) != shot.Aim)
                 {
                     continue;
                 }
 
-                // A Snap Shot cannot catch a sprinting target (GDD §3A/§5). Unreachable while Slice 1
-                // hardcodes Walk, but the rule belongs with the shot, not with the caller.
-                if (victim.StanceAt(shot.Seconds) == StanceType.Sprint)
+                // Snap cannot catch a sprinting target (GDD §3A/§5).
+                if (victim.StanceAt(shot.CompleteSeconds) == StanceType.Sprint)
                 {
                     continue;
                 }
 
-                hits.Add(new ResolvedHit(shot.Seconds, shot.ShooterId, victimId, shot.Target));
+                hits.Add(new ResolvedHit(shot.CompleteSeconds, shot.ShooterId, victimId, shot.Aim, lethal: false));
             }
+        }
+
+        private void ResolveHoldAngle(
+            ShotIntent shot,
+            GhostTrack shooter,
+            Dictionary<int, GhostTrack> tracks,
+            List<int> order,
+            List<ResolvedHit> hits)
+        {
+            GridCoordinate origin = shooter.TileAt(shot.WindowStartSeconds);
+
+            for (int i = 0; i < order.Count; i++)
+            {
+                int victimId = order[i];
+                if (victimId == shot.ShooterId)
+                {
+                    continue;
+                }
+
+                GhostTrack victim = tracks[victimId];
+                if (!TryFindHoldContact(shot, origin, victim, out float contactSeconds, out GridCoordinate contactTile))
+                {
+                    continue;
+                }
+
+                // Hold hits Sprint; lethal on contact (GDD §3A/§5).
+                hits.Add(new ResolvedHit(contactSeconds, shot.ShooterId, victimId, contactTile, lethal: true));
+            }
+        }
+
+        private bool TryFindHoldContact(
+            ShotIntent shot,
+            GridCoordinate origin,
+            GhostTrack victim,
+            out float contactSeconds,
+            out GridCoordinate contactTile)
+        {
+            contactSeconds = 0f;
+            contactTile = default;
+
+            var probes = new List<float> { shot.WindowStartSeconds, shot.CompleteSeconds };
+            foreach (ActionNode node in victim.Nodes)
+            {
+                if (node.Verb != ActionVerb.Move)
+                {
+                    continue;
+                }
+
+                if (node.ExecuteTime > shot.WindowStartSeconds && node.ExecuteTime < shot.CompleteSeconds)
+                {
+                    probes.Add(node.ExecuteTime);
+                }
+            }
+
+            probes.Sort();
+
+            for (int i = 0; i < probes.Count; i++)
+            {
+                if (i > 0 && probes[i] - probes[i - 1] <= _simultaneityEpsilon)
+                {
+                    continue;
+                }
+
+                float t = probes[i];
+                GridCoordinate tile = victim.TileAt(t);
+                if (!GridLineOfSight.IsOnCoveredLane(origin, shot.Aim, tile))
+                {
+                    continue;
+                }
+
+                if (!GridLineOfSight.HasLineOfSight(_board, origin, tile))
+                {
+                    continue;
+                }
+
+                contactSeconds = t;
+                contactTile = tile;
+                return true;
+            }
+
+            return false;
         }
 
         private static void ApplyHit(ResolvedHit hit, Dictionary<int, GhostTrack> tracks, List<TapeEvent> events)
         {
             GhostTrack victim = tracks[hit.VictimId];
-            victim.Wounds++;
+            if (hit.Lethal)
+            {
+                victim.Wounds = WoundsUntilDead;
+            }
+            else
+            {
+                victim.Wounds++;
+            }
 
             TapeEventType type = victim.Wounds >= WoundsUntilDead ? TapeEventType.Killed : TapeEventType.Wounded;
             events.Add(new TapeEvent(hit.Seconds, hit.VictimId, type, hit.Tile, hit.ShooterId));
         }
 
-        /// <summary>Causal order at a shared second: arrivals, then fire, then its consequences.</summary>
         private static int CompareEvents(TapeEvent a, TapeEvent b)
         {
             int bySecond = a.Seconds.CompareTo(b.Seconds);
@@ -235,15 +338,21 @@ namespace LogiCard.Net
         {
             public int ShooterId { get; }
 
-            public float Seconds { get; }
+            public float CompleteSeconds { get; }
 
-            public GridCoordinate Target { get; }
+            public float WindowStartSeconds { get; }
 
-            public ShotIntent(int shooterId, float seconds, GridCoordinate target)
+            public GridCoordinate Aim { get; }
+
+            public ShootMode Mode { get; }
+
+            public ShotIntent(int shooterId, float completeSeconds, float windowStartSeconds, GridCoordinate aim, ShootMode mode)
             {
                 ShooterId = shooterId;
-                Seconds = seconds;
-                Target = target;
+                CompleteSeconds = completeSeconds;
+                WindowStartSeconds = windowStartSeconds;
+                Aim = aim;
+                Mode = mode;
             }
         }
 
@@ -257,12 +366,15 @@ namespace LogiCard.Net
 
             public GridCoordinate Tile { get; }
 
-            public ResolvedHit(float seconds, int shooterId, int victimId, GridCoordinate tile)
+            public bool Lethal { get; }
+
+            public ResolvedHit(float seconds, int shooterId, int victimId, GridCoordinate tile, bool lethal)
             {
                 Seconds = seconds;
                 ShooterId = shooterId;
                 VictimId = victimId;
                 Tile = tile;
+                Lethal = lethal;
             }
         }
 

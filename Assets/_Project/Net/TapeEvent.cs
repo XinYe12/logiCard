@@ -3,8 +3,8 @@ using LogiCard.Sim;
 namespace LogiCard.Net
 {
     /// <summary>
-    /// Discrete outcomes a <see cref="ReplayTape"/> can carry. Killed and Invalid are reserved:
-    /// Day 8 adds Otherwise Invalid -> Stop, and lethal Hold Angle arrives with Day 6.
+    /// Discrete outcomes a <see cref="ReplayTape"/> can carry. Invalid is reserved for Day 7+
+    /// Otherwise Stop; Hold Angle lethality uses <see cref="Killed"/> (Day 6).
     /// </summary>
     public enum TapeEventType
     {

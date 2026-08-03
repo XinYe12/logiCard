@@ -20,14 +20,14 @@ namespace LogiCard.Tests.EditMode
             return new GridBoard(5, 5, new[] { Floor.Ground });
         }
 
-        private static ActionNode Move(float seconds, int x, int y)
+        private static ActionNode Shoot(float seconds, int x, int y, ShootMode mode = ShootMode.SnapShot)
         {
-            return new ActionNode(ActionVerb.Move, seconds, new GridCoordinate(x, y), StanceType.Walk);
+            return new ActionNode(ActionVerb.Shoot, seconds, new GridCoordinate(x, y), StanceType.Walk, modifier: null, mode);
         }
 
-        private static ActionNode Shoot(float seconds, int x, int y)
+        private static ActionNode Move(float seconds, int x, int y, StanceType stance = StanceType.Walk)
         {
-            return new ActionNode(ActionVerb.Shoot, seconds, new GridCoordinate(x, y), StanceType.Walk);
+            return new ActionNode(ActionVerb.Move, seconds, new GridCoordinate(x, y), stance);
         }
 
         private static GhostInput Input(int pawnId, GridCoordinate start, params ActionNode[] nodes)
@@ -224,6 +224,78 @@ namespace LogiCard.Tests.EditMode
             {
                 Assert.That(second.Events[i].ToString(), Is.EqualTo(first.Events[i].ToString()));
             }
+        }
+
+        [Test]
+        public void SnapShotMissesASprintingTargetOnTheAimedTile()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 2)),
+                Input(Defender, new GridCoordinate(0, 1), Move(1f, 0, 2, StanceType.Sprint)),
+            });
+
+            Assert.That(EventsOfType(tape, TapeEventType.ShootFire).Count, Is.EqualTo(1));
+            Assert.That(EventsOfType(tape, TapeEventType.Wounded), Is.Empty);
+            Assert.That(EventsOfType(tape, TapeEventType.Killed), Is.Empty);
+        }
+
+        [Test]
+        public void HoldAngleKillsASprintingTargetOnTheAimedTile()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Shoot(3f, 0, 2, ShootMode.HoldAngle)),
+                Input(Defender, new GridCoordinate(0, 1), Move(1f, 0, 2, StanceType.Sprint)),
+            });
+
+            List<TapeEvent> killed = EventsOfType(tape, TapeEventType.Killed);
+            Assert.That(killed.Count, Is.EqualTo(1));
+            Assert.That(killed[0].PawnId, Is.EqualTo(Defender));
+            Assert.That(tape.WoundsFor(Defender), Is.EqualTo(GhostResolver.WoundsUntilDead));
+        }
+
+        [Test]
+        public void HoldAngleCoversMidLaneNotOnlyTheAimedTile()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            // Aim past the defender; Snap would miss, Hold covers (0,2) on the way to (0,4).
+            ReplayTape snapTape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 4)),
+                Input(Defender, new GridCoordinate(0, 2)),
+            });
+            Assert.That(EventsOfType(snapTape, TapeEventType.Wounded), Is.Empty);
+
+            ReplayTape holdTape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Shoot(3f, 0, 4, ShootMode.HoldAngle)),
+                Input(Defender, new GridCoordinate(0, 2)),
+            });
+            Assert.That(EventsOfType(holdTape, TapeEventType.Killed).Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void MutualHoldAngleOnTheSameSecondKillsBoth()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new GridCoordinate(0, 0), Shoot(3f, 0, 2, ShootMode.HoldAngle)),
+                Input(Defender, new GridCoordinate(0, 2), Shoot(3f, 0, 0, ShootMode.HoldAngle)),
+            });
+
+            List<TapeEvent> killed = EventsOfType(tape, TapeEventType.Killed);
+            Assert.That(killed.Count, Is.EqualTo(2));
+            Assert.That(tape.AnyoneDead(), Is.True);
+            Assert.That(tape.WoundsFor(Attacker), Is.EqualTo(GhostResolver.WoundsUntilDead));
+            Assert.That(tape.WoundsFor(Defender), Is.EqualTo(GhostResolver.WoundsUntilDead));
         }
     }
 }

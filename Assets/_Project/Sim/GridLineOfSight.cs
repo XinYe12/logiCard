@@ -75,5 +75,35 @@ namespace LogiCard.Sim
                 yield return new GridCoordinate(x, y, from.Floor);
             }
         }
+
+        /// <summary>
+        /// Hold Angle cover lane (Day 6): every tile from the shooter toward the aim, including the
+        /// aimed tile, excluding the shooter's own tile.
+        /// </summary>
+        public static IEnumerable<GridCoordinate> CoveredLane(GridCoordinate from, GridCoordinate to)
+        {
+            foreach (GridCoordinate step in TilesBetween(from, to))
+            {
+                yield return step;
+            }
+
+            if (from != to && from.Floor == to.Floor)
+            {
+                yield return to;
+            }
+        }
+
+        public static bool IsOnCoveredLane(GridCoordinate from, GridCoordinate to, GridCoordinate tile)
+        {
+            foreach (GridCoordinate step in CoveredLane(from, to))
+            {
+                if (step == tile)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 }

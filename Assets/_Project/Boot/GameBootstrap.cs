@@ -173,7 +173,7 @@ namespace LogiCard.Boot
 
             // Budget is 0 until the first Time Card; Program rebuilds with the real allotment.
             _attackerInput = attacker.gameObject.AddComponent<BoardInputController>();
-            _attackerInput.Init(attacker, _phase, attackerHome, attackerSecondsPerTile, 0f);
+            _attackerInput.Init(attacker, _phase, attackerHome, attackerSecondsPerTile, 0f, _board);
 
             _playback = gameObject.AddComponent<RoundPlayback>();
             _playback.Init(_board, _clock, _phase);

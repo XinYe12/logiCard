@@ -70,15 +70,32 @@ namespace LogiCard.Tests.PlayMode
 
             AttackerInput.Mode = ActionVerb.Move;
             Assert.That(AttackerInput.TryTapTile(destination), Is.True);
+            Assert.That(AttackerInput.Program.HasDraft, Is.True, "Move taps draft a path before SET PATH.");
+            Assert.That(AttackerInput.TryCommitDraftPath(), Is.True);
 
             PawnProgram program = AttackerInput.Program;
-            Assert.That(program.Nodes.Count, Is.EqualTo(1));
-            Assert.That(program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Move));
-            Assert.That(program.Nodes[0].GridPosition, Is.EqualTo(destination));
-            Assert.That(program.Nodes[0].ExecuteTime, Is.EqualTo(expected).Within(0.0001f));
+            Assert.That(program.Nodes.Count, Is.EqualTo(2), "Orthogonal path expands one Move node per tile.");
+            Assert.That(program.Nodes[1].Verb, Is.EqualTo(ActionVerb.Move));
+            Assert.That(program.Nodes[1].GridPosition, Is.EqualTo(destination));
+            Assert.That(program.Nodes[1].ExecuteTime, Is.EqualTo(expected).Within(0.0001f));
 
             Assert.That(AttackerPawn.Path.Nodes[AttackerPawn.Path.Nodes.Count - 1], Is.EqualTo(destination));
             Assert.That(AttackerPawn.Path.EndSeconds, Is.EqualTo(expected).Within(0.0001f));
+        }
+
+        [Test]
+        public void MoveTap_SprintAllotment_BooksFasterThanWalk()
+        {
+            GridCoordinate destination = Home.Offset(2, 0);
+            AttackerInput.Mode = ActionVerb.Move;
+            Assert.That(AttackerInput.TryTapTile(destination), Is.True);
+            Assert.That(AttackerInput.TrySetDraftStance(StanceType.Sprint), Is.True);
+            Assert.That(AttackerInput.TryCommitDraftPath(), Is.True);
+
+            float sprintCost = StanceAllotment.CostForTiles(2f, AttackerInput.Program.BaseSecondsPerTile, StanceType.Sprint);
+            Assert.That(AttackerInput.Program.UsedSeconds, Is.EqualTo(sprintCost).Within(0.0001f));
+            Assert.That(AttackerInput.Program.Nodes[0].Stance, Is.EqualTo(StanceType.Sprint));
+            Assert.That(AttackerPawn.Path.EndSeconds, Is.EqualTo(sprintCost).Within(0.0001f));
         }
 
         [Test]
@@ -111,6 +128,7 @@ namespace LogiCard.Tests.PlayMode
         {
             AttackerInput.Mode = ActionVerb.Move;
             AttackerInput.TryTapTile(Home.Offset(2, 0));
+            AttackerInput.TryCommitDraftPath();
             Assert.That(AttackerInput.Program.Nodes, Is.Not.Empty);
 
             Phase.GoTo(RoundPhase.Reveal);
@@ -128,6 +146,7 @@ namespace LogiCard.Tests.PlayMode
         {
             AttackerInput.Mode = ActionVerb.Move;
             AttackerInput.TryTapTile(Home.Offset(1, 0));
+            AttackerInput.TryCommitDraftPath();
             AttackerInput.CommitToPlayback();
 
             int queuedBeforeExtraTap = AttackerInput.Program.Nodes.Count;

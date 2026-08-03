@@ -25,6 +25,7 @@ namespace LogiCard.Tests.PlayMode
         {
             AttackerInput.Mode = ActionVerb.Move;
             Assert.That(AttackerInput.TryTapTile(destination), Is.True);
+            Assert.That(AttackerInput.TryCommitDraftPath(), Is.True);
             AttackerInput.CommitToPlayback();
             Playback.ResolveAndArm();
             Clock.Pause();
@@ -166,6 +167,7 @@ namespace LogiCard.Tests.PlayMode
             GridCoordinate next = carried.Offset(1, 0);
             AttackerInput.Mode = ActionVerb.Move;
             Assert.That(AttackerInput.TryTapTile(next), Is.True);
+            Assert.That(AttackerInput.TryCommitDraftPath(), Is.True);
             Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(1));
             Assert.That(AttackerInput.Program.Nodes[0].GridPosition, Is.EqualTo(next));
         }

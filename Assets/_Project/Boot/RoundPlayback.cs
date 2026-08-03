@@ -230,9 +230,31 @@ namespace LogiCard.Boot
                     OutcomeReported?.Invoke($"WOUNDED  P{tapeEvent.PawnId}  @{tapeEvent.Seconds:0.0}s");
                     break;
                 case TapeEventType.Killed:
-                    OutcomeReported?.Invoke($"DOWN  P{tapeEvent.PawnId}  @{tapeEvent.Seconds:0.0}s");
+                    if (_tape != null && CountDeadOnTape() >= 2)
+                    {
+                        OutcomeReported?.Invoke($"DRAW  mutual kill @{tapeEvent.Seconds:0.0}s");
+                    }
+                    else
+                    {
+                        OutcomeReported?.Invoke($"DOWN  P{tapeEvent.PawnId}  @{tapeEvent.Seconds:0.0}s");
+                    }
+
                     break;
             }
+        }
+
+        private int CountDeadOnTape()
+        {
+            int dead = 0;
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                if (_tape.WoundsFor(_pawns[i].PawnId) >= GhostResolver.WoundsUntilDead)
+                {
+                    dead++;
+                }
+            }
+
+            return dead;
         }
 
         private void BuildTracers()

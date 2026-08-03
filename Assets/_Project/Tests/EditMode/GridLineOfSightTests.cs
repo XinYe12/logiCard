@@ -86,5 +86,23 @@ namespace LogiCard.Tests.EditMode
 
             Assert.That(walked, Is.Empty);
         }
+        [Test]
+        public void CoveredLane_IncludesAimExcludesOrigin()
+        {
+            var tiles = new List<GridCoordinate>();
+            foreach (GridCoordinate step in GridLineOfSight.CoveredLane(
+                         new GridCoordinate(0, 0), new GridCoordinate(0, 3)))
+            {
+                tiles.Add(step);
+            }
+
+            Assert.That(tiles, Does.Not.Contain(new GridCoordinate(0, 0)));
+            Assert.That(tiles, Is.EqualTo(new[]
+            {
+                new GridCoordinate(0, 1),
+                new GridCoordinate(0, 2),
+                new GridCoordinate(0, 3),
+            }));
+        }
     }
 }
