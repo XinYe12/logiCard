@@ -11,10 +11,10 @@ namespace LogiCard.Net
     }
 
     /// <summary>
-    /// One row of a <see cref="TimelinePayload"/> (TDD D6 §2). GridPosition reuses the sim's
-    /// GridCoordinate (carries Floor) rather than the doc's illustrative Vector2Int. For a Door
-    /// node, GridPosition is the door's own tile (same GridPosition-reuse pattern Shoot already
-    /// uses for its aimed tile).
+    /// One row of a <see cref="TimelinePayload"/> (TDD D6 §2). Position holds the sim's continuous
+    /// <see cref="PlanarPosition"/> (carries Floor) rather than the doc's illustrative Vector2Int
+    /// (C35/C39 pivot — was GridPosition/GridCoordinate). For a Door node, Position is the door's
+    /// interaction point (same Position-reuse pattern Shoot already uses for its aim point).
     /// </summary>
     public readonly struct ActionNode
     {
@@ -22,7 +22,7 @@ namespace LogiCard.Net
 
         public float ExecuteTime { get; }
 
-        public GridCoordinate GridPosition { get; }
+        public PlanarPosition Position { get; }
 
         public StanceType Stance { get; }
 
@@ -38,7 +38,7 @@ namespace LogiCard.Net
         public ActionNode(
             ActionVerb verb,
             float executeTime,
-            GridCoordinate gridPosition,
+            PlanarPosition position,
             StanceType stance,
             CardData modifier = null,
             ShootMode shootMode = ShootMode.None,
@@ -46,7 +46,7 @@ namespace LogiCard.Net
         {
             Verb = verb;
             ExecuteTime = executeTime;
-            GridPosition = gridPosition;
+            Position = position;
             Stance = stance;
             Modifier = modifier;
             // Legacy Shoot constructors omit the mode; treat that as Snap (Day 4 default).

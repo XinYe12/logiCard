@@ -19,7 +19,7 @@ namespace LogiCard.Net
 
     /// <summary>
     /// One resolved moment on the tape, stamped with the Time Resource second it happens at (C27) —
-    /// never a Playback Duration second.
+    /// never a Playback Duration second. Position replaces Coordinate (C35/C39 pivot).
     /// </summary>
     public readonly struct TapeEvent
     {
@@ -31,25 +31,25 @@ namespace LogiCard.Net
 
         public TapeEventType Type { get; }
 
-        /// <summary>Arrival tile for a Move, aimed tile for a Shoot, victim's tile for a hit.</summary>
-        public GridCoordinate Coordinate { get; }
+        /// <summary>Arrival point for a Move, aim point for a Shoot, victim's position for a hit.</summary>
+        public PlanarPosition Position { get; }
 
         public int TargetPawnId { get; }
 
-        public TapeEvent(float seconds, int pawnId, TapeEventType type, GridCoordinate coordinate, int targetPawnId = NoPawn)
+        public TapeEvent(float seconds, int pawnId, TapeEventType type, PlanarPosition position, int targetPawnId = NoPawn)
         {
             Seconds = seconds;
             PawnId = pawnId;
             Type = type;
-            Coordinate = coordinate;
+            Position = position;
             TargetPawnId = targetPawnId;
         }
 
         public override string ToString()
         {
             return TargetPawnId == NoPawn
-                ? $"{Seconds:0.00}s P{PawnId} {Type} {Coordinate}"
-                : $"{Seconds:0.00}s P{PawnId} {Type} {Coordinate} -> P{TargetPawnId}";
+                ? $"{Seconds:0.00}s P{PawnId} {Type} {Position}"
+                : $"{Seconds:0.00}s P{PawnId} {Type} {Position} -> P{TargetPawnId}";
         }
     }
 }

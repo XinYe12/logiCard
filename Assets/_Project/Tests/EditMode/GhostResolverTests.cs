@@ -7,7 +7,9 @@ namespace LogiCard.Tests.EditMode
 {
     /// <summary>
     /// Day 4 resolve rules: a locked payload becomes ghost movement, line-of-sight checks and
-    /// wound outcomes, with no engine or randomness involved.
+    /// wound outcomes, with no engine or randomness involved. Retargeted onto continuous space
+    /// (C35/C39 pivot) — <see cref="ArenaBoard"/>/<see cref="PlanarPosition"/> replace
+    /// <c>GridBoard</c>/<c>GridCoordinate</c>.
     /// </summary>
     [TestFixture]
     public sealed class GhostResolverTests
@@ -15,22 +17,22 @@ namespace LogiCard.Tests.EditMode
         private const int Attacker = 1;
         private const int Defender = 2;
 
-        private static GridBoard NewBoard()
+        private static ArenaBoard NewBoard()
         {
-            return new GridBoard(5, 5, new[] { Floor.Ground });
+            return new ArenaBoard(floors: new[] { Floor.Ground });
         }
 
-        private static ActionNode Shoot(float seconds, int x, int y, ShootMode mode = ShootMode.SnapShot)
+        private static ActionNode Shoot(float seconds, float x, float y, ShootMode mode = ShootMode.SnapShot)
         {
-            return new ActionNode(ActionVerb.Shoot, seconds, new GridCoordinate(x, y), StanceType.Walk, modifier: null, mode);
+            return new ActionNode(ActionVerb.Shoot, seconds, new PlanarPosition(x, y), StanceType.Walk, modifier: null, mode);
         }
 
-        private static ActionNode Move(float seconds, int x, int y, StanceType stance = StanceType.Walk)
+        private static ActionNode Move(float seconds, float x, float y, StanceType stance = StanceType.Walk)
         {
-            return new ActionNode(ActionVerb.Move, seconds, new GridCoordinate(x, y), stance);
+            return new ActionNode(ActionVerb.Move, seconds, new PlanarPosition(x, y), stance);
         }
 
-        private static GhostInput Input(int pawnId, GridCoordinate start, params ActionNode[] nodes)
+        private static GhostInput Input(int pawnId, PlanarPosition start, params ActionNode[] nodes)
         {
             return new GhostInput(pawnId, start, new TimelinePayload(new List<ActionNode>(nodes)));
         }
@@ -50,24 +52,24 @@ namespace LogiCard.Tests.EditMode
         }
 
         [Test]
-        public void MoveArrivesOnItsScheduledTileAtItsExecuteTime()
+        public void MoveArrivesOnItsScheduledPositionAtItsExecuteTime()
         {
             var resolver = new GhostResolver(NewBoard());
 
             ReplayTape tape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Move(4f, 0, 2)),
+                Input(Attacker, new PlanarPosition(0, 0), Move(4f, 0, 2)),
             });
 
             ScheduledPath track = tape.Tracks[Attacker];
-            Assert.That(track.Evaluate(0f).ToNearestCoordinate(), Is.EqualTo(new GridCoordinate(0, 0)));
-            Assert.That(track.Evaluate(4f).ToNearestCoordinate(), Is.EqualTo(new GridCoordinate(0, 2)));
+            Assert.That(track.Evaluate(0f), Is.EqualTo(new PlanarPosition(0, 0)));
+            Assert.That(track.Evaluate(4f), Is.EqualTo(new PlanarPosition(0, 2)));
             Assert.That(tape.EndSeconds, Is.EqualTo(4f).Within(0.0001f));
 
             List<TapeEvent> arrivals = EventsOfType(tape, TapeEventType.MoveArrive);
             Assert.That(arrivals.Count, Is.EqualTo(1));
             Assert.That(arrivals[0].Seconds, Is.EqualTo(4f).Within(0.0001f));
-            Assert.That(arrivals[0].Coordinate, Is.EqualTo(new GridCoordinate(0, 2)));
+            Assert.That(arrivals[0].Position, Is.EqualTo(new PlanarPosition(0, 2)));
         }
 
         /// <summary>
@@ -81,7 +83,7 @@ namespace LogiCard.Tests.EditMode
 
             ReplayTape tape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Move(2f, 0, 1), Shoot(4f, 3, 1), Move(6f, 0, 2)),
+                Input(Attacker, new PlanarPosition(0, 0), Move(2f, 0, 1), Shoot(4f, 3, 1), Move(6f, 0, 2)),
             });
 
             ScheduledPath track = tape.Tracks[Attacker];
@@ -98,8 +100,8 @@ namespace LogiCard.Tests.EditMode
 
             ReplayTape tape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 2)),
-                Input(Defender, new GridCoordinate(0, 2)),
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(2f, 0, 2)),
+                Input(Defender, new PlanarPosition(0, 2)),
             });
 
             List<TapeEvent> wounds = EventsOfType(tape, TapeEventType.Wounded);
@@ -117,8 +119,8 @@ namespace LogiCard.Tests.EditMode
 
             ReplayTape tape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 4)),
-                Input(Defender, new GridCoordinate(0, 2)),
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(2f, 0, 4)),
+                Input(Defender, new PlanarPosition(0, 2)),
             });
 
             Assert.That(EventsOfType(tape, TapeEventType.ShootFire).Count, Is.EqualTo(1));
@@ -126,16 +128,16 @@ namespace LogiCard.Tests.EditMode
         }
 
         [Test]
-        public void ShotThroughAnImpassableTileDoesNotWound()
+        public void ShotThroughAWallDoesNotWound()
         {
-            GridBoard board = NewBoard();
-            board[new GridCoordinate(0, 1)] = new Tile(false);
+            ArenaBoard board = NewBoard();
+            board.RegisterWall(new Segment(new PlanarPosition(0, 1), new PlanarPosition(4, 1)));
             var resolver = new GhostResolver(board);
 
             ReplayTape tape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 2)),
-                Input(Defender, new GridCoordinate(0, 2)),
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(2f, 0, 2)),
+                Input(Defender, new PlanarPosition(0, 2)),
             });
 
             Assert.That(EventsOfType(tape, TapeEventType.ShootFire).Count, Is.EqualTo(1));
@@ -149,8 +151,8 @@ namespace LogiCard.Tests.EditMode
 
             ReplayTape tape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 2)),
-                Input(Defender, new GridCoordinate(0, 2), Move(1f, 3, 2)),
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(2f, 0, 2)),
+                Input(Defender, new PlanarPosition(0, 2), Move(1f, 3, 2)),
             });
 
             Assert.That(EventsOfType(tape, TapeEventType.Wounded), Is.Empty);
@@ -164,8 +166,8 @@ namespace LogiCard.Tests.EditMode
 
             ReplayTape tape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 2)),
-                Input(Defender, new GridCoordinate(0, 2), Shoot(2f, 0, 0)),
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(2f, 0, 2)),
+                Input(Defender, new PlanarPosition(0, 2), Shoot(2f, 0, 0)),
             });
 
             List<TapeEvent> wounds = EventsOfType(tape, TapeEventType.Wounded);
@@ -180,8 +182,8 @@ namespace LogiCard.Tests.EditMode
 
             ReplayTape tape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 2), Shoot(4f, 0, 2)),
-                Input(Defender, new GridCoordinate(0, 2)),
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(2f, 0, 2), Shoot(4f, 0, 2)),
+                Input(Defender, new PlanarPosition(0, 2)),
             });
 
             Assert.That(EventsOfType(tape, TapeEventType.Wounded).Count, Is.EqualTo(1));
@@ -197,8 +199,8 @@ namespace LogiCard.Tests.EditMode
 
             ReplayTape tape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Move(2f, 0, 1), Shoot(4f, 0, 3), Move(6f, 0, 2)),
-                Input(Defender, new GridCoordinate(0, 3), Shoot(4f, 0, 1)),
+                Input(Attacker, new PlanarPosition(0, 0), Move(2f, 0, 1), Shoot(4f, 0, 3), Move(6f, 0, 2)),
+                Input(Defender, new PlanarPosition(0, 3), Shoot(4f, 0, 1)),
             });
 
             for (int i = 1; i < tape.Events.Count; i++)
@@ -212,8 +214,8 @@ namespace LogiCard.Tests.EditMode
         {
             GhostInput[] inputs =
             {
-                Input(Attacker, new GridCoordinate(0, 0), Move(2f, 0, 1), Shoot(4f, 0, 3)),
-                Input(Defender, new GridCoordinate(0, 3), Shoot(4f, 0, 1)),
+                Input(Attacker, new PlanarPosition(0, 0), Move(2f, 0, 1), Shoot(4f, 0, 3)),
+                Input(Defender, new PlanarPosition(0, 3), Shoot(4f, 0, 1)),
             };
 
             ReplayTape first = new GhostResolver(NewBoard()).Resolve(inputs);
@@ -233,8 +235,8 @@ namespace LogiCard.Tests.EditMode
 
             ReplayTape tape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 2)),
-                Input(Defender, new GridCoordinate(0, 1), Move(1f, 0, 2, StanceType.Sprint)),
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(2f, 0, 2)),
+                Input(Defender, new PlanarPosition(0, 1), Move(1f, 0, 2, StanceType.Sprint)),
             });
 
             Assert.That(EventsOfType(tape, TapeEventType.ShootFire).Count, Is.EqualTo(1));
@@ -249,8 +251,8 @@ namespace LogiCard.Tests.EditMode
 
             ReplayTape tape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Shoot(3f, 0, 2, ShootMode.HoldAngle)),
-                Input(Defender, new GridCoordinate(0, 1), Move(1f, 0, 2, StanceType.Sprint)),
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(3f, 0, 2, ShootMode.HoldAngle)),
+                Input(Defender, new PlanarPosition(0, 1), Move(1f, 0, 2, StanceType.Sprint)),
             });
 
             List<TapeEvent> killed = EventsOfType(tape, TapeEventType.Killed);
@@ -267,15 +269,15 @@ namespace LogiCard.Tests.EditMode
             // Aim past the defender; Snap would miss, Hold covers (0,2) on the way to (0,4).
             ReplayTape snapTape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Shoot(2f, 0, 4)),
-                Input(Defender, new GridCoordinate(0, 2)),
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(2f, 0, 4)),
+                Input(Defender, new PlanarPosition(0, 2)),
             });
             Assert.That(EventsOfType(snapTape, TapeEventType.Wounded), Is.Empty);
 
             ReplayTape holdTape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Shoot(3f, 0, 4, ShootMode.HoldAngle)),
-                Input(Defender, new GridCoordinate(0, 2)),
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(3f, 0, 4, ShootMode.HoldAngle)),
+                Input(Defender, new PlanarPosition(0, 2)),
             });
             Assert.That(EventsOfType(holdTape, TapeEventType.Killed).Count, Is.EqualTo(1));
         }
@@ -287,8 +289,8 @@ namespace LogiCard.Tests.EditMode
 
             ReplayTape tape = resolver.Resolve(new[]
             {
-                Input(Attacker, new GridCoordinate(0, 0), Shoot(3f, 0, 2, ShootMode.HoldAngle)),
-                Input(Defender, new GridCoordinate(0, 2), Shoot(3f, 0, 0, ShootMode.HoldAngle)),
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(3f, 0, 2, ShootMode.HoldAngle)),
+                Input(Defender, new PlanarPosition(0, 2), Shoot(3f, 0, 0, ShootMode.HoldAngle)),
             });
 
             List<TapeEvent> killed = EventsOfType(tape, TapeEventType.Killed);

@@ -7,21 +7,20 @@ namespace LogiCard.Sim
     }
 
     /// <summary>
-    /// One map door (GDD §4): a single tile whose passability the resolver toggles over time.
-    /// Registered on a <see cref="GridBoard"/>; the door occupies its own tile rather than a true
-    /// edge between two tiles (Day 7 research note §C/H1) — reuses the existing
-    /// <see cref="Tile.IsPassable"/> mechanism both <see cref="GridLineOfSight"/> and
-    /// <see cref="OrthogonalPathfinder"/> already honor, so no LoS/pathfinder changes are needed.
+    /// One map door (GDD §4): a continuous-space segment whose passability the resolver toggles over
+    /// time (C35/C39 pivot). Registered on an <see cref="ArenaBoard"/>; interaction is radius-based
+    /// (Decision 4) rather than tile-adjacency, since a continuous click will essentially never land
+    /// exactly on the door's geometry.
     /// </summary>
     public sealed class Door
     {
-        public GridCoordinate Coordinate { get; }
+        public Segment Segment { get; }
 
         public DoorState InitialState { get; }
 
-        public Door(GridCoordinate coordinate, DoorState initialState)
+        public Door(Segment segment, DoorState initialState)
         {
-            Coordinate = coordinate;
+            Segment = segment;
             InitialState = initialState;
         }
     }

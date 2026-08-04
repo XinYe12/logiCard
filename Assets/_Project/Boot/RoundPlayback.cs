@@ -64,12 +64,12 @@ namespace LogiCard.Boot
             }
         }
 
-        public void Register(int pawnId, PawnView view, GridCoordinate home, Func<TimelinePayload> payloadSource)
+        public void Register(int pawnId, PawnView view, PlanarPosition home, Func<TimelinePayload> payloadSource)
         {
             _pawns.Add(new PawnEntry(pawnId, view, home, payloadSource));
         }
 
-        public GridCoordinate PositionOf(int pawnId)
+        public PlanarPosition PositionOf(int pawnId)
         {
             for (int i = 0; i < _pawns.Count; i++)
             {
@@ -119,6 +119,7 @@ namespace LogiCard.Boot
             }
 
             BuildTracers();
+            _board.RefreshDoorVisuals();
 
             Debug.Log($"[logiCard] Ghost resolve: {_tape.Events.Count} event(s), " +
                       $"{_tape.Tracks.Count} pawn(s), tape ends at {_tape.EndSeconds:0.0}s TR.");
@@ -146,15 +147,18 @@ namespace LogiCard.Boot
                 PawnEntry pawn = _pawns[i];
                 if (_tape.Tracks.TryGetValue(pawn.PawnId, out ScheduledPath track) && track != null)
                 {
-                    pawn.CurrentPosition = track.Evaluate(track.EndSeconds).ToNearestCoordinate();
+                    // Continuous carry — no grid snap (C35/C39 Phase 4 correctness fix).
+                    pawn.CurrentPosition = track.Evaluate(track.EndSeconds);
                 }
 
                 pawn.Wounds = _tape.WoundsFor(pawn.PawnId);
                 _pawns[i] = pawn;
             }
+
+            _board.RefreshDoorVisuals();
         }
 
-        /// <summary>Back to Allot/Program: drop the tape and stand everyone on their carried tile.</summary>
+        /// <summary>Back to Allot/Program: drop the tape and stand everyone on their carried point.</summary>
         public void Disarm()
         {
             _tape = null;
@@ -200,8 +204,6 @@ namespace LogiCard.Boot
 
             if (seconds < _lastAppliedSeconds)
             {
-                // Rewind: move the cursor without replaying outcomes, so crossing a wound forwards
-                // again still announces it exactly once.
                 _eventCursor = 0;
                 while (_eventCursor < _tape.Events.Count && _tape.Events[_eventCursor].Seconds <= seconds)
                 {
@@ -279,7 +281,7 @@ namespace LogiCard.Boot
                 tracer.Init(TracerColor);
                 tracer.Aim(
                     _board.WorldFromPlanar(shooter.Evaluate(tapeEvent.Seconds)),
-                    _board.WorldFromCoord(tapeEvent.Coordinate));
+                    _board.WorldFromPlanar(tapeEvent.Position));
 
                 _tracers.Add(new TracerEntry(tapeEvent.Seconds, tracer));
             }
@@ -316,11 +318,11 @@ namespace LogiCard.Boot
 
             public PawnView View { get; }
 
-            public GridCoordinate CurrentPosition { get; set; }
+            public PlanarPosition CurrentPosition { get; set; }
 
             public int Wounds { get; set; }
 
-            public PawnEntry(int pawnId, PawnView view, GridCoordinate home, Func<TimelinePayload> payloadSource)
+            public PawnEntry(int pawnId, PawnView view, PlanarPosition home, Func<TimelinePayload> payloadSource)
             {
                 PawnId = pawnId;
                 View = view;

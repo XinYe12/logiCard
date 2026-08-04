@@ -3,45 +3,22 @@ using System.Collections.Generic;
 
 namespace LogiCard.Sim
 {
-    public readonly struct PlanarPosition
-    {
-        public float X { get; }
-
-        public float Y { get; }
-
-        public Floor Floor { get; }
-
-        public PlanarPosition(float x, float y, Floor floor = Floor.Ground)
-        {
-            X = x;
-            Y = y;
-            Floor = floor;
-        }
-
-        /// <summary>
-        /// Tile a pawn counts as occupying while mid-move, used when the resolver has to decide
-        /// whether a shot fired at an instant finds a body standing there.
-        /// </summary>
-        public GridCoordinate ToNearestCoordinate()
-        {
-            return new GridCoordinate(
-                (int)Math.Round(X, MidpointRounding.AwayFromZero),
-                (int)Math.Round(Y, MidpointRounding.AwayFromZero),
-                Floor);
-        }
-    }
-
     /// <summary>
     /// A Move booked against the Time Resource budget: waypoints plus the cumulative
     /// second at which the pawn reaches each one. Sampling this is what playback reads,
     /// so the same structure serves the Host ghost sim and the client tape (C23).
+    ///
+    /// Retargeted onto continuous <see cref="PlanarPosition"/> (C35/C39 pivot) — the embedded
+    /// PlanarPosition struct that used to live in this file moved to its own file in Phase 1;
+    /// evaluation no longer round-trips through a grid coordinate, which also fixes the round-carry
+    /// rounding drift the old <c>ToNearestCoordinate()</c> snap introduced between rounds.
     /// </summary>
     public sealed class ScheduledPath
     {
-        private readonly List<GridCoordinate> nodes = new List<GridCoordinate>();
+        private readonly List<PlanarPosition> nodes = new List<PlanarPosition>();
         private readonly List<float> arrivalSeconds = new List<float>();
 
-        public IReadOnlyList<GridCoordinate> Nodes => nodes;
+        public IReadOnlyList<PlanarPosition> Nodes => nodes;
 
         public IReadOnlyList<float> ArrivalSeconds => arrivalSeconds;
 
@@ -50,7 +27,7 @@ namespace LogiCard.Sim
         public float EndSeconds => arrivalSeconds.Count == 0 ? 0f : arrivalSeconds[arrivalSeconds.Count - 1];
 
         public static ScheduledPath FromWaypoints(
-            IReadOnlyList<GridCoordinate> waypoints,
+            IReadOnlyList<PlanarPosition> waypoints,
             float baseSecondsPerTile,
             StanceType stance,
             float startSeconds = 0f)
@@ -81,7 +58,7 @@ namespace LogiCard.Sim
         /// distance, so arrival seconds cannot be recomputed from distance alone.
         /// </summary>
         public static ScheduledPath FromTimedWaypoints(
-            IReadOnlyList<GridCoordinate> waypoints,
+            IReadOnlyList<PlanarPosition> waypoints,
             IReadOnlyList<float> arrivalSeconds)
         {
             var path = new ScheduledPath();
@@ -119,13 +96,13 @@ namespace LogiCard.Sim
 
             if (seconds <= arrivalSeconds[0])
             {
-                return ToPlanar(nodes[0]);
+                return nodes[0];
             }
 
             int last = nodes.Count - 1;
             if (seconds >= arrivalSeconds[last])
             {
-                return ToPlanar(nodes[last]);
+                return nodes[last];
             }
 
             for (int i = 1; i <= last; i++)
@@ -139,20 +116,10 @@ namespace LogiCard.Sim
 
                 float span = segmentEnd - segmentStart;
                 float t = span <= 0f ? 1f : (seconds - segmentStart) / span;
-                GridCoordinate a = nodes[i - 1];
-                GridCoordinate b = nodes[i];
-                return new PlanarPosition(
-                    a.X + ((b.X - a.X) * t),
-                    a.Y + ((b.Y - a.Y) * t),
-                    b.Floor);
+                return PlanarPosition.Lerp(nodes[i - 1], nodes[i], t);
             }
 
-            return ToPlanar(nodes[last]);
-        }
-
-        private static PlanarPosition ToPlanar(GridCoordinate c)
-        {
-            return new PlanarPosition(c.X, c.Y, c.Floor);
+            return nodes[last];
         }
     }
 }

@@ -38,14 +38,12 @@ namespace LogiCard.Tests.PlayMode
 
         protected MatchClock MatchClock { get; private set; }
 
-        /// <summary>The attacker's start tile for this round, read back from the program.</summary>
-        protected GridCoordinate Home { get; private set; }
+        /// <summary>The attacker's start point for this round, read back from the program.</summary>
+        protected PlanarPosition Home { get; private set; }
 
         [SetUp]
         public void BuildScene()
         {
-            // GameBootstrap builds board, pawns, clock, HUD and camera inside Awake, which runs
-            // synchronously on AddComponent — no frame needs to elapse before asserting.
             Bootstrap = new GameObject("TestBootstrap").AddComponent<GameBootstrap>();
 
             BoardVisual = Object.FindFirstObjectByType<BoardView>();
@@ -82,8 +80,6 @@ namespace LogiCard.Tests.PlayMode
                 Object.DestroyImmediate(Bootstrap.gameObject);
             }
 
-            // The camera and EventSystem are created unparented, so they outlive the bootstrap
-            // object and would leak into the next fixture.
             foreach (Camera camera in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
             {
                 Object.DestroyImmediate(camera.gameObject);
@@ -95,16 +91,14 @@ namespace LogiCard.Tests.PlayMode
             }
         }
 
-        /// <summary>Time Resource cost of moving between two tiles at the attacker's own base speed.</summary>
-        protected float MoveSeconds(GridCoordinate from, GridCoordinate to)
+        /// <summary>Time Resource cost of moving between two points at the attacker's own base speed.</summary>
+        protected float MoveSeconds(PlanarPosition from, PlanarPosition to)
         {
             return TimeResourceMath.SegmentSeconds(from, to, AttackerInput.Program.BaseSecondsPerTile, StanceType.Walk);
         }
 
         protected static T FindByName<T>(string name) where T : Component
         {
-            // Include inactive so verb-context controls (e.g. ShootModeControls while Move is
-            // selected) are still findable by name — they exist, just hidden.
             foreach (T candidate in Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
                 if (candidate.gameObject.name == name)

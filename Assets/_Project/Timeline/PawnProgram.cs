@@ -10,17 +10,32 @@ namespace LogiCard.Timeline
     /// picked stance, then commit Move/Shoot/Door against the round budget into a
     /// <see cref="TimelinePayload"/> (TDD D6 §2/§3). Cost is automatic — there is no time-allotment
     /// step (C21, amended 2026-08-03). Pure C# so it is unit-testable without a scene.
+    ///
+    /// Retargeted onto continuous space (C35/C39 pivot, Phase 3): <see cref="PlanarPosition"/> and
+    /// <see cref="ArenaBoard"/> replace <c>GridCoordinate</c>/<c>GridBoard</c>;
+    /// <see cref="ContinuousPathfinder"/> replaces <c>OrthogonalPathfinder</c>. The old "reject a tap
+    /// that revisits or crosses a prior waypoint" guard is gone outright — nothing replaces it,
+    /// revisiting/crossing a prior point is legal now. Shoot targeting is free-aim (Decision 1): the
+    /// row/column constraint is gone. Door interaction is radius-based (Decision 4): the caller
+    /// resolves a <see cref="Door"/> reference itself (e.g. via <see cref="ArenaBoard.TryGetNearestDoor"/>)
+    /// before calling <see cref="TryQueueDoor"/>.
     /// </summary>
     public sealed class PawnProgram
     {
         private const float BudgetEpsilon = 0.001f;
 
-        private readonly List<ActionNode> _nodes = new List<ActionNode>();
-        private readonly List<GridCoordinate> _draftWaypoints = new List<GridCoordinate>();
-        private readonly List<GridCoordinate> _pathBuffer = new List<GridCoordinate>();
-        private readonly GridBoard _board;
+        /// <summary>
+        /// Door interaction reach (Decision 4) — start ~half a pawn-width per C39, tune in Phase 6
+        /// against real play (PRODUCT_MEMORY.md open numeric #5), same scale as GhostResolver's HitRadius.
+        /// </summary>
+        private const float InteractRadius = 0.45f;
 
-        public GridCoordinate CurrentPosition { get; private set; }
+        private readonly List<ActionNode> _nodes = new List<ActionNode>();
+        private readonly List<PlanarPosition> _draftWaypoints = new List<PlanarPosition>();
+        private readonly List<PlanarPosition> _pathBuffer = new List<PlanarPosition>();
+        private readonly ArenaBoard _board;
+
+        public PlanarPosition CurrentPosition { get; private set; }
 
         /// <summary>Stance of the last committed action (or the starting stance before any).</summary>
         public StanceType CurrentStance { get; private set; }
@@ -43,20 +58,27 @@ namespace LogiCard.Timeline
         public IReadOnlyList<ActionNode> Nodes => _nodes;
 
         /// <summary>Draft waypoints after <see cref="CurrentPosition"/> (destination last).</summary>
-        public IReadOnlyList<GridCoordinate> DraftWaypoints => _draftWaypoints;
+        public IReadOnlyList<PlanarPosition> DraftWaypoints => _draftWaypoints;
 
-        public int DraftTileCount => _draftWaypoints.Count;
+        public int DraftWaypointCount => _draftWaypoints.Count;
 
         public bool HasDraft => _draftWaypoints.Count > 0;
 
         public float DraftAllottedSeconds { get; private set; }
 
+        /// <summary>
+        /// Sum of Euclidean leg lengths in the current draft (C35/C39 pivot) — replaces the old
+        /// "one cost-unit per waypoint" count, which was only correct because each grid waypoint
+        /// happened to be exactly one tile.
+        /// </summary>
+        public float DraftDistance { get; private set; }
+
         public PawnProgram(
-            GridCoordinate start,
+            PlanarPosition start,
             float baseSecondsPerTile,
             float budgetSeconds,
             StanceType startingStance = StanceType.Walk,
-            GridBoard board = null,
+            ArenaBoard board = null,
             float doorInteractBaseSeconds = 4f)
         {
             CurrentPosition = start;
@@ -66,26 +88,26 @@ namespace LogiCard.Timeline
             DraftStance = startingStance;
             CurrentShootMode = ShootMode.SnapShot;
             DoorInteractSeconds = doorInteractBaseSeconds;
-            _board = board ?? new GridBoard(5, 5, new[] { Floor.Ground });
+            _board = board ?? new ArenaBoard(floors: new[] { Floor.Ground });
         }
 
         /// <summary>
-        /// Replaces the draft with the shortest orthogonal route to <paramref name="destination"/>.
-        /// Used by <see cref="TryQueueMove"/> for scripted/single-shot moves. Interactive per-tap
-        /// authoring goes through <see cref="TryAddWaypoint"/> instead, which appends rather than
-        /// replaces. Does not spend budget until <see cref="TryCommitDraft"/>.
+        /// Replaces the draft with the shortest route to <paramref name="destination"/>. Used by
+        /// <see cref="TryQueueMove"/> for scripted/single-shot moves. Interactive per-tap authoring
+        /// goes through <see cref="TryAddWaypoint"/> instead, which appends rather than replaces.
+        /// Does not spend budget until <see cref="TryCommitDraft"/>.
         /// </summary>
-        public bool TryDraftPath(GridCoordinate destination, out string rejectionReason)
+        public bool TryDraftPath(PlanarPosition destination, out string rejectionReason)
         {
-            if (destination == CurrentPosition)
+            if (destination.Equals(CurrentPosition))
             {
                 rejectionReason = "Destination matches current position.";
                 return false;
             }
 
-            if (!OrthogonalPathfinder.TryFindPath(_board, CurrentPosition, destination, _pathBuffer))
+            if (!ContinuousPathfinder.TryFindPath(_board, CurrentPosition, destination, _pathBuffer))
             {
-                rejectionReason = "No orthogonal path to destination.";
+                rejectionReason = "No route to destination.";
                 return false;
             }
 
@@ -97,19 +119,20 @@ namespace LogiCard.Timeline
         }
 
         /// <summary>
-        /// Adds one waypoint to the draft (C21, amended 2026-08-03): the shortest legal orthogonal
-        /// route from the draft's current tip (or <see cref="CurrentPosition"/> if the draft is
-        /// empty) to <paramref name="tile"/> is appended. The player controls the route's shape by
-        /// choosing where waypoints land — the system fills in each leg, it never replaces the whole
-        /// draft with its own single shortest path to one destination. Re-tapping the immediately
-        /// previous waypoint undoes it.
+        /// Adds one waypoint to the draft (C21, amended 2026-08-03): the shortest legal route from
+        /// the draft's current tip (or <see cref="CurrentPosition"/> if the draft is empty) to
+        /// <paramref name="point"/> is appended. The player controls the route's shape by choosing
+        /// where waypoints land — the system fills in each leg, it never replaces the whole draft
+        /// with its own single shortest path to one destination. Re-tapping the immediately previous
+        /// waypoint undoes it; revisiting or crossing any other prior point is legal (C35/C39 pivot —
+        /// the old reject-on-revisit guard is gone, nothing replaces it).
         /// </summary>
-        public bool TryAddWaypoint(GridCoordinate tile, out string rejectionReason)
+        public bool TryAddWaypoint(PlanarPosition point, out string rejectionReason)
         {
-            GridCoordinate tip = HasDraft ? _draftWaypoints[_draftWaypoints.Count - 1] : CurrentPosition;
+            PlanarPosition tip = HasDraft ? _draftWaypoints[_draftWaypoints.Count - 1] : CurrentPosition;
 
             // Backtrack one waypoint if the player re-taps the previous stop.
-            if (HasDraft && tile == (DraftTileCount == 1 ? CurrentPosition : _draftWaypoints[DraftTileCount - 2]))
+            if (HasDraft && point.Equals(DraftWaypointCount == 1 ? CurrentPosition : _draftWaypoints[DraftWaypointCount - 2]))
             {
                 _draftWaypoints.RemoveAt(_draftWaypoints.Count - 1);
                 RecomputeDraftCost();
@@ -117,15 +140,9 @@ namespace LogiCard.Timeline
                 return true;
             }
 
-            if (tile == tip || _draftWaypoints.Contains(tile))
+            if (!ContinuousPathfinder.TryFindPath(_board, tip, point, _pathBuffer))
             {
-                rejectionReason = "Path already visits that tile.";
-                return false;
-            }
-
-            if (!OrthogonalPathfinder.TryFindPath(_board, tip, tile, _pathBuffer))
-            {
-                rejectionReason = "No orthogonal path to that tile.";
+                rejectionReason = "No route to that point.";
                 return false;
             }
 
@@ -139,6 +156,7 @@ namespace LogiCard.Timeline
         {
             _draftWaypoints.Clear();
             DraftAllottedSeconds = 0f;
+            DraftDistance = 0f;
         }
 
         /// <summary>Sets the draft's stance directly — no time-allotment step (C21).</summary>
@@ -165,9 +183,28 @@ namespace LogiCard.Timeline
 
         private void RecomputeDraftCost()
         {
+            DraftDistance = ComputeDraftDistance();
             DraftAllottedSeconds = HasDraft
-                ? StanceAllotment.CostForTiles(DraftTileCount, BaseSecondsPerTile, DraftStance)
+                ? StanceAllotment.CostForTiles(DraftDistance, BaseSecondsPerTile, DraftStance)
                 : 0f;
+        }
+
+        private float ComputeDraftDistance()
+        {
+            if (!HasDraft)
+            {
+                return 0f;
+            }
+
+            float distance = 0f;
+            PlanarPosition from = CurrentPosition;
+            for (int i = 0; i < _draftWaypoints.Count; i++)
+            {
+                distance += from.DistanceTo(_draftWaypoints[i]);
+                from = _draftWaypoints[i];
+            }
+
+            return distance;
         }
 
         public void SetShootMode(ShootMode mode)
@@ -188,17 +225,16 @@ namespace LogiCard.Timeline
                 return false;
             }
 
-            float cost = StanceAllotment.CostForTiles(DraftTileCount, BaseSecondsPerTile, DraftStance);
-            if (!CanReserve(cost, out rejectionReason))
+            if (!CanReserve(DraftAllottedSeconds, out rejectionReason))
             {
                 return false;
             }
 
-            GridCoordinate stepFrom = CurrentPosition;
+            PlanarPosition stepFrom = CurrentPosition;
             float running = UsedSeconds;
             for (int i = 0; i < _draftWaypoints.Count; i++)
             {
-                GridCoordinate stepTo = _draftWaypoints[i];
+                PlanarPosition stepTo = _draftWaypoints[i];
                 running += TimeResourceMath.SegmentSeconds(stepFrom, stepTo, BaseSecondsPerTile, DraftStance);
                 _nodes.Add(new ActionNode(ActionVerb.Move, running, stepTo, DraftStance));
                 stepFrom = stepTo;
@@ -216,7 +252,7 @@ namespace LogiCard.Timeline
         /// Convenience for scripted opponents and tests: draft the shortest path and commit at
         /// <see cref="CurrentStance"/> (or <paramref name="stance"/> when supplied).
         /// </summary>
-        public bool TryQueueMove(GridCoordinate destination, out string rejectionReason, StanceType? stance = null)
+        public bool TryQueueMove(PlanarPosition destination, out string rejectionReason, StanceType? stance = null)
         {
             StanceType previousPreferred = DraftStance;
             if (stance.HasValue)
@@ -244,7 +280,8 @@ namespace LogiCard.Timeline
             return committed;
         }
 
-        public bool TryQueueShoot(GridCoordinate target, out string rejectionReason, ShootMode? mode = null)
+        /// <summary>Free-aim Shoot (Decision 1) — <paramref name="aimPoint"/> may be any in-bounds point, no row/column constraint.</summary>
+        public bool TryQueueShoot(PlanarPosition aimPoint, out string rejectionReason, ShootMode? mode = null)
         {
             if (HasDraft && !TryCommitDraft(out rejectionReason))
             {
@@ -257,15 +294,9 @@ namespace LogiCard.Timeline
                 return false;
             }
 
-            if (target == CurrentPosition)
+            if (!_board.InBounds(aimPoint))
             {
-                rejectionReason = "Cannot target own tile.";
-                return false;
-            }
-
-            if (target.Floor != CurrentPosition.Floor || (target.X != CurrentPosition.X && target.Y != CurrentPosition.Y))
-            {
-                rejectionReason = "Shoot target must be on the shooter's row or column.";
+                rejectionReason = "Aim point must be in bounds.";
                 return false;
             }
 
@@ -282,31 +313,33 @@ namespace LogiCard.Timeline
             }
 
             CurrentShootMode = shootMode;
-            _nodes.Add(new ActionNode(ActionVerb.Shoot, UsedSeconds, target, CurrentStance, modifier: null, shootMode));
+            _nodes.Add(new ActionNode(ActionVerb.Shoot, UsedSeconds, aimPoint, CurrentStance, modifier: null, shootMode));
             rejectionReason = null;
             return true;
         }
 
         /// <summary>
-        /// Books an Open or Close on <paramref name="doorTile"/> — a base map action (GDD §4), not
-        /// a gear card, legal from the pawn's current tile or an orthogonal neighbour of it.
+        /// Books an Open or Close on <paramref name="door"/> — a base map action (GDD §4), not a gear
+        /// card. Legal within <see cref="InteractRadius"/> of the pawn's current position (Decision 4);
+        /// the caller resolves which door via <see cref="ArenaBoard.TryGetNearestDoor"/> before calling
+        /// this, since a continuous click essentially never lands exactly on a door's geometry.
         /// </summary>
-        public bool TryQueueDoor(GridCoordinate doorTile, DoorAction action, out string rejectionReason)
+        public bool TryQueueDoor(Door door, DoorAction action, out string rejectionReason)
         {
             if (HasDraft && !TryCommitDraft(out rejectionReason))
             {
                 return false;
             }
 
-            if (!_board.TryGetDoor(doorTile, out _))
+            if (door == null)
             {
-                rejectionReason = "Tile is not a registered door.";
+                rejectionReason = "No door to interact with.";
                 return false;
             }
 
-            if (!IsCurrentOrAdjacent(doorTile))
+            if (door.Segment.DistanceToPoint(CurrentPosition) > InteractRadius)
             {
-                rejectionReason = "Door must be on the pawn's current or adjacent tile.";
+                rejectionReason = "Door is out of interaction range.";
                 return false;
             }
 
@@ -315,27 +348,10 @@ namespace LogiCard.Timeline
                 return false;
             }
 
-            _nodes.Add(new ActionNode(ActionVerb.Door, UsedSeconds, doorTile, CurrentStance, doorAction: action));
+            PlanarPosition doorPosition = PlanarPosition.Lerp(door.Segment.A, door.Segment.B, 0.5f);
+            _nodes.Add(new ActionNode(ActionVerb.Door, UsedSeconds, doorPosition, CurrentStance, doorAction: action));
             rejectionReason = null;
             return true;
-        }
-
-        private bool IsCurrentOrAdjacent(GridCoordinate tile)
-        {
-            if (tile == CurrentPosition)
-            {
-                return true;
-            }
-
-            foreach (GridCoordinate neighbour in CurrentPosition.GetOrthogonalNeighbours())
-            {
-                if (neighbour == tile)
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         public TimelinePayload Build()
@@ -347,11 +363,11 @@ namespace LogiCard.Timeline
         /// Preview path for the board: committed Move waypoints plus the current draft, timed with
         /// each node's own stance (draft uses <see cref="DraftStance"/>).
         /// </summary>
-        public ScheduledPath BuildMovePreviewPath(GridCoordinate origin)
+        public ScheduledPath BuildMovePreviewPath(PlanarPosition origin)
         {
-            var waypoints = new List<GridCoordinate> { origin };
+            var waypoints = new List<PlanarPosition> { origin };
             var arrivals = new List<float> { 0f };
-            GridCoordinate at = origin;
+            PlanarPosition at = origin;
             float t = 0f;
 
             foreach (ActionNode node in _nodes)
@@ -362,14 +378,14 @@ namespace LogiCard.Timeline
                 }
 
                 t = node.ExecuteTime;
-                at = node.GridPosition;
+                at = node.Position;
                 waypoints.Add(at);
                 arrivals.Add(t);
             }
 
             for (int i = 0; i < _draftWaypoints.Count; i++)
             {
-                GridCoordinate next = _draftWaypoints[i];
+                PlanarPosition next = _draftWaypoints[i];
                 t += TimeResourceMath.SegmentSeconds(at, next, BaseSecondsPerTile, DraftStance);
                 at = next;
                 waypoints.Add(at);

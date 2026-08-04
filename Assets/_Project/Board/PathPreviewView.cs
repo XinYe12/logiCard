@@ -6,7 +6,7 @@ namespace LogiCard.Board
 {
     /// <summary>
     /// Day 5 placeholder for path readability. Yarn/chalk materials land on Day 9; until then
-    /// tile beads along the booked route are enough to show the orthogonal path.
+    /// beads along the booked continuous route show the draft/booked path.
     /// </summary>
     public sealed class PathPreviewView : MonoBehaviour
     {
@@ -21,7 +21,7 @@ namespace LogiCard.Board
             _board = board;
         }
 
-        public void Show(IReadOnlyList<GridCoordinate> waypoints, bool isDraft)
+        public void Show(IReadOnlyList<PlanarPosition> waypoints, bool isDraft)
         {
             Clear();
             if (_board == null || waypoints == null || waypoints.Count == 0)
@@ -35,7 +35,7 @@ namespace LogiCard.Board
                 var bead = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 bead.name = $"PathBead_{i}";
                 bead.transform.SetParent(transform, false);
-                bead.transform.position = _board.WorldFromCoord(waypoints[i]) + (Vector3.up * 0.22f);
+                bead.transform.position = _board.WorldFromPlanar(waypoints[i]) + (Vector3.up * 0.22f);
                 bead.transform.localScale = Vector3.one * (isDraft ? 0.22f : 0.16f);
                 bead.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
 

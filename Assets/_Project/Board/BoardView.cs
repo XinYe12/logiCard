@@ -1,50 +1,98 @@
+using System.Collections.Generic;
 using LogiCard.Sim;
 using UnityEngine;
 
 namespace LogiCard.Board
 {
     /// <summary>
-    /// Scene view for the pure-C# <see cref="LogiCard.Sim.GridBoard"/>. The sim owns tile truth;
-    /// this only draws primitives and converts coordinates to world space (C29: primitives
-    /// may evoke the diorama for the demo).
+    /// Scene view for <see cref="ArenaBoard"/> (C35/C39 Phase 4): one ground plane plus thin boxes
+    /// for wall/door segments. Sim owns geometry truth; this only draws and converts coordinates.
     /// </summary>
     public sealed class BoardView : MonoBehaviour
     {
-        public float TileSize = 1f;
-        public float TileThickness = 0.12f;
+        public float WorldScale = 1f;
         public float FloorSpacing = 2.5f;
+        public float WallHeight = 0.85f;
+        public float SegmentThickness = 0.12f;
 
-        private GridBoard _model;
+        private static readonly Color DoorOpenColor = new Color(0.55f, 0.72f, 0.48f);
+        private static readonly Color DoorClosedColor = new Color(0.55f, 0.38f, 0.32f);
 
-        public GridBoard Model => _model;
+        private ArenaBoard _model;
+        private readonly List<DoorVisual> _doorVisuals = new List<DoorVisual>();
+
+        public ArenaBoard Model => _model;
 
         public Vector3 CenterWorld => _model == null
             ? transform.position
-            : WorldFromPlanar(new PlanarPosition((_model.Width - 1) * 0.5f, (_model.Height - 1) * 0.5f));
+            : WorldFromPlanar(new PlanarPosition(
+                (_model.MinX + _model.MaxX) * 0.5f,
+                (_model.MinY + _model.MaxY) * 0.5f));
 
-        public void Build(GridBoard model, Color lightTile, Color darkTile)
+        public void Build(ArenaBoard model, Color groundColor, Color wallColor)
         {
             _model = model;
+            _doorVisuals.Clear();
 
-            Material light = CreateClayish(lightTile);
-            Material dark = CreateClayish(darkTile);
-
-            foreach (GridCoordinate coord in model.GetAllCoordinates())
+            for (int i = transform.childCount - 1; i >= 0; i--)
             {
-                var tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                tile.name = $"Tile_{coord.Floor}_{coord.X}_{coord.Y}";
-                tile.transform.SetParent(transform, false);
-                tile.transform.localPosition = LocalFromPlanar(new PlanarPosition(coord.X, coord.Y, coord.Floor));
-                tile.transform.localScale = new Vector3(TileSize * 0.94f, TileThickness, TileSize * 0.94f);
-                tile.GetComponent<MeshRenderer>().sharedMaterial = ((coord.X + coord.Y) % 2 == 0) ? light : dark;
-                tile.AddComponent<TileMarker>().Init(coord);
+                DestroyImmediate(transform.GetChild(i).gameObject);
+            }
+
+            float width = model.MaxX - model.MinX;
+            float depth = model.MaxY - model.MinY;
+            float centerX = (model.MinX + model.MaxX) * 0.5f;
+            float centerY = (model.MinY + model.MaxY) * 0.5f;
+
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            ground.name = "GroundPlane";
+            ground.transform.SetParent(transform, false);
+            ground.transform.localPosition = LocalFromPlanar(new PlanarPosition(centerX, centerY))
+                                            + new Vector3(0f, -0.05f, 0f);
+            ground.transform.localScale = new Vector3(width * WorldScale, 0.1f, depth * WorldScale);
+            ground.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(groundColor);
+
+            for (int i = 0; i < model.Walls.Count; i++)
+            {
+                PlaceSegmentBox($"Wall_{i}", model.Walls[i], wallColor, WallHeight);
+            }
+
+            for (int i = 0; i < model.Doors.Count; i++)
+            {
+                Door door = model.Doors[i];
+                Color color = model.GetDoorState(door) == DoorState.Open ? DoorOpenColor : DoorClosedColor;
+                GameObject box = PlaceSegmentBox($"Door_{i}", door.Segment, color, WallHeight * 0.92f);
+                _doorVisuals.Add(new DoorVisual(door, box.GetComponent<MeshRenderer>()));
+            }
+        }
+
+        /// <summary>Refresh door box colors from the live board state (open vs closed).</summary>
+        public void RefreshDoorVisuals()
+        {
+            if (_model == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _doorVisuals.Count; i++)
+            {
+                DoorVisual visual = _doorVisuals[i];
+                if (visual.Renderer == null)
+                {
+                    continue;
+                }
+
+                Color color = _model.GetDoorState(visual.Door) == DoorState.Open
+                    ? DoorOpenColor
+                    : DoorClosedColor;
+                visual.Renderer.sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
             }
         }
 
         public Vector3 LocalFromPlanar(PlanarPosition p)
         {
             float floorHeight = p.Floor == Floor.Attic ? FloorSpacing : 0f;
-            return new Vector3(p.X * TileSize, floorHeight, p.Y * TileSize);
+            return new Vector3(p.X * WorldScale, floorHeight, p.Y * WorldScale);
         }
 
         public Vector3 WorldFromPlanar(PlanarPosition p)
@@ -52,14 +100,55 @@ namespace LogiCard.Board
             return transform.TransformPoint(LocalFromPlanar(p));
         }
 
-        public Vector3 WorldFromCoord(GridCoordinate c)
+        /// <summary>Inverse of <see cref="WorldFromPlanar"/> for ground-plane raycasts (Decision 4 input).</summary>
+        public PlanarPosition PlanarFromWorld(Vector3 world)
         {
-            return WorldFromPlanar(new PlanarPosition(c.X, c.Y, c.Floor));
+            Vector3 local = transform.InverseTransformPoint(world);
+            float scale = WorldScale <= 0f ? 1f : WorldScale;
+            return new PlanarPosition(local.x / scale, local.z / scale, Floor.Ground);
         }
 
-        private static Material CreateClayish(Color color)
+        private GameObject PlaceSegmentBox(string name, Segment segment, Color color, float height)
         {
-            return PrimitiveMaterialFactory.Tinted(color);
+            float dx = segment.B.X - segment.A.X;
+            float dy = segment.B.Y - segment.A.Y;
+            float length = Mathf.Sqrt((dx * dx) + (dy * dy));
+            if (length < 1e-4f)
+            {
+                length = SegmentThickness;
+            }
+
+            PlanarPosition mid = PlanarPosition.Lerp(segment.A, segment.B, 0.5f);
+            var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            box.name = name;
+            box.transform.SetParent(transform, false);
+            box.transform.localPosition = LocalFromPlanar(mid) + new Vector3(0f, height * 0.5f, 0f);
+            box.transform.localScale = new Vector3(length * WorldScale, height, SegmentThickness * WorldScale);
+            float yaw = Mathf.Atan2(dx, dy) * Mathf.Rad2Deg;
+            box.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            box.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
+
+            // Walls/doors should not steal board taps — only the ground plane is clickable.
+            Collider col = box.GetComponent<Collider>();
+            if (col != null)
+            {
+                Object.Destroy(col);
+            }
+
+            return box;
+        }
+
+        private readonly struct DoorVisual
+        {
+            public Door Door { get; }
+
+            public MeshRenderer Renderer { get; }
+
+            public DoorVisual(Door door, MeshRenderer renderer)
+            {
+                Door = door;
+                Renderer = renderer;
+            }
         }
     }
 }

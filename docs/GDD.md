@@ -72,7 +72,7 @@ There is **no Walk card**. Movement is built-in programming:
 
 ### 3.3 Collision
 - Closed door segment blocks movement across it (§4).
-- **Pawn-vs-pawn collision on a continuous board is OPEN** — the old "cannot share a tile" rule doesn't translate directly (there's no tile to share). Not addressed by `CONTINUOUS_PIVOT_PLAN.md`'s Phase 1–6; needs a decision before Phase 6 tuning (e.g., a minimum-separation radius, or no pawn-vs-pawn blocking at all since wounds already come from Shoot, not contact).
+- **Pawns do not block each other** (**C40**). Two pawns may occupy the same point or cross paths; contact is not a combat verb. Wounds come only from Shoot (`HitRadius` / `LaneHalfWidth` — **C39**). Matches the grid demo's actual behavior (the old "cannot share a tile" line was never enforced in digital code). Optional AV (slight offset when stacked) is presentation-only, not a gameplay rule. Tradeoff archive: [`docs/drafts/pawn-collision-tradeoff.md`](drafts/pawn-collision-tradeoff.md).
 
 ---
 

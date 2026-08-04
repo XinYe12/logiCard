@@ -547,7 +547,7 @@ namespace LogiCard.UI
             float cost = ShootCost.SecondsFor(mode);
             _shootModeLabel.text = mode == ShootMode.HoldAngle
                 ? $"HOLD ANGLE  {cost:0}s — covers the aim lane; lethal; hits Sprint"
-                : $"SNAP SHOT  {cost:0}s — aimed tile only; wounds; misses Sprint";
+                : $"SNAP SHOT  {cost:0}s — aimed point only; wounds; misses Sprint";
 
             if (_snapButton != null)
             {
@@ -564,12 +564,12 @@ namespace LogiCard.UI
             }
 
             StanceType stance = program.HasDraft ? program.DraftStance : (_input != null ? _input.PreferredStance : StanceType.Walk);
-            float tiles = program.HasDraft ? program.DraftTileCount : 1f;
-            float cost = StanceAllotment.CostForTiles(tiles, program.BaseSecondsPerTile, stance);
+            float distance = program.HasDraft ? program.DraftDistance : 1f;
+            float cost = StanceAllotment.CostForTiles(distance, program.BaseSecondsPerTile, stance);
 
             _stanceLabel.text = program.HasDraft
-                ? $"PATH {program.DraftTileCount} tile(s) · {StanceMath.Label(stance)} · {cost:0.0}s — SET PATH to book"
-                : $"STANCE  {StanceMath.Label(stance)} · {cost:0.0}s / tile — tap the board to build a path";
+                ? $"PATH {program.DraftDistance:0.0}m · {StanceMath.Label(stance)} · {cost:0.0}s — SET PATH to book"
+                : $"STANCE  {StanceMath.Label(stance)} · {cost:0.0}s / m — tap the board to build a path";
 
             if (_sprintButton != null)
             {
@@ -594,12 +594,12 @@ namespace LogiCard.UI
             string text = $"Used {program.UsedSeconds:0.0} / {program.BudgetSeconds:0.0}s";
             if (program.HasDraft)
             {
-                text += $"\nDRAFT {program.DraftTileCount} tile(s) · {StanceMath.Label(program.DraftStance)} · {program.DraftAllottedSeconds:0.0}s";
+                text += $"\nDRAFT {program.DraftDistance:0.0}m · {StanceMath.Label(program.DraftStance)} · {program.DraftAllottedSeconds:0.0}s";
             }
 
             if (program.Nodes.Count == 0 && !program.HasDraft)
             {
-                text += "\n\nTap tiles to draw a path, allot stance, SET PATH. Or Shoot.";
+                text += "\n\nTap the board to draw a path, pick stance, SET PATH. Or Shoot (free-aim).";
             }
 
             for (int i = 0; i < program.Nodes.Count; i++)
@@ -608,7 +608,7 @@ namespace LogiCard.UI
                 string detail = node.Verb == ActionVerb.Shoot
                     ? ShootModeMath.Label(node.ShootMode)
                     : StanceMath.Label(node.Stance);
-                text += $"\n{i + 1}: {node.Verb} -> {node.GridPosition} @{node.ExecuteTime:0.0}s ({detail})";
+                text += $"\n{i + 1}: {node.Verb} -> {node.Position} @{node.ExecuteTime:0.0}s ({detail})";
             }
 
             _queueText.text = text;
@@ -634,7 +634,7 @@ namespace LogiCard.UI
             foreach (ActionNode node in payload.Nodes)
             {
                 string modifier = node.Modifier != null ? node.Modifier.displayName : "none";
-                Debug.Log($"[logiCard]   {node.Verb} @ {node.ExecuteTime:0.00}s -> {node.GridPosition} " +
+                Debug.Log($"[logiCard]   {node.Verb} @ {node.ExecuteTime:0.00}s -> {node.Position} " +
                           $"stance={StanceMath.Label(node.Stance)} shoot={ShootModeMath.Label(node.ShootMode)} " +
                           $"modifier={modifier}");
             }

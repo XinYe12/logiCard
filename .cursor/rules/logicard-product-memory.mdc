@@ -64,6 +64,14 @@ One **shared** match Time Resource pool (demo **900s**). Each round one side pla
 
 **C39 locks the technical decisions:** free-aim Shoot targeting (no row/column, no pawn-ID lock — `HitRadius`/`LaneHalfWidth`); schedule handling = compress the art/polish pass, keep Day 14 ship; pathfinding = visibility graph + Dijkstra (not navmesh); Door interaction = radius-based (`ArenaBoard.TryGetNearestDoor`); Hold Angle contact = analytic segment-vs-lane sweep (not instant-probing — the grid version's sampling only worked by tile-density coincidence); `Floor` field kept, no per-floor obstacle infra (attic still out of scope); board scale unchanged.
 
+## Pawn-vs-pawn collision (C40)
+
+**No pawn-vs-pawn blocking.** Pawns may occupy the same point or cross paths; contact is not a combat verb. Wounds come only from Shoot (`HitRadius`/`LaneHalfWidth`). Walls/closed doors remain the only movement + LoS blockers. Optional stacked-pawn AV is presentation-only.
+
+## Phase 1 ↔ master merge locks (C41)
+
+**Door API = Door-typed** (master), not int-id. **`Segment.Intersects` = inclusive touch** (shared corner/endpoint blocks). Take Phase 1 real math elsewhere; rewrite those two shapes to match.
+
 ## Long-term map-adjacent, objective, revive (C36–C38 — still long-term only)
 
 **None of these change the 14-day demo** (which now uses continuous position per C35/C39, but still Dead-only win, Healthy→Wounded→Dead). Long-term only:

@@ -9,30 +9,32 @@ using UnityEngine.EventSystems;
 namespace LogiCard.Board
 {
     /// <summary>
-    /// Program input for one pawn: raycasts board tiles, drafts a multi-waypoint path (each tap
-    /// appends a waypoint) at a directly picked stance, and commits Move/Shoot into a
-    /// <see cref="PawnProgram"/>. Cost is automatic — no time-allotment step (C21, amended
-    /// 2026-08-03). Origin and budget refresh each round from carried state + Time Card (C33).
+    /// Program input for one pawn: raycasts the continuous ground plane, drafts multi-waypoint
+    /// paths at a directly picked stance, and commits Move/Shoot/Door into a
+    /// <see cref="PawnProgram"/> (C21 + C35/C39 Phase 4).
     /// </summary>
     public sealed class BoardInputController : MonoBehaviour
     {
+        private const float DoorPickRadius = 0.55f;
+
         private PawnView _pawn;
         private RoundPhaseController _phase;
-        private GridCoordinate _origin;
+        private PlanarPosition _origin;
         private float _baseSecondsPerTile;
         private float _budgetSeconds;
-        private GridBoard _board;
+        private ArenaBoard _board;
         private BoardView _boardView;
         private bool _locked;
         private StanceType _preferredStance = StanceType.Walk;
         private ShootMode _preferredShootMode = ShootMode.SnapShot;
+        private DoorAction _preferredDoorAction = DoorAction.Open;
         private PathPreviewView _pathPreview;
 
         public ActionVerb Mode { get; set; } = ActionVerb.Move;
 
         public PawnProgram Program { get; private set; }
 
-        public GridCoordinate Origin => _origin;
+        public PlanarPosition Origin => _origin;
 
         public StanceType PreferredStance
         {
@@ -63,12 +65,18 @@ namespace LogiCard.Board
             }
         }
 
+        public DoorAction PreferredDoorAction
+        {
+            get => _preferredDoorAction;
+            set => _preferredDoorAction = value;
+        }
+
         public event Action<PawnProgram> QueueChanged;
 
         public void Init(
             PawnView pawn,
             RoundPhaseController phase,
-            GridCoordinate origin,
+            PlanarPosition origin,
             float baseSecondsPerTile,
             float budgetSeconds,
             BoardView boardView = null)
@@ -93,8 +101,8 @@ namespace LogiCard.Board
             ResetProgram();
         }
 
-        /// <summary>Updates the carried start tile and round budget before Program rebuilds (C33).</summary>
-        public void PrepareRound(GridCoordinate origin, float budgetSeconds)
+        /// <summary>Updates the carried start point and round budget before Program rebuilds (C33).</summary>
+        public void PrepareRound(PlanarPosition origin, float budgetSeconds)
         {
             _origin = origin;
             _budgetSeconds = budgetSeconds < 0f ? 0f : budgetSeconds;
@@ -108,10 +116,6 @@ namespace LogiCard.Board
             }
         }
 
-        /// <summary>
-        /// Stops further scheduling. The pawn's playback path now comes from the resolved ReplayTape
-        /// rather than from this preview, so nothing is written to the view here.
-        /// </summary>
         public void CommitToPlayback()
         {
             TryCommitDraftPath();
@@ -119,7 +123,6 @@ namespace LogiCard.Board
             _pathPreview?.Clear();
         }
 
-        /// <summary>Commits a pending draft path at its allotted stance, if any.</summary>
         public bool TryCommitDraftPath()
         {
             if (_locked || Program == null || !Program.HasDraft)
@@ -202,36 +205,70 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Queues the current <see cref="Mode"/> against an already-resolved tile and refreshes the
-        /// preview. Split out from the raycast so the schedule path can be driven without a real
-        /// pointer (mouse state cannot be synthesised through legacy <see cref="Input"/>).
+        /// Queues the current <see cref="Mode"/> at an already-resolved continuous point.
+        /// Split from the raycast so PlayMode tests can drive scheduling without a real pointer.
         /// </summary>
-        public bool TryTapTile(GridCoordinate coordinate)
+        public bool TryTapPoint(PlanarPosition point)
         {
             if (_locked || _phase.Phase != RoundPhase.Program)
             {
                 return false;
             }
 
-            if (Mode == ActionVerb.Shoot)
+            if (Mode == ActionVerb.Shoot || Mode == ActionVerb.Door)
             {
                 TryCommitDraftPath();
             }
 
             string reason;
-            bool queued = Mode == ActionVerb.Move
-                ? Program.TryAddWaypoint(coordinate, out reason)
-                : Program.TryQueueShoot(coordinate, out reason, _preferredShootMode);
+            bool queued;
+            if (Mode == ActionVerb.Move)
+            {
+                queued = Program.TryAddWaypoint(point, out reason);
+            }
+            else if (Mode == ActionVerb.Shoot)
+            {
+                queued = Program.TryQueueShoot(point, out reason, _preferredShootMode);
+            }
+            else if (Mode == ActionVerb.Door)
+            {
+                queued = TryQueueNearestDoor(point, out reason);
+            }
+            else
+            {
+                reason = $"Unsupported verb {Mode}.";
+                queued = false;
+            }
 
             if (!queued)
             {
-                Debug.Log($"[logiCard] {Mode} rejected at {coordinate}: {reason}");
+                Debug.Log($"[logiCard] {Mode} rejected at {point}: {reason}");
                 return false;
             }
 
             RefreshPreview();
             QueueChanged?.Invoke(Program);
             return true;
+        }
+
+        private bool TryQueueNearestDoor(PlanarPosition point, out string reason)
+        {
+            if (_board == null || !_board.TryGetNearestDoor(point, DoorPickRadius, out Door door))
+            {
+                reason = "No door near tap.";
+                return false;
+            }
+
+            DoorAction action = _preferredDoorAction;
+            DoorState state = _board.GetDoorState(door);
+            // If the preferred action is already the live state, toggle so a second tap still does work.
+            if ((action == DoorAction.Open && state == DoorState.Open)
+                || (action == DoorAction.Close && state == DoorState.Closed))
+            {
+                action = state == DoorState.Open ? DoorAction.Close : DoorAction.Open;
+            }
+
+            return Program.TryQueueDoor(door, action, out reason);
         }
 
         private void RefreshPreview()
@@ -259,12 +296,12 @@ namespace LogiCard.Board
                 return;
             }
 
-            var points = new List<GridCoordinate> { _origin };
+            var points = new List<PlanarPosition> { _origin };
             foreach (ActionNode node in Program.Nodes)
             {
                 if (node.Verb == ActionVerb.Move)
                 {
-                    points.Add(node.GridPosition);
+                    points.Add(node.Position);
                 }
             }
 
@@ -291,18 +328,24 @@ namespace LogiCard.Board
         private void TryHandleClick()
         {
             Camera cam = Camera.main;
-            if (cam == null || !Physics.Raycast(cam.ScreenPointToRay(Input.mousePosition), out RaycastHit hit))
+            if (cam == null || _boardView == null)
             {
                 return;
             }
 
-            var marker = hit.collider.GetComponent<TileMarker>();
-            if (marker == null)
+            if (!Physics.Raycast(cam.ScreenPointToRay(Input.mousePosition), out RaycastHit hit))
             {
                 return;
             }
 
-            TryTapTile(marker.Coordinate);
+            // Only accept hits on this board's ground (or any collider under the BoardView root).
+            if (!hit.collider.transform.IsChildOf(_boardView.transform)
+                && hit.collider.transform != _boardView.transform)
+            {
+                return;
+            }
+
+            TryTapPoint(_boardView.PlanarFromWorld(hit.point));
         }
     }
 }

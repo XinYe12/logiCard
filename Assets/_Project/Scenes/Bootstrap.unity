@@ -352,10 +352,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a1b2c3d4e5f6470895a1b2c3d4e5f608, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  timeResourceBudgetSeconds: 60
-  playbackSecondsForFullBudget: 8
+  matchPoolSeconds: 900
+  minRoundSeconds: 30
+  playbackSecondsPerTimeResourceSecond: 0.13333334
   boardWidth: 5
   boardHeight: 5
+  showPhaseDebugControls: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

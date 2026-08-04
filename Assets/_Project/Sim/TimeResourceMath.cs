@@ -11,11 +11,12 @@ namespace LogiCard.Sim
         }
 
         /// <summary>
-        /// Movement is orthogonal on the grid, so tile distance is Manhattan distance.
+        /// Continuous-space movement (C35/C39 pivot): distance is Euclidean, not Manhattan. Draft cost
+        /// becomes "sum of leg lengths" rather than "one cost-unit per waypoint" as a direct consequence.
         /// </summary>
-        public static float SegmentSeconds(GridCoordinate from, GridCoordinate to, float baseSecondsPerTile, StanceType stance)
+        public static float SegmentSeconds(PlanarPosition from, PlanarPosition to, float baseSecondsPerTile, StanceType stance)
         {
-            return SegmentSeconds(from.ManhattanDistanceTo(to), baseSecondsPerTile, stance);
+            return SegmentSeconds(from.DistanceTo(to), baseSecondsPerTile, stance);
         }
     }
 }

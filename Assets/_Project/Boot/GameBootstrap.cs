@@ -7,15 +7,12 @@ using UnityEngine;
 namespace LogiCard.Boot
 {
     /// <summary>
-    /// Vertical slice scaffold: builds the 5x5 board, the continuous Time Resource clock,
+    /// Vertical slice scaffold: builds the continuous arena, the Time Resource clock,
     /// the portrait HUD, two pawns, MatchClock (C33), and the local resolve/playback loop.
     ///
     /// The attacker is player-programmed via BoardInputController; the defender runs a
     /// scripted program rebuilt each round from its carried position. Both reach the
     /// resolver as ordinary payloads.
-    ///
-    /// Everything is constructed at runtime on purpose — Slice 1-2 changes shape daily and
-    /// code is easier to diff than scene YAML.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public sealed class GameBootstrap : MonoBehaviour
@@ -29,10 +26,6 @@ namespace LogiCard.Boot
 
         [Tooltip("Playback Duration seconds per one Time Resource second (C27). Default keeps the old 60s→8s feel.")]
         public float playbackSecondsPerTimeResourceSecond = 8f / 60f;
-
-        [Header("Board")]
-        public int boardWidth = 5;
-        public int boardHeight = 5;
 
         [Header("Debug")]
         [Tooltip("Adds the Program/Reveal/Execute jump buttons to the thumb zone (Day 2 debug aid).")]
@@ -107,8 +100,9 @@ namespace LogiCard.Boot
             hud.NextRoundRequested += OnNextRoundRequested;
             _playback.OutcomeReported += hud.ShowOutcome;
 
-            Debug.Log($"[logiCard] Slice up: {boardWidth}x{boardHeight} board, match pool " +
-                      $"{matchPoolSeconds:0}s TR, min round {minRoundSeconds:0}s.");
+            Debug.Log($"[logiCard] Slice up: continuous arena [{_board.Model.MinX},{_board.Model.MaxX}]×" +
+                      $"[{_board.Model.MinY},{_board.Model.MaxY}], match pool {matchPoolSeconds:0}s TR, " +
+                      $"min round {minRoundSeconds:0}s.");
         }
 
         private void OnTimeCardPlayed(float seconds)
@@ -122,7 +116,7 @@ namespace LogiCard.Boot
             float allotment = _matchClock.RoundAllotment;
             _clock.ApplyBudget(allotment);
 
-            GridCoordinate attackerOrigin = _playback.PositionOf(AttackerPawnId);
+            PlanarPosition attackerOrigin = _playback.PositionOf(AttackerPawnId);
             _attackerInput.PrepareRound(attackerOrigin, allotment);
 
             Debug.Log($"[logiCard] Time Card played by {_matchClock.CurrentChooser}: {allotment:0.0}s " +
@@ -155,23 +149,30 @@ namespace LogiCard.Boot
             var boardGo = new GameObject("Board");
             boardGo.transform.SetParent(transform, false);
 
-            // Ground floor only for Day 2; the attic floor is already supported by the sim board.
-            var model = new GridBoard(boardWidth, boardHeight, new[] { Floor.Ground });
+            // Continuous translation of DAY7 wall-with-gap: walls along y=2 with a door gap at x≈2.
+            // Door starts Open so scripted/demo LoS through the choke is readable without a forced
+            // open action (Closed-start remains the design preference for Phase 6 playtest tuning).
+            var model = new ArenaBoard(0f, 0f, 4f, 4f, new[] { Floor.Ground });
+            model.RegisterWall(new Segment(new PlanarPosition(0f, 2f), new PlanarPosition(1.75f, 2f)));
+            model.RegisterWall(new Segment(new PlanarPosition(2.25f, 2f), new PlanarPosition(4f, 2f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(1.75f, 2f), new PlanarPosition(2.25f, 2f)),
+                DoorState.Open));
 
             _board = boardGo.AddComponent<BoardView>();
-            _board.Build(model, new Color(0.82f, 0.78f, 0.70f), new Color(0.62f, 0.58f, 0.52f));
+            _board.Build(model, new Color(0.82f, 0.78f, 0.70f), new Color(0.42f, 0.38f, 0.34f));
         }
 
         private void BuildPawns()
         {
-            var attackerHome = new GridCoordinate(0, 0);
+            // Column-aligned with the door choke (DAY7 research layout).
+            var attackerHome = new PlanarPosition(2f, 0f);
             const float attackerSecondsPerTile = 1f;
-            var defenderSpawn = new GridCoordinate(4, 4);
+            var defenderSpawn = new PlanarPosition(2f, 4f);
 
             PawnView attacker = SpawnPawn("Pawn_Attacker", new Color(0.90f, 0.35f, 0.28f), attackerHome, attackerSecondsPerTile);
             PawnView defender = SpawnPawn("Pawn_Defender", new Color(0.32f, 0.58f, 0.86f), defenderSpawn, DefenderSecondsPerTile);
 
-            // Budget is 0 until the first Time Card; Program rebuilds with the real allotment.
             _attackerInput = attacker.gameObject.AddComponent<BoardInputController>();
             _attackerInput.Init(attacker, _phase, attackerHome, attackerSecondsPerTile, 0f, _board);
 
@@ -184,42 +185,39 @@ namespace LogiCard.Boot
         }
 
         /// <summary>
-        /// Scripted defender rebuilt each Lock In from its carried tile and the round allotment,
-        /// so multi-round matches stay coherent without a second input device.
+        /// Scripted defender rebuilt each Lock In from its carried point and the round allotment.
         /// </summary>
         private LogiCard.Net.TimelinePayload BuildDefenderPayload()
         {
-            GridCoordinate start = _playback.PositionOf(DefenderPawnId);
+            PlanarPosition start = _playback.PositionOf(DefenderPawnId);
             float budget = _matchClock.RoundAllotment;
-            var program = new PawnProgram(start, DefenderSecondsPerTile, budget);
+            var program = new PawnProgram(start, DefenderSecondsPerTile, budget, StanceType.Walk, _board.Model);
 
-            // Prefer a short cross toward the board center, then a Snap down the row, then close in —
-            // same intent as the Day 3 script, but clipped to whatever N the Time Card funded.
-            int midY = Mathf.Clamp(2, 0, boardHeight - 1);
-            TryScriptMove(program, new GridCoordinate(start.X, midY));
-            TryScriptShoot(program, new GridCoordinate(0, program.CurrentPosition.Y));
-            TryScriptMove(program, new GridCoordinate(2, 2));
+            // Approach the door from the north, Snap south down the door column, then edge closer.
+            TryScriptMove(program, new PlanarPosition(2f, 2.6f));
+            TryScriptShoot(program, new PlanarPosition(2f, 1f));
+            TryScriptMove(program, new PlanarPosition(2f, 2.3f));
 
             return program.Build();
         }
 
-        private static void TryScriptMove(PawnProgram program, GridCoordinate destination)
+        private static void TryScriptMove(PawnProgram program, PlanarPosition destination)
         {
             if (!program.TryQueueMove(destination, out _))
             {
-                // Over-budget or already there — fine for a stub AI.
+                // Over-budget or unreachable — fine for a stub AI.
             }
         }
 
-        private static void TryScriptShoot(PawnProgram program, GridCoordinate target)
+        private static void TryScriptShoot(PawnProgram program, PlanarPosition aim)
         {
-            if (!program.TryQueueShoot(target, out _))
+            if (!program.TryQueueShoot(aim, out _))
             {
                 // Over-budget or illegal aim — fine for a stub AI.
             }
         }
 
-        private PawnView SpawnPawn(string name, Color color, GridCoordinate home, float baseSecondsPerTile)
+        private PawnView SpawnPawn(string name, Color color, PlanarPosition home, float baseSecondsPerTile)
         {
             var go = new GameObject(name);
             go.transform.SetParent(transform, false);
@@ -238,14 +236,12 @@ namespace LogiCard.Boot
                 cam = camGo.GetComponent<Camera>();
             }
 
-            // Board renders only in the middle band; the HUD panels cover the rest (C30).
             cam.rect = new Rect(0f, ProgramHud.ThumbZoneHeight, 1f, 1f - ProgramHud.ThumbZoneHeight - ProgramHud.TopStripHeight);
             cam.orthographic = true;
             cam.orthographicSize = 3.6f;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.07f, 0.07f, 0.09f);
 
-            // Tilt-shift diorama angle (C29) without needing any art yet.
             var rotation = Quaternion.Euler(52f, 0f, 0f);
             cam.transform.rotation = rotation;
             cam.transform.position = _board.CenterWorld - (rotation * Vector3.forward * 14f);

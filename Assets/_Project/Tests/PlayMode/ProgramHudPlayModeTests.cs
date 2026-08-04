@@ -10,8 +10,7 @@ using UnityEngine.UI;
 namespace LogiCard.Tests.PlayMode
 {
     /// <summary>
-    /// Day 3/5 HUD wiring plus the playback hand-off: thumb-zone controls must drive the program,
-    /// and Lock In must put the committed path on screen through the Time Resource clock.
+    /// HUD wiring plus the playback hand-off on the continuous board (Phase 4/5).
     /// </summary>
     [TestFixture]
     public sealed class ProgramHudPlayModeTests : SliceSceneFixture
@@ -44,7 +43,7 @@ namespace LogiCard.Tests.PlayMode
             hold.onClick.Invoke();
             Assert.That(AttackerInput.PreferredShootMode, Is.EqualTo(ShootMode.HoldAngle));
 
-            Assert.That(AttackerInput.TryTapTile(Home.Offset(0, 3)), Is.True);
+            Assert.That(AttackerInput.TryTapPoint(new PlanarPosition(Home.X, Home.Y + 3f)), Is.True);
             Assert.That(AttackerInput.Program.Nodes[0].ShootMode, Is.EqualTo(ShootMode.HoldAngle));
             Assert.That(AttackerInput.Program.UsedSeconds, Is.EqualTo(ShootCost.HoldAngleSeconds).Within(0.0001f));
 
@@ -61,7 +60,7 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(setPath, Is.Not.Null, "HUD has no SetPathButton.");
 
             AttackerInput.Mode = ActionVerb.Move;
-            Assert.That(AttackerInput.TryTapTile(Home.Offset(0, 2)), Is.True);
+            Assert.That(AttackerInput.TryTapPoint(new PlanarPosition(Home.X, Home.Y + 2f)), Is.True);
 
             sprint.onClick.Invoke();
             Assert.That(AttackerInput.Program.DraftStance, Is.EqualTo(StanceType.Sprint));
@@ -78,11 +77,11 @@ namespace LogiCard.Tests.PlayMode
             Text readout = FindByName<Text>("QueueReadout");
             Assert.That(readout, Is.Not.Null, "HUD has no QueueReadout text.");
 
-            GridCoordinate destination = Home.Offset(0, 2);
+            PlanarPosition destination = new PlanarPosition(Home.X, Home.Y + 2f);
             float expected = MoveSeconds(Home, destination);
 
             AttackerInput.Mode = ActionVerb.Move;
-            AttackerInput.TryTapTile(destination);
+            AttackerInput.TryTapPoint(destination);
 
             Assert.That(readout.text, Does.Contain("DRAFT"));
             Assert.That(readout.text, Does.Contain("Walk"));
@@ -98,7 +97,7 @@ namespace LogiCard.Tests.PlayMode
         public IEnumerator LockInButtonCommitsDraftAndReachesExecutePhase()
         {
             AttackerInput.Mode = ActionVerb.Move;
-            AttackerInput.TryTapTile(Home.Offset(0, 2));
+            AttackerInput.TryTapPoint(new PlanarPosition(Home.X, Home.Y + 2f));
             Assert.That(AttackerInput.Program.HasDraft, Is.True);
 
             Button lockIn = FindByName<Button>("LockInButton");
@@ -108,7 +107,6 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(AttackerInput.Program.HasDraft, Is.False, "Lock In must commit the draft path.");
             Assert.That(AttackerInput.Program.Nodes, Is.Not.Empty);
 
-            // Reveal holds for 0.8 real-world seconds before Execute (ProgramHud.LockInRoutine).
             float deadline = Time.realtimeSinceStartup + 5f;
             while (Phase.Phase != RoundPhase.Execute && Time.realtimeSinceStartup < deadline)
             {
@@ -119,29 +117,30 @@ namespace LogiCard.Tests.PlayMode
         }
 
         [Test]
-        public void PlaybackPlacesThePawnOnItsScheduledTileAtTheArrivalSecond()
+        public void PlaybackPlacesThePawnOnItsScheduledPointAtTheArrivalSecond()
         {
-            GridCoordinate destination = Home.Offset(0, 2);
+            PlanarPosition destination = new PlanarPosition(Home.X, Home.Y + 2f);
             float arrival = MoveSeconds(Home, destination);
 
             AttackerInput.Mode = ActionVerb.Move;
-            AttackerInput.TryTapTile(destination);
+            AttackerInput.TryTapPoint(destination);
             AttackerInput.CommitToPlayback();
 
             Clock.Pause();
 
             Clock.SetSeconds(0f);
-            Assert.That(Vector3.Distance(AttackerPawn.transform.position, BoardVisual.WorldFromCoord(Home)),
-                Is.LessThan(0.0001f), "Pawn does not start on its home tile.");
+            Assert.That(Vector3.Distance(AttackerPawn.transform.position, BoardVisual.WorldFromPlanar(Home)),
+                Is.LessThan(0.0001f), "Pawn does not start on its home point.");
 
             Clock.SetSeconds(arrival * 0.5f);
-            Vector3 midpoint = Vector3.Lerp(BoardVisual.WorldFromCoord(Home), BoardVisual.WorldFromCoord(destination), 0.5f);
+            Vector3 midpoint = Vector3.Lerp(
+                BoardVisual.WorldFromPlanar(Home), BoardVisual.WorldFromPlanar(destination), 0.5f);
             Assert.That(Vector3.Distance(AttackerPawn.transform.position, midpoint), Is.LessThan(0.001f),
                 "Playback snaps instead of interpolating across the Time Resource segment.");
 
             Clock.SetSeconds(arrival);
-            Assert.That(Vector3.Distance(AttackerPawn.transform.position, BoardVisual.WorldFromCoord(destination)),
-                Is.LessThan(0.0001f), "Pawn is not on its scheduled tile at the arrival second.");
+            Assert.That(Vector3.Distance(AttackerPawn.transform.position, BoardVisual.WorldFromPlanar(destination)),
+                Is.LessThan(0.0001f), "Pawn is not on its scheduled point at the arrival second.");
         }
     }
 }
