@@ -32,6 +32,9 @@ namespace LogiCard.Board
 
         public ActionVerb Mode { get; set; } = ActionVerb.Move;
 
+        /// <summary>Read-only access for the HUD to describe actual door state (not just the player's selected action).</summary>
+        public ArenaBoard Board => _board;
+
         public PawnProgram Program { get; private set; }
 
         public PlanarPosition Origin => _origin;
@@ -91,8 +94,15 @@ namespace LogiCard.Board
 
             if (_pathPreview == null && boardView != null)
             {
+                // Parented to the board, not this pawn's own transform (BUG FOUND 2026-08-05):
+                // beads are drawn at absolute board positions via WorldFromPlanar, but this
+                // component lives on the pawn's GameObject. Parenting under the pawn made every
+                // bead a rigid child of it, so scrubbing the Time Resource slider during Program
+                // (which moves the pawn along its live draft/preview path, see RoundPlayback.ApplyTime)
+                // dragged the whole bead constellation along with the pawn instead of leaving them
+                // fixed on the board.
                 var previewGo = new GameObject("PathPreview");
-                previewGo.transform.SetParent(transform, false);
+                previewGo.transform.SetParent(boardView.transform, false);
                 _pathPreview = previewGo.AddComponent<PathPreviewView>();
                 _pathPreview.Init(boardView);
             }
@@ -133,6 +143,30 @@ namespace LogiCard.Board
             if (!Program.TryCommitDraft(out string reason))
             {
                 Debug.Log($"[logiCard] Commit draft rejected: {reason}");
+                return false;
+            }
+
+            RefreshPreview();
+            QueueChanged?.Invoke(Program);
+            return true;
+        }
+
+        /// <summary>
+        /// Undoes the whole program back one step at a time: draft waypoints/legs first if any are
+        /// in progress, then previously committed Move/Shoot/Door actions (BUG FOUND 2026-08-05 —
+        /// this used to require an active draft, so it dead-ended at the first Shoot/Door or any
+        /// already-committed Move; <see cref="PawnProgram.TryUndoLastStep"/> now covers both).
+        /// </summary>
+        public bool TryUndoLastStep()
+        {
+            if (_locked || Program == null || !Program.CanUndoLastStep)
+            {
+                return false;
+            }
+
+            if (!Program.TryUndoLastStep(out string reason))
+            {
+                Debug.Log($"[logiCard] Undo step rejected: {reason}");
                 return false;
             }
 
@@ -296,7 +330,11 @@ namespace LogiCard.Board
                 return;
             }
 
-            var points = new List<PlanarPosition> { _origin };
+            // BUG FOUND 2026-08-05: this used to seed the list with _origin, so every draft always
+            // rendered a spurious extra bead at/near the pawn's own starting point — the pawn already
+            // marks that, and the stray bead was easy to mistake for a wrongly-placed destination
+            // marker (most visible when a route behind a wall collapses to a single real waypoint).
+            var points = new List<PlanarPosition>();
             foreach (ActionNode node in Program.Nodes)
             {
                 if (node.Verb == ActionVerb.Move)
@@ -316,7 +354,7 @@ namespace LogiCard.Board
                 return;
             }
 
-            if (points.Count > 1)
+            if (points.Count > 0)
             {
                 _pathPreview.Show(points, isDraft: false);
                 return;

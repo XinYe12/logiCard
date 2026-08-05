@@ -35,6 +35,23 @@ namespace LogiCard.Timeline
         private readonly List<PlanarPosition> _pathBuffer = new List<PlanarPosition>();
         private readonly ArenaBoard _board;
 
+        /// <summary>
+        /// One entry per <see cref="TryAddWaypoint"/>/<see cref="TryDraftPath"/> step, holding
+        /// <c>_draftWaypoints.Count</c> as it was immediately before that step. <see
+        /// cref="TryUndoLastDraftStep"/> pops the last entry and truncates back to it, so repeated
+        /// presses walk the whole draft back one step at a time, not just the single most recent one.
+        /// </summary>
+        private readonly List<int> _draftStepBoundaries = new List<int>();
+
+        /// <summary>
+        /// One entry per committed Move/Shoot/Door step (a full <see cref="TryCommitDraft"/> call,
+        /// or one <see cref="TryQueueShoot"/>/<see cref="TryQueueDoor"/>), snapshotting the state
+        /// immediately before that step so <see cref="TryUndoLastCommittedStep"/> can restore it.
+        /// Previously nothing could undo a committed step at all — the draft-only undo above was a
+        /// dead end at the first Shoot/Door or any already-committed Move (BUG FOUND 2026-08-05).
+        /// </summary>
+        private readonly List<CommittedStepSnapshot> _committedStepHistory = new List<CommittedStepSnapshot>();
+
         public PlanarPosition CurrentPosition { get; private set; }
 
         /// <summary>Stance of the last committed action (or the starting stance before any).</summary>
@@ -63,6 +80,12 @@ namespace LogiCard.Timeline
         public int DraftWaypointCount => _draftWaypoints.Count;
 
         public bool HasDraft => _draftWaypoints.Count > 0;
+
+        /// <summary>Whether <see cref="TryUndoLastDraftStep"/> would currently succeed.</summary>
+        public bool CanUndoLastDraftStep => _draftStepBoundaries.Count > 0;
+
+        /// <summary>Whether <see cref="TryUndoLastStep"/> would currently succeed — draft or committed.</summary>
+        public bool CanUndoLastStep => CanUndoLastDraftStep || _committedStepHistory.Count > 0;
 
         public float DraftAllottedSeconds { get; private set; }
 
@@ -112,6 +135,8 @@ namespace LogiCard.Timeline
             }
 
             _draftWaypoints.Clear();
+            _draftStepBoundaries.Clear();
+            _draftStepBoundaries.Add(0);
             _draftWaypoints.AddRange(_pathBuffer);
             RecomputeDraftCost();
             rejectionReason = null;
@@ -131,11 +156,14 @@ namespace LogiCard.Timeline
         {
             PlanarPosition tip = HasDraft ? _draftWaypoints[_draftWaypoints.Count - 1] : CurrentPosition;
 
-            // Backtrack one waypoint if the player re-taps the previous stop.
+            // Backtrack if the player re-taps the previous stop — delegates to the same step-undo
+            // used by the button below, so the two never drift out of sync. In practice this needs
+            // an exact float match on a raycast-derived point, which real taps essentially never
+            // reproduce — TryUndoLastDraftStep (the button) is the reliable path; this stays for the
+            // rare exact hit.
             if (HasDraft && point.Equals(DraftWaypointCount == 1 ? CurrentPosition : _draftWaypoints[DraftWaypointCount - 2]))
             {
-                _draftWaypoints.RemoveAt(_draftWaypoints.Count - 1);
-                RecomputeDraftCost();
+                TryUndoLastDraftStep(out _);
                 rejectionReason = null;
                 return true;
             }
@@ -146,8 +174,72 @@ namespace LogiCard.Timeline
                 return false;
             }
 
+            _draftStepBoundaries.Add(_draftWaypoints.Count);
             _draftWaypoints.AddRange(_pathBuffer);
             RecomputeDraftCost();
+            rejectionReason = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Removes exactly the waypoints the most recent still-undone step added — a reliable
+        /// "revert to previous step." Unlike a single-level undo, repeated calls with no intervening
+        /// tap keep walking the draft back one step at a time, all the way to empty.
+        /// </summary>
+        public bool TryUndoLastDraftStep(out string rejectionReason)
+        {
+            if (_draftStepBoundaries.Count == 0)
+            {
+                rejectionReason = "No draft step to undo.";
+                return false;
+            }
+
+            int restoreCount = _draftStepBoundaries[_draftStepBoundaries.Count - 1];
+            _draftStepBoundaries.RemoveAt(_draftStepBoundaries.Count - 1);
+            if (restoreCount > _draftWaypoints.Count)
+            {
+                restoreCount = _draftWaypoints.Count;
+            }
+
+            _draftWaypoints.RemoveRange(restoreCount, _draftWaypoints.Count - restoreCount);
+            RecomputeDraftCost();
+            rejectionReason = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Undoes the most recent step, whichever kind it is: an in-progress draft waypoint/leg if
+        /// one exists, otherwise the most recently committed Move (a whole <see cref="TryCommitDraft"/>
+        /// call), Shoot, or Door. This is what the HUD's UNDO button calls — repeated presses with no
+        /// intervening tap walk the entire program back one step at a time (draft first, then
+        /// committed history), all the way to the round's starting state, not just the current draft.
+        /// </summary>
+        public bool TryUndoLastStep(out string rejectionReason)
+        {
+            return HasDraft ? TryUndoLastDraftStep(out rejectionReason) : TryUndoLastCommittedStep(out rejectionReason);
+        }
+
+        /// <summary>
+        /// Removes exactly the nodes the most recent still-undone committed step added and restores
+        /// the position/time/stance state to what it was immediately before that step.
+        /// </summary>
+        public bool TryUndoLastCommittedStep(out string rejectionReason)
+        {
+            if (_committedStepHistory.Count == 0)
+            {
+                rejectionReason = "No committed step to undo.";
+                return false;
+            }
+
+            CommittedStepSnapshot snapshot = _committedStepHistory[_committedStepHistory.Count - 1];
+            _committedStepHistory.RemoveAt(_committedStepHistory.Count - 1);
+
+            int restoreCount = snapshot.NodeCount > _nodes.Count ? _nodes.Count : snapshot.NodeCount;
+            _nodes.RemoveRange(restoreCount, _nodes.Count - restoreCount);
+            UsedSeconds = snapshot.UsedSeconds;
+            CurrentPosition = snapshot.CurrentPosition;
+            CurrentStance = snapshot.CurrentStance;
+
             rejectionReason = null;
             return true;
         }
@@ -155,6 +247,7 @@ namespace LogiCard.Timeline
         public void ClearDraft()
         {
             _draftWaypoints.Clear();
+            _draftStepBoundaries.Clear();
             DraftAllottedSeconds = 0f;
             DraftDistance = 0f;
         }
@@ -229,6 +322,8 @@ namespace LogiCard.Timeline
             {
                 return false;
             }
+
+            _committedStepHistory.Add(new CommittedStepSnapshot(_nodes.Count, UsedSeconds, CurrentPosition, CurrentStance));
 
             PlanarPosition stepFrom = CurrentPosition;
             float running = UsedSeconds;
@@ -307,11 +402,13 @@ namespace LogiCard.Timeline
             }
 
             float cost = ShootCost.SecondsFor(shootMode);
+            var beforeReserve = new CommittedStepSnapshot(_nodes.Count, UsedSeconds, CurrentPosition, CurrentStance);
             if (!TryReserve(cost, out rejectionReason))
             {
                 return false;
             }
 
+            _committedStepHistory.Add(beforeReserve);
             CurrentShootMode = shootMode;
             _nodes.Add(new ActionNode(ActionVerb.Shoot, UsedSeconds, aimPoint, CurrentStance, modifier: null, shootMode));
             rejectionReason = null;
@@ -343,11 +440,13 @@ namespace LogiCard.Timeline
                 return false;
             }
 
+            var beforeReserve = new CommittedStepSnapshot(_nodes.Count, UsedSeconds, CurrentPosition, CurrentStance);
             if (!TryReserve(DoorInteractSeconds, out rejectionReason))
             {
                 return false;
             }
 
+            _committedStepHistory.Add(beforeReserve);
             PlanarPosition doorPosition = PlanarPosition.Lerp(door.Segment.A, door.Segment.B, 0.5f);
             _nodes.Add(new ActionNode(ActionVerb.Door, UsedSeconds, doorPosition, CurrentStance, doorAction: action));
             rejectionReason = null;
@@ -417,6 +516,25 @@ namespace LogiCard.Timeline
             UsedSeconds += cost;
             rejectionReason = null;
             return true;
+        }
+
+        private readonly struct CommittedStepSnapshot
+        {
+            public int NodeCount { get; }
+
+            public float UsedSeconds { get; }
+
+            public PlanarPosition CurrentPosition { get; }
+
+            public StanceType CurrentStance { get; }
+
+            public CommittedStepSnapshot(int nodeCount, float usedSeconds, PlanarPosition currentPosition, StanceType currentStance)
+            {
+                NodeCount = nodeCount;
+                UsedSeconds = usedSeconds;
+                CurrentPosition = currentPosition;
+                CurrentStance = currentStance;
+            }
         }
     }
 }

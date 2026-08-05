@@ -120,6 +120,68 @@ namespace LogiCard.Tests.EditMode
         }
 
         [Test]
+        public void TryUndoLastDraftStep_RepeatedCalls_WalksBackOneStepAtATime()
+        {
+            var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+            program.TryAddWaypoint(new PlanarPosition(1, 0), out _);
+            program.TryAddWaypoint(new PlanarPosition(2, 0), out _);
+            program.TryAddWaypoint(new PlanarPosition(3, 0), out _);
+            Assert.That(program.DraftWaypointCount, Is.EqualTo(3));
+
+            Assert.That(program.TryUndoLastDraftStep(out _), Is.True);
+            Assert.That(program.DraftWaypointCount, Is.EqualTo(2));
+            Assert.That(program.DraftWaypoints[1], Is.EqualTo(new PlanarPosition(2, 0)));
+
+            Assert.That(program.TryUndoLastDraftStep(out _), Is.True);
+            Assert.That(program.DraftWaypointCount, Is.EqualTo(1));
+            Assert.That(program.DraftWaypoints[0], Is.EqualTo(new PlanarPosition(1, 0)));
+
+            Assert.That(program.TryUndoLastDraftStep(out _), Is.True);
+            Assert.That(program.HasDraft, Is.False);
+
+            Assert.That(program.TryUndoLastDraftStep(out string reason), Is.False);
+            Assert.That(reason, Is.Not.Null.And.Not.Empty);
+        }
+
+        [Test]
+        public void TryUndoLastStep_WalksBackThroughCommittedMoveAndShoot()
+        {
+            // BUG FOUND 2026-08-05: undo used to require an active draft, so a program like
+            // Move -> Move -> Shoot -> (drafting a third Move) could only ever undo back to right
+            // after the Shoot — the two committed Moves and the Shoot itself were unreachable.
+            var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+
+            Assert.That(program.TryQueueMove(new PlanarPosition(1, 0), out _), Is.True);
+            float usedAfterFirstMove = program.UsedSeconds;
+
+            Assert.That(program.TryQueueMove(new PlanarPosition(2, 0), out _), Is.True);
+            float usedAfterSecondMove = program.UsedSeconds;
+            Assert.That(program.CurrentPosition, Is.EqualTo(new PlanarPosition(2, 0)));
+
+            Assert.That(program.TryQueueShoot(new PlanarPosition(2, 3), out _), Is.True);
+            Assert.That(program.Nodes.Count, Is.EqualTo(3));
+
+            Assert.That(program.CanUndoLastStep, Is.True);
+            Assert.That(program.TryUndoLastStep(out _), Is.True);
+            Assert.That(program.Nodes.Count, Is.EqualTo(2), "First undo should remove only the Shoot.");
+            Assert.That(program.UsedSeconds, Is.EqualTo(usedAfterSecondMove).Within(0.0001f));
+
+            Assert.That(program.TryUndoLastStep(out _), Is.True);
+            Assert.That(program.Nodes.Count, Is.EqualTo(1), "Second undo should remove the second committed Move.");
+            Assert.That(program.CurrentPosition, Is.EqualTo(new PlanarPosition(1, 0)));
+            Assert.That(program.UsedSeconds, Is.EqualTo(usedAfterFirstMove).Within(0.0001f));
+
+            Assert.That(program.TryUndoLastStep(out _), Is.True);
+            Assert.That(program.Nodes, Is.Empty, "Third undo should remove the first committed Move too.");
+            Assert.That(program.CurrentPosition, Is.EqualTo(new PlanarPosition(0, 0)));
+            Assert.That(program.UsedSeconds, Is.EqualTo(0f).Within(0.0001f));
+
+            Assert.That(program.CanUndoLastStep, Is.False);
+            Assert.That(program.TryUndoLastStep(out string reason), Is.False);
+            Assert.That(reason, Is.Not.Null.And.Not.Empty);
+        }
+
+        [Test]
         public void QueueShoot_HoldAngle_CostsThreeSecondsAndTagsMode()
         {
             var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);

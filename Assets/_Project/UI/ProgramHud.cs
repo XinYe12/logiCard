@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using LogiCard.Board;
 using LogiCard.Net;
 using LogiCard.Sim;
@@ -38,6 +39,9 @@ namespace LogiCard.UI
         private static readonly Color PanelSunken = new Color(0.06f, 0.06f, 0.08f, 1f);
         private static readonly Color Accent = new Color(0.98f, 0.72f, 0.25f, 1f);
         private static readonly Color AccentDim = new Color(0.35f, 0.30f, 0.20f, 1f);
+        private static readonly Color MoveMarkerColor = new Color(0.55f, 0.75f, 0.95f, 1f);
+        private static readonly Color ShootMarkerColor = new Color(0.95f, 0.35f, 0.30f, 1f);
+        private static readonly Color DoorMarkerColor = new Color(0.55f, 0.85f, 0.55f, 1f);
 
         private TimeResourceClockDriver _clock;
         private RoundPhaseController _phase;
@@ -49,6 +53,7 @@ namespace LogiCard.UI
         private Text _matchLabel;
         private Text _scrubLabel;
         private Slider _scrubber;
+        private readonly List<GameObject> _scrubberMarkers = new List<GameObject>();
         private Button _playButton;
         private Text _playButtonLabel;
         private Button _moveModeButton;
@@ -57,6 +62,7 @@ namespace LogiCard.UI
         private Button _sprintButton;
         private Button _walkButton;
         private Button _crawlButton;
+        private Button _undoWaypointButton;
         private Button _setPathButton;
         private Button _snapButton;
         private Button _holdButton;
@@ -352,19 +358,25 @@ namespace LogiCard.UI
 
             _sprintButton = CreateButton(moveRt, "Stance_Sprint", "SPRINT", PanelMid, Ink, 28,
                 () => SetStanceBand(StanceType.Sprint));
-            PlaceSplitCell(_sprintButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 0, 4);
+            PlaceSplitCell(_sprintButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 0, 5);
 
             _walkButton = CreateButton(moveRt, "Stance_Walk", "WALK", PanelMid, Ink, 28,
                 () => SetStanceBand(StanceType.Walk));
-            PlaceSplitCell(_walkButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 1, 4);
+            PlaceSplitCell(_walkButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 1, 5);
 
             _crawlButton = CreateButton(moveRt, "Stance_Crawl", "CRAWL", PanelMid, Ink, 28,
                 () => SetStanceBand(StanceType.Crawl));
-            PlaceSplitCell(_crawlButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 2, 4);
+            PlaceSplitCell(_crawlButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 2, 5);
+
+            // Reliable "revert to previous step" — walks back through the whole program one step at
+            // a time: in-progress draft first, then previously committed Move/Shoot/Door actions.
+            _undoWaypointButton = CreateButton(moveRt, "UndoWaypointButton", "UNDO", PanelMid, Ink, 28,
+                () => _input.TryUndoLastStep());
+            PlaceSplitCell(_undoWaypointButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 3, 5);
 
             _setPathButton = CreateButton(moveRt, "SetPathButton", "SET PATH", Accent, new Color(0.1f, 0.09f, 0.07f), 28,
                 () => _input.TryCommitDraftPath());
-            PlaceSplitCell(_setPathButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 3, 4);
+            PlaceSplitCell(_setPathButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 4, 5);
 
             _shootModeControls = new GameObject("ShootModeControls", typeof(RectTransform));
             var shootRt = _shootModeControls.GetComponent<RectTransform>();
@@ -606,8 +618,19 @@ namespace LogiCard.UI
 
             float cost = program != null ? program.DoorInteractSeconds : 4f;
             DoorAction action = _input.PreferredDoorAction;
-            string actionLabel = action == DoorAction.Close ? "Close" : "Open";
-            _doorModeLabel.text = $"DOOR  {actionLabel} · {cost:0}s — tap near a door to toggle it";
+            string actionLabel = action == DoorAction.Close ? "CLOSE" : "OPEN";
+
+            // BUG FOUND 2026-08-05: this used to read "DOOR Open · 4s", which is the player's
+            // *selected action*, not the door's actual current state — easy to misread as a status
+            // readout. Now states both explicitly and separately.
+            string stateLabel = "state unknown";
+            if (program != null && _input.Board != null
+                && _input.Board.TryGetNearestDoor(program.CurrentPosition, float.MaxValue, out Door nearestDoor))
+            {
+                stateLabel = _input.Board.GetDoorState(nearestDoor) == DoorState.Open ? "OPEN" : "CLOSED";
+            }
+
+            _doorModeLabel.text = $"DOOR is {stateLabel} — selected: {actionLabel} ({cost:0}s)";
 
             if (_openDoorButton != null)
             {
@@ -654,6 +677,11 @@ namespace LogiCard.UI
             {
                 _setPathButton.interactable = program.HasDraft;
             }
+
+            if (_undoWaypointButton != null)
+            {
+                _undoWaypointButton.interactable = program.CanUndoLastStep;
+            }
         }
 
         private void OnQueueChanged(PawnProgram program)
@@ -677,14 +705,77 @@ namespace LogiCard.UI
             for (int i = 0; i < program.Nodes.Count; i++)
             {
                 ActionNode node = program.Nodes[i];
-                string detail = node.Verb == ActionVerb.Shoot
-                    ? ShootModeMath.Label(node.ShootMode)
-                    : StanceMath.Label(node.Stance);
+                string detail;
+                if (node.Verb == ActionVerb.Shoot)
+                {
+                    detail = ShootModeMath.Label(node.ShootMode);
+                }
+                else if (node.Verb == ActionVerb.Door)
+                {
+                    // Was falling through to StanceMath.Label(node.Stance) — a leftover/irrelevant
+                    // value on a Door node — printing something like "(Walk)" for a door toggle.
+                    detail = node.Door == DoorAction.Close ? "Close" : "Open";
+                }
+                else
+                {
+                    detail = StanceMath.Label(node.Stance);
+                }
+
                 text += $"\n{i + 1}: {node.Verb} -> {node.Position} @{node.ExecuteTime:0.0}s ({detail})";
             }
 
             _queueText.text = text;
             RefreshVerbContextControls(program);
+            RefreshScrubberMarkers(program);
+        }
+
+        /// <summary>
+        /// Event markers on the Time Resource scrubber (PRODUCT_MEMORY.md C24 / VISION.md — "observer
+        /// reads cause/effect on the timeline scrubber"): one tick per booked operation, positioned at
+        /// its ExecuteTime proportion of the round budget, color-coded by verb. Previously only the
+        /// Queue text panel below listed operations — the scrubber itself was a bare fill bar.
+        /// </summary>
+        private void RefreshScrubberMarkers(PawnProgram program)
+        {
+            for (int i = 0; i < _scrubberMarkers.Count; i++)
+            {
+                if (_scrubberMarkers[i] != null)
+                {
+                    Destroy(_scrubberMarkers[i]);
+                }
+            }
+
+            _scrubberMarkers.Clear();
+
+            if (_scrubber == null || program == null || program.BudgetSeconds <= 0f)
+            {
+                return;
+            }
+
+            RectTransform track = _scrubber.GetComponent<RectTransform>();
+            for (int i = 0; i < program.Nodes.Count; i++)
+            {
+                ActionNode node = program.Nodes[i];
+                float t = Mathf.Clamp01(node.ExecuteTime / program.BudgetSeconds);
+                Color color = node.Verb == ActionVerb.Shoot ? ShootMarkerColor
+                    : node.Verb == ActionVerb.Door ? DoorMarkerColor
+                    : MoveMarkerColor;
+
+                var markerGo = new GameObject($"ScrubberMark_{i}_{node.Verb}", typeof(RectTransform), typeof(Image));
+                var rt = markerGo.GetComponent<RectTransform>();
+                rt.SetParent(track, false);
+                rt.anchorMin = new Vector2(t, 0f);
+                rt.anchorMax = new Vector2(t, 1f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.offsetMin = new Vector2(-3f, -8f);
+                rt.offsetMax = new Vector2(3f, 8f);
+
+                var image = markerGo.GetComponent<Image>();
+                image.color = color;
+                image.raycastTarget = false;
+
+                _scrubberMarkers.Add(markerGo);
+            }
         }
 
         private void OnLockInPressed()
