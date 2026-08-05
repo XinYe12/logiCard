@@ -398,6 +398,25 @@ namespace LogiCard.Net
                 }
             }
 
+            // A victim holds its final position after its last scheduled node — forever, if it has
+            // none at all (e.g. an un-programmed defender: nodes.Count == 1, no legs above ever run).
+            // The affine sweep above only covers explicit legs between nodes, so the trailing
+            // stationary stretch needs its own check or Hold Angle can never catch a target who
+            // simply stands still.
+            float tailStart = arrivals[arrivals.Count - 1];
+            float tailWindowLo = Math.Max(tailStart, shot.WindowStartSeconds);
+            if (shot.CompleteSeconds >= tailWindowLo)
+            {
+                PlanarPosition tailPosition = nodes[nodes.Count - 1];
+                if (ContinuousLineOfSight.IsOnLane(origin, shot.Aim, tailPosition, LaneHalfWidth)
+                    && ContinuousLineOfSight.HasLineOfSight(board, origin, tailPosition))
+                {
+                    contactSeconds = tailWindowLo;
+                    contactPosition = tailPosition;
+                    return true;
+                }
+            }
+
             return false;
         }
 
