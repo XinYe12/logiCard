@@ -569,7 +569,7 @@ namespace LogiCard.UI
             }
             else if (mode == ActionVerb.Door)
             {
-                RefreshDoorModeControls();
+                RefreshDoorModeControls(program);
             }
             else
             {
@@ -597,20 +597,32 @@ namespace LogiCard.UI
             }
         }
 
-        private void RefreshDoorModeControls()
+        private void RefreshDoorModeControls(PawnProgram program)
         {
             if (_doorModeLabel == null || _input == null)
             {
                 return;
             }
 
+            float cost = program != null ? program.DoorInteractSeconds : 4f;
             DoorAction action = _input.PreferredDoorAction;
-            _doorModeLabel.text = action == DoorAction.Close
-                ? "DOOR  Close — tap near a door to swing it shut"
-                : "DOOR  Open — tap near a door to swing it open";
+            string actionLabel = action == DoorAction.Close ? "Close" : "Open";
+            _doorModeLabel.text = $"DOOR  {actionLabel} · {cost:0}s — tap near a door to toggle it";
 
             if (_openDoorButton != null)
             {
+                Text openLabel = _openDoorButton.GetComponentInChildren<Text>();
+                Text closeLabel = _closeDoorButton.GetComponentInChildren<Text>();
+                if (openLabel != null)
+                {
+                    openLabel.text = $"OPEN  {cost:0}s";
+                }
+
+                if (closeLabel != null)
+                {
+                    closeLabel.text = $"CLOSE  {cost:0}s";
+                }
+
                 _openDoorButton.GetComponent<Image>().color = action == DoorAction.Open ? Accent : PanelMid;
                 _closeDoorButton.GetComponent<Image>().color = action == DoorAction.Close ? Accent : PanelMid;
             }
