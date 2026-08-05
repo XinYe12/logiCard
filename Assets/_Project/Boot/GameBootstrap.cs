@@ -151,7 +151,12 @@ namespace LogiCard.Boot
 
             // Continuous translation of DAY7 wall-with-gap: walls along y=2 with a door gap at x≈2.
             // Door starts Open so scripted/demo LoS through the choke is readable without a forced
-            // open action (Closed-start remains the design preference for Phase 6 playtest tuning).
+            // open action. Closed-start is still the Phase 6 design preference (CONTINUOUS_PIVOT_PLAN.md)
+            // but flipping it ripples into the RoundPlaybackPlayModeTests "AmbushPoint" scenario (the
+            // scripted defender's Snap Shot needs LoS through the door to wound the attacker) and a
+            // few HUD test destinations that sit exactly on the door — tried it 2026-08-05, reverted;
+            // needs deliberate test-fixture updates alongside a cold-observer playtest call, not a
+            // blind flag flip.
             var model = new ArenaBoard(0f, 0f, 4f, 4f, new[] { Floor.Ground });
             model.RegisterWall(new Segment(new PlanarPosition(0f, 2f), new PlanarPosition(1.75f, 2f)));
             model.RegisterWall(new Segment(new PlanarPosition(2.25f, 2f), new PlanarPosition(4f, 2f)));
