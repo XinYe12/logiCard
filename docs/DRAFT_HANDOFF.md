@@ -21,10 +21,13 @@ Continuous-space pivot **Phases 1–5** on `master` (C35/C39/C40/C41):
 
 ## Still unfinished
 
-1. **Verify** — close Editor if using batchmode; run EditMode then PlayMode; fix reds.
-2. **Phase 6** — tune `HitRadius` / `LaneHalfWidth` / `InteractRadius` (still ~`0.45f`); consider door **Closed** at match start; cold-observer M2.5 “door changes a fight once.”
-3. **HUD Door verb** — input supports Door; ProgramHud verb row is still MOVE/SHOOT only.
-4. **Worktrees** — `logiCard-continuous-phase1` optional close (content ported); `art/urp-foundation` not merged; `logiCard-verify` parked.
+1. **Verify** — close Editor if using batchmode; run EditMode then PlayMode; fix reds. (Batchmode needs **no** Unity instance on `D:\projects\Game\logiCard` — other worktree paths do not share that lock.)
+2. **Phase 6** — tune `HitRadius` / `LaneHalfWidth` / `InteractRadius` (still ~`0.45f`); consider door **Closed** at match start; cold-observer M2.5 “door changes a fight once.” **Human playtest — not agent-delegable.**
+3. **HUD Door verb** — landed on master (`15a335b` + cost row `0c6f2ae`). Duplicate `feature/hud-door-verb` can be discarded (no further cherry-picks needed; optional empty-queue “Or Door…” hint only).
+4. **Worktrees (2026-08-05 audit):**
+   - `art/urp-foundation` — **fully merged** (`4cfe8ea`). Worktree `logiCard-urp-foundation` still registered → safe to remove + delete branch.
+   - `verify/day5-6-tests` — **parked findings only** (EditMode 77/77, PlayMode 23/23 on 2026-08-03). Test fixes superseded by continuous pivot (grid tests deleted; fixtures retargeted). **Do not merge**; safe to close worktree + delete branch. Day 4–6 SCHEDULE boxes stay unticked until human cold-observer.
+   - `logiCard-continuous-phase1` / `logiCard-hud-door` — already gone from `.git/worktrees` (closed earlier).
 
 ## Tomorrow
 
