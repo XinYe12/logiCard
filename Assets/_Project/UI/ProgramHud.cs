@@ -53,16 +53,21 @@ namespace LogiCard.UI
         private Text _playButtonLabel;
         private Button _moveModeButton;
         private Button _shootModeButton;
+        private Button _doorModeButton;
         private Button _sprintButton;
         private Button _walkButton;
         private Button _crawlButton;
         private Button _setPathButton;
         private Button _snapButton;
         private Button _holdButton;
+        private Button _openDoorButton;
+        private Button _closeDoorButton;
         private GameObject _moveStanceControls;
         private GameObject _shootModeControls;
+        private GameObject _doorModeControls;
         private Text _stanceLabel;
         private Text _shootModeLabel;
+        private Text _doorModeLabel;
         private Text _queueText;
         private Text _outcomeLabel;
         private GameObject _programControls;
@@ -311,14 +316,17 @@ namespace LogiCard.UI
             _nextRoundButtonLabel = _nextRoundButton.GetComponentInChildren<Text>();
         }
 
-        /// <summary>MOVE / SHOOT split the full width, so both stay large single-thumb targets (C30).</summary>
+        /// <summary>MOVE / SHOOT / DOOR split the full width, so all three stay large single-thumb targets (C30).</summary>
         private void BuildVerbRow(RectTransform zone, ref float cursor)
         {
             _moveModeButton = CreateButton(zone, "Mode_Move", "MOVE", PanelMid, Ink, 36, () => SetMode(ActionVerb.Move));
-            PlaceSplitCell(_moveModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 0, 2);
+            PlaceSplitCell(_moveModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 0, 3);
 
             _shootModeButton = CreateButton(zone, "Mode_Shoot", "SHOOT", PanelMid, Ink, 36, () => SetMode(ActionVerb.Shoot));
-            PlaceSplitCell(_shootModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 1, 2);
+            PlaceSplitCell(_shootModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 1, 3);
+
+            _doorModeButton = CreateButton(zone, "Mode_Door", "DOOR", PanelMid, Ink, 36, () => SetMode(ActionVerb.Door));
+            PlaceSplitCell(_doorModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 2, 3);
 
             cursor -= VerbRowHeight + RowGap;
             RefreshModeButtons();
@@ -364,7 +372,7 @@ namespace LogiCard.UI
             Stretch(shootRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             float shootCursor = rowTop;
-            _shootModeLabel = CreateText(shootRt, "ShootModeLabel", "SHOOT  Snap · 2s — tap a tile on your row/col", 28, TextAnchor.MiddleLeft, Ink);
+            _shootModeLabel = CreateText(shootRt, "ShootModeLabel", "SHOOT  Snap · 2s — free-aim (tap anywhere on the board)", 28, TextAnchor.MiddleLeft, Ink);
             PlaceRow(_shootModeLabel.rectTransform, ref shootCursor, 40f, 8f);
 
             _snapButton = CreateButton(shootRt, "Shoot_Snap", "SNAP  2s", PanelMid, Ink, 32,
@@ -375,8 +383,25 @@ namespace LogiCard.UI
                 () => SetShootMode(ShootMode.HoldAngle));
             PlaceSplitCell(_holdButton.GetComponent<RectTransform>(), shootCursor, StanceRowHeight, 1, 2);
 
-            // Move and Shoot controls occupy the same zone rect (toggled via SetActive), both now
-            // the same height with no slider on either side, so a single formula covers both.
+            _doorModeControls = new GameObject("DoorModeControls", typeof(RectTransform));
+            var doorRt = _doorModeControls.GetComponent<RectTransform>();
+            doorRt.SetParent(zone, false);
+            Stretch(doorRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            float doorCursor = rowTop;
+            _doorModeLabel = CreateText(doorRt, "DoorModeLabel", "DOOR  Open — tap near a door to toggle it", 28, TextAnchor.MiddleLeft, Ink);
+            PlaceRow(_doorModeLabel.rectTransform, ref doorCursor, 40f, 8f);
+
+            _openDoorButton = CreateButton(doorRt, "Door_Open", "OPEN", PanelMid, Ink, 32,
+                () => SetDoorAction(DoorAction.Open));
+            PlaceSplitCell(_openDoorButton.GetComponent<RectTransform>(), doorCursor, StanceRowHeight, 0, 2);
+
+            _closeDoorButton = CreateButton(doorRt, "Door_Close", "CLOSE", PanelMid, Ink, 32,
+                () => SetDoorAction(DoorAction.Close));
+            PlaceSplitCell(_closeDoorButton.GetComponent<RectTransform>(), doorCursor, StanceRowHeight, 1, 2);
+
+            // Move, Shoot and Door controls occupy the same zone rect (toggled via SetActive), all
+            // the same height with no slider on any side, so a single formula covers all three.
             cursor = rowTop - 40f - 8f - StanceRowHeight - RowGap;
             RefreshVerbContextControls(_input != null ? _input.Program : null);
         }
@@ -480,7 +505,7 @@ namespace LogiCard.UI
 
         private void SetMode(ActionVerb mode)
         {
-            if (mode == ActionVerb.Shoot)
+            if (mode != ActionVerb.Move)
             {
                 _input.TryCommitDraftPath();
             }
@@ -502,6 +527,12 @@ namespace LogiCard.UI
             RefreshVerbContextControls(_input.Program);
         }
 
+        private void SetDoorAction(DoorAction action)
+        {
+            _input.PreferredDoorAction = action;
+            RefreshVerbContextControls(_input.Program);
+        }
+
         private void RefreshModeButtons()
         {
             if (_moveModeButton == null || _input == null)
@@ -511,24 +542,34 @@ namespace LogiCard.UI
 
             _moveModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.Move ? Accent : PanelMid;
             _shootModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.Shoot ? Accent : PanelMid;
+            _doorModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.Door ? Accent : PanelMid;
         }
 
         private void RefreshVerbContextControls(PawnProgram program)
         {
-            bool shooting = _input != null && _input.Mode == ActionVerb.Shoot;
+            ActionVerb mode = _input != null ? _input.Mode : ActionVerb.Move;
             if (_moveStanceControls != null)
             {
-                _moveStanceControls.SetActive(!shooting);
+                _moveStanceControls.SetActive(mode == ActionVerb.Move);
             }
 
             if (_shootModeControls != null)
             {
-                _shootModeControls.SetActive(shooting);
+                _shootModeControls.SetActive(mode == ActionVerb.Shoot);
             }
 
-            if (shooting)
+            if (_doorModeControls != null)
+            {
+                _doorModeControls.SetActive(mode == ActionVerb.Door);
+            }
+
+            if (mode == ActionVerb.Shoot)
             {
                 RefreshShootModeControls(program);
+            }
+            else if (mode == ActionVerb.Door)
+            {
+                RefreshDoorModeControls();
             }
             else
             {
@@ -553,6 +594,25 @@ namespace LogiCard.UI
             {
                 _snapButton.GetComponent<Image>().color = mode == ShootMode.SnapShot ? Accent : PanelMid;
                 _holdButton.GetComponent<Image>().color = mode == ShootMode.HoldAngle ? Accent : PanelMid;
+            }
+        }
+
+        private void RefreshDoorModeControls()
+        {
+            if (_doorModeLabel == null || _input == null)
+            {
+                return;
+            }
+
+            DoorAction action = _input.PreferredDoorAction;
+            _doorModeLabel.text = action == DoorAction.Close
+                ? "DOOR  Close — tap near a door to swing it shut"
+                : "DOOR  Open — tap near a door to swing it open";
+
+            if (_openDoorButton != null)
+            {
+                _openDoorButton.GetComponent<Image>().color = action == DoorAction.Open ? Accent : PanelMid;
+                _closeDoorButton.GetComponent<Image>().color = action == DoorAction.Close ? Accent : PanelMid;
             }
         }
 

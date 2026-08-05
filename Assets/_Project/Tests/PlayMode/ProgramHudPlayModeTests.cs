@@ -31,6 +31,27 @@ namespace LogiCard.Tests.PlayMode
         }
 
         [Test]
+        public void DoorModeButtonSwitchesTheInputVerbAndAction()
+        {
+            Button door = FindByName<Button>("Mode_Door");
+            Button open = FindByName<Button>("Door_Open");
+            Button close = FindByName<Button>("Door_Close");
+            Assert.That(door, Is.Not.Null, "HUD has no Mode_Door button.");
+            Assert.That(open, Is.Not.Null, "HUD has no Door_Open button.");
+            Assert.That(close, Is.Not.Null, "HUD has no Door_Close button.");
+
+            door.onClick.Invoke();
+            Assert.That(AttackerInput.Mode, Is.EqualTo(ActionVerb.Door));
+            Assert.That(AttackerInput.PreferredDoorAction, Is.EqualTo(DoorAction.Open));
+
+            close.onClick.Invoke();
+            Assert.That(AttackerInput.PreferredDoorAction, Is.EqualTo(DoorAction.Close));
+
+            open.onClick.Invoke();
+            Assert.That(AttackerInput.PreferredDoorAction, Is.EqualTo(DoorAction.Open));
+        }
+
+        [Test]
         public void ShootModeButtonsSelectSnapAndHold()
         {
             Button shoot = FindByName<Button>("Mode_Shoot");
