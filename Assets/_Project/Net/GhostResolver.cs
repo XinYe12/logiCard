@@ -75,8 +75,10 @@ namespace LogiCard.Net
 
         public ReplayTape Resolve(IReadOnlyList<GhostInput> inputs)
         {
-            var tracks = new Dictionary<int, GhostTrack>();
             var order = new List<int>();
+            var payloadNodes = new Dictionary<int, List<ActionNode>>();
+            var startPositions = new Dictionary<int, PlanarPosition>();
+            var startingWoundsByPawn = new Dictionary<int, int>();
             var events = new List<TapeEvent>();
 
             if (inputs != null)
@@ -84,12 +86,34 @@ namespace LogiCard.Net
                 for (int i = 0; i < inputs.Count; i++)
                 {
                     GhostInput input = inputs[i];
-                    tracks[input.PawnId] = CompileTrack(input, events);
+                    var ordered = new List<ActionNode>(input.Payload != null ? input.Payload.Nodes : NoNodes);
+                    ordered.Sort((a, b) => a.ExecuteTime.CompareTo(b.ExecuteTime));
+
+                    payloadNodes[input.PawnId] = ordered;
+                    startPositions[input.PawnId] = input.Start;
+                    startingWoundsByPawn[input.PawnId] = input.StartingWounds;
                     order.Add(input.PawnId);
                 }
             }
 
             order.Sort();
+
+            // Door toggles never depend on whether movement later turns out to be blocked (booking
+            // one only ever required InteractRadius from a position already validated at draft time,
+            // never "successfully arrived via this round's Move"), so the full set is known upfront —
+            // computed once, chronologically, before any pawn's movement is compiled, and shared by
+            // every pawn's movement-blocking check below.
+            List<DoorTransition> doorTransitions = BuildDoorTransitions(order, payloadNodes);
+
+            var tracks = new Dictionary<int, GhostTrack>();
+            for (int i = 0; i < order.Count; i++)
+            {
+                int pawnId = order[i];
+                tracks[pawnId] = CompileTrack(
+                    pawnId, startPositions[pawnId], payloadNodes[pawnId], startingWoundsByPawn[pawnId],
+                    doorTransitions, events);
+            }
+
             ResolveShots(tracks, order, events);
 
             events.Sort(CompareEvents);
@@ -106,28 +130,218 @@ namespace LogiCard.Net
             return new ReplayTape(paths, events, endWounds);
         }
 
-        private static GhostTrack CompileTrack(GhostInput input, List<TapeEvent> events)
+        /// <summary>
+        /// One resolved outcome for one door at one instant — the result of grouping same-instant
+        /// toggles the same way <see cref="ApplyDoorGroup"/> already does for the shot/event sweep
+        /// ("Close wins" tie-break), computed independently here so movement-blocking can query "what
+        /// was this door's state at time T" without waiting for the shot/event sweep to reach it.
+        /// </summary>
+        private readonly struct DoorTransition
         {
-            var ordered = new List<ActionNode>(input.Payload != null ? input.Payload.Nodes : NoNodes);
-            ordered.Sort((a, b) => a.ExecuteTime.CompareTo(b.ExecuteTime));
+            public float Time { get; }
 
-            var waypoints = new List<PlanarPosition> { input.Start };
-            var arrivals = new List<float> { 0f };
-            PlanarPosition current = input.Start;
+            public Door Door { get; }
 
-            foreach (ActionNode node in ordered)
+            public DoorState State { get; }
+
+            public DoorTransition(float time, Door door, DoorState state)
             {
+                Time = time;
+                Door = door;
+                State = state;
+            }
+        }
+
+        /// <summary>
+        /// Chronological, per-door outcome timeline built from every pawn's Door nodes — mirrors
+        /// <see cref="ApplyDoorGroup"/>'s same-instant grouping and "Close wins" tie-break exactly (kept
+        /// as a second, independent implementation rather than shared, so this addition can't change
+        /// the already-tested shot/event sweep's behavior even if the two ever need to diverge). Only
+        /// groups consecutive same-door entries in the globally time-sorted list, same as
+        /// <see cref="ApplyDoorGroup"/>'s caller — with 2 pawns (this project's 1v1 scope) two
+        /// different doors can never interleave between one door's own simultaneous toggles, so this
+        /// is exact for the demo; a 3+-pawn future would need the same fix in both places.
+        /// </summary>
+        private List<DoorTransition> BuildDoorTransitions(List<int> order, Dictionary<int, List<ActionNode>> payloadNodes)
+        {
+            var toggles = new List<DoorToggleIntent>();
+            for (int i = 0; i < order.Count; i++)
+            {
+                int pawnId = order[i];
+                List<ActionNode> nodes = payloadNodes[pawnId];
+                for (int n = 0; n < nodes.Count; n++)
+                {
+                    ActionNode node = nodes[n];
+                    if (node.Verb != ActionVerb.Door)
+                    {
+                        continue;
+                    }
+
+                    if (_board.TryGetDoor(node.Position, out Door door))
+                    {
+                        toggles.Add(new DoorToggleIntent(pawnId, node.ExecuteTime, door, node.Position, node.Door));
+                    }
+                }
+            }
+
+            toggles.Sort((a, b) => a.ExecuteTime != b.ExecuteTime
+                ? a.ExecuteTime.CompareTo(b.ExecuteTime)
+                : a.PawnId.CompareTo(b.PawnId));
+
+            var transitions = new List<DoorTransition>();
+            int index = 0;
+            while (index < toggles.Count)
+            {
+                int end = index + 1;
+                while (end < toggles.Count
+                       && ReferenceEquals(toggles[end].Door, toggles[index].Door)
+                       && toggles[end].ExecuteTime - toggles[index].ExecuteTime <= _simultaneityEpsilon)
+                {
+                    end++;
+                }
+
+                bool anyClose = false;
+                for (int k = index; k < end; k++)
+                {
+                    if (toggles[k].Action == DoorAction.Close)
+                    {
+                        anyClose = true;
+                        break;
+                    }
+                }
+
+                transitions.Add(new DoorTransition(
+                    toggles[index].ExecuteTime, toggles[index].Door, anyClose ? DoorState.Closed : DoorState.Open));
+                index = end;
+            }
+
+            return transitions;
+        }
+
+        private DoorState DoorStateAt(List<DoorTransition> transitions, Door door, float time)
+        {
+            DoorState state = _board.GetDoorState(door);
+            for (int i = 0; i < transitions.Count; i++)
+            {
+                DoorTransition transition = transitions[i];
+                if (!ReferenceEquals(transition.Door, door) || transition.Time > time)
+                {
+                    continue;
+                }
+
+                state = transition.State;
+            }
+
+            return state;
+        }
+
+        /// <summary>
+        /// GDD.md §3.1 / CORE_LOOP.md: "Blocked path / closed door → stop before the block." Movement
+        /// legs are drafted against a snapshot of the board (plus, per PawnProgram's own local-board
+        /// fix, this pawn's own already-queued Door actions) — but the *other* pawn's Door actions are
+        /// still fully hidden until resolve, so a route that looked clear at draft time can turn out
+        /// blocked once both programs actually run. Previously nothing re-checked this: movement was
+        /// pre-baked and simply played back with zero collision re-check, so a pawn would visibly glide
+        /// through a door that turned out closed. Checks every door the leg's straight line crosses and
+        /// returns the earliest one that's actually Closed at the moment the leg would cross it — walls
+        /// need no equivalent check since they're static and the pathfinder already guarantees a
+        /// committed leg never crosses one.
+        /// </summary>
+        private bool TryFindEarliestDoorBlock(
+            PlanarPosition legFrom, float legStart, PlanarPosition legTo, float legEnd,
+            List<DoorTransition> doorTransitions,
+            out PlanarPosition blockPoint, out float blockTime)
+        {
+            blockPoint = default;
+            blockTime = 0f;
+
+            var leg = new Segment(legFrom, legTo);
+            IReadOnlyList<Door> doors = _board.Doors;
+            float bestT = float.MaxValue;
+            bool found = false;
+
+            for (int i = 0; i < doors.Count; i++)
+            {
+                Door door = doors[i];
+                if (!leg.TryIntersectionParams(door.Segment, out float t, out float u))
+                {
+                    continue;
+                }
+
+                float clampedT = t < 0f ? 0f : (t > 1f ? 1f : t);
+                if (u < 0f || u > 1f)
+                {
+                    continue;
+                }
+
+                float crossTime = legStart + (clampedT * (legEnd - legStart));
+                if (DoorStateAt(doorTransitions, door, crossTime) != DoorState.Closed)
+                {
+                    continue;
+                }
+
+                if (clampedT < bestT)
+                {
+                    bestT = clampedT;
+                    found = true;
+                }
+            }
+
+            if (!found)
+            {
+                return false;
+            }
+
+            blockPoint = PlanarPosition.Lerp(legFrom, legTo, bestT);
+            blockTime = legStart + (bestT * (legEnd - legStart));
+            return true;
+        }
+
+        private GhostTrack CompileTrack(
+            int pawnId, PlanarPosition start, List<ActionNode> ordered, int startingWounds,
+            List<DoorTransition> doorTransitions, List<TapeEvent> events)
+        {
+            var waypoints = new List<PlanarPosition> { start };
+            var arrivals = new List<float> { 0f };
+            var surviving = new List<ActionNode>();
+            PlanarPosition current = start;
+            float currentTime = 0f;
+
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                ActionNode node = ordered[i];
+
                 if (node.Verb == ActionVerb.Move)
                 {
+                    if (TryFindEarliestDoorBlock(current, currentTime, node.Position, node.ExecuteTime,
+                            doorTransitions, out PlanarPosition blockPoint, out float blockTime))
+                    {
+                        // Cancel everything still queued after the block rather than resuming from an
+                        // unscripted position — same "the rest of a program built on an assumption
+                        // that didn't hold gets dropped" shape as the "death freezes remaining queue"
+                        // rule already agreed for this resolver (C37), applied here to "blocked"
+                        // instead of "dead".
+                        waypoints.Add(blockPoint);
+                        arrivals.Add(blockTime);
+                        events.Add(new TapeEvent(blockTime, pawnId, TapeEventType.MoveArrive, blockPoint));
+                        return new GhostTrack(ScheduledPath.FromTimedWaypoints(waypoints, arrivals), surviving, startingWounds);
+                    }
+
                     current = node.Position;
-                    events.Add(new TapeEvent(node.ExecuteTime, input.PawnId, TapeEventType.MoveArrive, current));
+                    currentTime = node.ExecuteTime;
+                    events.Add(new TapeEvent(node.ExecuteTime, pawnId, TapeEventType.MoveArrive, current));
+                }
+                else
+                {
+                    currentTime = node.ExecuteTime;
                 }
 
                 waypoints.Add(current);
                 arrivals.Add(node.ExecuteTime);
+                surviving.Add(node);
             }
 
-            return new GhostTrack(ScheduledPath.FromTimedWaypoints(waypoints, arrivals), ordered, input.StartingWounds);
+            return new GhostTrack(ScheduledPath.FromTimedWaypoints(waypoints, arrivals), surviving, startingWounds);
         }
 
         private void ResolveShots(Dictionary<int, GhostTrack> tracks, List<int> order, List<TapeEvent> events)

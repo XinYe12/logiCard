@@ -102,6 +102,24 @@ User asked to generalize past just the door: any UI that changes a board object'
 
 Not yet visually re-verified.
 
+## 2026-08-06 seventh pass — same-round door open+cross, and the GDD-mandated block re-check that was never built
+
+Traced "I opened the door but still can't get through" to a real design gap, cross-checked against the docs (not guessed): `GDD.md`:59 / `CORE_LOOP.md`:90 already specify "blocked path / closed door → stop before the block," but the continuous-space retarget never implemented the resolve-time half of that. Two coordinated fixes, both with new EditMode coverage:
+
+1. **`PawnProgram` draft-time self-consistency** — a pawn's own already-committed Door nodes this round are now applied to a local clone of the board (`BuildLocalBoard()`, new) before `TryDraftPath`/`TryAddWaypoint` run pathfinding, so "walk near the door → open it → walk through" is plannable in one round. Deliberately still fully blind to the *opponent's* plan — only this pawn's own committed actions count. New tests: `DoorTests.TryDraftPath_WithoutOwnQueuedDoorOpen_DetoursAroundTheStillClosedDoor` / `TryDraftPath_AfterOwnQueuedDoorOpen_CrossesTheGapInOneRound`.
+2. **`GhostResolver` "stop before the block"** — movement used to be pre-baked per-pawn with zero re-validation against the board's actual evolving door state, so a pawn could visibly glide through a door that turned out closed by the time they got there (contention with the opponent, or any other mismatch between the draft-time snapshot and reality). `Resolve()` now extracts every pawn's Door toggles up front (`BuildDoorTransitions`, independent of and not touching the existing, already-tested `ApplyDoorGroup`/`ResolveShots` shot-and-event sweep, to keep this change's blast radius small), and `CompileTrack` checks each Move leg against it (`TryFindEarliestDoorBlock`, using new `Segment.TryIntersectionParams`) — a leg that crosses a door that's actually Closed at that instant gets truncated there, and everything still queued after it for that pawn is dropped (mirrors the existing "death freezes remaining queue" precedent, C37, applied to "blocked" instead of "dead"). New tests: `DoorTests.Move_CrossingADoorThatClosesBeforehand_StopsAtTheDoor` / `Move_CrossingADoorThatOpensBeforehand_CompletesNormally` / `Move_BlockedByADoor_CancelsThatPawnsLaterQueuedActions`.
+
+Contention itself (who opens/closes a shared door and when) needed no new design — `ApplyDoorGroup`'s existing chronological-order + simultaneity-epsilon + "Close wins" tie-break already governs it, same mechanism combat already uses. Confirmed no regression risk by inspection: `GhostResolverTests.cs`'s shared `NewBoard()` registers zero doors (so `TryFindEarliestDoorBlock` is a no-op there), and every existing Move-vs-door scenario in `RoundPlaybackPlayModeTests`/`GameBootstrap`'s scripted defender stays on one side of the wall line rather than crossing it — but this has **not been run through an actual test pass yet**, only reasoned through by reading every affected call site. Verify before trusting.
+
+## 2026-08-06 eighth pass — playtest #1 (crossing) confirmed working; found why state looked stuck
+
+User confirmed the persistence/crossing/block-at-door fixes above work correctly. Two remaining symptoms — door tint never changing, the board-anchored prompt always reading "OPEN" — turned out to be **one bug, and not in any of this session's new code**:
+
+- **Root cause: `GameBootstrap.BuildDefenderPayload`'s scripted defender queued `Door(Open)` unconditionally, every single round**, regardless of the door's actual live state. This was harmless before door state persisted across rounds at all (nothing carried over for it to undo) — but once persistence started working (this session, pass 2), the defender silently re-opened the door near the end of *every* round's timeline, undoing any Close the player had just booked. Both the tint and the prompt were reading the real, correctly-updated state the whole time — the state itself just kept getting stomped back to Open by the AI a few seconds after the player closed it.
+- **Fix:** `TryScriptDoor` now checks `_board.Model.GetDoorState(door)` first and no-ops if it already matches the action's implied state — the defender only opens it when it's actually closed. Round 1 is unaffected (door always starts Closed, so the defender's Open still fires exactly as before, preserving `RoundPlaybackPlayModeTests`' AmbushPoint scenario, which needs that open for its Snap Shot's LoS).
+
+Not yet re-verified by the user or a test run — should be a quick recheck given the fix is a one-line conditional in already-scripted AI, not new resolve logic.
+
 ## Blockers / notes
 
 - Unity **6000.5.5f1**; project path `D:\projects\Game\logiCard`.

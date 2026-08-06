@@ -46,6 +46,11 @@ namespace LogiCard.Tests.EditMode
             return new ActionNode(ActionVerb.Shoot, seconds, new PlanarPosition(x, y), StanceType.Walk, modifier: null, mode);
         }
 
+        private static ActionNode Move(float seconds, float x, float y, StanceType stance = StanceType.Walk)
+        {
+            return new ActionNode(ActionVerb.Move, seconds, new PlanarPosition(x, y), stance);
+        }
+
         private static GhostInput Input(int pawnId, PlanarPosition start, params ActionNode[] nodes)
         {
             return new GhostInput(pawnId, start, new TimelinePayload(new List<ActionNode>(nodes)));
@@ -159,6 +164,66 @@ namespace LogiCard.Tests.EditMode
             Assert.That(HasEventType(tape, TapeEventType.Wounded), Is.False, "Close must win a same-instant tie.");
         }
 
+        // ---------- GhostResolver movement vs mid-resolve door state (2026-08-06) ----------
+        // GDD.md §3.1 / CORE_LOOP.md: "Blocked path / closed door -> stop before the block." A route
+        // can look clear when drafted (own board snapshot, plus this pawn's own already-queued Door
+        // actions per PawnProgram's local-board fix) but the OTHER pawn's Door action is still fully
+        // hidden until resolve — movement must be re-checked against what the door's state actually
+        // turns out to be, not just played back as pre-baked waypoints.
+
+        [Test]
+        public void Move_CrossingADoorThatClosesBeforehand_StopsAtTheDoor()
+        {
+            var resolver = new GhostResolver(NewBoardWithDoor(DoorState.Open));
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new PlanarPosition(0, 2), Move(3f, 4, 2)),
+                Input(Defender, new PlanarPosition(4, 0), DoorNode(1f, DoorAction.Close)),
+            });
+
+            Assert.That(tape.Tracks.TryGetValue(Attacker, out ScheduledPath path), Is.True);
+            PlanarPosition finalPosition = path.Evaluate(path.EndSeconds);
+
+            // The leg crosses the door (x=2, spanning the door's y=1..3) at its exact midpoint, 1.5s
+            // in — after the door closes at 1s — so the pawn should stop right there, not at (4,2).
+            Assert.That(finalPosition.X, Is.EqualTo(2f).Within(0.01f));
+            Assert.That(finalPosition.Y, Is.EqualTo(2f).Within(0.01f));
+        }
+
+        [Test]
+        public void Move_CrossingADoorThatOpensBeforehand_CompletesNormally()
+        {
+            var resolver = new GhostResolver(NewBoardWithDoor(DoorState.Closed));
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new PlanarPosition(0, 2), Move(3f, 4, 2)),
+                Input(Defender, new PlanarPosition(4, 0), DoorNode(1f, DoorAction.Open)),
+            });
+
+            Assert.That(tape.Tracks.TryGetValue(Attacker, out ScheduledPath path), Is.True);
+            PlanarPosition finalPosition = path.Evaluate(path.EndSeconds);
+
+            Assert.That(finalPosition.X, Is.EqualTo(4f).Within(0.01f));
+            Assert.That(finalPosition.Y, Is.EqualTo(2f).Within(0.01f));
+        }
+
+        [Test]
+        public void Move_BlockedByADoor_CancelsThatPawnsLaterQueuedActions()
+        {
+            var resolver = new GhostResolver(NewBoardWithDoor(DoorState.Open));
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new PlanarPosition(0, 2), Move(3f, 4, 2), Shoot(5f, 4, 0)),
+                Input(Defender, new PlanarPosition(4, 0), DoorNode(1f, DoorAction.Close)),
+            });
+
+            Assert.That(HasEventType(tape, TapeEventType.ShootFire), Is.False,
+                "The Shoot queued after a blocked Move never happens — the pawn never reached where it needed to be to take it.");
+        }
+
         // ---------- PawnProgram authoring ----------
         // Decision 4: TryQueueDoor takes an already-resolved Door reference (the input layer would
         // find it via ArenaBoard.TryGetNearestDoor before calling this) and checks InteractRadius
@@ -232,6 +297,50 @@ namespace LogiCard.Tests.EditMode
 
             Assert.That(ok, Is.False);
             Assert.That(program.UsedSeconds, Is.EqualTo(0f));
+        }
+
+        // ---------- draft-time self-consistency (playtest 2026-08-06) ----------
+        // A player could book an Open on the shared board's Door but still couldn't draft a path
+        // through it the same round, because pathfinding only ever saw the board as it was at round
+        // start — with no visibility into this pawn's own not-yet-resolved Door action. PawnProgram
+        // now pathfinds against a local clone with this pawn's own committed Door nodes applied.
+
+        [Test]
+        public void TryDraftPath_WithoutOwnQueuedDoorOpen_DetoursAroundTheStillClosedDoor()
+        {
+            ArenaBoard board = NewBoardWithDoor(DoorState.Closed);
+            var program = new PawnProgram(new PlanarPosition(0f, 2f), baseSecondsPerTile: 1f, budgetSeconds: 60f,
+                board: board, doorInteractBaseSeconds: 4f);
+
+            bool ok = program.TryDraftPath(new PlanarPosition(4f, 2f), out string reason);
+
+            Assert.That(ok, Is.True, reason);
+            Assert.That(program.DraftWaypoints.Count, Is.GreaterThan(1),
+                "A still-closed door forces a detour around it, not a straight line through it.");
+        }
+
+        [Test]
+        public void TryDraftPath_AfterOwnQueuedDoorOpen_CrossesTheGapInOneRound()
+        {
+            ArenaBoard board = NewBoardWithDoor(DoorState.Closed);
+            board.TryGetDoor(DoorPosition, out Door door);
+            var program = new PawnProgram(new PlanarPosition(0f, 2f), baseSecondsPerTile: 1f, budgetSeconds: 60f,
+                board: board, doorInteractBaseSeconds: 4f);
+
+            // Step within interaction range of the still-closed door, then open it.
+            Assert.That(program.TryQueueMove(new PlanarPosition(1.5f, 2f), out string moveReason), Is.True, moveReason);
+            Assert.That(program.TryQueueDoor(door, DoorAction.Open, out string doorReason), Is.True, doorReason);
+
+            bool ok = program.TryDraftPath(new PlanarPosition(4f, 2f), out string pathReason);
+
+            Assert.That(ok, Is.True, pathReason);
+            Assert.That(program.DraftWaypoints.Count, Is.EqualTo(1),
+                "A straight shot through the now-(locally)-open door needs no detour waypoints.");
+            Assert.That(program.DraftWaypoints[0], Is.EqualTo(new PlanarPosition(4f, 2f)));
+
+            // This pawn's plan is local-only — the shared board itself never mutates from drafting;
+            // that only happens for real at resolve (RoundPlayback.CommitRoundState).
+            Assert.That(board.GetDoorState(door), Is.EqualTo(DoorState.Closed));
         }
     }
 }

@@ -130,7 +130,7 @@ namespace LogiCard.Timeline
                 return false;
             }
 
-            if (!ContinuousPathfinder.TryFindPath(_board, CurrentPosition, destination, _pathBuffer))
+            if (!ContinuousPathfinder.TryFindPath(BuildLocalBoard(), CurrentPosition, destination, _pathBuffer))
             {
                 rejectionReason = "No route to destination.";
                 return false;
@@ -170,7 +170,7 @@ namespace LogiCard.Timeline
                 return true;
             }
 
-            if (!ContinuousPathfinder.TryFindPath(_board, tip, point, _pathBuffer))
+            if (!ContinuousPathfinder.TryFindPath(BuildLocalBoard(), tip, point, _pathBuffer))
             {
                 rejectionReason = "No route to that point.";
                 return false;
@@ -494,6 +494,41 @@ namespace LogiCard.Timeline
             }
 
             return ScheduledPath.FromTimedWaypoints(waypoints, arrivals);
+        }
+
+        /// <summary>
+        /// A clone of the shared board with this pawn's own already-committed Door nodes applied —
+        /// used for draft-time pathfinding instead of the raw shared <see cref="_board"/>, so a
+        /// "walk near the door -> open it -> walk through" sequence is plannable within one round
+        /// (playtest 2026-08-06: a player could open a door and still couldn't draft a path through
+        /// it the same round, because pathfinding only ever saw the board as it was at round start,
+        /// with no visibility into this pawn's own not-yet-resolved Door action). Deliberately only
+        /// reflects THIS pawn's own committed actions — the opponent's plan stays fully hidden until
+        /// resolve, same blind-programming guarantee as always; what actually happens if reality
+        /// doesn't match this pawn's assumption (opponent closes it first, etc.) is GhostResolver's
+        /// job at resolve time, not this pawn's own planning view. Doors only, not walls — walls
+        /// never move, so the shared board's wall state is always already correct at draft time.
+        /// Recomputed on demand rather than kept as mutable state, so it can never drift out of sync
+        /// with <see cref="_nodes"/> (which the undo system already keeps correct).
+        /// </summary>
+        private ArenaBoard BuildLocalBoard()
+        {
+            ArenaBoard local = _board.Clone();
+            for (int i = 0; i < _nodes.Count; i++)
+            {
+                ActionNode node = _nodes[i];
+                if (node.Verb != ActionVerb.Door)
+                {
+                    continue;
+                }
+
+                if (local.TryGetDoor(node.Position, out Door door))
+                {
+                    local.SetDoorState(door, node.Door == DoorAction.Open ? DoorState.Open : DoorState.Closed);
+                }
+            }
+
+            return local;
         }
 
         private bool CanReserve(float cost, out string rejectionReason)

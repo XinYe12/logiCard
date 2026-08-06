@@ -223,6 +223,17 @@ namespace LogiCard.Boot
                 return;
             }
 
+            // BUG FOUND 2026-08-06 (playtest): this used to queue every round unconditionally, so the
+            // scripted defender re-opened the door every single round no matter what the player did —
+            // including silently undoing a Close the player had just booked. Harmless before door
+            // state persisted across rounds (nothing carried over to undo); a real bug once it did.
+            // Now a no-op if the door's live state already matches what this action would produce.
+            DoorState impliedState = action == DoorAction.Open ? DoorState.Open : DoorState.Closed;
+            if (_board.Model.GetDoorState(door) == impliedState)
+            {
+                return;
+            }
+
             if (!program.TryQueueDoor(door, action, out _))
             {
                 // Out of range / over-budget — fine for a stub AI.

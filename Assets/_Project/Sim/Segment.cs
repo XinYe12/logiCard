@@ -93,6 +93,39 @@ namespace LogiCard.Sim
             return ((apx * abx) + (apy * aby)) / lengthSq;
         }
 
+        /// <summary>
+        /// Parametric crossing point between this segment (<paramref name="t"/>) and
+        /// <paramref name="other"/> (<paramref name="u"/>), both in [0,1] (epsilon-tolerant) when a
+        /// transversal crossing exists. Unlike <see cref="Intersects"/> (a legality check that also
+        /// treats touches/corner grazes as blocking), this needs the actual crossing location — used
+        /// to find *where and when* a movement leg crosses a door segment (GDD.md "stop before the
+        /// block"), not whether it's legal to draft at all. Returns false for parallel/collinear
+        /// segments (including exact overlap), where there's no single well-defined crossing point.
+        /// </summary>
+        public bool TryIntersectionParams(Segment other, out float t, out float u)
+        {
+            float d1x = B.X - A.X;
+            float d1y = B.Y - A.Y;
+            float d2x = other.B.X - other.A.X;
+            float d2y = other.B.Y - other.A.Y;
+
+            float denom = (d1x * d2y) - (d1y * d2x);
+            if (Math.Abs(denom) <= Epsilon)
+            {
+                t = 0f;
+                u = 0f;
+                return false;
+            }
+
+            float dx = other.A.X - A.X;
+            float dy = other.A.Y - A.Y;
+
+            t = ((dx * d2y) - (dy * d2x)) / denom;
+            u = ((dx * d1y) - (dy * d1x)) / denom;
+
+            return t >= -Epsilon && t <= 1f + Epsilon && u >= -Epsilon && u <= 1f + Epsilon;
+        }
+
         public override string ToString()
         {
             return $"[{A} -> {B}]";
