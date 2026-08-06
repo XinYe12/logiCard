@@ -58,12 +58,13 @@ The **Time Resource** timeline UI must be visual and intuitive enough that a new
 
 ## Long-Term Systems (Post-Demo)
 
-Confirmed direction for the full game, none of it required or built for the 14-day demo (see `PRODUCT_MEMORY.md` C35–C38 for detail):
+Confirmed direction for the full game, none of it required or built for the 14-day demo (see `PRODUCT_MEMORY.md` C35–C38 and C42–C44 for detail):
 
 - **Continuous movement** over a navmesh, replacing the tile grid (**C35**).
 - **Destructible geometry** as discrete breach states — the map as a weapon, made literal (**C36**).
 - **Asymmetric objective win condition** (vault/cashbox-style) — the actual long-term realization of the "Asymmetric Heist" pillar above, once the demo's elimination-only win ships (**C37**).
 - **Revive**, via a Downed state and a tile-targeted revive action, plus a "Detonator" martyr archetype that turns a finished-off ally into a tactical weapon (**C38**).
+- **Unique-verb character roster** — beyond Scout/Juggernaut's shared-verb, different-attributes model, characters carrying an ability no other character has (**C42**), starting with **Bomber** (floor breach + fall-through-floor, **C43**) and **Time Player** (rewind/fast-forward an object's state, **C44**). Detail: [CHARACTER_ROSTER_LONGTERM.md](CHARACTER_ROSTER_LONGTERM.md).
 
 ## Out of this doc
 
