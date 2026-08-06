@@ -155,7 +155,36 @@ namespace LogiCard.Boot
                 _pawns[i] = pawn;
             }
 
+            ApplyDoorStateFromTape();
             _board.RefreshDoorVisuals();
+        }
+
+        /// <summary>
+        /// BUG FOUND 2026-08-06 (playtest): door toggles only ever mutated <see cref="GhostResolver"/>'s
+        /// resolve-local scratch clone (by design, to keep Resolve a pure function of board+inputs) —
+        /// nothing ever copied the result back onto the shared <see cref="ArenaBoard"/> that the next
+        /// round's pathfinding and the door's rendered tint both read from. A player who booked and
+        /// resolved an Open had it silently reset to Closed the instant the round ended; the door
+        /// could never actually be gotten through. Walking the tape's Door events in order (already
+        /// chronological) and applying each to the real board leaves it at the correct final state.
+        /// </summary>
+        private void ApplyDoorStateFromTape()
+        {
+            for (int i = 0; i < _tape.Events.Count; i++)
+            {
+                TapeEvent tapeEvent = _tape.Events[i];
+                if (tapeEvent.Type != TapeEventType.DoorOpened && tapeEvent.Type != TapeEventType.DoorClosed)
+                {
+                    continue;
+                }
+
+                if (_board.Model.TryGetDoor(tapeEvent.Position, out Door door))
+                {
+                    _board.Model.SetDoorState(
+                        door,
+                        tapeEvent.Type == TapeEventType.DoorOpened ? DoorState.Open : DoorState.Closed);
+                }
+            }
         }
 
         /// <summary>Back to Allot/Program: drop the tape and stand everyone on their carried point.</summary>
@@ -279,11 +308,14 @@ namespace LogiCard.Boot
                 go.transform.SetParent(transform, false);
                 var tracer = go.AddComponent<ShotTracerView>();
                 tracer.Init(TracerColor);
+                // Origin = where the shooter stood when the window opened (matches
+                // GhostResolver.ResolveHoldAngle / ResolveSnapShot), not CompleteSeconds —
+                // same ShotTracerView path Snap already used; Hold just keeps it lit earlier.
                 tracer.Aim(
-                    _board.WorldFromPlanar(shooter.Evaluate(tapeEvent.Seconds)),
+                    _board.WorldFromPlanar(shooter.Evaluate(tapeEvent.WindowStartSeconds)),
                     _board.WorldFromPlanar(tapeEvent.Position));
 
-                _tracers.Add(new TracerEntry(tapeEvent.Seconds, tracer));
+                _tracers.Add(new TracerEntry(tapeEvent.WindowStartSeconds, tapeEvent.Seconds, tracer));
             }
         }
 
@@ -292,7 +324,11 @@ namespace LogiCard.Boot
             for (int i = 0; i < _tracers.Count; i++)
             {
                 TracerEntry tracer = _tracers[i];
-                bool lit = seconds >= tracer.Seconds && seconds <= tracer.Seconds + TracerVisibleSeconds;
+
+                // Lit for the shooter's whole aim-in/hold window, not just after it completes — a
+                // Hold Angle's contact (and the wound it causes) can land anywhere in that window,
+                // and used to resolve well before the beam ever appeared (BUG FOUND 2026-08-06).
+                bool lit = seconds >= tracer.WindowStartSeconds && seconds <= tracer.CompleteSeconds + TracerVisibleSeconds;
                 tracer.View.SetVisible(lit);
             }
         }
@@ -339,13 +375,16 @@ namespace LogiCard.Boot
 
         private readonly struct TracerEntry
         {
-            public float Seconds { get; }
+            public float WindowStartSeconds { get; }
+
+            public float CompleteSeconds { get; }
 
             public ShotTracerView View { get; }
 
-            public TracerEntry(float seconds, ShotTracerView view)
+            public TracerEntry(float windowStartSeconds, float completeSeconds, ShotTracerView view)
             {
-                Seconds = seconds;
+                WindowStartSeconds = windowStartSeconds;
+                CompleteSeconds = completeSeconds;
                 View = view;
             }
         }

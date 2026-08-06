@@ -25,10 +25,12 @@ namespace LogiCard.Timeline
         private const float BudgetEpsilon = 0.001f;
 
         /// <summary>
-        /// Door interaction reach (Decision 4) — start ~half a pawn-width per C39, tune in Phase 6
-        /// against real play (PRODUCT_MEMORY.md open numeric #5), same scale as GhostResolver's HitRadius.
+        /// Door interaction reach (Decision 4). Raised 0.45 -> 0.7 on playtest feedback 2026-08-06:
+        /// a pawn standing visibly adjacent to the door (0.58 from the segment) still read "out of
+        /// interaction range" — 0.45 (half a pawn-width, the original Phase 6 placeholder) was too
+        /// tight against how close taps actually land a pawn next to a wall-mounted door.
         /// </summary>
-        private const float InteractRadius = 0.45f;
+        private const float InteractRadius = 0.7f;
 
         private readonly List<ActionNode> _nodes = new List<ActionNode>();
         private readonly List<PlanarPosition> _draftWaypoints = new List<PlanarPosition>();

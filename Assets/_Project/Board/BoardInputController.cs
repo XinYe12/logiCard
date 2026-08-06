@@ -27,13 +27,16 @@ namespace LogiCard.Board
         private bool _locked;
         private StanceType _preferredStance = StanceType.Walk;
         private ShootMode _preferredShootMode = ShootMode.SnapShot;
-        private DoorAction _preferredDoorAction = DoorAction.Open;
+        private Door _pendingDoor;
         private PathPreviewView _pathPreview;
 
         public ActionVerb Mode { get; set; } = ActionVerb.Move;
 
         /// <summary>Read-only access for the HUD to describe actual door state (not just the player's selected action).</summary>
         public ArenaBoard Board => _board;
+
+        /// <summary>Lets the HUD project board-space points (e.g. the pending door) to screen space.</summary>
+        public BoardView BoardView => _boardView;
 
         public PawnProgram Program { get; private set; }
 
@@ -68,13 +71,25 @@ namespace LogiCard.Board
             }
         }
 
-        public DoorAction PreferredDoorAction
-        {
-            get => _preferredDoorAction;
-            set => _preferredDoorAction = value;
-        }
+        /// <summary>
+        /// The door a board tap in Door mode most recently selected, awaiting an explicit
+        /// OPEN/CLOSE confirm (BUG FOUND 2026-08-06, playtest: tapping the board used to queue an
+        /// Open/Close immediately against a HUD-preselected action, silently flipped to its
+        /// opposite whenever it matched the door's live state — the HUD label could show "OPEN"
+        /// while the tap actually booked a Close). Null once confirmed, rejected, or cancelled.
+        /// </summary>
+        public Door PendingDoor => _pendingDoor;
 
         public event Action<PawnProgram> QueueChanged;
+
+        /// <summary>
+        /// Fires with a human-readable reason whenever a board tap is rejected outright (e.g. "No
+        /// route to that point" when a closed door is the only way across) — previously only
+        /// reached <c>Debug.Log</c>, so a rejected tap looked exactly like nothing happening at all
+        /// (playtest feedback 2026-08-06: "why isn't anything happening" when a path was blocked by
+        /// the closed door). The HUD surfaces this in the outcome banner.
+        /// </summary>
+        public event Action<string> ActionRejected;
 
         public void Init(
             PawnView pawn,
@@ -126,11 +141,24 @@ namespace LogiCard.Board
             }
         }
 
-        public void CommitToPlayback()
+        /// <summary>
+        /// Lock In's entry point. Returns false — and leaves the round unlocked — if a pending
+        /// draft exists but fails to commit (e.g. over budget), instead of silently discarding that
+        /// draft and locking in anyway with whatever was already committed (BUG FOUND 2026-08-06,
+        /// playtest: a drafted path that didn't fit the round's Time Resource budget vanished
+        /// silently at Lock In, leaving the pawn with zero Move nodes — it just stood still through
+        /// the whole playback with no on-screen explanation).
+        /// </summary>
+        public bool CommitToPlayback()
         {
-            TryCommitDraftPath();
+            if (Program != null && Program.HasDraft && !TryCommitDraftPath())
+            {
+                return false;
+            }
+
             _locked = true;
             _pathPreview?.Clear();
+            return true;
         }
 
         public bool TryCommitDraftPath()
@@ -143,6 +171,7 @@ namespace LogiCard.Board
             if (!Program.TryCommitDraft(out string reason))
             {
                 Debug.Log($"[logiCard] Commit draft rejected: {reason}");
+                ActionRejected?.Invoke(reason);
                 return false;
             }
 
@@ -214,6 +243,7 @@ namespace LogiCard.Board
             Program = new PawnProgram(_origin, _baseSecondsPerTile, _budgetSeconds, _preferredStance, _board);
             Program.SetShootMode(_preferredShootMode);
             _locked = false;
+            _pendingDoor = null;
             RefreshPreview();
             QueueChanged?.Invoke(Program);
         }
@@ -266,7 +296,7 @@ namespace LogiCard.Board
             }
             else if (Mode == ActionVerb.Door)
             {
-                queued = TryQueueNearestDoor(point, out reason);
+                queued = TrySelectOrCancelDoor(point, out reason);
             }
             else
             {
@@ -277,6 +307,7 @@ namespace LogiCard.Board
             if (!queued)
             {
                 Debug.Log($"[logiCard] {Mode} rejected at {point}: {reason}");
+                ActionRejected?.Invoke(reason);
                 return false;
             }
 
@@ -285,24 +316,63 @@ namespace LogiCard.Board
             return true;
         }
 
-        private bool TryQueueNearestDoor(PlanarPosition point, out string reason)
+        /// <summary>
+        /// Door mode's first tap: selects the nearest door as <see cref="PendingDoor"/> without
+        /// booking anything yet — <see cref="TryConfirmPendingDoor"/> (the HUD's OPEN/CLOSE
+        /// buttons) does the actual queue. A tap that doesn't land near any door cancels whatever
+        /// was pending, so tapping elsewhere is how the player backs out.
+        /// </summary>
+        private bool TrySelectOrCancelDoor(PlanarPosition point, out string reason)
         {
-            if (_board == null || !_board.TryGetNearestDoor(point, DoorPickRadius, out Door door))
+            if (_board != null && _board.TryGetNearestDoor(point, DoorPickRadius, out Door door))
             {
-                reason = "No door near tap.";
+                _pendingDoor = door;
+                reason = null;
+                return true;
+            }
+
+            bool hadPending = _pendingDoor != null;
+            _pendingDoor = null;
+            reason = hadPending ? null : "No door near tap.";
+            return hadPending;
+        }
+
+        /// <summary>
+        /// The HUD's OPEN/CLOSE buttons call this with the player's explicit choice against
+        /// whatever door <see cref="TrySelectOrCancelDoor"/> most recently selected — the only path
+        /// that actually books a Door node, so there is no silent action-flipping.
+        /// </summary>
+        public bool TryConfirmPendingDoor(DoorAction action, out string reason)
+        {
+            if (_locked || Program == null)
+            {
+                reason = "Round is locked.";
+                ActionRejected?.Invoke(reason);
                 return false;
             }
 
-            DoorAction action = _preferredDoorAction;
-            DoorState state = _board.GetDoorState(door);
-            // If the preferred action is already the live state, toggle so a second tap still does work.
-            if ((action == DoorAction.Open && state == DoorState.Open)
-                || (action == DoorAction.Close && state == DoorState.Closed))
+            if (_pendingDoor == null)
             {
-                action = state == DoorState.Open ? DoorAction.Close : DoorAction.Open;
+                reason = "No door selected — tap near a door first.";
+                ActionRejected?.Invoke(reason);
+                return false;
             }
 
-            return Program.TryQueueDoor(door, action, out reason);
+            if (!Program.TryQueueDoor(_pendingDoor, action, out reason))
+            {
+                ActionRejected?.Invoke(reason);
+                return false;
+            }
+
+            _pendingDoor = null;
+            RefreshPreview();
+            QueueChanged?.Invoke(Program);
+            return true;
+        }
+
+        public void CancelPendingDoor()
+        {
+            _pendingDoor = null;
         }
 
         private void RefreshPreview()

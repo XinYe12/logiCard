@@ -262,6 +262,32 @@ namespace LogiCard.Tests.EditMode
         }
 
         [Test]
+        public void HoldAngleShootFireCarriesWindowStartSoPlaybackCanLitTracerBeforeContact()
+        {
+            // BUG FOUND 2026-08-06: ShootFire was stamped only at CompleteSeconds, so a mid-window
+            // Hold kill could land on the tape before any tracer existed. WindowStartSeconds lets
+            // RoundPlayback keep the same ShotTracerView lit across the whole hold.
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(3f, 0, 4, ShootMode.HoldAngle)),
+                Input(Defender, new PlanarPosition(0, 2)),
+            });
+
+            List<TapeEvent> fires = EventsOfType(tape, TapeEventType.ShootFire);
+            Assert.That(fires.Count, Is.EqualTo(1));
+            Assert.That(fires[0].Seconds, Is.EqualTo(3f).Within(0.0001f));
+            Assert.That(fires[0].WindowStartSeconds, Is.EqualTo(0f).Within(0.0001f));
+
+            List<TapeEvent> killed = EventsOfType(tape, TapeEventType.Killed);
+            Assert.That(killed.Count, Is.EqualTo(1));
+            Assert.That(killed[0].Seconds, Is.LessThan(fires[0].Seconds),
+                "Contact must be allowed before CompleteSeconds — that is why the tracer needs WindowStart.");
+            Assert.That(killed[0].Seconds, Is.GreaterThanOrEqualTo(fires[0].WindowStartSeconds));
+        }
+
+        [Test]
         public void HoldAngleCoversMidLaneNotOnlyTheAimedTile()
         {
             var resolver = new GhostResolver(NewBoard());

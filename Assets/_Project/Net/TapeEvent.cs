@@ -36,13 +36,24 @@ namespace LogiCard.Net
 
         public int TargetPawnId { get; }
 
-        public TapeEvent(float seconds, int pawnId, TapeEventType type, PlanarPosition position, int targetPawnId = NoPawn)
+        /// <summary>
+        /// For <see cref="TapeEventType.ShootFire"/> only: when the shooter started pulling the
+        /// trigger (aim-in start for Snap, hold start for Hold Angle) — <see cref="Seconds"/> is
+        /// always the completion instant. Defaults to <see cref="Seconds"/> for every other event
+        /// type. Lets playback keep a Hold Angle's tracer lit across its whole hold window instead
+        /// of only after it completes, since a hold's contact can land anywhere in that window
+        /// (BUG FOUND 2026-08-06: the wound could land before the tracer ever showed up).
+        /// </summary>
+        public float WindowStartSeconds { get; }
+
+        public TapeEvent(float seconds, int pawnId, TapeEventType type, PlanarPosition position, int targetPawnId = NoPawn, float? windowStartSeconds = null)
         {
             Seconds = seconds;
             PawnId = pawnId;
             Type = type;
             Position = position;
             TargetPawnId = targetPawnId;
+            WindowStartSeconds = windowStartSeconds ?? seconds;
         }
 
         public override string ToString()

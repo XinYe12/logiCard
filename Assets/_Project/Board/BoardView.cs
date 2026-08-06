@@ -124,7 +124,13 @@ namespace LogiCard.Board
             box.transform.SetParent(transform, false);
             box.transform.localPosition = LocalFromPlanar(mid) + new Vector3(0f, height * 0.5f, 0f);
             box.transform.localScale = new Vector3(length * WorldScale, height, SegmentThickness * WorldScale);
-            float yaw = Mathf.Atan2(dx, dy) * Mathf.Rad2Deg;
+            // Box's long axis (scale.x) is local +X, which Quaternion.Euler(0,yaw,0) sends to
+            // (cos(yaw), 0, -sin(yaw)) in local space — so aligning it to (dx, dy) needs
+            // atan2(-dy, dx), not atan2(dx, dy) (that formula is for aligning local +Z instead).
+            // BUG FOUND 2026-08-06 (playtest): every wall/door box rendered rotated 90° from its
+            // real Segment position, e.g. a wall spanning x in [0, 1.75] at fixed y rendered as a
+            // bar spanning y instead of x.
+            float yaw = Mathf.Atan2(-dy, dx) * Mathf.Rad2Deg;
             box.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
             box.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
 

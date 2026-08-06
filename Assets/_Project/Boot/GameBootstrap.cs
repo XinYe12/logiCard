@@ -1,4 +1,5 @@
 using LogiCard.Board;
+using LogiCard.Net;
 using LogiCard.Sim;
 using LogiCard.Timeline;
 using LogiCard.UI;
@@ -150,19 +151,16 @@ namespace LogiCard.Boot
             boardGo.transform.SetParent(transform, false);
 
             // Continuous translation of DAY7 wall-with-gap: walls along y=2 with a door gap at x≈2.
-            // Door starts Open so scripted/demo LoS through the choke is readable without a forced
-            // open action. Closed-start is still the Phase 6 design preference (CONTINUOUS_PIVOT_PLAN.md)
-            // but flipping it ripples into the RoundPlaybackPlayModeTests "AmbushPoint" scenario (the
-            // scripted defender's Snap Shot needs LoS through the door to wound the attacker) and a
-            // few HUD test destinations that sit exactly on the door — tried it 2026-08-05, reverted;
-            // needs deliberate test-fixture updates alongside a cold-observer playtest call, not a
-            // blind flag flip.
+            // Door starts Closed (Phase 6 / CONTINUOUS_PIVOT_PLAN.md): the scripted defender opens it
+            // before Snap so AmbushPoint LoS still works, and PlayMode HUD destinations stay south
+            // of the segment so they remain legal move targets.
             var model = new ArenaBoard(0f, 0f, 4f, 4f, new[] { Floor.Ground });
             model.RegisterWall(new Segment(new PlanarPosition(0f, 2f), new PlanarPosition(1.75f, 2f)));
             model.RegisterWall(new Segment(new PlanarPosition(2.25f, 2f), new PlanarPosition(4f, 2f)));
             model.RegisterDoor(new Door(
                 new Segment(new PlanarPosition(1.75f, 2f), new PlanarPosition(2.25f, 2f)),
-                DoorState.Open));
+                DoorState.Closed,
+                displayName: "Door #1"));
 
             _board = boardGo.AddComponent<BoardView>();
             _board.Build(model, new Color(0.82f, 0.78f, 0.70f), new Color(0.42f, 0.38f, 0.34f));
@@ -198,8 +196,12 @@ namespace LogiCard.Boot
             float budget = _matchClock.RoundAllotment;
             var program = new PawnProgram(start, DefenderSecondsPerTile, budget, StanceType.Walk, _board.Model);
 
-            // Approach the door from the north, Snap south down the door column, then edge closer.
+            // Approach the choke from the north, step into InteractRadius, open the Closed door,
+            // Snap south onto AmbushPoint (2,1), then edge closer. Opening is what makes the shot's
+            // LoS legal — without it the Closed door blocks the wound the PlayMode suite asserts.
             TryScriptMove(program, new PlanarPosition(2f, 2.6f));
+            TryScriptMove(program, new PlanarPosition(2f, 2.35f));
+            TryScriptDoor(program, DoorAction.Open);
             TryScriptShoot(program, new PlanarPosition(2f, 1f));
             TryScriptMove(program, new PlanarPosition(2f, 2.3f));
 
@@ -211,6 +213,19 @@ namespace LogiCard.Boot
             if (!program.TryQueueMove(destination, out _))
             {
                 // Over-budget or unreachable — fine for a stub AI.
+            }
+        }
+
+        private void TryScriptDoor(PawnProgram program, DoorAction action)
+        {
+            if (!_board.Model.TryGetNearestDoor(program.CurrentPosition, float.MaxValue, out Door door))
+            {
+                return;
+            }
+
+            if (!program.TryQueueDoor(door, action, out _))
+            {
+                // Out of range / over-budget — fine for a stub AI.
             }
         }
 

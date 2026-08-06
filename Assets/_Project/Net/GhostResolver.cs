@@ -262,7 +262,8 @@ namespace LogiCard.Net
             ArenaBoard board)
         {
             GhostTrack shooter = tracks[shot.ShooterId];
-            events.Add(new TapeEvent(shot.CompleteSeconds, shot.ShooterId, TapeEventType.ShootFire, shot.Aim));
+            events.Add(new TapeEvent(shot.CompleteSeconds, shot.ShooterId, TapeEventType.ShootFire, shot.Aim,
+                windowStartSeconds: shot.WindowStartSeconds));
 
             if (shot.Mode == ShootMode.HoldAngle)
             {

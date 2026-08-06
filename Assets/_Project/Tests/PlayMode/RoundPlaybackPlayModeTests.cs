@@ -20,6 +20,8 @@ namespace LogiCard.Tests.PlayMode
     {
         /// <summary>
         /// Defender's scripted Snap aims at (2,1); attacker standing there (within HitRadius) gets hit.
+        /// Door starts Closed — the scripted defender opens it before the Snap so LoS through the choke
+        /// is legal (see <see cref="GameBootstrap"/> BuildDefenderPayload).
         /// </summary>
         private static readonly PlanarPosition AmbushPoint = new PlanarPosition(2f, 1f);
 

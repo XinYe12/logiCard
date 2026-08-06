@@ -15,6 +15,11 @@ namespace LogiCard.Tests.PlayMode
     [TestFixture]
     public sealed class ProgramHudPlayModeTests : SliceSceneFixture
     {
+        /// <summary>
+        /// South of the door choke (door segment sits on y=2 at x∈[1.75,2.25]). Destinations on
+        /// that segment become unreachable once the demo door starts Closed.
+        /// </summary>
+        private PlanarPosition SafeMoveDestination => new PlanarPosition(Home.X, Home.Y + 1f);
         [Test]
         public void ModeButtonsSwitchTheInputVerb()
         {
@@ -30,8 +35,16 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(AttackerInput.Mode, Is.EqualTo(ActionVerb.Move));
         }
 
+        /// <summary>
+        /// BUG FOUND 2026-08-06 (playtest): a board tap used to book an Open/Close immediately
+        /// against a HUD-preselected action, silently flipped to its opposite whenever it matched
+        /// the door's live state — confusing/"ambiguous" since what got booked didn't always match
+        /// what the HUD showed as selected. Tapping now only selects a door (PendingDoor); OPEN/
+        /// CLOSE is the explicit confirm, and confirming with nothing selected — or nothing at all
+        /// — books nothing.
+        /// </summary>
         [Test]
-        public void DoorModeButtonSwitchesTheInputVerbAndAction()
+        public void DoorModeSelectsADoorThenRequiresExplicitConfirm()
         {
             Button door = FindByName<Button>("Mode_Door");
             Button open = FindByName<Button>("Door_Open");
@@ -42,13 +55,17 @@ namespace LogiCard.Tests.PlayMode
 
             door.onClick.Invoke();
             Assert.That(AttackerInput.Mode, Is.EqualTo(ActionVerb.Door));
-            Assert.That(AttackerInput.PreferredDoorAction, Is.EqualTo(DoorAction.Open));
+            Assert.That(AttackerInput.PendingDoor, Is.Null, "Nothing should be selected before a tap.");
 
             close.onClick.Invoke();
-            Assert.That(AttackerInput.PreferredDoorAction, Is.EqualTo(DoorAction.Close));
+            Assert.That(AttackerInput.Program.Nodes, Is.Empty, "Confirming with nothing selected must not book anything.");
 
-            open.onClick.Invoke();
-            Assert.That(AttackerInput.PreferredDoorAction, Is.EqualTo(DoorAction.Open));
+            Assert.That(AttackerInput.TryTapPoint(new PlanarPosition(2f, 2f)), Is.True);
+            Assert.That(AttackerInput.PendingDoor, Is.Not.Null, "Tapping near the door should select it.");
+            Assert.That(AttackerInput.Program.Nodes, Is.Empty, "Selecting a door must not book anything by itself.");
+
+            Assert.That(AttackerInput.TryTapPoint(new PlanarPosition(0.2f, 0.2f)), Is.True);
+            Assert.That(AttackerInput.PendingDoor, Is.Null, "A tap away from any door should cancel the pending selection.");
         }
 
         [Test]
@@ -81,14 +98,14 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(setPath, Is.Not.Null, "HUD has no SetPathButton.");
 
             AttackerInput.Mode = ActionVerb.Move;
-            Assert.That(AttackerInput.TryTapPoint(new PlanarPosition(Home.X, Home.Y + 2f)), Is.True);
+            Assert.That(AttackerInput.TryTapPoint(SafeMoveDestination), Is.True);
 
             sprint.onClick.Invoke();
             Assert.That(AttackerInput.Program.DraftStance, Is.EqualTo(StanceType.Sprint));
 
             setPath.onClick.Invoke();
             Assert.That(AttackerInput.Program.HasDraft, Is.False);
-            Assert.That(AttackerInput.Program.UsedSeconds, Is.EqualTo(2f).Within(0.0001f));
+            Assert.That(AttackerInput.Program.UsedSeconds, Is.EqualTo(1f).Within(0.0001f));
             Assert.That(AttackerInput.Program.Nodes[0].Stance, Is.EqualTo(StanceType.Sprint));
         }
 
@@ -98,7 +115,7 @@ namespace LogiCard.Tests.PlayMode
             Text readout = FindByName<Text>("QueueReadout");
             Assert.That(readout, Is.Not.Null, "HUD has no QueueReadout text.");
 
-            PlanarPosition destination = new PlanarPosition(Home.X, Home.Y + 2f);
+            PlanarPosition destination = SafeMoveDestination;
             float expected = MoveSeconds(Home, destination);
 
             AttackerInput.Mode = ActionVerb.Move;
@@ -118,7 +135,7 @@ namespace LogiCard.Tests.PlayMode
         public IEnumerator LockInButtonCommitsDraftAndReachesExecutePhase()
         {
             AttackerInput.Mode = ActionVerb.Move;
-            AttackerInput.TryTapPoint(new PlanarPosition(Home.X, Home.Y + 2f));
+            AttackerInput.TryTapPoint(SafeMoveDestination);
             Assert.That(AttackerInput.Program.HasDraft, Is.True);
 
             Button lockIn = FindByName<Button>("LockInButton");
@@ -140,7 +157,7 @@ namespace LogiCard.Tests.PlayMode
         [Test]
         public void PlaybackPlacesThePawnOnItsScheduledPointAtTheArrivalSecond()
         {
-            PlanarPosition destination = new PlanarPosition(Home.X, Home.Y + 2f);
+            PlanarPosition destination = SafeMoveDestination;
             float arrival = MoveSeconds(Home, destination);
 
             AttackerInput.Mode = ActionVerb.Move;

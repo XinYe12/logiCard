@@ -74,6 +74,10 @@ namespace LogiCard.UI
         private Text _stanceLabel;
         private Text _shootModeLabel;
         private Text _doorModeLabel;
+        private RectTransform _canvasRoot;
+        private GameObject _doorPromptRoot;
+        private RectTransform _doorPromptRect;
+        private Text _doorPromptLabel;
         private Text _queueText;
         private Text _outcomeLabel;
         private GameObject _programControls;
@@ -119,13 +123,16 @@ namespace LogiCard.UI
 
             EnsureEventSystem();
             RectTransform root = BuildCanvas();
+            _canvasRoot = root;
             BuildTopStrip(root);
             BuildThumbZone(root);
             BuildOutcomeBanner(root);
+            BuildDoorPrompt(root);
 
             _clock.TimeChanged += OnClockTime;
             _phase.PhaseChanged += OnPhaseChanged;
             _input.QueueChanged += OnQueueChanged;
+            _input.ActionRejected += OnActionRejected;
 
             OnPhaseChanged(_phase.Phase);
             OnClockTime(_clock.CurrentSeconds);
@@ -148,6 +155,7 @@ namespace LogiCard.UI
             if (_input != null)
             {
                 _input.QueueChanged -= OnQueueChanged;
+                _input.ActionRejected -= OnActionRejected;
             }
         }
 
@@ -401,16 +409,13 @@ namespace LogiCard.UI
             Stretch(doorRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             float doorCursor = rowTop;
-            _doorModeLabel = CreateText(doorRt, "DoorModeLabel", "DOOR  Open — tap near a door to toggle it", 28, TextAnchor.MiddleLeft, Ink);
+            // The actual OPEN/CLOSE controls now spawn as a floating prompt anchored right at the
+            // selected door (BuildDoorPrompt/RefreshDoorPrompt) — playtest feedback 2026-08-06
+            // wanted "a UI component you interact with to open/close the door" at the point of
+            // interaction, not a fixed row down in the thumb zone disconnected from the door itself.
+            // This label just orients the player before they've tapped one.
+            _doorModeLabel = CreateText(doorRt, "DoorModeLabel", "DOOR — tap near a door to select it", 28, TextAnchor.MiddleLeft, Ink);
             PlaceRow(_doorModeLabel.rectTransform, ref doorCursor, 40f, 8f);
-
-            _openDoorButton = CreateButton(doorRt, "Door_Open", "OPEN", PanelMid, Ink, 32,
-                () => SetDoorAction(DoorAction.Open));
-            PlaceSplitCell(_openDoorButton.GetComponent<RectTransform>(), doorCursor, StanceRowHeight, 0, 2);
-
-            _closeDoorButton = CreateButton(doorRt, "Door_Close", "CLOSE", PanelMid, Ink, 32,
-                () => SetDoorAction(DoorAction.Close));
-            PlaceSplitCell(_closeDoorButton.GetComponent<RectTransform>(), doorCursor, StanceRowHeight, 1, 2);
 
             // Move, Shoot and Door controls occupy the same zone rect (toggled via SetActive), all
             // the same height with no slider on any side, so a single formula covers all three.
@@ -482,6 +487,46 @@ namespace LogiCard.UI
             }
         }
 
+        /// <summary>
+        /// Board-anchored OPEN/CLOSE button cluster (see <see cref="RefreshDoorPrompt"/> and
+        /// <c>docs/UI_BOARD_ANCHORED_COMPONENTS.md</c> for the general pattern this follows) — built
+        /// once, hidden until a door is selected, then repositioned beside it every time the
+        /// selection changes. Anchored to the canvas's own center reference point (`(0.5,0.5)`,
+        /// matching what <see cref="RectTransformUtility.ScreenPointToLocalPointInRectangle"/>
+        /// measures from) with its OWN pivot at its left-center edge, so it extends to the right of
+        /// — "beside" — wherever it's anchored, without covering the anchor point itself.
+        /// </summary>
+        private void BuildDoorPrompt(RectTransform root)
+        {
+            var promptGo = new GameObject("DoorPrompt", typeof(RectTransform), typeof(Image));
+            _doorPromptRoot = promptGo;
+            _doorPromptRect = promptGo.GetComponent<RectTransform>();
+            _doorPromptRect.SetParent(root, false);
+            _doorPromptRect.anchorMin = new Vector2(0.5f, 0.5f);
+            _doorPromptRect.anchorMax = new Vector2(0.5f, 0.5f);
+            _doorPromptRect.pivot = new Vector2(0f, 0.5f);
+            _doorPromptRect.sizeDelta = new Vector2(120f, 116f);
+            promptGo.GetComponent<Image>().color = PanelDark;
+
+            // Identity + state leg of the content contract (docs/UI_BOARD_ANCHORED_COMPONENTS.md) —
+            // every interaction prompt says *what* it's acting on and its *current* state, not just
+            // the available actions. Pinned to the top 24px.
+            _doorPromptLabel = CreateText(_doorPromptRect, "DoorPromptLabel", string.Empty, 13, TextAnchor.MiddleCenter, Ink);
+            Anchor(_doorPromptLabel.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(6f, -26f), new Vector2(-6f, -2f));
+
+            // Two equal-height (42px) action buttons stacked below the label, all anchored to the
+            // bottom so the pixel math is absolute and doesn't depend on the parent's own pivot.
+            _openDoorButton = CreateButton(_doorPromptRect, "Door_Open", "OPEN", PanelMid, Ink, 22,
+                () => ConfirmDoor(DoorAction.Open));
+            Anchor(_openDoorButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(6f, 48f), new Vector2(-6f, 90f));
+
+            _closeDoorButton = CreateButton(_doorPromptRect, "Door_Close", "CLOSE", PanelMid, Ink, 22,
+                () => ConfirmDoor(DoorAction.Close));
+            Anchor(_closeDoorButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(6f, 4f), new Vector2(-6f, 46f));
+
+            promptGo.SetActive(false);
+        }
+
         private void CreatePhaseButton(RectTransform parent, string label, RoundPhase phase, int index, float cursor, int count)
         {
             Button b = CreateButton(parent, $"Phase_{label}", label, PanelMid, Ink, 24, () => SwitchPhase(phase));
@@ -522,6 +567,11 @@ namespace LogiCard.UI
                 _input.TryCommitDraftPath();
             }
 
+            if (mode != ActionVerb.Door)
+            {
+                _input.CancelPendingDoor();
+            }
+
             _input.Mode = mode;
             RefreshModeButtons();
             RefreshVerbContextControls(_input.Program);
@@ -539,9 +589,13 @@ namespace LogiCard.UI
             RefreshVerbContextControls(_input.Program);
         }
 
-        private void SetDoorAction(DoorAction action)
+        private void ConfirmDoor(DoorAction action)
         {
-            _input.PreferredDoorAction = action;
+            if (!_input.TryConfirmPendingDoor(action, out string reason))
+            {
+                Debug.Log($"[logiCard] Door confirm rejected: {reason}");
+            }
+
             RefreshVerbContextControls(_input.Program);
         }
 
@@ -573,6 +627,14 @@ namespace LogiCard.UI
             if (_doorModeControls != null)
             {
                 _doorModeControls.SetActive(mode == ActionVerb.Door);
+            }
+
+            // The floating door prompt only makes sense in Door mode — hide it unconditionally here
+            // so leaving Door mode always clears it, regardless of which refresh path got here
+            // (RefreshDoorModeControls only re-shows it when there's still something pending).
+            if (mode != ActionVerb.Door && _doorPromptRoot != null)
+            {
+                _doorPromptRoot.SetActive(false);
             }
 
             if (mode == ActionVerb.Shoot)
@@ -617,38 +679,88 @@ namespace LogiCard.UI
             }
 
             float cost = program != null ? program.DoorInteractSeconds : 4f;
-            DoorAction action = _input.PreferredDoorAction;
-            string actionLabel = action == DoorAction.Close ? "CLOSE" : "OPEN";
+            Door pending = _input.PendingDoor;
 
-            // BUG FOUND 2026-08-05: this used to read "DOOR Open · 4s", which is the player's
-            // *selected action*, not the door's actual current state — easy to misread as a status
-            // readout. Now states both explicitly and separately.
-            string stateLabel = "state unknown";
-            if (program != null && _input.Board != null
-                && _input.Board.TryGetNearestDoor(program.CurrentPosition, float.MaxValue, out Door nearestDoor))
+            // BUG FOUND 2026-08-06 (playtest): tapping the board used to book an Open/Close
+            // immediately against a HUD-preselected action, silently flipped to its opposite
+            // whenever it matched the door's live state — confusing/"ambiguous" since the booked
+            // action didn't always match what the HUD showed as selected. Tapping now only
+            // *selects* a door; OPEN/CLOSE below is the explicit confirm, so what you press is
+            // exactly what gets booked.
+            string stateLabel = pending != null && _input.Board != null
+                ? (_input.Board.GetDoorState(pending) == DoorState.Open ? "OPEN" : "CLOSED")
+                : null;
+
+            // Identity leg of the content contract (docs/UI_BOARD_ANCHORED_COMPONENTS.md) — falls
+            // back to a generic label for any Door registered without a DisplayName.
+            string targetName = pending?.DisplayName ?? "DOOR";
+
+            _doorModeLabel.text = stateLabel != null
+                ? $"{targetName} selected, currently {stateLabel} — use the prompt on the board to confirm"
+                : "DOOR — tap near a door to select it";
+
+            RefreshDoorPrompt(pending, targetName, stateLabel, cost);
+        }
+
+        /// <summary>
+        /// Board-anchored OPEN/CLOSE button cluster spawned beside the selected door — playtest
+        /// feedback 2026-08-06 wanted an actual interactive UI element at the door, not an error
+        /// message or a fixed row in the thumb zone. Projects the door's board-space midpoint
+        /// through the game camera into screen space, then into this screen-space-overlay canvas's
+        /// local space (see <c>docs/UI_BOARD_ANCHORED_COMPONENTS.md</c> for the general recipe and
+        /// the anchor/pivot pitfall this once fell into). The camera and board never move, so this
+        /// only needs to run when the selection changes, not every frame.
+        /// </summary>
+        private void RefreshDoorPrompt(Door pending, string targetName, string stateLabel, float cost)
+        {
+            if (_doorPromptRoot == null)
             {
-                stateLabel = _input.Board.GetDoorState(nearestDoor) == DoorState.Open ? "OPEN" : "CLOSED";
+                return;
             }
 
-            _doorModeLabel.text = $"DOOR is {stateLabel} — selected: {actionLabel} ({cost:0}s)";
-
-            if (_openDoorButton != null)
+            if (pending == null || _input.BoardView == null || Camera.main == null)
             {
-                Text openLabel = _openDoorButton.GetComponentInChildren<Text>();
-                Text closeLabel = _closeDoorButton.GetComponentInChildren<Text>();
-                if (openLabel != null)
-                {
-                    openLabel.text = $"OPEN  {cost:0}s";
-                }
-
-                if (closeLabel != null)
-                {
-                    closeLabel.text = $"CLOSE  {cost:0}s";
-                }
-
-                _openDoorButton.GetComponent<Image>().color = action == DoorAction.Open ? Accent : PanelMid;
-                _closeDoorButton.GetComponent<Image>().color = action == DoorAction.Close ? Accent : PanelMid;
+                _doorPromptRoot.SetActive(false);
+                return;
             }
+
+            PlanarPosition doorMid = PlanarPosition.Lerp(pending.Segment.A, pending.Segment.B, 0.5f);
+            Vector3 worldPoint = _input.BoardView.WorldFromPlanar(doorMid);
+            Vector3 screenPoint = Camera.main.WorldToScreenPoint(worldPoint);
+
+            if (screenPoint.z <= 0f)
+            {
+                // Behind the camera — shouldn't happen on this fixed top-down rig, but don't show a
+                // prompt pinned to a point that isn't actually on screen.
+                _doorPromptRoot.SetActive(false);
+                return;
+            }
+
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRoot, screenPoint, null, out Vector2 local);
+            // Small rightward gap so the cluster sits beside the door instead of starting exactly on
+            // top of its (and the pawn's) own rendered geometry.
+            _doorPromptRect.anchoredPosition = local + new Vector2(18f, 0f);
+
+            if (_doorPromptLabel != null)
+            {
+                _doorPromptLabel.text = $"{targetName} · {stateLabel}";
+            }
+
+            Text openLabel = _openDoorButton.GetComponentInChildren<Text>();
+            Text closeLabel = _closeDoorButton.GetComponentInChildren<Text>();
+            if (openLabel != null)
+            {
+                openLabel.text = $"OPEN\n{cost:0}s";
+            }
+
+            if (closeLabel != null)
+            {
+                closeLabel.text = $"CLOSE\n{cost:0}s";
+            }
+
+            _openDoorButton.GetComponent<Image>().color = stateLabel == "OPEN" ? AccentDim : PanelMid;
+            _closeDoorButton.GetComponent<Image>().color = stateLabel == "CLOSED" ? AccentDim : PanelMid;
+            _doorPromptRoot.SetActive(true);
         }
 
         private void RefreshStanceControls(PawnProgram program)
@@ -684,8 +796,20 @@ namespace LogiCard.UI
             }
         }
 
+        /// <summary>
+        /// A successful queue change means whatever the player was doing worked, so any leftover
+        /// rejection text from a moment ago is stale — clear it rather than leaving it stuck on
+        /// screen through the next few successful taps.
+        /// </summary>
+        private void OnActionRejected(string reason)
+        {
+            ShowOutcome(string.IsNullOrEmpty(reason) ? string.Empty : $"Can't do that — {reason}");
+        }
+
         private void OnQueueChanged(PawnProgram program)
         {
+            ShowOutcome(string.Empty);
+
             if (_queueText == null || program == null)
             {
                 return;
@@ -785,10 +909,14 @@ namespace LogiCard.UI
                 return;
             }
 
-            const float budgetEpsilon = 0.001f;
-            if (_input.Program.UsedSeconds > _input.Program.BudgetSeconds + budgetEpsilon)
+            // BUG FOUND 2026-08-06 (playtest): this used to only check *already-committed*
+            // UsedSeconds, never the pending draft's cost — a drafted-but-not-yet-"SET PATH"ed
+            // move that didn't fit the budget sailed past this check, then got silently discarded
+            // by CommitToPlayback while Lock In proceeded anyway. CommitToPlayback itself is now
+            // the single source of truth: it fails (and leaves the round unlocked) exactly when a
+            // pending draft exists and doesn't fit, and OnActionRejected already showed why.
+            if (!_input.CommitToPlayback())
             {
-                Debug.LogWarning("[logiCard] Lock In blocked: program exceeds Time Resource budget.");
                 return;
             }
 
@@ -802,7 +930,6 @@ namespace LogiCard.UI
                           $"modifier={modifier}");
             }
 
-            _input.CommitToPlayback();
             LockedIn?.Invoke();
 
             StopAllCoroutines();
@@ -898,6 +1025,14 @@ namespace LogiCard.UI
                 _programControls.SetActive(phase == RoundPhase.Program
                     || phase == RoundPhase.Reveal
                     || phase == RoundPhase.Execute);
+            }
+
+            // Unlike the rest of _programControls, the floating door prompt only makes sense while
+            // actively drafting — leaving it up through Reveal/Execute would float a stale, locked
+            // OPEN/CLOSE prompt over the playback animation.
+            if (_doorPromptRoot != null && phase != RoundPhase.Program)
+            {
+                _doorPromptRoot.SetActive(false);
             }
 
             if (_allotPanel != null)
