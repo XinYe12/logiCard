@@ -1,12 +1,30 @@
 # Draft Handoff — 2026-08-07
 
-**Schedule:** M2.5 continuous pivot (Days 7b–7g) code-complete on `master` through `ef05061`. Day 8 URP merged. 2026-08-07 playtest follow-up pack is **committed**. Phase 6 cold-observer + radius tuning still human-only; Day 9 (board/UI identity) waits on that gate.
+**Schedule:** M2.5 continuous pivot (Days 7b–7g) code-complete on `master` through `6f7acf9`. Day 8 URP merged. 2026-08-07 playtest follow-up pack and the tracer-truncation fix are **both committed**. Phase 6 cold-observer + radius tuning still human-only; Day 9 (board/UI identity) waits on that gate.
+
+**Parallel work in flight (separate worktrees, not yet merged — user reconciles by hand):**
+
+| Worktree | Branch | Owns | Status as of this handoff |
+|----------|--------|------|----------------------------|
+| `logiCard-day9-yarn` | `feat/day9-yarn-ui` | Yarn/chalk `PathPreviewView` + Time Card/scrubber presentation | Forked at `54b051a` (stale — predates both commits below); brief at `DAY9_YARN_AGENT_BRIEF.md` |
+| `logiCard-match-over-hud` | `feat/match-over-hud` | `ProgramHud.RefreshMatchLabel` / `RefreshAftermathPanel` — stale “R3 · ATTACKER PICKS” header on MatchOver + duplicate “MATCH OVER” button label (playtest 2026-08-07) | Forked at `0b4feec`; brief at `MATCH_OVER_HUD_AGENT_BRIEF.md` |
+| `logiCard-verify-playtest` | `verify/playtest-door-scrub` | Parked verify from the earlier 99/99·28/28 run | Do not merge/retarget |
+
+Do not edit `ProgramHud.cs` Aftermath/match-label methods or `PathPreviewView.cs` from `master` — those are claimed by the worktrees above.
 
 ## Implemented
 
 **Already on `master` (`54b051a` and earlier):** continuous Phases 1–5 (C35/C39/C40/C41); 2026-08-06 playtest pack (wall yaw, Hold tracer window, door Closed-at-start + Aftermath carry, select-then-confirm door, board-anchored OPEN/CLOSE, `InteractRadius` 0.7, rejection banner, Lock In respects pending draft).
 
-**Committed `ef05061` (2026-08-07 playtest follow-ups):**
+**Committed `6f7acf9` (2026-08-07, playtest follow-up #2 — bullets visually passing through walls/closed doors):**
+
+| Area | What landed |
+|------|-------------|
+| Tracer truncation | `Segment.TryGetIntersection` (exact crossing point) + `ArenaBoard.TryGetNearestBlockPoint`; `GhostResolver.ResolveShot` now stamps `ShootFire`'s `Position` with the tracer's real visual endpoint (blocked point, or aim point if clear) instead of always the raw aim point |
+
+Hit resolution itself was already correct (LoS-gated) — this was purely the tracer drawing past the obstacle it was blocked by. `TapeEvent.Position` doc comment updated to reflect the new semantics; no other consumer existed besides `RoundPlayback.BuildTracers`.
+
+**Committed `ef05061` (2026-08-07 playtest follow-ups #1):**
 
 | Area | What landed |
 |------|-------------|
@@ -24,7 +42,8 @@ Human playtest confirmed: door open/close status + path-through after Open work.
 
 ## Verification
 
-- Worktree `logiCard-verify-playtest` (Editor open on main `LogiCard` path): full suite after final Lock In draft-drop sync — **EditMode 99/99**, **PlayMode 28/28**.
+- `ef05061` (playtest follow-ups #1): worktree `logiCard-verify-playtest` — **EditMode 99/99**, **PlayMode 28/28**.
+- `6f7acf9` (tracer truncation): disposable worktree `logiCard-verify-tracer` (created and removed same session — main path's Editor was open, so batchmode couldn't run there) — **EditMode 102/102** (99 + 3 new tracer-truncation tests), **PlayMode 28/28**.
 - Manual Bootstrap smoke checklist still **not** formally recorded.
 
 ## Still unfinished
@@ -32,17 +51,18 @@ Human playtest confirmed: door open/close status + path-through after Open work.
 1. **Phase 6** — tune `HitRadius` / `LaneHalfWidth` / `InteractRadius`; cold-observer “door changes a fight once.” Human.
 2. **Manual Bootstrap smoke** — full Time Card → Program → Lock In → playback → next round. Human.
 3. **SCHEDULE.md** Day 7–8 boxes — tick only after the human Phase 6 call.
-4. Optional cleanup: remove verify worktree/branch `verify/playtest-door-scrub` / `logiCard-verify-playtest`.
+4. Merge/reconcile `feat/day9-yarn-ui` and `feat/match-over-hud` once those agents report back (see parallel work table above) — user reconciles by hand, not an agent merge.
+5. Optional cleanup: remove verify worktree/branch `verify/playtest-door-scrub` / `logiCard-verify-playtest`.
 
 ## Tomorrow / next agent
 
 1. Human: Phase 6 cold-observer + Bootstrap smoke (items 1–2 above) — this is the gate.
-2. Agent: do not start Day 9 board/UI identity until the human confirms the Phase 6 bar is honest.
+2. Agent: do not start Day 9 board/UI identity or match-over HUD work on `master` — both are already claimed by the worktrees above. Confirm with the user before merging either back.
 
 ## Blockers / notes
 
 - Unity **6000.5.5f1**; project `/Users/xuxinye/Documents/projects/Game/LogiCard`.
 - Batchmode: Editor closed on the **same** path, or a **different worktree path** in parallel. Do **not** pass `-quit` with `-runTests` (exits before the suite runs); use `-acceptSoftwareTermsForThisRunOnly` like prior verify runs.
 - Hub “Add project”: select parent `…/Game`, not `LogiCard` itself.
-- `master` tracks `origin/master`; today’s work is uncommitted locally only.
-- Editor is typically open on the main path — use `logiCard-verify-playtest` for batchmode.
+- `master` tracks `origin/master`; all of today's work (both commits) is local-only, not pushed.
+- Editor is typically open on the main path (user playtests there live) — use a separate worktree for batchmode; spin up a disposable one (`git worktree add`) and remove it after if none of the existing ones fit, rather than reusing `logiCard-verify-playtest` (parked) or the Day 9/match-over-hud worktrees (owned by other agents).
