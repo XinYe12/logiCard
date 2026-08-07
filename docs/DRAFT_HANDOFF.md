@@ -54,6 +54,10 @@ Human playtest confirmed: door open/close status + path-through after Open work.
 2. Merge/reconcile `feat/day9-yarn-ui` and `feat/match-over-hud` once those agents report back (see parallel work table above) — user reconciles by hand, not an agent merge.
 3. Optional cleanup: remove verify worktree/branch `verify/playtest-door-scrub` / `logiCard-verify-playtest`.
 
+## Known issues (deferred, cosmetic — not a gate)
+
+- **Pawn model visually pokes through wall/closed-door geometry** when its logical position sits at/near the wall plane (e.g. standing right at a doorway). Cause: the sim tracks pawns as a point (no collider/physical volume by design — C32, no Physics/Physics2D involved in resolve), so nothing pushes the render mesh out of the wall mesh. Does not affect hit resolution, pathing, or LoS — those are all point/segment math and already correct. User call (2026-08-07): defer to a later pawn-model/art pass rather than fixing now.
+
 ## Tomorrow / next agent
 
 1. Phase 6 gate is cleared — Day 9 board/UI identity work is unblocked, but it's already claimed by `logiCard-day9-yarn` (stale, forked at `54b051a` — needs rebasing onto `6f7acf9` before it can land) and `logiCard-match-over-hud`. Don't duplicate that work on `master`; check whether either has reported back before starting anything new there.
