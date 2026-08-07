@@ -1,6 +1,8 @@
 # Draft Handoff — 2026-08-07
 
-**Schedule:** M2.5 continuous pivot + Day 8 URP done; Phase 6 human gate cleared. Day 9 board/UI identity landed on `master`, went through one real round of human feedback ("too plain and dull"), got a lighting/post-processing fix, then the path visual got redesigned entirely (yarn → FragPunk-style ink line), then the **first actual look at it in-Editor found the whole scene had gone red** — a real bug in the lighting-fix commit, now fixed. `master` is at `727ebd4`. The match-over HUD fix is merged in too. **Still open: human visual sign-off in the Editor** — this is the first round of that, and it already caught something automated tests couldn't (see below).
+**Schedule:** M2.5 continuous pivot + Day 8 URP done; Phase 6 human gate cleared. **Day 9 is DONE** — board/UI identity landed on `master`, went through a full feedback loop (too plain/dull → lighting fix → path redesigned to an ink line → red-tint bug found and fixed by the first real in-Editor look), and got human sign-off 2026-08-07. `master` is at `727ebd4` (game code) / `d48fdc6` (docs). The match-over HUD fix is merged in too.
+
+**Day 9 sign-off, read this before touching board/path art again:** human accepted the current board/path look **with reservations** — not fully satisfied with the board's visual quality, but explicit that schedule takes priority over further art polish right now ("if that is what we can do in this schedule I am fine with it," said about both the board and the path). This is a **conscious tradeoff, not an oversight** — don't restart art iteration on the board or path without the human raising it again. If Day 10+ work touches rendering and there's slack, revisiting board quality is fair game, but it is not blocking and was not asked for.
 
 **Heads up — read this if you're a fresh session:** at least one other concurrent session (Cursor-based, working from a "Art UI Decisions" plan) was actively editing this exact `master` working tree today, at the same time as this session, more than once. Both collisions were caught and reconciled cleanly (see below), but don't assume you're the only one touching this repo. Check `git status` and `git log` before building on anything, and if a file changes under you mid-task, stop and reconcile before continuing.
 
@@ -52,13 +54,12 @@ Only `logiCard-verify-playtest` remains as a leftover worktree. Every disposable
 - **Phase 6 human call: good enough as-is** — user declined further radius tuning.
 - **Manual Bootstrap smoke: confirmed good by human** — full Time Card → Program → Lock In → playback → next round.
 - **Wall/door "wound behind the wall" playtest finding: investigated, closed as not-a-bug.** A pawn opened the door, then shot through the gap it created. The wall itself held.
-- **Not yet done, at all:** a human looking at either the lighting pass or the new ink-line path in the Editor. Everything above is test-verified only — tests don't check what a render looks like.
+- **Human visual sign-off (2026-08-07): DONE.** Colors confirmed back to normal after the red-tint fix. Board accepted with reservations (not fully satisfied with visual quality, but schedule > further polish — see the sign-off note at the top of this doc). Path accepted on the same terms. **SCHEDULE Day 9 ticked.**
 
 ## Still unfinished
 
-1. **Human: re-look in the Editor now that the red-tint bug is fixed.** Confirm colors are back to normal, then judge whether the lighting/grade and the ink-line path actually read as intended. Both are easy to retune from feedback — lighting numbers live in `GameBootstrap.BuildLighting`/`BuildDioramaVolume` and `PrimitiveMaterialFactory`; path stroke numbers (width, wobble amount, colors) live at the top of `PathPreviewView.cs`.
-2. Tick SCHEDULE Day 9 once both are accepted.
-3. Optional cleanup: remove parked `logiCard-verify-playtest`.
+1. Optional cleanup: remove parked `logiCard-verify-playtest`.
+2. Optional, not requested: board visual polish beyond the current floor, if slack appears later — see the Day 9 sign-off note above before touching this unprompted.
 
 ## Known issues (deferred, cosmetic — not a gate)
 
@@ -66,9 +67,9 @@ Only `logiCard-verify-playtest` remains as a leftover worktree. Every disposable
 
 ## Tomorrow / next agent
 
-1. Get the human's visual sign-off on lighting + ink-line path, iterate on numbers if needed, then tick SCHEDULE Day 9.
-2. Start **Day 10** — clay motion + physical VFX (stepped playback, muzzle flash, wound splat) — once Day 9 is accepted.
-3. Don't reopen tracer truncation / `HitRadius` / `LaneHalfWidth` / `InteractRadius` tuning unless a new playtest finding says so — that's settled.
+1. **Day 9 is accepted — start Day 10** — clay motion + physical VFX (stepped playback, muzzle flash, wound splat).
+2. Don't reopen tracer truncation / `HitRadius` / `LaneHalfWidth` / `InteractRadius` tuning unless a new playtest finding says so — that's settled.
+3. Don't restart board/path art polish unprompted — see the Day 9 sign-off note at the top of this doc.
 
 ## Blockers / notes
 

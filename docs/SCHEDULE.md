@@ -98,7 +98,7 @@ If behind: **freeze at last green milestone**; do not start the next. Cut order:
 - [x] Day 7e–7f — continuous pivot Phase 4 (Unity views, whole-project-green)  
 - [x] Day 7g — **M2.5** continuous pivot Phase 5–6 (HUD/tests, tuning) — Phase 6 human call landed 2026-08-07 (see `DRAFT_HANDOFF.md`)  
 - [x] Day 8 — URP + diorama lighting foundation (compressed scope)  
-- [ ] Day 9 — board/UI identity (线稿涂鸦 path, Time Card)  
+- [x] Day 9 — board/UI identity (线稿涂鸦 path, Time Card) — human accepted 2026-08-07 with reservations on board polish; schedule takes priority over further art passes (see `DRAFT_HANDOFF.md`)  
 - [ ] Day 10 — clay motion + physical VFX  
 - [ ] Day 11 — audio + feedback  
 - [ ] Day 12 — Windows candidate (+ optional Android smoke)  
