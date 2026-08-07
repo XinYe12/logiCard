@@ -1117,6 +1117,16 @@ namespace LogiCard.UI
 
             int minutes = Mathf.FloorToInt(_matchClock.RemainingSeconds / 60f);
             int seconds = Mathf.FloorToInt(_matchClock.RemainingSeconds % 60f);
+
+            // Once the match has ended there is no next chooser to pick anything, so the live-round
+            // "Rn · SIDE PICKS" framing no longer applies (playtest 2026-08-07: header stayed stuck
+            // on stale round info after MatchOver).
+            if (_phase != null && _phase.Phase == RoundPhase.MatchOver)
+            {
+                _matchLabel.text = $"MATCH OVER · R{_matchClock.RoundIndex} played · {minutes}:{seconds:00} left";
+                return;
+            }
+
             string chooser = _matchClock.CurrentChooser == MatchSide.Attacker ? "ATTACKER" : "DEFENDER";
             _matchLabel.text = $"MATCH {minutes}:{seconds:00} left · R{_matchClock.RoundIndex} · {chooser} PICKS";
         }
@@ -1162,7 +1172,13 @@ namespace LogiCard.UI
 
             if (_nextRoundButtonLabel != null)
             {
-                _nextRoundButtonLabel.text = matchOver ? "MATCH OVER" : "NEXT ROUND";
+                // Aftermath-with-no-funding still shows "MATCH OVER" here so the click that advances
+                // into RoundPhase.MatchOver reads correctly; once actually on MatchOver the headline
+                // above already says it, so the dead button reads "DONE" instead of repeating it
+                // (playtest 2026-08-07: same three words shown twice on the end screen).
+                _nextRoundButtonLabel.text = phase == RoundPhase.MatchOver
+                    ? "DONE"
+                    : matchOver ? "MATCH OVER" : "NEXT ROUND";
             }
 
             if (_nextRoundButton != null)
