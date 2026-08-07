@@ -15,8 +15,10 @@ namespace LogiCard.Board
         public float WallHeight = 0.85f;
         public float SegmentThickness = 0.12f;
 
-        private static readonly Color DoorOpenColor = new Color(0.55f, 0.72f, 0.48f);
-        private static readonly Color DoorClosedColor = new Color(0.55f, 0.38f, 0.32f);
+        // Keep these far from wall brown (GameBootstrap ~0.42/0.38/0.34) — playtest 2026-08-07:
+        // Closed used a near-wall rust and read as "door never changes color."
+        private static readonly Color DoorOpenColor = new Color(0.35f, 0.82f, 0.42f);
+        private static readonly Color DoorClosedColor = new Color(0.82f, 0.22f, 0.18f);
 
         private ArenaBoard _model;
         private readonly List<DoorVisual> _doorVisuals = new List<DoorVisual>();
@@ -66,8 +68,12 @@ namespace LogiCard.Board
             }
         }
 
-        /// <summary>Refresh door box colors from the live board state (open vs closed).</summary>
-        public void RefreshDoorVisuals()
+        /// <summary>
+        /// Refresh door box colors. Pass <paramref name="overrideStates"/> during Program to preview
+        /// scheduled Open/Close without mutating the live board (pathfinding still uses model state
+        /// until Aftermath carry — playtest 2026-08-07).
+        /// </summary>
+        public void RefreshDoorVisuals(IReadOnlyDictionary<Door, DoorState> overrideStates = null)
         {
             if (_model == null)
             {
@@ -82,9 +88,10 @@ namespace LogiCard.Board
                     continue;
                 }
 
-                Color color = _model.GetDoorState(visual.Door) == DoorState.Open
-                    ? DoorOpenColor
-                    : DoorClosedColor;
+                DoorState state = overrideStates != null && overrideStates.TryGetValue(visual.Door, out DoorState preview)
+                    ? preview
+                    : _model.GetDoorState(visual.Door);
+                Color color = state == DoorState.Open ? DoorOpenColor : DoorClosedColor;
                 visual.Renderer.sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
             }
         }

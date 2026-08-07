@@ -145,6 +145,41 @@ namespace LogiCard.Tests.PlayMode
                 Is.LessThan(0.0001f));
         }
 
+        /// <summary>
+        /// Scripted defender opens the Closed door mid-tape. Tint/model must follow the scrubber,
+        /// then persist Open onto the shared board after Aftermath so the next round can path through.
+        /// </summary>
+        [Test]
+        public void DoorOpenedOnTapeSyncsWhileScrubbingAndCarriesAfterAftermath()
+        {
+            ArmWithAttackerMoveTo(AmbushPoint);
+
+            TapeEvent? opened = FirstEventOfType(Playback.Tape, TapeEventType.DoorOpened);
+            Assert.That(opened.HasValue, Is.True, "Defender script must open the door before Snap.");
+
+            Assert.That(BoardVisual.Model.TryGetDoor(opened.Value.Position, out Door door), Is.True);
+            Clock.SetSeconds(0f);
+            Assert.That(BoardVisual.Model.GetDoorState(door), Is.EqualTo(DoorState.Closed),
+                "At t=0 the shared board must still show the round-start Closed state.");
+
+            Clock.SetSeconds(opened.Value.Seconds);
+            Assert.That(BoardVisual.Model.GetDoorState(door), Is.EqualTo(DoorState.Open),
+                "Scrubbing past DoorOpened must update the shared board (and tint) immediately.");
+
+            Clock.SetSeconds(0f);
+            Assert.That(BoardVisual.Model.GetDoorState(door), Is.EqualTo(DoorState.Closed),
+                "Rewinding must restore round-start door state.");
+
+            Phase.GoTo(RoundPhase.Aftermath);
+            Assert.That(BoardVisual.Model.GetDoorState(door), Is.EqualTo(DoorState.Open),
+                "Aftermath must leave the door Open for the next round.");
+
+            Bootstrap.RequestNextRound();
+            Assert.That(Bootstrap.BeginRound(60f), Is.True);
+            Assert.That(BoardVisual.Model.GetDoorState(door), Is.EqualTo(DoorState.Open),
+                "Carried Open must survive into the next Program.");
+        }
+
         [Test]
         public void SecondRoundAcceptsBoardInputFromCarriedPoints()
         {

@@ -30,8 +30,12 @@ This is the part that's easy to skip when you're focused on getting a button to 
 1. **Identity — what you're acting on.**
    The object's player-facing name, e.g. `"Door #1"`, `"Power Station #3"`. Needed the moment there's more than one of a kind on the board, and cheap to carry from day one even when the demo only ever spawns one — retrofitting identity after code/UI has assumed "the door" (singular) is more expensive than an unused field now. Source it from the Sim-layer model object itself (e.g. `Door.DisplayName`), never invent it at the UI layer, so it can't drift from what the resolver/tape actually reasons about.
 
-2. **Current state — read live, never inferred.**
-   The object's actual current state (`OPEN`/`CLOSED`, `POWERED`/`UNPOWERED`, ...), read fresh from the authoritative model (`ArenaBoard.GetDoorState`, or the equivalent for whatever's next) every time the prompt refreshes. **Do not infer or remember state from what the player last selected or pressed** — that exact class of bug shipped once already (2026-08-06: the HUD's "selected" action and the door's real state silently diverged, and a confirm could book the opposite of what was displayed). If you don't have a live read, you don't have a state — don't show one.
+2. **Current state — authoritative for what the player is looking at, never inferred from a button preference.**
+   Show the object's state every time the prompt refreshes. **Do not remember "the player last pressed OPEN"** as state — that exact class of bug shipped once already (2026-08-06: a HUD-preferred action silently diverged from reality and a confirm could book the opposite of what was displayed).
+
+   For doors during **Program**, the authoritative read is **scheduled state**: round-start live `ArenaBoard.GetDoorState`, then each Door toggle already booked on this pawn's `PawnProgram` for that door, in order (`PawnProgram.ScheduledDoorState`). That is what OPEN/CLOSE just changed, and what the prompt must show. Move drafting pathfinds on a **clone** with those scheduled door states so "open then walk through" works in the same draft; the shared live board stays at round-start until Aftermath (Lock In arm / resolve still need the true start state). Raw live-only `GetDoorState` in the prompt made OPEN look like a no-op (playtest 2026-08-07).
+
+   After playback/Aftermath, live board and scheduled state agree again.
 
 3. **Options — the concrete actions available, each an explicit confirm.**
    Every option is its own labeled, separately-tappable control (`OPEN`, `CLOSE`, ...) with its cost/consequence visible on the control itself (e.g. `"OPEN 4s"`), and pressing it must be the *only* thing that commits the action. No control may silently substitute a different action than the one it's labeled as (the auto-flip-to-opposite bug, same date). No control may auto-fire from a state change alone (selecting the object must never itself book an action) — the player's tap on a specific, labeled option is the one and only trigger.
@@ -41,7 +45,7 @@ This is the part that's easy to skip when you're focused on getting a button to 
 | Contract leg | Door's answer | Source |
 |---|---|---|
 | Identity | `"Door #1"` | `Door.DisplayName` |
-| State | `"CLOSED"` | `ArenaBoard.GetDoorState(door)` |
+| State | `"CLOSED"` / `"OPEN"` | `PawnProgram.ScheduledDoorState(door)` during Program (live ⊕ booked toggles); live board after Aftermath |
 | Options | `OPEN 4s`, `CLOSE 4s` | `PawnProgram.DoorInteractSeconds` cost, `BoardInputController.TryConfirmPendingDoor(DoorAction, ...)` per option |
 
 **Minimum shape in code**, if you're modeling a new interactable — doesn't have to be this exact struct, but every new board-anchored prompt's data should be expressible as it:

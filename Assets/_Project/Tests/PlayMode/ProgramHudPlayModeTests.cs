@@ -68,6 +68,43 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(AttackerInput.PendingDoor, Is.Null, "A tap away from any door should cancel the pending selection.");
         }
 
+        /// <summary>
+        /// Playtest 2026-08-07: OPEN must change the prompt's status. Live board stays Closed until
+        /// Aftermath; ScheduledDoorState + keeping PendingDoor after confirm are what make the
+        /// label actually flip.
+        /// </summary>
+        [Test]
+        public void DoorOpenConfirmUpdatesScheduledStatusAndKeepsSelection()
+        {
+            // Must already be within InteractRadius — same constraint as a real Open tap after a Move.
+            PlanarPosition besideDoor = new PlanarPosition(2f, 1.85f);
+            AttackerInput.PrepareRound(besideDoor, 60f);
+            Phase.GoTo(RoundPhase.Reveal);
+            Phase.GoTo(RoundPhase.Program);
+
+            Button doorMode = FindByName<Button>("Mode_Door");
+            Button open = FindByName<Button>("Door_Open");
+            doorMode.onClick.Invoke();
+
+            Assert.That(AttackerInput.TryTapPoint(besideDoor), Is.True);
+            Door selected = AttackerInput.PendingDoor;
+            Assert.That(selected, Is.Not.Null);
+
+            Assert.That(AttackerInput.Board.GetDoorState(selected), Is.EqualTo(DoorState.Closed));
+            Assert.That(AttackerInput.Program.ScheduledDoorState(selected), Is.EqualTo(DoorState.Closed));
+
+            open.onClick.Invoke();
+
+            Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(1),
+                "Open confirm should book one Door node (pawn starts beside door).");
+            Assert.That(AttackerInput.Program.Nodes[0].Door, Is.EqualTo(DoorAction.Open));
+            Assert.That(AttackerInput.PendingDoor, Is.SameAs(selected),
+                "Selection must stay so the prompt can show the new status.");
+            Assert.That(AttackerInput.Program.ScheduledDoorState(selected), Is.EqualTo(DoorState.Open));
+            Assert.That(AttackerInput.Board.GetDoorState(selected), Is.EqualTo(DoorState.Closed),
+                "Live passability still waits for Aftermath.");
+        }
+
         [Test]
         public void ShootModeButtonsSelectSnapAndHold()
         {

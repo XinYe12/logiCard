@@ -23,6 +23,7 @@ namespace LogiCard.Boot
         private readonly List<PawnEntry> _pawns = new List<PawnEntry>();
         private readonly List<GhostInput> _inputs = new List<GhostInput>();
         private readonly List<TracerEntry> _tracers = new List<TracerEntry>();
+        private readonly Dictionary<Door, DoorState> _doorStateAtArm = new Dictionary<Door, DoorState>();
 
         private BoardView _board;
         private TimeResourceClockDriver _clock;
@@ -31,6 +32,7 @@ namespace LogiCard.Boot
         private ReplayTape _tape;
         private int _eventCursor;
         private float _lastAppliedSeconds;
+        private float _doorsSyncedToSeconds = float.NaN;
         private bool _anyoneDead;
 
         /// <summary>Stub outcome text for the HUD; empty string means "clear the banner".</summary>
@@ -119,7 +121,7 @@ namespace LogiCard.Boot
             }
 
             BuildTracers();
-            _board.RefreshDoorVisuals();
+            SnapshotDoorStatesAtArm();
 
             Debug.Log($"[logiCard] Ghost resolve: {_tape.Events.Count} event(s), " +
                       $"{_tape.Tracks.Count} pawn(s), tape ends at {_tape.EndSeconds:0.0}s TR.");
@@ -155,8 +157,24 @@ namespace LogiCard.Boot
                 _pawns[i] = pawn;
             }
 
-            ApplyDoorStateFromTape();
-            _board.RefreshDoorVisuals();
+            // Final authoritative apply (covers Aftermath without scrubbing to the tape end).
+            SyncDoorsToSeconds(float.PositiveInfinity);
+        }
+
+        /// <summary>
+        /// Snapshot live door state at Lock In so scrubbing can restore round-start (which may
+        /// already differ from each door's <see cref="Door.InitialState"/> after prior rounds).
+        /// </summary>
+        private void SnapshotDoorStatesAtArm()
+        {
+            _doorStateAtArm.Clear();
+            _doorsSyncedToSeconds = float.NaN;
+            IReadOnlyList<Door> doors = _board.Model.Doors;
+            for (int i = 0; i < doors.Count; i++)
+            {
+                Door door = doors[i];
+                _doorStateAtArm[door] = _board.Model.GetDoorState(door);
+            }
         }
 
         /// <summary>
@@ -165,26 +183,53 @@ namespace LogiCard.Boot
         /// nothing ever copied the result back onto the shared <see cref="ArenaBoard"/> that the next
         /// round's pathfinding and the door's rendered tint both read from. A player who booked and
         /// resolved an Open had it silently reset to Closed the instant the round ended; the door
-        /// could never actually be gotten through. Walking the tape's Door events in order (already
-        /// chronological) and applying each to the real board leaves it at the correct final state.
+        /// could never actually be gotten through.
+        ///
+        /// Additionally, tint used to refresh only at arm/Aftermath — during playback a Closed-looking
+        /// door could show a tracer "through" it after the tape had already opened it. Syncing from the
+        /// arm snapshot + tape events up to the scrubber second keeps model + tint matched while scrubbing.
         /// </summary>
-        private void ApplyDoorStateFromTape()
+        private void SyncDoorsToSeconds(float seconds)
         {
-            for (int i = 0; i < _tape.Events.Count; i++)
+            // Scrubber can re-fire the same second; skip so we don't allocate fresh door materials
+            // via RefreshDoorVisuals on every identical tick.
+            if (_doorsSyncedToSeconds == seconds)
             {
-                TapeEvent tapeEvent = _tape.Events[i];
-                if (tapeEvent.Type != TapeEventType.DoorOpened && tapeEvent.Type != TapeEventType.DoorClosed)
-                {
-                    continue;
-                }
+                return;
+            }
 
-                if (_board.Model.TryGetDoor(tapeEvent.Position, out Door door))
+            foreach (KeyValuePair<Door, DoorState> pair in _doorStateAtArm)
+            {
+                _board.Model.SetDoorState(pair.Key, pair.Value);
+            }
+
+            if (_tape != null)
+            {
+                for (int i = 0; i < _tape.Events.Count; i++)
                 {
-                    _board.Model.SetDoorState(
-                        door,
-                        tapeEvent.Type == TapeEventType.DoorOpened ? DoorState.Open : DoorState.Closed);
+                    TapeEvent tapeEvent = _tape.Events[i];
+                    // Events are sorted by Seconds (GhostResolver.CompareEvents).
+                    if (tapeEvent.Seconds > seconds)
+                    {
+                        break;
+                    }
+
+                    if (tapeEvent.Type != TapeEventType.DoorOpened && tapeEvent.Type != TapeEventType.DoorClosed)
+                    {
+                        continue;
+                    }
+
+                    if (_board.Model.TryGetDoor(tapeEvent.Position, out Door door))
+                    {
+                        _board.Model.SetDoorState(
+                            door,
+                            tapeEvent.Type == TapeEventType.DoorOpened ? DoorState.Open : DoorState.Closed);
+                    }
                 }
             }
+
+            _board.RefreshDoorVisuals();
+            _doorsSyncedToSeconds = seconds;
         }
 
         /// <summary>Back to Allot/Program: drop the tape and stand everyone on their carried point.</summary>
@@ -230,6 +275,7 @@ namespace LogiCard.Boot
             }
 
             UpdateTracers(seconds);
+            SyncDoorsToSeconds(seconds);
 
             if (seconds < _lastAppliedSeconds)
             {

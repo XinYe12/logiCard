@@ -130,7 +130,7 @@ namespace LogiCard.Timeline
                 return false;
             }
 
-            if (!ContinuousPathfinder.TryFindPath(_board, CurrentPosition, destination, _pathBuffer))
+            if (!ContinuousPathfinder.TryFindPath(BoardForPathfinding(), CurrentPosition, destination, _pathBuffer))
             {
                 rejectionReason = "No route to destination.";
                 return false;
@@ -170,7 +170,7 @@ namespace LogiCard.Timeline
                 return true;
             }
 
-            if (!ContinuousPathfinder.TryFindPath(_board, tip, point, _pathBuffer))
+            if (!ContinuousPathfinder.TryFindPath(BoardForPathfinding(), tip, point, _pathBuffer))
             {
                 rejectionReason = "No route to that point.";
                 return false;
@@ -453,6 +453,53 @@ namespace LogiCard.Timeline
             _nodes.Add(new ActionNode(ActionVerb.Door, UsedSeconds, doorPosition, CurrentStance, doorAction: action));
             rejectionReason = null;
             return true;
+        }
+
+        /// <summary>
+        /// Door state for Program UI + pathfinding: round-start live state, then each booked Door
+        /// toggle for that door in order. Does not mutate the shared <see cref="ArenaBoard"/> (so
+        /// Lock In still arms from round-start and Aftermath carries the real resolve). Playtest
+        /// 2026-08-07: live-only reads made OPEN look like a no-op; pathfinding on live-only also
+        /// blocked "open then walk through" in the same draft.
+        /// </summary>
+        public DoorState ScheduledDoorState(Door door)
+        {
+            if (door == null)
+            {
+                return DoorState.Closed;
+            }
+
+            DoorState state = _board.GetDoorState(door);
+            PlanarPosition mid = PlanarPosition.Lerp(door.Segment.A, door.Segment.B, 0.5f);
+            for (int i = 0; i < _nodes.Count; i++)
+            {
+                ActionNode node = _nodes[i];
+                if (node.Verb != ActionVerb.Door || mid.SqrDistanceTo(node.Position) > 1e-6f)
+                {
+                    continue;
+                }
+
+                state = node.Door == DoorAction.Close ? DoorState.Closed : DoorState.Open;
+            }
+
+            return state;
+        }
+
+        /// <summary>
+        /// Scratch board for Move drafting: same geometry as live, door passability from
+        /// <see cref="ScheduledDoorState"/>. Keeps the shared board at round-start for resolve arm.
+        /// </summary>
+        private ArenaBoard BoardForPathfinding()
+        {
+            ArenaBoard scratch = _board.Clone();
+            IReadOnlyList<Door> doors = scratch.Doors;
+            for (int i = 0; i < doors.Count; i++)
+            {
+                Door door = doors[i];
+                scratch.SetDoorState(door, ScheduledDoorState(door));
+            }
+
+            return scratch;
         }
 
         public TimelinePayload Build()

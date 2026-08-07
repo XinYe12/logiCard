@@ -374,17 +374,11 @@ namespace LogiCard.UI
 
             _crawlButton = CreateButton(moveRt, "Stance_Crawl", "CRAWL", PanelMid, Ink, 28,
                 () => SetStanceBand(StanceType.Crawl));
-            PlaceSplitCell(_crawlButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 2, 5);
-
-            // Reliable "revert to previous step" — walks back through the whole program one step at
-            // a time: in-progress draft first, then previously committed Move/Shoot/Door actions.
-            _undoWaypointButton = CreateButton(moveRt, "UndoWaypointButton", "UNDO", PanelMid, Ink, 28,
-                () => _input.TryUndoLastStep());
-            PlaceSplitCell(_undoWaypointButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 3, 5);
+            PlaceSplitCell(_crawlButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 2, 4);
 
             _setPathButton = CreateButton(moveRt, "SetPathButton", "SET PATH", Accent, new Color(0.1f, 0.09f, 0.07f), 28,
                 () => _input.TryCommitDraftPath());
-            PlaceSplitCell(_setPathButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 4, 5);
+            PlaceSplitCell(_setPathButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 3, 4);
 
             _shootModeControls = new GameObject("ShootModeControls", typeof(RectTransform));
             var shootRt = _shootModeControls.GetComponent<RectTransform>();
@@ -443,13 +437,31 @@ namespace LogiCard.UI
             Button rewind = CreateButton(zone, "RewindButton", "Rewind", PanelMid, Ink, 34, () => _clock.Rewind());
             PlaceActionCell(rewind.GetComponent<RectTransform>(), rewindLeft, rewindLeft + TransportButtonWidth);
 
+            // UNDO must stay mode-agnostic (playtest 2026-08-07): it used to live only on the Move
+            // stance row, so Door/Shoot mode hid it — players hit Rewind instead and thought undo
+            // "didn't clear the queue." Same name as before so existing lookups keep working.
+            float undoLeft = rewindLeft + TransportButtonWidth + Gap;
+            _undoWaypointButton = CreateButton(zone, "UndoWaypointButton", "UNDO", PanelMid, Ink, 34, OnUndoPressed);
+            PlaceActionCell(_undoWaypointButton.GetComponent<RectTransform>(), undoLeft, undoLeft + TransportButtonWidth);
+
             // Lock In takes every remaining pixel of the row so the commit action reads as primary.
             Button lockIn = CreateButton(zone, "LockInButton", "LOCK IN", Accent, new Color(0.1f, 0.09f, 0.07f), 44, OnLockInPressed);
             RectTransform rt = lockIn.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0f, 0f);
             rt.anchorMax = new Vector2(1f, 0f);
-            rt.offsetMin = new Vector2(rewindLeft + TransportButtonWidth + Gap, Pad);
+            rt.offsetMin = new Vector2(undoLeft + TransportButtonWidth + Gap, Pad);
             rt.offsetMax = new Vector2(-Pad, Pad + ActionRowHeight);
+        }
+
+        private void OnUndoPressed()
+        {
+            if (_input == null)
+            {
+                return;
+            }
+
+            _input.TryUndoLastStep();
+            RefreshUndoButton(_input.Program);
         }
 
         /// <summary>
@@ -681,22 +693,20 @@ namespace LogiCard.UI
             float cost = program != null ? program.DoorInteractSeconds : 4f;
             Door pending = _input.PendingDoor;
 
-            // BUG FOUND 2026-08-06 (playtest): tapping the board used to book an Open/Close
-            // immediately against a HUD-preselected action, silently flipped to its opposite
-            // whenever it matched the door's live state — confusing/"ambiguous" since the booked
-            // action didn't always match what the HUD showed as selected. Tapping now only
-            // *selects* a door; OPEN/CLOSE below is the explicit confirm, so what you press is
-            // exactly what gets booked.
-            string stateLabel = pending != null && _input.Board != null
-                ? (_input.Board.GetDoorState(pending) == DoorState.Open ? "OPEN" : "CLOSED")
-                : null;
+            // Scheduled state (live ⊕ this program's Door toggles) — not raw GetDoorState alone.
+            // Playtest 2026-08-07: live-only read stayed CLOSED after OPEN, so the prompt looked dead.
+            string stateLabel = null;
+            if (pending != null && program != null)
+            {
+                stateLabel = program.ScheduledDoorState(pending) == DoorState.Open ? "OPEN" : "CLOSED";
+            }
 
             // Identity leg of the content contract (docs/UI_BOARD_ANCHORED_COMPONENTS.md) — falls
             // back to a generic label for any Door registered without a DisplayName.
             string targetName = pending?.DisplayName ?? "DOOR";
 
             _doorModeLabel.text = stateLabel != null
-                ? $"{targetName} selected, currently {stateLabel} — use the prompt on the board to confirm"
+                ? $"{targetName} selected · {stateLabel} — board prompt books Open/Close for this round"
                 : "DOOR — tap near a door to select it";
 
             RefreshDoorPrompt(pending, targetName, stateLabel, cost);
@@ -758,8 +768,11 @@ namespace LogiCard.UI
                 closeLabel.text = $"CLOSE\n{cost:0}s";
             }
 
-            _openDoorButton.GetComponent<Image>().color = stateLabel == "OPEN" ? AccentDim : PanelMid;
-            _closeDoorButton.GetComponent<Image>().color = stateLabel == "CLOSED" ? AccentDim : PanelMid;
+            // Highlight the action that would change live state (not the one that matches it) —
+            // dimming "current" used to make CLOSE look selected/disabled while CLOSED (playtest).
+            bool closed = stateLabel == "CLOSED";
+            _openDoorButton.GetComponent<Image>().color = closed ? Accent : PanelMid;
+            _closeDoorButton.GetComponent<Image>().color = closed ? PanelMid : Accent;
             _doorPromptRoot.SetActive(true);
         }
 
@@ -790,10 +803,17 @@ namespace LogiCard.UI
                 _setPathButton.interactable = program.HasDraft;
             }
 
-            if (_undoWaypointButton != null)
+            RefreshUndoButton(program);
+        }
+
+        private void RefreshUndoButton(PawnProgram program)
+        {
+            if (_undoWaypointButton == null)
             {
-                _undoWaypointButton.interactable = program.CanUndoLastStep;
+                return;
             }
+
+            _undoWaypointButton.interactable = program != null && program.CanUndoLastStep;
         }
 
         /// <summary>
@@ -818,7 +838,11 @@ namespace LogiCard.UI
             string text = $"Used {program.UsedSeconds:0.0} / {program.BudgetSeconds:0.0}s";
             if (program.HasDraft)
             {
-                text += $"\nDRAFT {program.DraftDistance:0.0}m · {StanceMath.Label(program.DraftStance)} · {program.DraftAllottedSeconds:0.0}s";
+                float total = program.UsedSeconds + program.DraftAllottedSeconds;
+                text +=
+                    $"\nDRAFT {program.DraftDistance:0.0}m · {StanceMath.Label(program.DraftStance)} · " +
+                    $"{program.DraftAllottedSeconds:0.0}s → total {total:0.0}s" +
+                    (total > program.BudgetSeconds + 0.001f ? " (over budget — UNDO draft or Lock In drops it)" : "");
             }
 
             if (program.Nodes.Count == 0 && !program.HasDraft)
@@ -850,6 +874,7 @@ namespace LogiCard.UI
 
             _queueText.text = text;
             RefreshVerbContextControls(program);
+            RefreshUndoButton(program);
             RefreshScrubberMarkers(program);
         }
 
@@ -912,9 +937,9 @@ namespace LogiCard.UI
             // BUG FOUND 2026-08-06 (playtest): this used to only check *already-committed*
             // UsedSeconds, never the pending draft's cost — a drafted-but-not-yet-"SET PATH"ed
             // move that didn't fit the budget sailed past this check, then got silently discarded
-            // by CommitToPlayback while Lock In proceeded anyway. CommitToPlayback itself is now
-            // the single source of truth: it fails (and leaves the round unlocked) exactly when a
-            // pending draft exists and doesn't fit, and OnActionRejected already showed why.
+            // by CommitToPlayback while Lock In proceeded anyway. CommitToPlayback is now the
+            // source of truth: it either commits a fitting draft, or drops an over-budget draft
+            // and locks the committed queue (playtest 2026-08-07).
             if (!_input.CommitToPlayback())
             {
                 return;
