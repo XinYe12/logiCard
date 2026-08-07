@@ -191,6 +191,32 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(Phase.Phase, Is.EqualTo(RoundPhase.Execute), "Lock In never reached Execute.");
         }
 
+        /// <summary>
+        /// BUG FOUND 2026-08-07 (playtest): the end screen showed a stale "Rn · SIDE PICKS" top
+        /// strip and the word "MATCH OVER" twice (headline + dead button) once the match actually
+        /// ended.
+        /// </summary>
+        [Test]
+        public void MatchOverClearsTheStaleHeaderAndDoesNotRepeatItsHeadlineOnTheButton()
+        {
+            Text matchLabel = FindByName<Text>("MatchLabel");
+            Text aftermathLabel = FindByName<Text>("AftermathLabel");
+            Button nextRoundButton = FindByName<Button>("NextRoundButton");
+            Assert.That(matchLabel, Is.Not.Null, "HUD has no MatchLabel text.");
+            Assert.That(aftermathLabel, Is.Not.Null, "HUD has no AftermathLabel text.");
+            Assert.That(nextRoundButton, Is.Not.Null, "HUD has no NextRoundButton.");
+            Text nextRoundButtonLabel = nextRoundButton.GetComponentInChildren<Text>();
+
+            Phase.GoTo(RoundPhase.MatchOver);
+
+            Assert.That(matchLabel.text, Does.Not.Contain("PICKS"),
+                "Top strip should not still frame the match as mid-round once it is over.");
+            Assert.That(aftermathLabel.text, Does.Contain("MATCH OVER"));
+            Assert.That(nextRoundButtonLabel.text, Is.Not.EqualTo(aftermathLabel.text),
+                "Button must not repeat the exact same headline text.");
+            Assert.That(nextRoundButton.interactable, Is.False);
+        }
+
         [Test]
         public void PlaybackPlacesThePawnOnItsScheduledPointAtTheArrivalSecond()
         {
