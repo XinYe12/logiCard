@@ -34,7 +34,7 @@ Nice-to-have (not ship blockers): Android smoke build, bots (**C19**), optional 
 | **M3 / Diorama Art** | 8–11 (**compressed**) | Presentation | URP/lighting, board/UI identity, clay motion/VFX, tactile audio — scope trimmed per the cut order below to absorb M2.5's cost without moving Day 14 |
 | **M4 / Ship** | 12–14 | Build + portfolio | Windows candidate, playtest, capture, README |
 
-If behind: **freeze at last green milestone**; do not start the next. Cut order: Android smoke → door reopen nuance → Crawl AV nuance → optional DoF/SSS → **never** cut Time Card loop, Move/Shoot readability, warm diorama composition, yarn path, physical shot feedback, or Windows build stability (**C34**). **As of the continuous pivot (2026-08-03), this cut order is expected to be used more aggressively than originally planned** — M2.5 (~5.5–7.5 engineer-days) eats most of the runway that was going to Week 2's art pass; that tradeoff was made explicitly (see `CONTINUOUS_PIVOT_PLAN.md` §F), not discovered late.
+If behind: **freeze at last green milestone**; do not start the next. Cut order: Android smoke → door reopen nuance → Crawl AV nuance → optional DoF/SSS → **never** cut Time Card loop, Move/Shoot readability, warm diorama composition, **线稿涂鸦** path, physical shot feedback, or Windows build stability (**C34**). **As of the continuous pivot (2026-08-03), this cut order is expected to be used more aggressively than originally planned** — M2.5 (~5.5–7.5 engineer-days) eats most of the runway that was going to Week 2's art pass; that tradeoff was made explicitly (see `CONTINUOUS_PIVOT_PLAN.md` §F), not discovered late.
 
 **Day 3b is absorbed, not a 15th calendar day.** M1/Slice 1 still spans **Days 2–4** — 3b is scoped as same-day-or-buffer insert work within that window (C33 filled a gap C4 already implied but D8 never scheduled), not an extra day tacked onto the plan. **M2.5 (7b–7g) works the same way** — inserted days, not a 15th-day extension; Day 14 ship date is unchanged, absorbed by compressing M3 instead.
 
@@ -65,7 +65,7 @@ If behind: **freeze at last green milestone**; do not start the next. Cut order:
 | Day | Focus | DoD |
 |-----|--------|-----|
 | **8** | Render/art foundation: **URP** migration, portrait camera composition, diorama base, warm lighting, material palette | Board reads as desk diorama under lamp light |
-| **9** | Board/UI identity: handmade board dressing, painted grid, **yarn/chalk** paths, cardstock Time Card, AR scrubber polish | Paths + Time Card match ART_DIRECTION floor |
+| **9** | Board/UI identity: handmade board dressing, painted grid, **线稿涂鸦** paths (FragPunk-A ink on clay), cardstock Time Card, AR scrubber polish | Paths + Time Card match ART_DIRECTION floor |
 | **10** | Character/VFX motion: clay pawn silhouettes, **stepped** playback, physical muzzle flash, wound splat | Move vs Shoot vs hit visually distinct |
 | **11** | Audio + feedback: tactile foley, transitions, hit feedback, visual hierarchy pass | Footsteps / shot / Time Card / Lock In distinct |
 | **12** | Windows release-candidate; optional Android smoke; perf — drop costly FX before readability | **M3→ship candidate** Windows build runs |
@@ -98,7 +98,7 @@ If behind: **freeze at last green milestone**; do not start the next. Cut order:
 - [x] Day 7e–7f — continuous pivot Phase 4 (Unity views, whole-project-green)  
 - [x] Day 7g — **M2.5** continuous pivot Phase 5–6 (HUD/tests, tuning) — Phase 6 human call landed 2026-08-07 (see `DRAFT_HANDOFF.md`)  
 - [x] Day 8 — URP + diorama lighting foundation (compressed scope)  
-- [ ] Day 9 — board/UI identity (yarn, Time Card)  
+- [ ] Day 9 — board/UI identity (线稿涂鸦 path, Time Card)  
 - [ ] Day 10 — clay motion + physical VFX  
 - [ ] Day 11 — audio + feedback  
 - [ ] Day 12 — Windows candidate (+ optional Android smoke)  
@@ -112,7 +112,7 @@ If behind: **freeze at last green milestone**; do not start the next. Cut order:
 | Risk | Hits days | Mitigation in schedule |
 |------|-----------|-------------------------|
 | Art pass overrun | 8–11 | Required floor only; cut optional DoF/SSS first (**C34**) |
-| Path UI overruns | 5–6 | Keep Day 3 click-destination if needed; yarn is Day 9 |
+| Path UI overruns | 5–6 | Keep Day 3 click-destination if needed; 线稿涂鸦 path is Day 9 |
 | URP migration pain | 8 | Start Day 8 early; primitives stay playable until materials land |
 | Scope creep (full old GDD) | any | **C34** freeze: no Fusion/gear cards/attic in 14-day ship |
 | Android SDK pain | 12 | Smoke only if Windows candidate is already green |

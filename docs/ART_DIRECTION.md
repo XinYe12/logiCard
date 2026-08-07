@@ -1,7 +1,7 @@
 # D10: Art Direction & Audio Bible
 
 **Doc ID:** D10  
-**Status:** Updated 2026-07-30 — **C34** elevates the demo art floor from optional polish to ship requirement  
+**Status:** Updated 2026-08-07 — path pillar = FragPunk/界外狂潮-style **线稿涂鸦** (supersedes yarn/chalk); **C34** demo art floor still required  
 **Depends on:** [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md) (D9), [SCOPE.md](SCOPE.md), [GDD.md](GDD.md)  
 **Canonical path:** `docs/ART_DIRECTION.md` (also referenced as `D10_Art_Direction.md`)
 

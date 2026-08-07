@@ -59,7 +59,7 @@ flowchart TD
 | Band | Screen share | Content | Touch |
 |------|--------------|---------|-------|
 | **Top strip** | ~10% | **Real-world** Program countdown (e.g. 30s), round/phase label, wound badges. | Read-only |
-| **Board** | ~50% | Diorama board (tilt-shift camera), both 5×5 floors stacked. Yarn/chalk **path** while drawing. | Taps only — target tiles, aim tiles |
+| **Board** | ~50% | Diorama board (tilt-shift camera), both 5×5 floors stacked. **线稿涂鸦** path while drawing (FragPunk-A ink on clay — ART_DIRECTION). | Taps only — target tiles, aim tiles |
 | **Thumb zone** | ~40% | **Time Resource scrubber**, gear **cards** (max 3), stance/shoot-mode band, **Lock In**. | All drags and precision input |
 
 **Thumb-zone rules:**

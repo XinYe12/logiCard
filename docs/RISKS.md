@@ -18,7 +18,7 @@ Living register. Re-score after each milestone playtest (Days 4 / 7 / 11–12).
 | R2 | **Scope heavier than 14 days** (path UI, stances, wounds, doors, gadgets) | 5 | 4 | 20 | Strict Slice freeze ([VERTICAL_SLICE.md](VERTICAL_SLICE.md)); cut order: gadgets → vent/monitor → doors → stance polish | Never cut Slice 1 Move+Shoot visibility |
 | R3 | **Time Resource vs Playback Duration** confuses players / designers | 4 | 4 | 16 | UI labels Time Resource scrubber; cinema uses separate Playback clock; tooltips once | If playtests misread order, slow Playback before changing math |
 | R4 | **Android heat / FPS** from DoF/SSS/clay look | 4 | 4 | 16 | **C13** smooth-first; drop DoF→SSS→shadows before readability; portrait only (**C30**) | Mid-device &lt;30 FPS → primitives + flat lit |
-| R5 | **Path-draw UI overrun** (Days 5–6) | 4 | 4 | 16 | Keep Day 3 click-destination forever if needed; yarn path is polish | Path polish slips → Slice 2 reduced to click+stance slider |
+| R5 | **Path-draw UI overrun** (Days 5–6) | 4 | 4 | 16 | Keep Day 3 click-destination forever if needed; 线稿涂鸦 path is Day 9 polish | Path polish slips → Slice 2 reduced to click+stance slider |
 | R6 | **Determinism / desync** if any resolve uses physics or client math | 3 | 5 | 15 | Grid + Bresenham only on Host; clients playback-only (**C23**) | Any client-side hit detect → delete immediately |
 | R7 | **Cheat / invalid payloads** | 3 | 4 | 12 | Host revalidates Speed×Stance×budget before accept | Reject + Otherwise Stop substitute |
 | R8 | **Phone-as-Host instability** | 3 | 4 | 12 | Prefer Windows Host in demos; document it | Android-only lobby fails → require Win host |

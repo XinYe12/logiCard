@@ -49,7 +49,7 @@ Under **`Assets/_Project/Art/Materials/`**, author a small set of **matte / poly
 - Board / plywood base
 - Warm clay (pawn-ish)
 - Cool clay (second silhouette)
-- Path yarn / chalk (muted fiber or chalk — **not** neon)
+- Path **线稿涂鸦** / ink (matte sketch stroke — **not** neon; supersedes earlier yarn/chalk palette note — ART_DIRECTION 2026-08-07)
 - Void / unlit black (if useful)
 
 Subtle procedural noise on albedo is nice if cheap; **true SSS and thumbprint normals are optional — skip them** unless free.
@@ -98,7 +98,7 @@ Do **not** run or rewrite EditMode/PlayMode gameplay tests — those belong to t
 - Edit `docs/DRAFT_HANDOFF.md`, `docs/PRODUCT_MEMORY.md`, `docs/GDD.md`, `.cursor/rules/**`
 - Push, force-push, or merge into `master`
 - Touch other worktrees at all
-- Start yarn-path mesh work, Time Card cardstock UI, clay pawn meshes, muzzle VFX, or audio — those are Day 9–11 and need the continuous Board/UI surface
+- Start 线稿涂鸦 path mesh work, Time Card cardstock UI, clay pawn meshes, muzzle VFX, or audio — those are Day 9–11 and need the continuous Board/UI surface
 
 **Why:** Phase 2–3 in the main tree are rewriting Sim/Net/Timeline and their EditMode tests. Phase 1 owns new Sim geometry files in another worktree. Phase 4 will retarget `BoardView` / `GameBootstrap` / `RoundPlayback` onto `ArenaBoard` — if you rewrite those now against the old grid API, your work is deleted or conflicted. URP + a lab scene is deliberately **ahead of** that surface.
 
