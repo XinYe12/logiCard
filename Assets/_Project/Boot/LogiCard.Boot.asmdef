@@ -7,6 +7,7 @@
         "LogiCard.Timeline",
         "LogiCard.Board",
         "LogiCard.UI",
+        "LogiCard.Audio",
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Core.Runtime"
     ],

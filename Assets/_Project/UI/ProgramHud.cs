@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using LogiCard.Audio;
 using LogiCard.Board;
 using LogiCard.Net;
 using LogiCard.Sim;
@@ -57,6 +58,7 @@ namespace LogiCard.UI
         private RoundPhaseController _phase;
         private BoardInputController _input;
         private MatchClock _matchClock;
+        private IFoleyPlayer _foley;
 
         private Text _phaseLabel;
         private Text _programTimerLabel;
@@ -122,13 +124,15 @@ namespace LogiCard.UI
             RoundPhaseController phase,
             BoardInputController input,
             MatchClock matchClock,
-            bool showPhaseDebugControls = false)
+            bool showPhaseDebugControls = false,
+            IFoleyPlayer foley = null)
         {
             _clock = clock;
             _phase = phase;
             _input = input;
             _matchClock = matchClock;
             _showPhaseDebugControls = showPhaseDebugControls;
+            _foley = foley;
             _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             EnsureEventSystem();
@@ -975,6 +979,7 @@ namespace LogiCard.UI
                           $"modifier={modifier}");
             }
 
+            _foley?.Play(FoleyId.LockIn);
             LockedIn?.Invoke();
 
             StopAllCoroutines();
@@ -996,6 +1001,7 @@ namespace LogiCard.UI
                 return;
             }
 
+            _foley?.Play(FoleyId.TimeCard);
             TimeCardPlayed?.Invoke(seconds);
         }
 

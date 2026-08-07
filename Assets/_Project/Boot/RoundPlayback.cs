@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using LogiCard.Audio;
 using LogiCard.Board;
 using LogiCard.Net;
 using LogiCard.Sim;
@@ -37,6 +38,7 @@ namespace LogiCard.Boot
         private BoardView _board;
         private TimeResourceClockDriver _clock;
         private RoundPhaseController _phase;
+        private IFoleyPlayer _foley;
         private GhostResolver _resolver;
         private ReplayTape _tape;
         private int _eventCursor;
@@ -51,11 +53,12 @@ namespace LogiCard.Boot
 
         public bool AnyoneDead => _anyoneDead;
 
-        public void Init(BoardView board, TimeResourceClockDriver clock, RoundPhaseController phase)
+        public void Init(BoardView board, TimeResourceClockDriver clock, RoundPhaseController phase, IFoleyPlayer foley = null)
         {
             _board = board;
             _clock = clock;
             _phase = phase;
+            _foley = foley;
             _resolver = new GhostResolver(board.Model);
 
             _clock.TimeChanged += ApplyTime;
@@ -315,6 +318,12 @@ namespace LogiCard.Boot
         {
             switch (tapeEvent.Type)
             {
+                case TapeEventType.MoveArrive:
+                    _foley?.Play(FoleyId.Footstep);
+                    break;
+                case TapeEventType.ShootFire:
+                    _foley?.Play(FoleyId.Shot);
+                    break;
                 case TapeEventType.Wounded:
                     OutcomeReported?.Invoke($"WOUNDED  P{tapeEvent.PawnId}  @{tapeEvent.Seconds:0.0}s");
                     break;

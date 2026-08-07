@@ -1,3 +1,4 @@
+using LogiCard.Audio;
 using LogiCard.Board;
 using LogiCard.Net;
 using LogiCard.Sim;
@@ -43,6 +44,7 @@ namespace LogiCard.Boot
         private BoardInputController _attackerInput;
         private RoundPlayback _playback;
         private MatchClock _matchClock;
+        private IFoleyPlayer _foley;
         private const float DefenderSecondsPerTile = 2f;
 
         public MatchClock MatchClock => _matchClock;
@@ -88,6 +90,7 @@ namespace LogiCard.Boot
             _clock.PlaybackSecondsPerTimeResourceSecond = playbackSecondsPerTimeResourceSecond;
 
             _phase = gameObject.AddComponent<RoundPhaseController>();
+            _foley = gameObject.AddComponent<FoleyPlayer>();
 
             BuildBoard();
             BuildPawns();
@@ -96,7 +99,7 @@ namespace LogiCard.Boot
 
             var hud = new GameObject("ProgramHud").AddComponent<ProgramHud>();
             hud.transform.SetParent(transform, false);
-            hud.Init(_clock, _phase, _attackerInput, _matchClock, showPhaseDebugControls);
+            hud.Init(_clock, _phase, _attackerInput, _matchClock, showPhaseDebugControls, _foley);
 
             hud.LockedIn += _playback.ResolveAndArm;
             hud.TimeCardPlayed += OnTimeCardPlayed;
@@ -182,7 +185,7 @@ namespace LogiCard.Boot
             _attackerInput.Init(attacker, _phase, attackerHome, attackerSecondsPerTile, 0f, _board);
 
             _playback = gameObject.AddComponent<RoundPlayback>();
-            _playback.Init(_board, _clock, _phase);
+            _playback.Init(_board, _clock, _phase, _foley);
             _playback.Register(AttackerPawnId, attacker, attackerHome, () => _attackerInput.Program.Build());
             _playback.Register(DefenderPawnId, defender, defenderSpawn, BuildDefenderPayload);
 
@@ -272,6 +275,15 @@ namespace LogiCard.Boot
             // without this the diorama Volume below has nothing to render through (playtest 2026-08-07:
             // "too plain and dull" — the scene had no shadows, fill light, or grade at all).
             cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
+
+            // The scripted camera above skips Unity's "GameObject > Camera" menu path, which is the
+            // only place Unity auto-adds this — without it FoleyPlayer.Play would silently produce no
+            // audible sound (just a console "no audio listeners" warning), and the Day 11 human
+            // ear-check would have nothing to listen to.
+            if (cam.GetComponent<AudioListener>() == null)
+            {
+                cam.gameObject.AddComponent<AudioListener>();
+            }
         }
 
         private void BuildLighting()
