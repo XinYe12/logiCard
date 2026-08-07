@@ -1,72 +1,64 @@
 # Draft Handoff — 2026-08-07
 
-**Schedule:** M2.5 continuous pivot (Days 7b–7g) code-complete on `master` through `6f7acf9`. Day 8 URP merged. 2026-08-07 playtest follow-up pack and the tracer-truncation fix are **both committed**. **Phase 6 gate is cleared** (human call, 2026-08-07 — see below); Day 9 is unblocked, but see the parallel-worktree table for who already owns which surface.
+**Schedule:** M2.5 continuous pivot + Day 8 URP done; Phase 6 human gate cleared. **Day 9 board/UI identity is committed on `master`** (`57fc1cd`), verified, but not yet visually eyeballed by a human — that's the one thing left before ticking SCHEDULE Day 9. Match-over HUD fix is done on its own branch (`0d1a7ac`), not yet merged into `master`.
 
-**Parallel work in flight (separate worktrees, not yet merged — user reconciles by hand):**
+**Heads up for whoever reads this next:** two different sessions worked on Day 9 concurrently today — one directly on `master`, one (this session) in the `logiCard-day9-yarn` worktree. The `master` version landed first and is more complete, so the worktree's duplicate edit was discarded (never committed) and that worktree is now superseded. If you see contradictory notes below from an earlier version of this file, trust the state described here — it was written after reconciling both.
 
-| Worktree | Branch | Owns | Status as of this handoff |
-|----------|--------|------|----------------------------|
-| `logiCard-day9-yarn` | `feat/day9-yarn-ui` | Yarn/chalk `PathPreviewView` + Time Card/scrubber presentation | Forked at `54b051a` (stale — predates both commits below); brief at `DAY9_YARN_AGENT_BRIEF.md` |
-| `logiCard-match-over-hud` | `feat/match-over-hud` | `ProgramHud.RefreshMatchLabel` / `RefreshAftermathPanel` — stale “R3 · ATTACKER PICKS” header on MatchOver + duplicate “MATCH OVER” button label (playtest 2026-08-07) | Forked at `0b4feec`; brief at `MATCH_OVER_HUD_AGENT_BRIEF.md` |
-| `logiCard-verify-playtest` | `verify/playtest-door-scrub` | Parked verify from the earlier 99/99·28/28 run | Do not merge/retarget |
+## Parallel worktrees
 
-Do not edit `ProgramHud.cs` Aftermath/match-label methods or `PathPreviewView.cs` from `master` — those are claimed by the worktrees above.
+| Worktree | Branch | Status |
+|----------|--------|--------|
+| `logiCard-match-over-hud` | `feat/match-over-hud` @ `0d1a7ac` | **Done.** Fixed the stale “R3 · ATTACKER PICKS” header and duplicate “MATCH OVER” button text; PlayMode regression test added. Ready for user to merge into `master` whenever they want it in. |
+| `logiCard-day9-yarn` | `feat/day9-yarn-ui` @ `54b051a` | **Superseded** — Day 9 landed on `master` instead (`57fc1cd`). Nothing of value in this worktree; safe to remove. |
+| `logiCard-verify-playtest` | `verify/playtest-door-scrub` @ `54b051a` | Parked from an earlier verify run; optional remove. |
 
 ## Implemented
 
-**Already on `master` (`54b051a` and earlier):** continuous Phases 1–5 (C35/C39/C40/C41); 2026-08-06 playtest pack (wall yaw, Hold tracer window, door Closed-at-start + Aftermath carry, select-then-confirm door, board-anchored OPEN/CLOSE, `InteractRadius` 0.7, rejection banner, Lock In respects pending draft).
+**Committed on `master`, newest first:**
 
-**Committed `6f7acf9` (2026-08-07, playtest follow-up #2 — bullets visually passing through walls/closed doors):**
+- `57fc1cd` — **Day 9 presentation pass** (ART_DIRECTION §4 Demo art floor):
+  - `PathPreviewView.cs`: yarn `LineRenderer` strand + pin beads replace the Day 5 bead-only placeholder (draft lighter/unsettled, booked settled); `Init`/`Show`/`Clear` API unchanged.
+  - `BoardView.cs`: `PlacePaintedGrid` — etched unit-grid strokes on the board face.
+  - `GameBootstrap.cs`: ground tint shifted toward plywood/cardstock.
+  - `ProgramHud.cs`: Allot/Time Card panel gets a cardstock paper face + soft shadow; Time Resource scrubber restyled to a cool cyan/white AR look, contrasting with the clay board. Door prompt, Lock In, and Aftermath/match-label methods untouched — those are `feat/match-over-hud`'s and main's territory respectively.
+- `0b4f147` — SCHEDULE.md Days 4–8 ticked.
+- `6f7acf9` — Tracer truncation fix: `Segment.TryGetIntersection` → `ArenaBoard.TryGetNearestBlockPoint` → `GhostResolver` stamps `ShootFire.Position` with the tracer's real visual endpoint instead of the raw aim point, so a blocked shot's beam now stops at the wall/closed door instead of drawing through it.
+- `ef05061` / `54b051a` — earlier playtest packs (door scrub, snap LoS, UNDO row, Lock In draft-drop; wall render, Hold Angle timing, door lifecycle).
 
-| Area | What landed |
-|------|-------------|
-| Tracer truncation | `Segment.TryGetIntersection` (exact crossing point) + `ArenaBoard.TryGetNearestBlockPoint`; `GhostResolver.ResolveShot` now stamps `ShootFire`'s `Position` with the tracer's real visual endpoint (blocked point, or aim point if clear) instead of always the raw aim point |
-
-Hit resolution itself was already correct (LoS-gated) — this was purely the tracer drawing past the obstacle it was blocked by. `TapeEvent.Position` doc comment updated to reflect the new semantics; no other consumer existed besides `RoundPlayback.BuildTracers`.
-
-**Committed `ef05061` (2026-08-07 playtest follow-ups #1):**
-
-| Area | What landed |
-|------|-------------|
-| Snap LoS | `GhostResolver` requires LoS to victim, not only aim (closed-door HitRadius edge case) |
-| Door scrub | `RoundPlayback.SyncDoorsToSeconds` — tint/model follow scrubber + Aftermath carry |
-| Door status UX | Prompt uses `PawnProgram.ScheduledDoorState`; keep selection after OPEN/CLOSE; strong red/green door colors |
-| Open→walk same Program | Move drafting pathfinds on a **scheduled-door clone**; shared board stays round-start until Aftermath |
-| UNDO | Always on bottom action row (Play / Rewind / UNDO / Lock In) |
-| Lock In + draft | Drops over-budget **pending** draft when committed queue fits; queue shows draft → total when draft exists |
-| Docs | `UI_BOARD_ANCHORED_COMPONENTS.md` scheduled-state + pathfinding note |
-
-Human playtest confirmed: door open/close status + path-through after Open work. Lock In sticky-fail was the pending-draft issue (Editor log `34.1s of 30.0s` while Used looked fine).
-
-**Still not committed (leave as-is):** `ProjectSettings.asset` (`SENTIS_ANALYTICS_ENABLED`), `unity-first-open.log`.
+**Leave uncommitted / do not ship:** `ProjectSettings.asset` (Sentis analytics churn), `unity-first-open.log`, and the parallel-development skill edits under `.claude/skills/parallel-development/` + `.cursor/skills/` — a different concurrent session touched those; not this workstream's to commit.
 
 ## Verification
 
-- `ef05061` (playtest follow-ups #1): worktree `logiCard-verify-playtest` — **EditMode 99/99**, **PlayMode 28/28**.
-- `6f7acf9` (tracer truncation): disposable worktree `logiCard-verify-tracer` (created and removed same session — main path's Editor was open, so batchmode couldn't run there) — **EditMode 102/102** (99 + 3 new tracer-truncation tests), **PlayMode 28/28**.
-- **Phase 6 human call (2026-08-07): good enough as-is.** User explicitly declined to tune `HitRadius`/`LaneHalfWidth`/`InteractRadius` further — "they look alright for now."
-- **Wall/door tracer playtest finding, investigated and closed as not-a-bug:** user saw a pawn wounded while apparently "behind the wall" in the Aftermath end-state screenshot. Traced via the Console's per-round `[logiCard] Ghost resolve` event log (Round 3): `6.20s P2 DoorOpened (2,2)` → `8.20s P2 ShootFire (2,1)` → wounds P1. The wall itself held (P1's two shots at 5.59s/7.59s both truncated at the wall face, x=1.4/1.69, short of the door gap at x∈[1.75,2.25]) — P2 simply opened the door first, then shot through the gap it created. Aftermath's final positions don't match shot-time positions since pawns keep moving after being hit, which is what made it look wrong at a glance. No code change needed; the door mechanic worked as designed.
-- **Manual Bootstrap smoke (2026-08-07): confirmed good by human** — full Time Card → Program → Lock In → playback → next round, done live in-Editor across the session above (the match-over/aftermath screenshots came from this same run).
+- Day 9 (`57fc1cd`): disposable worktree `logiCard-verify-day9` (created and removed same session) — **EditMode 102/102**, **PlayMode 28/28**.
+- Match-over HUD (`0d1a7ac`): verified in its own worktree — **EditMode 102/102**, **PlayMode 29/29** (28 + 1 new).
+- Tracer truncation (`6f7acf9`): **EditMode 102/102** (99 + 3 new), **PlayMode 28/28**.
+- Playtest pack (`ef05061`): **EditMode 99/99**, **PlayMode 28/28**.
+- **Phase 6 human call (2026-08-07): good enough as-is** — user declined further radius tuning.
+- **Manual Bootstrap smoke (2026-08-07): confirmed good by human** — full Time Card → Program → Lock In → playback → next round.
+- **Wall/door "wound behind the wall" playtest finding: investigated, closed as not-a-bug.** Traced via the Console's per-round event log — a pawn opened the door, then shot through the gap it created. The wall itself held (an earlier shot from the same pawn truncated correctly at the wall face). No code change needed.
+- **Not yet done:** a human eyeballing Day 9's actual look in the Editor (yarn path, painted grid, cardstock Allot, AR scrubber) — automated tests don't check visuals. This is the one gate left before ticking SCHEDULE Day 9.
 
 ## Still unfinished
 
-1. **SCHEDULE.md** Day 7–8 boxes — tick now that the Phase 6 human call landed (see Verification above).
-2. Merge/reconcile `feat/day9-yarn-ui` and `feat/match-over-hud` once those agents report back (see parallel work table above) — user reconciles by hand, not an agent merge.
-3. Optional cleanup: remove verify worktree/branch `verify/playtest-door-scrub` / `logiCard-verify-playtest`.
+1. **Human: eyeball Day 9 in the Editor** — does the yarn/chalk path, painted grid, cardstock Time Card, and AR scrubber actually read as intended? Tick SCHEDULE Day 9 if so.
+2. **Merge `feat/match-over-hud` into `master`** (user call, whenever convenient) — expect a clean merge on `ProgramHud.cs` since it and Day 9 touch disjoint methods (Allot/scrubber vs. Aftermath/match-label).
+3. Optional cleanup: remove superseded `logiCard-day9-yarn` and parked `logiCard-verify-playtest` worktrees/branches.
 
 ## Known issues (deferred, cosmetic — not a gate)
 
-- **Pawn model visually pokes through wall/closed-door geometry** when its logical position sits at/near the wall plane (e.g. standing right at a doorway). Cause: the sim tracks pawns as a point (no collider/physical volume by design — C32, no Physics/Physics2D involved in resolve), so nothing pushes the render mesh out of the wall mesh. Does not affect hit resolution, pathing, or LoS — those are all point/segment math and already correct. User call (2026-08-07): defer to a later pawn-model/art pass rather than fixing now.
+- Pawn model visually pokes through wall/closed-door geometry when its logical position sits at/near the wall plane. Cause: the sim tracks pawns as a point with no collider (deliberate — no Physics/Physics2D anywhere in resolve), so nothing pushes the render mesh out of the wall mesh. Doesn't affect hit resolution, pathing, or LoS. User call: defer to a later pawn-model/art pass.
 
 ## Tomorrow / next agent
 
-1. Phase 6 gate is cleared — Day 9 board/UI identity work is unblocked, but it's already claimed by `logiCard-day9-yarn` (stale, forked at `54b051a` — needs rebasing onto `6f7acf9` before it can land) and `logiCard-match-over-hud`. Don't duplicate that work on `master`; check whether either has reported back before starting anything new there.
-2. Confirm with the user before merging either worktree back into `master`.
+1. Get the human's visual sign-off on Day 9, then tick SCHEDULE Day 9.
+2. Merge `feat/match-over-hud` when the user's ready.
+3. Start **Day 10** — clay motion + physical VFX (stepped playback, muzzle flash, wound splat) — once Day 9 is accepted.
+4. Don't reopen tracer truncation / `HitRadius` / `LaneHalfWidth` / `InteractRadius` tuning unless a new playtest finding says so — that's settled for now.
 
 ## Blockers / notes
 
-- Unity **6000.5.5f1**; project `/Users/xuxinye/Documents/projects/Game/LogiCard`.
-- Batchmode: Editor closed on the **same** path, or a **different worktree path** in parallel. Do **not** pass `-quit` with `-runTests` (exits before the suite runs); use `-acceptSoftwareTermsForThisRunOnly` like prior verify runs.
-- Hub “Add project”: select parent `…/Game`, not `LogiCard` itself.
-- `master` tracks `origin/master`; all of today's work (both commits) is local-only, not pushed.
-- Editor is typically open on the main path (user playtests there live) — use a separate worktree for batchmode; spin up a disposable one (`git worktree add`) and remove it after if none of the existing ones fit, rather than reusing `logiCard-verify-playtest` (parked) or the Day 9/match-over-hud worktrees (owned by other agents).
+- Unity **6000.5.5f1**; main project `/Users/xuxinye/Documents/projects/Game/LogiCard`. Editor is typically open there (user playtests live) — batchmode needs a different worktree path. Spin up a disposable one (`git worktree add`) and remove it after, rather than reusing `logiCard-verify-playtest` (parked) or the other agents' worktrees.
+- Do **not** pass `-quit` with `-runTests` (exits before the suite runs); use `-acceptSoftwareTermsForThisRunOnly`.
+- Hub "Add project": select parent `…/Game`, not `LogiCard` itself.
+- `master` tracks `origin/master`; everything above is local-only, not pushed.
+- If you notice another session's edits mid-task (uncommitted changes you didn't make, or this file changing under you), stop and reconcile before continuing — don't just build on top blind. That's what happened with Day 9 today.
