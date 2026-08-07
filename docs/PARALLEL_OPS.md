@@ -69,6 +69,42 @@ Then update **your** STATUS to In progress. If a file you need is owned by anoth
 - Verify on the same path as an open Editor  
 - Unprompted board/path art restarts after Day 9 human sign-off (schedule > polish unless human reopens)
 
+## Starting a new worktree — quick reference
+
+The full mechanics live in `.claude/skills/parallel-development/SKILL.md` (invoke with `/parallel-development` or
+by saying "parallel development" — an agent will pick a slice, set this up, and hand you a paste-ready command
+for the other agent). This is the condensed version, for doing it by hand or when no agent is available to run
+the skill:
+
+```bash
+# 1. From the main tree (/Users/xuxinye/Documents/projects/Game/LogiCard), create the worktree.
+#    Name the branch/directory after the SLICE, not "agent2" — e.g. a Day 13 wall-clip fix:
+git worktree add -b feat/day13-wall-clip-fix ../logiCard-day13-wall-clip-fix master
+
+# 2. Write a self-contained brief at the worktree ROOT (not the main tree):
+#    <SLICE_NAME>_AGENT_BRIEF.md — where/why, the job (concrete paths/signatures), tests to run,
+#    boundary (files NOT to touch and why), why the split is safe, how to report back.
+#    See DAY10_HIT_VFX_AGENT_BRIEF.md / DAY11_AUDIO_STUB_AGENT_BRIEF.md / SHIP_DOCS_AGENT_BRIEF.md
+#    in git history (git show <branch>:<BRIEF_FILE>) as worked examples if those worktrees are gone.
+
+# 3. Hand this to the other agent/session, unchanged:
+cd /Users/xuxinye/Documents/projects/Game/logiCard-day13-wall-clip-fix
+# open this path in a second Cursor/Claude session, then:
+# Read <SLICE_NAME>_AGENT_BRIEF.md first, then do what it says.
+```
+
+When the worker reports back (commit on their branch, never pushed/merged by them): review the diff and
+boundary, batchmode-verify in a **disposable** worktree if it touches code (`git worktree add -d
+../logiCard-verify-<x> master`, copy the changed files in since worktrees only see committed history, run
+EditMode + PlayMode, remove the worktree after), then `git merge --no-ff <branch>` from the main tree once you
+and the human are satisfied — never merge unprompted. Update `contracts/CURRENT.md` / `DRAFT_HANDOFF.md` /
+`departments/INDEX.md` after, per the doc-ownership rules above.
+
+To remove a worktree once its branch is fully merged: `git worktree remove ../logiCard-<slice-name>` (add
+`--force` only if you've confirmed there's nothing valuable left uncommitted in it — `git stash` first if unsure,
+stashes survive worktree removal and are recoverable with `git stash list` / `git stash pop` from any worktree of
+the repo).
+
 ## Days 10–14 wave map (summary)
 
 - ~~**Wave 1 (Day 10):** Integrator = stepped motion + VFX wire; Presentation = muzzle/wound views; Audio = `FoleyPlayer` stub (new files only).~~ **Done** (2026-08-07) — `d60f01d`, `fc32a2d`, `a57d095`.
