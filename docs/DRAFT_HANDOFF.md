@@ -1,6 +1,6 @@
 # Draft Handoff — 2026-08-07
 
-**Schedule:** M2.5 continuous pivot + Day 8 URP done; Phase 6 human gate cleared. Day 9 board/UI identity landed on `master`, went through one real round of human feedback ("too plain and dull"), got a lighting/post-processing fix, and then the path visual got redesigned entirely (yarn → FragPunk-style ink line, human decision). **All of it — lighting fix and ink-line path rewrite — is committed and test-verified.** `master` is at `d4eb6ca`. The match-over HUD fix is merged in too. **Still open: human visual sign-off in the Editor** — everything below is verified by automated tests, none of it has been looked at yet.
+**Schedule:** M2.5 continuous pivot + Day 8 URP done; Phase 6 human gate cleared. Day 9 board/UI identity landed on `master`, went through one real round of human feedback ("too plain and dull"), got a lighting/post-processing fix, then the path visual got redesigned entirely (yarn → FragPunk-style ink line), then the **first actual look at it in-Editor found the whole scene had gone red** — a real bug in the lighting-fix commit, now fixed. `master` is at `727ebd4`. The match-over HUD fix is merged in too. **Still open: human visual sign-off in the Editor** — this is the first round of that, and it already caught something automated tests couldn't (see below).
 
 **Heads up — read this if you're a fresh session:** at least one other concurrent session (Cursor-based, working from a "Art UI Decisions" plan) was actively editing this exact `master` working tree today, at the same time as this session, more than once. Both collisions were caught and reconciled cleanly (see below), but don't assume you're the only one touching this repo. Check `git status` and `git log` before building on anything, and if a file changes under you mid-task, stop and reconcile before continuing.
 
@@ -18,6 +18,7 @@ Only `logiCard-verify-playtest` remains as a leftover worktree. Every disposable
 
 **Committed on `master`, newest first:**
 
+- `727ebd4` — **Fixed a real bug the human's first in-Editor look caught**: board/walls/pawns all rendered nearly pure red, while the untouched camera background stayed correct. Root cause: `PrimitiveMaterialFactory`'s clay-grain texture (added in `12f8a02`) used `TextureFormat.R8` — a single-channel format. `SetPixels32` was fed matching R=G=B pixel values, but R8 only physically stores red; green/blue silently drop on `Apply()`. Sampled as `_BaseMap`, that comes back `(r, 0, 0, 1)`, so `BaseColor * BaseMap` crushed every tinted material's green/blue toward zero regardless of its intended tint — hence everything reading red-ish. Fix: `RGB24` instead of `R8`. This is exactly the kind of bug automated tests can't catch (nothing asserts on rendered color) — first reason this session needed an actual human look, not just green test runs.
 - `d4eb6ca` — finished propagating the path-art decision's terminology across the whole doc corpus (`SCHEDULE.md`, `GDD.md`, `PRODUCT_MEMORY.md`, `RISKS.md`, `SCOPE.md`, `UI_FLOW.md`, `VERTICAL_SLICE.md`, `Art/README.md`, `URP_AGENT_BRIEF.md`, `.cursor/rules/logicard-product-memory.mdc`) — a concurrent session started this, this session finished the remaining "yarn/chalk" references.
 - `950b0ac` — **Path visual pivot, code + docs**: human decision (2026-08-07, via a Cursor plan) dropped Day 9's 3D yarn entirely in favor of a FragPunk/界外狂潮-style **线稿涂鸦** (thin, slightly wobbly hand-drawn ink line on the board surface — not fat spray, not a glitchy HUD line, not neon).
   - `PathPreviewView.cs` rewritten: `LineRenderer` stroke lying close to the board surface, subdivided per leg with a deterministic Perlin-seeded sideways wobble (stable across calls — a draft path being actively dragged doesn't jitter). Draft reads like **pencil** (lighter gray, thinner, rougher/more wobble); booked reads like **settled ink** (dark charcoal, bolder, steadier) — a sketch-to-ink metaphor, not a port of yarn's old opacity logic. Waypoint dots restyled to the same ink language instead of the old warm terracotta pins. `Init`/`Show`/`Clear` API unchanged — no caller needed to change.
@@ -40,6 +41,7 @@ Only `logiCard-verify-playtest` remains as a leftover worktree. Every disposable
 
 ## Verification
 
+- Red-tint fix (`727ebd4`): **EditMode 102/102**, **PlayMode 29/29**. Caught by the human's first real look in the Editor — the whole board/walls/pawns had gone red. Not yet re-confirmed visually after the fix (tests pass, but tests don't check color).
 - Path visual pivot (`950b0ac`): disposable worktree, created and removed same session — **EditMode 102/102**, **PlayMode 29/29**.
 - Lighting/post-processing fix (`5ea34aa`): **EditMode 102/102**, **PlayMode 29/29**, no exceptions in the PlayMode log. First attempt hit two compile errors (missing asmdef references), both fixed and reverified before this passed.
 - Post-merge state (`0ad1991`, match-over-hud + Day 9 together): **EditMode 102/102**, **PlayMode 29/29**.
@@ -54,7 +56,7 @@ Only `logiCard-verify-playtest` remains as a leftover worktree. Every disposable
 
 ## Still unfinished
 
-1. **Human: look at both the lighting pass and the ink-line path in the Editor.** Do they read as intended? Both are easy to retune from feedback — lighting numbers live in `GameBootstrap.BuildLighting`/`BuildDioramaVolume` and `PrimitiveMaterialFactory`; path stroke numbers (width, wobble amount, colors) live at the top of `PathPreviewView.cs`.
+1. **Human: re-look in the Editor now that the red-tint bug is fixed.** Confirm colors are back to normal, then judge whether the lighting/grade and the ink-line path actually read as intended. Both are easy to retune from feedback — lighting numbers live in `GameBootstrap.BuildLighting`/`BuildDioramaVolume` and `PrimitiveMaterialFactory`; path stroke numbers (width, wobble amount, colors) live at the top of `PathPreviewView.cs`.
 2. Tick SCHEDULE Day 9 once both are accepted.
 3. Optional cleanup: remove parked `logiCard-verify-playtest`.
 
