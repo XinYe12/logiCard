@@ -1,6 +1,6 @@
 # Draft Handoff — 2026-08-07
 
-**Schedule:** M2.5 continuous pivot (Days 7b–7g) code-complete on `master` through `6f7acf9`. Day 8 URP merged. 2026-08-07 playtest follow-up pack and the tracer-truncation fix are **both committed**. Phase 6 cold-observer + radius tuning still human-only; Day 9 (board/UI identity) waits on that gate.
+**Schedule:** M2.5 continuous pivot (Days 7b–7g) code-complete on `master` through `6f7acf9`. Day 8 URP merged. 2026-08-07 playtest follow-up pack and the tracer-truncation fix are **both committed**. **Phase 6 gate is cleared** (human call, 2026-08-07 — see below); Day 9 is unblocked, but see the parallel-worktree table for who already owns which surface.
 
 **Parallel work in flight (separate worktrees, not yet merged — user reconciles by hand):**
 
@@ -44,20 +44,20 @@ Human playtest confirmed: door open/close status + path-through after Open work.
 
 - `ef05061` (playtest follow-ups #1): worktree `logiCard-verify-playtest` — **EditMode 99/99**, **PlayMode 28/28**.
 - `6f7acf9` (tracer truncation): disposable worktree `logiCard-verify-tracer` (created and removed same session — main path's Editor was open, so batchmode couldn't run there) — **EditMode 102/102** (99 + 3 new tracer-truncation tests), **PlayMode 28/28**.
-- Manual Bootstrap smoke checklist still **not** formally recorded.
+- **Phase 6 human call (2026-08-07): good enough as-is.** User explicitly declined to tune `HitRadius`/`LaneHalfWidth`/`InteractRadius` further — "they look alright for now."
+- **Wall/door tracer playtest finding, investigated and closed as not-a-bug:** user saw a pawn wounded while apparently "behind the wall" in the Aftermath end-state screenshot. Traced via the Console's per-round `[logiCard] Ghost resolve` event log (Round 3): `6.20s P2 DoorOpened (2,2)` → `8.20s P2 ShootFire (2,1)` → wounds P1. The wall itself held (P1's two shots at 5.59s/7.59s both truncated at the wall face, x=1.4/1.69, short of the door gap at x∈[1.75,2.25]) — P2 simply opened the door first, then shot through the gap it created. Aftermath's final positions don't match shot-time positions since pawns keep moving after being hit, which is what made it look wrong at a glance. No code change needed; the door mechanic worked as designed.
+- **Manual Bootstrap smoke (2026-08-07): confirmed good by human** — full Time Card → Program → Lock In → playback → next round, done live in-Editor across the session above (the match-over/aftermath screenshots came from this same run).
 
 ## Still unfinished
 
-1. **Phase 6** — tune `HitRadius` / `LaneHalfWidth` / `InteractRadius`; cold-observer “door changes a fight once.” Human.
-2. **Manual Bootstrap smoke** — full Time Card → Program → Lock In → playback → next round. Human.
-3. **SCHEDULE.md** Day 7–8 boxes — tick only after the human Phase 6 call.
-4. Merge/reconcile `feat/day9-yarn-ui` and `feat/match-over-hud` once those agents report back (see parallel work table above) — user reconciles by hand, not an agent merge.
-5. Optional cleanup: remove verify worktree/branch `verify/playtest-door-scrub` / `logiCard-verify-playtest`.
+1. **SCHEDULE.md** Day 7–8 boxes — tick now that the Phase 6 human call landed (see Verification above).
+2. Merge/reconcile `feat/day9-yarn-ui` and `feat/match-over-hud` once those agents report back (see parallel work table above) — user reconciles by hand, not an agent merge.
+3. Optional cleanup: remove verify worktree/branch `verify/playtest-door-scrub` / `logiCard-verify-playtest`.
 
 ## Tomorrow / next agent
 
-1. Human: Phase 6 cold-observer + Bootstrap smoke (items 1–2 above) — this is the gate.
-2. Agent: do not start Day 9 board/UI identity or match-over HUD work on `master` — both are already claimed by the worktrees above. Confirm with the user before merging either back.
+1. Phase 6 gate is cleared — Day 9 board/UI identity work is unblocked, but it's already claimed by `logiCard-day9-yarn` (stale, forked at `54b051a` — needs rebasing onto `6f7acf9` before it can land) and `logiCard-match-over-hud`. Don't duplicate that work on `master`; check whether either has reported back before starting anything new there.
+2. Confirm with the user before merging either worktree back into `master`.
 
 ## Blockers / notes
 
