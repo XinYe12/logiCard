@@ -6,7 +6,8 @@
         "LogiCard.Net",
         "LogiCard.Timeline",
         "LogiCard.Board",
-        "LogiCard.UI"
+        "LogiCard.UI",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
