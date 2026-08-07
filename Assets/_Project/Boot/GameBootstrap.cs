@@ -163,7 +163,7 @@ namespace LogiCard.Boot
                 displayName: "Door #1"));
 
             _board = boardGo.AddComponent<BoardView>();
-            _board.Build(model, new Color(0.82f, 0.78f, 0.70f), new Color(0.42f, 0.38f, 0.34f));
+            _board.Build(model, new Color(0.72f, 0.55f, 0.38f), new Color(0.42f, 0.38f, 0.34f));
         }
 
         private void BuildPawns()

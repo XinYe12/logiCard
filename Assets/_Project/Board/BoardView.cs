@@ -54,6 +54,9 @@ namespace LogiCard.Board
             ground.transform.localScale = new Vector3(width * WorldScale, 0.1f, depth * WorldScale);
             ground.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(groundColor);
 
+            // Day 9: painted/etched unit grid on the board face (ART_DIRECTION Demo art floor).
+            PlacePaintedGrid(model);
+
             for (int i = 0; i < model.Walls.Count; i++)
             {
                 PlaceSegmentBox($"Wall_{i}", model.Walls[i], wallColor, WallHeight);
@@ -113,6 +116,78 @@ namespace LogiCard.Board
             Vector3 local = transform.InverseTransformPoint(world);
             float scale = WorldScale <= 0f ? 1f : WorldScale;
             return new PlanarPosition(local.x / scale, local.z / scale, Floor.Ground);
+        }
+
+        private void PlacePaintedGrid(ArenaBoard model)
+        {
+            var gridRoot = new GameObject("PaintedGrid");
+            gridRoot.transform.SetParent(transform, false);
+
+            Color lineColor = new Color(0.42f, 0.32f, 0.22f, 0.85f);
+            const float lineY = 0.02f;
+            const float thickness = 0.035f;
+
+            int x0 = Mathf.CeilToInt(model.MinX);
+            int x1 = Mathf.FloorToInt(model.MaxX);
+            for (int x = x0; x <= x1; x++)
+            {
+                PlaceGridStroke(
+                    gridRoot.transform,
+                    $"GridX_{x}",
+                    new PlanarPosition(x, model.MinY),
+                    new PlanarPosition(x, model.MaxY),
+                    lineColor,
+                    lineY,
+                    thickness);
+            }
+
+            int y0 = Mathf.CeilToInt(model.MinY);
+            int y1 = Mathf.FloorToInt(model.MaxY);
+            for (int y = y0; y <= y1; y++)
+            {
+                PlaceGridStroke(
+                    gridRoot.transform,
+                    $"GridY_{y}",
+                    new PlanarPosition(model.MinX, y),
+                    new PlanarPosition(model.MaxX, y),
+                    lineColor,
+                    lineY,
+                    thickness);
+            }
+        }
+
+        private void PlaceGridStroke(
+            Transform parent,
+            string name,
+            PlanarPosition a,
+            PlanarPosition b,
+            Color color,
+            float height,
+            float thickness)
+        {
+            float dx = b.X - a.X;
+            float dy = b.Y - a.Y;
+            float length = Mathf.Sqrt((dx * dx) + (dy * dy));
+            if (length < 1e-4f)
+            {
+                return;
+            }
+
+            PlanarPosition mid = PlanarPosition.Lerp(a, b, 0.5f);
+            var stroke = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            stroke.name = name;
+            stroke.transform.SetParent(parent, false);
+            stroke.transform.localPosition = LocalFromPlanar(mid) + new Vector3(0f, height, 0f);
+            stroke.transform.localScale = new Vector3(length * WorldScale, 0.02f, thickness * WorldScale);
+            float yaw = Mathf.Atan2(-dy, dx) * Mathf.Rad2Deg;
+            stroke.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            stroke.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
+
+            Collider col = stroke.GetComponent<Collider>();
+            if (col != null)
+            {
+                Object.Destroy(col);
+            }
         }
 
         private GameObject PlaceSegmentBox(string name, Segment segment, Color color, float height)

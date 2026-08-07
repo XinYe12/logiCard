@@ -43,6 +43,16 @@ namespace LogiCard.UI
         private static readonly Color ShootMarkerColor = new Color(0.95f, 0.35f, 0.30f, 1f);
         private static readonly Color DoorMarkerColor = new Color(0.55f, 0.85f, 0.55f, 1f);
 
+        // Day 9 — cardstock Time Card (paper in the thumb zone) vs AR scrubber (cool contrast on clay).
+        private static readonly Color CardstockPaper = new Color(0.93f, 0.88f, 0.78f, 1f);
+        private static readonly Color CardstockPaperDeep = new Color(0.86f, 0.78f, 0.64f, 1f);
+        private static readonly Color CardstockInk = new Color(0.22f, 0.16f, 0.12f, 1f);
+        private static readonly Color CardstockShadow = new Color(0.05f, 0.04f, 0.03f, 0.45f);
+        private static readonly Color CardstockConfirm = new Color(0.78f, 0.42f, 0.22f, 1f);
+        private static readonly Color ArTrack = new Color(0.08f, 0.14f, 0.22f, 1f);
+        private static readonly Color ArFill = new Color(0.35f, 0.85f, 0.95f, 1f);
+        private static readonly Color ArHandle = new Color(0.95f, 0.98f, 1f, 1f);
+
         private TimeResourceClockDriver _clock;
         private RoundPhaseController _phase;
         private BoardInputController _input;
@@ -258,10 +268,11 @@ namespace LogiCard.UI
 
             float cursor = -Pad;
 
-            _scrubLabel = CreateText(rt, "ScrubLabel", "Time Resource  0.0s / 0.0s", 34, TextAnchor.MiddleLeft, Ink);
+            // AR scrubber: cool cyan/white on a dark track — deliberate contrast vs clay board (ART_DIRECTION §4).
+            _scrubLabel = CreateText(rt, "ScrubLabel", "Time Resource  0.0s / 0.0s", 34, TextAnchor.MiddleLeft, ArFill);
             PlaceRow(_scrubLabel.rectTransform, ref cursor, 48f, 12f);
 
-            _scrubber = CreateSlider(rt, "Scrubber");
+            _scrubber = CreateSlider(rt, "Scrubber", ArTrack, ArFill, ArHandle);
             PlaceRow(_scrubber.GetComponent<RectTransform>(), ref cursor, 56f, RowGap);
             _scrubber.onValueChanged.AddListener(OnScrubberMoved);
 
@@ -284,31 +295,40 @@ namespace LogiCard.UI
             rt.SetParent(zone, false);
             Stretch(rt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
+            // Soft cardstock shadow + paper face (Day 9 Demo art floor — physical Time Card in thumb zone).
+            RectTransform shadow = CreatePanel(rt, "TimeCardShadow", CardstockShadow, Vector2.zero, Vector2.one);
+            shadow.offsetMin = new Vector2(Pad + 10f, Pad);
+            shadow.offsetMax = new Vector2(-Pad + 10f, -Pad - 10f);
+
+            RectTransform card = CreatePanel(rt, "TimeCardFace", CardstockPaper, Vector2.zero, Vector2.one);
+            card.offsetMin = new Vector2(Pad, Pad + 12f);
+            card.offsetMax = new Vector2(-Pad, -Pad);
+
             float cursor = -Pad;
-            _allotChooserLabel = CreateText(rt, "ChooserLabel", "ATTACKER PLAYS TIME CARD", 36, TextAnchor.MiddleLeft, Accent);
+            _allotChooserLabel = CreateText(card, "ChooserLabel", "ATTACKER PLAYS TIME CARD", 36, TextAnchor.MiddleLeft, CardstockInk);
             PlaceRow(_allotChooserLabel.rectTransform, ref cursor, 56f, RowGap);
 
             for (int i = 0; i < TimeCardPresets.Length; i++)
             {
                 float preset = TimeCardPresets[i];
-                Button presetButton = CreateButton(rt, $"TimeCard_{preset:0}", $"{preset:0}s", PanelMid, Ink, 34,
+                Button presetButton = CreateButton(card, $"TimeCard_{preset:0}", $"{preset:0}s", CardstockPaperDeep, CardstockInk, 34,
                     () => ConfirmTimeCard(preset));
                 PlaceSplitCell(presetButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, i, TimeCardPresets.Length + 1);
             }
 
-            Button allIn = CreateButton(rt, "TimeCard_AllIn", "ALL IN", Accent, new Color(0.1f, 0.09f, 0.07f), 34,
+            Button allIn = CreateButton(card, "TimeCard_AllIn", "ALL IN", CardstockConfirm, CardstockPaper, 34,
                 () => ConfirmTimeCard(_matchClock != null ? _matchClock.RemainingSeconds : 0f));
             PlaceSplitCell(allIn.GetComponent<RectTransform>(), cursor, VerbRowHeight, TimeCardPresets.Length, TimeCardPresets.Length + 1);
             cursor -= VerbRowHeight + RowGap;
 
-            _allotSliderLabel = CreateText(rt, "AllotSliderLabel", "Custom  60s", 30, TextAnchor.MiddleLeft, Ink);
+            _allotSliderLabel = CreateText(card, "AllotSliderLabel", "Custom  60s", 30, TextAnchor.MiddleLeft, CardstockInk);
             PlaceRow(_allotSliderLabel.rectTransform, ref cursor, 44f, 8f);
 
-            _allotSlider = CreateSlider(rt, "AllotSlider");
+            _allotSlider = CreateSlider(card, "AllotSlider", CardstockPaperDeep, CardstockConfirm, CardstockInk);
             PlaceRow(_allotSlider.GetComponent<RectTransform>(), ref cursor, 56f, RowGap);
             _allotSlider.onValueChanged.AddListener(OnAllotSliderMoved);
 
-            Button confirm = CreateButton(rt, "ConfirmTimeCard", "PLAY TIME CARD", Accent, new Color(0.1f, 0.09f, 0.07f), 40,
+            Button confirm = CreateButton(card, "ConfirmTimeCard", "PLAY TIME CARD", CardstockConfirm, CardstockPaper, 40,
                 () => ConfirmTimeCard(_pendingAllotment));
             PlaceRow(confirm.GetComponent<RectTransform>(), ref cursor, ActionRowHeight, 0f);
         }
@@ -1203,13 +1223,13 @@ namespace LogiCard.UI
             return button;
         }
 
-        private Slider CreateSlider(RectTransform parent, string name)
+        private Slider CreateSlider(RectTransform parent, string name, Color track, Color fillColor, Color handleColor)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Slider));
             var rt = go.GetComponent<RectTransform>();
             rt.SetParent(parent, false);
 
-            RectTransform background = CreatePanel(rt, "Background", AccentDim, Vector2.zero, Vector2.one);
+            RectTransform background = CreatePanel(rt, "Background", track, Vector2.zero, Vector2.one);
 
             var fillArea = new GameObject("Fill Area", typeof(RectTransform)).GetComponent<RectTransform>();
             fillArea.SetParent(rt, false);
@@ -1218,7 +1238,7 @@ namespace LogiCard.UI
             fillArea.offsetMin = new Vector2(0f, 0f);
             fillArea.offsetMax = new Vector2(0f, 0f);
 
-            RectTransform fill = CreatePanel(fillArea, "Fill", Accent, Vector2.zero, Vector2.one);
+            RectTransform fill = CreatePanel(fillArea, "Fill", fillColor, Vector2.zero, Vector2.one);
 
             var handleArea = new GameObject("Handle Slide Area", typeof(RectTransform)).GetComponent<RectTransform>();
             handleArea.SetParent(rt, false);
@@ -1227,7 +1247,7 @@ namespace LogiCard.UI
             handleArea.offsetMin = new Vector2(20f, 0f);
             handleArea.offsetMax = new Vector2(-20f, 0f);
 
-            RectTransform handle = CreatePanel(handleArea, "Handle", Ink, Vector2.zero, Vector2.one);
+            RectTransform handle = CreatePanel(handleArea, "Handle", handleColor, Vector2.zero, Vector2.one);
             handle.sizeDelta = new Vector2(40f, 0f);
 
             var slider = go.GetComponent<Slider>();
