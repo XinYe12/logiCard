@@ -1,6 +1,6 @@
 # Draft Handoff — 2026-08-07
 
-**Schedule:** M2.5 continuous pivot + Day 8 URP done; Phase 6 human gate cleared. **Day 9 is DONE and accepted** (2026-08-07). **Day 10 (clay motion + physical VFX) is fully wired and committed** (`a57d095`) — stepped playback, the muzzle-flash/wound-splat views, and their wiring into `RoundPlayback`'s tape-event loop are all on `master`; still needs a human Editor look before ticking SCHEDULE. **Day 11 audio is fully wired too** (`04f9191`, 2026-08-07) — `FoleyPlayer.Play()` now fires on Footstep/Shot (`RoundPlayback`) and Time Card/Lock In (`ProgramHud`); still needs a human ear-check before ticking SCHEDULE. **Day 14 ship case-study draft + capture checklist landed** (`950ff63`). **Multi-agent Parallel Ops is live** — see `docs/PARALLEL_OPS.md` + `docs/departments/INDEX.md` before starting any concurrent session.
+**Schedule:** M2.5 continuous pivot + Day 8 URP done; Phase 6 human gate cleared. **Day 9 is DONE and accepted** (2026-08-07). **Day 10 (clay motion + physical VFX) is fully wired and committed** (`a57d095`) — stepped playback, the muzzle-flash/wound-splat views, and their wiring into `RoundPlayback`'s tape-event loop are all on `master`; still needs a human Editor look before ticking SCHEDULE. **Day 11 audio is fully wired too** (`04f9191`, 2026-08-07) — `FoleyPlayer.Play()` now fires on Footstep/Shot (`RoundPlayback`) and Time Card/Lock In (`ProgramHud`); still needs a human ear-check before ticking SCHEDULE. **Day 14 ship case-study draft + capture checklist landed** (`950ff63`). **Multi-agent Parallel Ops is live** — see `docs/PARALLEL_OPS.md` + `docs/departments/INDEX.md` before starting any concurrent session. **Wave 3 (Days 12–14) plan is written up in `PARALLEL_OPS.md`'s "Wave 3 kickoff" section and `docs/DAY13_PLAYTEST_FINDINGS.md`** — read those before spawning agents for what's next.
 
 **Day 12 Windows candidate — attempted, cancelled in favor of building on Windows directly (2026-08-07):** tried a batchmode `-buildTarget Win64` build from this Mac (Unity has no native Windows machine here, so this meant installing the Windows Build Support (Mono) module via Unity Hub CLI first, then building from a disposable worktree). Compiled clean, but the actual build ran 40+ minutes without finishing — likely a cold `Library/` cache in the fresh worktree stacked with a first-time platform switch, plus the project's unrelated Sentis package dependency (538 log mentions, not used by any gameplay code — same "Sentis analytics churn" already flagged on `ProjectSettings.asset` elsewhere in this doc) adding real overhead, plus dozens of failed license/telemetry network calls retrying. User (**has a real Windows machine**) called it and will build there directly instead — much simpler than fighting a cross-compile from Mac. Build stopped, disposable worktree removed, the one-off `BuildScript.cs` batchmode entry point deleted (unneeded once building natively). **If Day 12 comes up again on a Mac-only setup:** the Windows Build Support module *is* now installed on this machine's Unity (`6000.5.5f1`) if that helps, but consider first checking whether Sentis is actually needed in this project — it wasn't traced to any gameplay code and may be safe to remove, which would likely fix build time on its own.
 
@@ -93,13 +93,19 @@ Ops constitution: `docs/PARALLEL_OPS.md`. Contracts this wave: `docs/contracts/C
 
 - Pawn model visually pokes through wall/closed-door geometry when its logical position sits at/near the wall plane. Cause: the sim tracks pawns as a point with no collider (deliberate — no Physics/Physics2D anywhere in resolve). Doesn't affect hit resolution, pathing, or LoS. User call: defer to a later pawn-model/art pass.
 
-## Tomorrow / next agent
+## Tomorrow / next agent — Wave 3 kickoff
 
-1. Read `docs/departments/INDEX.md` + `docs/contracts/CURRENT.md`. Stepped motion, VFX (wired), Audio (wired), and Ship docs are all on `master` (`2a60abc` is the tip as of this save) — next is a **human Editor look + ear-check** before ticking Day 10/11 on SCHEDULE. No more Core-side implementation queued for this wave.
-2. Windows candidate is happening natively on the user's own Windows machine, outside this repo's Mac-only agent workflow — nothing for an agent to do there unless asked.
-3. Once Days 10/11 are ticked: Wave 3 (Days 13–14) is playtest hotfixes + Ship finalizing README/media with real capture footage, per `PARALLEL_OPS.md`'s wave map.
-4. Don't reopen tracer / radius tuning unless a new playtest finding says so.
-5. Don't restart board/path art polish unprompted.
+**Read `docs/PARALLEL_OPS.md`'s "Wave 3 kickoff" section (bottom of file) before spawning anything** — it's the
+step-by-step for Days 12–14 and the full reasoning, this is just the short version:
+
+1. Read `docs/departments/INDEX.md` + `docs/contracts/CURRENT.md`. Stepped motion, VFX (wired), Audio (wired), and Ship docs are all on `master` (`842ce27` is the tip as of this save). No Core-side implementation queued.
+2. **Gate: human fills in `docs/DAY13_PLAYTEST_FINDINGS.md`** (Editor look + ear-check, repro steps included in that file) before anything else happens. Nothing is safe to hand a fresh worker off a vague verbal note — this project has already eaten real time from that kind of shortcut.
+3. Integrator triages each written finding per that file's key (ship-as-is / quick fix / `/parallel-development` a real fix / defer), then ticks Day 10 + Day 11 on `SCHEDULE.md`.
+4. Windows candidate (Day 12) is happening natively on the user's own Windows machine — **not an agent task**. Once it exists, tick Day 12 and note the build location here.
+5. Day 13 is the same findings-file loop, framed as the "presentation playtest" `SCHEDULE.md`'s cadence rule asks for.
+6. Day 14: once the Windows build + capture footage/screenshots exist, spin a fresh Ship worktree to embed them into `SHIP_README_DRAFT.md` and promote it to root `README.md`.
+7. Don't reopen tracer / radius tuning unless a new playtest finding says so.
+8. Don't restart board/path art polish unprompted.
 
 ## Blockers / notes
 
