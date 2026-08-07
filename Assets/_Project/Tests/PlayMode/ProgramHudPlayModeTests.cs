@@ -217,8 +217,8 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(nextRoundButton.interactable, Is.False);
         }
 
-        [Test]
-        public void PlaybackPlacesThePawnOnItsScheduledPointAtTheArrivalSecond()
+        [UnityTest]
+        public IEnumerator PlaybackPlacesThePawnOnItsScheduledPointAtTheArrivalSecond()
         {
             PlanarPosition destination = SafeMoveDestination;
             float arrival = MoveSeconds(Home, destination);
@@ -233,11 +233,19 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(Vector3.Distance(AttackerPawn.transform.position, BoardVisual.WorldFromPlanar(Home)),
                 Is.LessThan(0.0001f), "Pawn does not start on its home point.");
 
+            // Committing a path forces one exact apply at t=0; wait past PawnView's stepped-playback
+            // hold (ART_DIRECTION §2 — pose snaps, not blends) before scrubbing to the mid-segment
+            // instant below, or it would read back that stale t=0 pose instead.
+            yield return WaitForPawnStepRelease();
+
             Clock.SetSeconds(arrival * 0.5f);
             Vector3 midpoint = Vector3.Lerp(
                 BoardVisual.WorldFromPlanar(Home), BoardVisual.WorldFromPlanar(destination), 0.5f);
             Assert.That(Vector3.Distance(AttackerPawn.transform.position, midpoint), Is.LessThan(0.001f),
-                "Playback snaps instead of interpolating across the Time Resource segment.");
+                "Scrubbing to an exact instant (after the stepped-playback hold clears) must show that " +
+                "instant's precise point, not a stale held pose.");
+
+            yield return WaitForPawnStepRelease();
 
             Clock.SetSeconds(arrival);
             Assert.That(Vector3.Distance(AttackerPawn.transform.position, BoardVisual.WorldFromPlanar(destination)),
