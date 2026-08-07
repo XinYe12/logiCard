@@ -24,7 +24,10 @@
 ## Deviations from brief
 
 - Skipped the optional EditMode smoke test: it would require adding a reference to `LogiCard.Audio` in the shared `Assets/_Project/Tests/EditMode/LogiCard.Tests.EditMode.asmdef`, which this dept doesn't own and other in-flight depts also touch — out of scope for a new-files-only slice. `FoleyPlayer`/`IFoleyPlayer` are otherwise unchanged from the frozen contract.
-- No Unity Editor/batchmode run performed in this session (no Unity install available here) — compile correctness verified by reading against existing `LogiCard.Board`/`LogiCard.Sim` code style only. **Flag for Integrator/Verify:** please batchmode-compile this worktree before merge.
+
+## Verified
+
+- Batchmode EditMode run on this worktree path (`/Users/xuxinye/Documents/projects/Game/logiCard-day11-audio`), 2026-08-07: clean compile (0 `error CS` lines in the run log), 102/102 EditMode tests passed, 0 failed. No blocker for Integrator merge.
 
 ## In progress
 
