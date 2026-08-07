@@ -111,7 +111,12 @@ namespace LogiCard.Board
                 }
 
                 const int size = 64;
-                var tex = new Texture2D(size, size, TextureFormat.R8, false, true)
+                // RGB24, not R8: R8 only physically stores the red channel — even with matching
+                // R=G=B pixel values, green/blue silently drop on upload, so every tinted material's
+                // BaseMap sample comes back (r, 0, 0, 1) and crushes the whole scene toward red
+                // (playtest 2026-08-07: board/walls/pawns went red, only things bypassing this
+                // factory — the solid-color camera background — stayed correct).
+                var tex = new Texture2D(size, size, TextureFormat.RGB24, false, true)
                 {
                     name = "ClayGrain",
                     wrapMode = TextureWrapMode.Repeat,
