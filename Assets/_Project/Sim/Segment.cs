@@ -93,6 +93,41 @@ namespace LogiCard.Sim
             return ((apx * abx) + (apy * aby)) / lengthSq;
         }
 
+        /// <summary>
+        /// Standard line-line intersection (cross-product form). Used where <see cref="Intersects"/>'s
+        /// yes/no isn't enough and the actual crossing point is needed (e.g. truncating a shot tracer
+        /// at the wall it hit). Parallel/collinear segments report no unique point even if they
+        /// overlap — callers that only need the boolean should keep using <see cref="Intersects"/>.
+        /// </summary>
+        public bool TryGetIntersection(Segment other, out PlanarPosition point)
+        {
+            float rx = B.X - A.X;
+            float ry = B.Y - A.Y;
+            float sx = other.B.X - other.A.X;
+            float sy = other.B.Y - other.A.Y;
+
+            float rxs = (rx * sy) - (ry * sx);
+            if (Math.Abs(rxs) <= Epsilon)
+            {
+                point = default;
+                return false;
+            }
+
+            float qpx = other.A.X - A.X;
+            float qpy = other.A.Y - A.Y;
+            float t = ((qpx * sy) - (qpy * sx)) / rxs;
+            float u = ((qpx * ry) - (qpy * rx)) / rxs;
+
+            if (t < -Epsilon || t > 1f + Epsilon || u < -Epsilon || u > 1f + Epsilon)
+            {
+                point = default;
+                return false;
+            }
+
+            point = new PlanarPosition(A.X + (t * rx), A.Y + (t * ry), A.Floor);
+            return true;
+        }
+
         public override string ToString()
         {
             return $"[{A} -> {B}]";

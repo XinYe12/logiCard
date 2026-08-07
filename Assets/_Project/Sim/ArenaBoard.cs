@@ -155,6 +155,55 @@ namespace LogiCard.Sim
         }
 
         /// <summary>
+        /// Nearest point along <paramref name="probe"/> (from <c>probe.A</c>) where a wall or
+        /// currently-closed door crosses it — for truncating a shot tracer at the obstacle instead of
+        /// drawing it straight through (playtest 2026-08-07: bullets visually passed through walls
+        /// even though <see cref="IsBlocking"/> already denied the hit). Not used for hit resolution;
+        /// <see cref="IsBlocking"/> stays the source of truth there.
+        /// </summary>
+        public bool TryGetNearestBlockPoint(Segment probe, out PlanarPosition point)
+        {
+            bool found = false;
+            float bestT = float.MaxValue;
+            point = default;
+
+            for (int i = 0; i < walls.Count; i++)
+            {
+                if (probe.TryGetIntersection(walls[i], out PlanarPosition p))
+                {
+                    float t = probe.ProjectParam(p);
+                    if (t < bestT)
+                    {
+                        bestT = t;
+                        point = p;
+                        found = true;
+                    }
+                }
+            }
+
+            for (int i = 0; i < doors.Count; i++)
+            {
+                if (GetDoorState(doors[i]) != DoorState.Closed)
+                {
+                    continue;
+                }
+
+                if (probe.TryGetIntersection(doors[i].Segment, out PlanarPosition p))
+                {
+                    float t = probe.ProjectParam(p);
+                    if (t < bestT)
+                    {
+                        bestT = t;
+                        point = p;
+                        found = true;
+                    }
+                }
+            }
+
+            return found;
+        }
+
+        /// <summary>
         /// Resolve-local scratch copy: only door *state* is snapshotted (walls never move mid-match).
         /// </summary>
         public ArenaBoard Clone()

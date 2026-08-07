@@ -262,7 +262,19 @@ namespace LogiCard.Net
             ArenaBoard board)
         {
             GhostTrack shooter = tracks[shot.ShooterId];
-            events.Add(new TapeEvent(shot.CompleteSeconds, shot.ShooterId, TapeEventType.ShootFire, shot.Aim,
+
+            // Tracer should stop at the wall/closed door it hits, not draw straight through it
+            // (playtest 2026-08-07). Origin matches whichever Resolve* below evaluates LoS from:
+            // Snap fires at CompleteSeconds, Hold Angle fires from where the shooter stood when the
+            // hold window opened.
+            PlanarPosition tracerOrigin = shot.Mode == ShootMode.HoldAngle
+                ? shooter.PositionAt(shot.WindowStartSeconds)
+                : shooter.PositionAt(shot.CompleteSeconds);
+            PlanarPosition tracerEnd = board.TryGetNearestBlockPoint(new Segment(tracerOrigin, shot.Aim), out PlanarPosition blockPoint)
+                ? blockPoint
+                : shot.Aim;
+
+            events.Add(new TapeEvent(shot.CompleteSeconds, shot.ShooterId, TapeEventType.ShootFire, tracerEnd,
                 windowStartSeconds: shot.WindowStartSeconds));
 
             if (shot.Mode == ShootMode.HoldAngle)
