@@ -2,6 +2,8 @@
 
 **Schedule:** M2.5 continuous pivot + Day 8 URP done; Phase 6 human gate cleared. **Day 9 is DONE and accepted** (2026-08-07). **Day 10 (clay motion + physical VFX) is fully wired and committed** (`a57d095`) — stepped playback, the muzzle-flash/wound-splat views, and their wiring into `RoundPlayback`'s tape-event loop are all on `master`; still needs a human Editor look before ticking SCHEDULE. **Day 11 audio is fully wired too** (`04f9191`, 2026-08-07) — `FoleyPlayer.Play()` now fires on Footstep/Shot (`RoundPlayback`) and Time Card/Lock In (`ProgramHud`); still needs a human ear-check before ticking SCHEDULE. **Day 14 ship case-study draft + capture checklist landed** (`950ff63`). **Multi-agent Parallel Ops is live** — see `docs/PARALLEL_OPS.md` + `docs/departments/INDEX.md` before starting any concurrent session.
 
+**Day 12 Windows candidate — attempted, cancelled in favor of building on Windows directly (2026-08-07):** tried a batchmode `-buildTarget Win64` build from this Mac (Unity has no native Windows machine here, so this meant installing the Windows Build Support (Mono) module via Unity Hub CLI first, then building from a disposable worktree). Compiled clean, but the actual build ran 40+ minutes without finishing — likely a cold `Library/` cache in the fresh worktree stacked with a first-time platform switch, plus the project's unrelated Sentis package dependency (538 log mentions, not used by any gameplay code — same "Sentis analytics churn" already flagged on `ProjectSettings.asset` elsewhere in this doc) adding real overhead, plus dozens of failed license/telemetry network calls retrying. User (**has a real Windows machine**) called it and will build there directly instead — much simpler than fighting a cross-compile from Mac. Build stopped, disposable worktree removed, the one-off `BuildScript.cs` batchmode entry point deleted (unneeded once building natively). **If Day 12 comes up again on a Mac-only setup:** the Windows Build Support module *is* now installed on this machine's Unity (`6000.5.5f1`) if that helps, but consider first checking whether Sentis is actually needed in this project — it wasn't traced to any gameplay code and may be safe to remove, which would likely fix build time on its own.
+
 **Concurrent-session note (2026-08-07, resolved):** while Core was mid-edit on `RoundPlayback.cs` for VFX wiring, a second Integrator-role session reviewed and merged the Audio stub (`ef6e3f5`) directly into this same `master` working tree, updating `DRAFT_HANDOFF.md`/`contracts/CURRENT.md`/`departments/INDEX.md` concurrently. No file overlap occurred (Audio touched only `Assets/_Project/Audio/**` + its own STATUS.md) and both sessions' doc edits were reconciled by hand. The human confirmed and cancelled that other session afterward — as of this note, this is the only session on `master`. Third instance of the same "two agents, one working tree" risk this doc has now logged; if you're a fresh session, confirm who else might be pointed at this exact path before editing, every time.
 
 **Day 9 sign-off, read this before touching board/path art again:** human accepted the current board/path look **with reservations** — not fully satisfied with the board's visual quality, but explicit that schedule takes priority over further art polish right now ("if that is what we can do in this schedule I am fine with it," said about both the board and the path). This is a **conscious tradeoff, not an oversight** — don't restart art iteration on the board or path without the human raising it again. If Day 10+ work touches rendering and there's slack, revisiting board quality is fair game, but it is not blocking and was not asked for.
@@ -10,13 +12,15 @@
 
 ## Parallel worktrees
 
-| Worktree | Branch | Status |
-|----------|--------|--------|
-| `logiCard-day10-vfx` | `feat/day10-hit-vfx` @ `f2256f6` | **Merged into `master` (`fc32a2d`) and wired (`a57d095`).** `MuzzleFlashView` + `WoundSplatView` reviewed, re-verified alongside stepped motion (EditMode 102/102, PlayMode 29/29), merged clean (no conflicts), then wired into `RoundPlayback`'s tape-event loop. Worktree can be removed once no further Presentation work is expected. STATUS: `docs/departments/presentation/STATUS.md`. |
-| `logiCard-day11-audio` | `feat/day11-audio-stub` @ `5c402db` | **Merged into `master` in two passes** (`ef6e3f5` for `764a42e`, then `7e08aba` for a small follow-up — unused `using` removed, STATUS updated with the dept's own batchmode confirmation). **Now wired** (`04f9191`) — `Play()` fires from `RoundPlayback` (Footstep/Shot) and `ProgramHud` (TimeCard/LockIn). STATUS: `docs/departments/audio/STATUS.md`. |
-| `logiCard-ship-docs` | `feat/ship-docs` @ `fc58db3` | **Landed on `master` (`950ff63`).** Only the three files Ship actually owns were pulled in (`SHIP_README_DRAFT.md`, `CAPTURE_CHECKLIST.md`, `departments/ship/STATUS.md`) — their commit also bundled a stale pre-Day-10 snapshot of the shared docs from when their worktree forked, which was deliberately left out rather than merged over today's current versions. STATUS: `docs/departments/ship/STATUS.md`. |
-| `logiCard-verify-playtest` | `verify/playtest-door-scrub` @ `54b051a` | Parked verify; optional remove. Do not commit from here. |
-| `logiCard-match-over-hud` / `logiCard-day9-yarn` | — | **Removed** (merged or superseded). |
+**All worktrees removed as of this save (2026-08-07)** — every dept slice for this wave delivered and merged; nothing left in flight. Branches still exist locally (nothing force-deleted), just no working-tree checkout:
+
+| Branch | Last commit | Status |
+|--------|-------------|--------|
+| `feat/day10-hit-vfx` | `f2256f6` | **Merged into `master` (`fc32a2d`) and wired (`a57d095`).** `MuzzleFlashView` + `WoundSplatView`, re-verified (EditMode 102/102, PlayMode 29/29), then wired into `RoundPlayback`'s tape-event loop. STATUS: `docs/departments/presentation/STATUS.md`. |
+| `feat/day11-audio-stub` | `5c402db` | **Merged in two passes** (`ef6e3f5`, then `7e08aba`). **Wired** (`04f9191`) — `Play()` fires from `RoundPlayback` (Footstep/Shot) and `ProgramHud` (TimeCard/LockIn). STATUS: `docs/departments/audio/STATUS.md`. |
+| `feat/ship-docs` | `fc58db3` | **Landed on `master` (`950ff63`)** — only the three files Ship owns, not the stale doc snapshot their commit also carried. STATUS: `docs/departments/ship/STATUS.md`. |
+| `verify/playtest-door-scrub` | `54b051a` | Had uncommitted drift on top (door-sync logic that appears superseded by what's already on `master` — matched verbatim). **Stashed, not discarded**, before removing the worktree: `git stash list` from the main tree, recoverable via `git stash pop` if ever needed. Never committed here; nothing lost either way. |
+| `logiCard-match-over-hud` / `logiCard-day9-yarn` | — | Already removed in an earlier session (merged or superseded). |
 
 Ops constitution: `docs/PARALLEL_OPS.md`. Contracts this wave: `docs/contracts/CURRENT.md`.
 
@@ -81,8 +85,9 @@ Ops constitution: `docs/PARALLEL_OPS.md`. Contracts this wave: `docs/contracts/C
 2. ~~**Day 10, parallel half:** VFX report-back, verify, merge, wire.~~ **Done** — merged `fc32a2d`, wired `a57d095` (2026-08-07). **Remaining:** human Editor look before ticking Day 10 on SCHEDULE (flash/splat behavior itself has no automated test coverage — see Verification).
 3. ~~**Day 11 audio stub:** report-back, review, merge, wire.~~ **Done** — merged `ef6e3f5`/`7e08aba`, wired `04f9191` (2026-08-07). **Remaining:** human ear-check before ticking Day 11 on SCHEDULE.
 4. ~~**Ship docs:** drafts seeded on `feat/ship-docs`.~~ **Done, landed** (`950ff63`, 2026-08-07). Still DRAFT pending human capture + Windows candidate (expected — not a blocker for anything else).
-5. Optional cleanup: remove parked `logiCard-verify-playtest`, and the now-fully-delivered `logiCard-day10-vfx` / `logiCard-day11-audio` / `logiCard-ship-docs` worktrees if no further work is expected from those depts.
-6. Optional, not requested: board visual polish — see Day 9 sign-off before touching unprompted.
+5. ~~Optional cleanup: remove parked/delivered worktrees.~~ **Done** (2026-08-07) — all four removed; branches intact. `logiCard-verify-playtest`'s uncommitted drift stashed first, not discarded (see Parallel worktrees table).
+6. **Day 12 Windows candidate:** attempted from this Mac, cancelled — user is building natively on their own Windows machine instead. See the note near the top of this doc for why the Mac attempt was slow.
+7. Optional, not requested: board visual polish — see Day 9 sign-off before touching unprompted.
 
 ## Known issues (deferred, cosmetic — not a gate)
 
@@ -90,10 +95,11 @@ Ops constitution: `docs/PARALLEL_OPS.md`. Contracts this wave: `docs/contracts/C
 
 ## Tomorrow / next agent
 
-1. Read `docs/departments/INDEX.md` + `docs/contracts/CURRENT.md`. Stepped motion, VFX (wired), Audio (wired), and Ship docs are all on `master` (`04f9191` is the tip as of this note) — next is a **human Editor look + ear-check** before ticking Day 10/11 on SCHEDULE. No more Core-side implementation queued for this wave.
-2. Once Days 10/11 are ticked: Wave 3 (Days 12–14) is Windows candidate + playtest hotfixes + Ship finalizing README/media with real capture footage, per `PARALLEL_OPS.md`'s wave map.
-3. Don't reopen tracer / radius tuning unless a new playtest finding says so.
-4. Don't restart board/path art polish unprompted.
+1. Read `docs/departments/INDEX.md` + `docs/contracts/CURRENT.md`. Stepped motion, VFX (wired), Audio (wired), and Ship docs are all on `master` (`2a60abc` is the tip as of this save) — next is a **human Editor look + ear-check** before ticking Day 10/11 on SCHEDULE. No more Core-side implementation queued for this wave.
+2. Windows candidate is happening natively on the user's own Windows machine, outside this repo's Mac-only agent workflow — nothing for an agent to do there unless asked.
+3. Once Days 10/11 are ticked: Wave 3 (Days 13–14) is playtest hotfixes + Ship finalizing README/media with real capture footage, per `PARALLEL_OPS.md`'s wave map.
+4. Don't reopen tracer / radius tuning unless a new playtest finding says so.
+5. Don't restart board/path art polish unprompted.
 
 ## Blockers / notes
 

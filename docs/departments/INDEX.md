@@ -11,15 +11,15 @@ Integrator + up to **2** coding workers. Current coding fill: **0/2** — Presen
 
 ## Active agents / worktrees
 
-All four dept slices for this wave are delivered and merged into `master`. Nothing is currently in-flight.
+All four dept slices for this wave are delivered and merged into `master`. Nothing is currently in-flight, and **all worker/verify worktrees have been removed** (2026-08-07) — branches still exist, just no working-tree checkout. Recreate with `git worktree add` per `../PARALLEL_OPS.md` if a new wave needs them.
 
-| Dept | Branch | Worktree path | Status file | Notes |
-|------|--------|---------------|-------------|-------|
-| **Core / Integrator** | `master` @ `04f9191` | `/Users/xuxinye/Documents/projects/Game/LogiCard` | [core/STATUS.md](core/STATUS.md) | Stepped motion, VFX (merged+wired), Audio (merged+wired), Ship docs — all committed. Nothing queued; waiting on human Editor look + ear-check before ticking Day 10/11 on SCHEDULE |
-| **Presentation** | `feat/day10-hit-vfx` @ `f2256f6` — **merged + wired into master** | `/Users/xuxinye/Documents/projects/Game/logiCard-day10-vfx` | [presentation/STATUS.md](presentation/STATUS.md) | `MuzzleFlashView` + `WoundSplatView` landed on master (`fc32a2d`) and are driven by RoundPlayback's tape-event loop (`a57d095`); worktree safe to remove |
-| **Audio** | `feat/day11-audio-stub` @ `5c402db` — **merged + wired into master** | `/Users/xuxinye/Documents/projects/Game/logiCard-day11-audio` | [audio/STATUS.md](audio/STATUS.md) | `FoleyPlayer`/`IFoleyPlayer` landed (`ef6e3f5`, `7e08aba`) and `Play()` now fires from RoundPlayback/ProgramHud (`04f9191`); worktree safe to remove |
-| **Ship** | `feat/ship-docs` @ `fc58db3` — **landed on master** | `/Users/xuxinye/Documents/projects/Game/logiCard-ship-docs` | [ship/STATUS.md](ship/STATUS.md) | README case study + capture checklist landed (`950ff63`); still DRAFT pending human capture + Windows candidate; worktree safe to remove |
-| **Verify** | parked | `/Users/xuxinye/Documents/projects/Game/logiCard-verify-playtest` | — | Optional remove; do not commit from here |
+| Dept | Branch | Status file | Notes |
+|------|--------|--------------|-------|
+| **Core / Integrator** | `master` @ `2a60abc` (main tree, `/Users/xuxinye/Documents/projects/Game/LogiCard`) | [core/STATUS.md](core/STATUS.md) | Stepped motion, VFX (merged+wired), Audio (merged+wired), Ship docs — all committed. Nothing queued; waiting on human Editor look + ear-check before ticking Day 10/11 on SCHEDULE |
+| **Presentation** | `feat/day10-hit-vfx` @ `f2256f6` — merged + wired | [presentation/STATUS.md](presentation/STATUS.md) | `MuzzleFlashView` + `WoundSplatView` landed on master (`fc32a2d`), driven by RoundPlayback's tape-event loop (`a57d095`) |
+| **Audio** | `feat/day11-audio-stub` @ `5c402db` — merged + wired | [audio/STATUS.md](audio/STATUS.md) | `FoleyPlayer`/`IFoleyPlayer` landed (`ef6e3f5`, `7e08aba`), `Play()` fires from RoundPlayback/ProgramHud (`04f9191`) |
+| **Ship** | `feat/ship-docs` @ `fc58db3` — landed | [ship/STATUS.md](ship/STATUS.md) | README case study + capture checklist landed (`950ff63`); still DRAFT pending human capture + Windows candidate (now happening on the user's own Windows machine, not this repo's agent workflow) |
+| **Verify** | `verify/playtest-door-scrub` @ `54b051a` — parked, worktree removed | — | Had uncommitted drift; stashed (not discarded) before removal — see `DRAFT_HANDOFF.md` |
 
 ## Ownership matrix (write locks)
 

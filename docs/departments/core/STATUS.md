@@ -1,7 +1,7 @@
 # Core / Integrator — STATUS
 
 **Wave / Day:** Wave 1 + Wave 2 — Day 10 and Day 11 both fully wired and committed  
-**Branch / worktree:** `master` @ `04f9191` — `/Users/xuxinye/Documents/projects/Game/LogiCard`  
+**Branch / worktree:** `master` @ `2a60abc` — `/Users/xuxinye/Documents/projects/Game/LogiCard`  
 **Last cross-reviewed:** 2026-08-07 — presentation/STATUS (report-back `f2256f6` reviewed, merged, wired), audio/STATUS (report-back `764a42e`+`5c402db` reviewed, merged in two passes, wired), ship/STATUS (report-back `fc58db3` reviewed, three owned files landed)
 
 ## Owned files (this wave)
@@ -27,10 +27,12 @@
 - **Audio Wave 1 follow-up merged** (`7e08aba`): small cleanup commit from Audio (`5c402db` — dropped unused `using`, STATUS update with their own batchmode confirmation). No functional change; safe fast merge.
 - **Ship docs landed** (`950ff63`): pulled only the three files Ship actually owns (`SHIP_README_DRAFT.md`, `CAPTURE_CHECKLIST.md`, `departments/ship/STATUS.md`) out of `fc58db3` rather than merging the branch — that commit also carried a stale pre-Day-10 snapshot of the shared docs from when their worktree forked at `a5c276a`, which would have clobbered today's current versions under a plain merge.
 - **Wave 2: `FoleyPlayer` wired into `RoundPlayback`/`ProgramHud`** (`04f9191`): `GameBootstrap` builds one `FoleyPlayer` and threads it into both `Init` calls as a new optional trailing `IFoleyPlayer` param. `RoundPlayback.Report` (same forward-only, once-per-crossing hook the WOUNDED/DOWN banner already uses) — `MoveArrive` → `Play(Footstep)`, `ShootFire` → `Play(Shot)`. `ProgramHud.OnLockInPressed` → `Play(LockIn)`, `ConfirmTimeCard` → `Play(TimeCard)`. Also fixed a real gap found while wiring: the scripted camera never got an `AudioListener` (only auto-added via the Editor's "GameObject > Camera" menu, which this project's code-built camera never goes through) — without it, every `Play()` call would have been a silent no-op past a console warning. `LogiCard.UI.asmdef`/`LogiCard.Boot.asmdef` gained an explicit `LogiCard.Audio` reference. Verified against `master` at `7e08aba` in a disposable worktree: **EditMode 102/102, PlayMode 29/29**, no exceptions, no "no audio listener" warnings in the log.
+- **Windows candidate attempted, cancelled** (2026-08-07): installed Windows Build Support (Mono) via Unity Hub CLI, wrote a one-off batchmode build script, kicked off a `-buildTarget Win64` build in a disposable worktree. Compiled clean but ran 40+ minutes without finishing — cold `Library/` cache + first platform switch, plus the project's Sentis package dependency (538 log mentions, not traced to any gameplay code) adding real overhead, plus repeated failed license/telemetry network calls. User has a real Windows machine and will build there directly instead. Build stopped, worktree removed, the one-off script deleted. Doc'd in `DRAFT_HANDOFF.md` in case Day 12 ever needs a Mac-side build again — the module stays installed either way, and Sentis is worth a look as a possible actual fix.
+- **Session cleanup** (2026-08-07): removed all worker/verify worktrees now that every branch is merged (`feat/day10-hit-vfx`, `feat/day11-audio-stub`, `feat/ship-docs`, `verify/playtest-door-scrub`) — branches untouched, just no working-tree checkout. `verify/playtest-door-scrub` had real uncommitted drift (door-sync logic matching what's already on `master` verbatim, likely a stale duplicate); stashed rather than discarded before removal, recoverable via `git stash list`/`pop`.
 
 ## In progress
 
-- Nothing. All four dept slices for Wave 1 + Wave 2 are delivered, merged, and wired.
+- Nothing. All four dept slices for Wave 1 + Wave 2 are delivered, merged, and wired. Worktrees cleaned up.
 
 ## Blocked
 
@@ -39,7 +41,7 @@
 
 ## Depends on
 
-- Nothing outstanding. Next Core work is Wave 3 (Days 12–14: Windows candidate + playtest hotfixes) once the human sign-offs above land, or any playtest finding that reopens something.
+- Nothing outstanding. Next Core work is Wave 3 (Days 13–14: playtest hotfixes + Ship media) once the human sign-offs above land, or any playtest finding that reopens something. Windows candidate is happening on the user's own Windows machine, outside this repo's agent workflow.
 
 ## Offers
 
