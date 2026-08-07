@@ -1,6 +1,6 @@
 # Draft Handoff — 2026-08-07
 
-**Schedule:** M2.5 continuous pivot + Day 8 URP done; Phase 6 human gate cleared. **Day 9 is DONE** — board/UI identity landed on `master`, went through a full feedback loop (too plain/dull → lighting fix → path redesigned to an ink line → red-tint bug found and fixed by the first real in-Editor look), and got human sign-off 2026-08-07. `master` is at `727ebd4` (game code) / `d48fdc6` (docs). The match-over HUD fix is merged in too.
+**Schedule:** M2.5 continuous pivot + Day 8 URP done; Phase 6 human gate cleared. **Day 9 is DONE and accepted** (2026-08-07) — board/UI identity landed on `master`, went through a full feedback loop (too plain/dull → lighting fix → path redesigned to an ink line → red-tint bug found and fixed by the first real in-Editor look), got human sign-off, SCHEDULE ticked. `master` is at `08112e1`. **Day 10 (clay motion + physical VFX) is now in progress**, split across two workers: main (this session, on `master`) is doing stepped 8–12fps playback motion plus wiring hit-VFX into the playback loop; a parallel agent in `logiCard-day10-vfx` is building the two new VFX view components (muzzle flash, wound splat) main will wire in. Neither side has landed anything for Day 10 yet as of this draft.
 
 **Day 9 sign-off, read this before touching board/path art again:** human accepted the current board/path look **with reservations** — not fully satisfied with the board's visual quality, but explicit that schedule takes priority over further art polish right now ("if that is what we can do in this schedule I am fine with it," said about both the board and the path). This is a **conscious tradeoff, not an oversight** — don't restart art iteration on the board or path without the human raising it again. If Day 10+ work touches rendering and there's slack, revisiting board quality is fair game, but it is not blocking and was not asked for.
 
@@ -10,11 +10,12 @@
 
 | Worktree | Branch | Status |
 |----------|--------|--------|
+| `logiCard-day10-vfx` | `feat/day10-hit-vfx` @ `08112e1` | **New, in progress.** Brief at `DAY10_HIT_VFX_AGENT_BRIEF.md` in that worktree. Building `Assets/_Project/Board/MuzzleFlashView.cs` + `WoundSplatView.cs` — two new, self-contained view components (`Init`/`Place`/`SetVisible`, matching the existing `ShotTracerView.cs` pattern). Does **not** touch `PawnView.cs`/`RoundPlayback.cs`/`GameBootstrap.cs` — main wires those in afterward. Not merged; check `git log --oneline master..feat/day10-hit-vfx` in the main tree to see if it's reported back yet. |
 | `logiCard-match-over-hud` | — | **Merged and removed.** Fixed the stale “R3 · ATTACKER PICKS” header and duplicate “MATCH OVER” button text. Now part of `master` (`0ad1991`). |
 | `logiCard-day9-yarn` | — | **Deleted** (superseded — Day 9 landed on `master` directly instead). |
 | `logiCard-verify-playtest` | `verify/playtest-door-scrub` @ `54b051a` | Still parked from an earlier verify run; optional remove. |
 
-Only `logiCard-verify-playtest` remains as a leftover worktree. Every disposable `logiCard-verify-*` worktree from this session was created and removed within the same session — none should exist right now; if you see one, it's stale and safe to remove.
+Every disposable `logiCard-verify-*` worktree from earlier today was created and removed within the same session — none should exist right now; if you see one, it's stale and safe to remove. `logiCard-day10-vfx` is the one active in-flight worktree.
 
 ## Implemented
 
@@ -58,8 +59,10 @@ Only `logiCard-verify-playtest` remains as a leftover worktree. Every disposable
 
 ## Still unfinished
 
-1. Optional cleanup: remove parked `logiCard-verify-playtest`.
-2. Optional, not requested: board visual polish beyond the current floor, if slack appears later — see the Day 9 sign-off note above before touching this unprompted.
+1. **Day 10, main's half:** stepped 8–12fps playback motion (`PawnView.cs` — quantize the sampled Time Resource second so poses snap instead of interpolate smoothly, per ART_DIRECTION §2). Not started yet as of this draft.
+2. **Day 10, parallel half:** waiting on `logiCard-day10-vfx` to report back (`MuzzleFlashView.cs` + `WoundSplatView.cs`). Once it does: review, verify (disposable worktree, same pattern as every other verify this session), merge into `master` (your call, not an agent's), then wire both components into `RoundPlayback`'s tape-event loop (`ShootFire` → muzzle flash briefly; `Wounded`/`Killed` → wound splat persists) the same way `BuildTracers`/`UpdateTracers` already drive `ShotTracerView`.
+3. Optional cleanup: remove parked `logiCard-verify-playtest`.
+4. Optional, not requested: board visual polish beyond the current floor, if slack appears later — see the Day 9 sign-off note above before touching this unprompted.
 
 ## Known issues (deferred, cosmetic — not a gate)
 
@@ -67,9 +70,10 @@ Only `logiCard-verify-playtest` remains as a leftover worktree. Every disposable
 
 ## Tomorrow / next agent
 
-1. **Day 9 is accepted — start Day 10** — clay motion + physical VFX (stepped playback, muzzle flash, wound splat).
-2. Don't reopen tracer truncation / `HitRadius` / `LaneHalfWidth` / `InteractRadius` tuning unless a new playtest finding says so — that's settled.
-3. Don't restart board/path art polish unprompted — see the Day 9 sign-off note at the top of this doc.
+1. Check `logiCard-day10-vfx` for a report-back, and implement stepped-motion playback on `master` (see "Still unfinished" above for both halves).
+2. Once both land: merge the VFX branch, wire it in, verify the full suite, then tick SCHEDULE Day 10 with a human look (screenshots or live Editor) — same pattern as Day 9: tests passing is not the same as it looking right.
+3. Don't reopen tracer truncation / `HitRadius` / `LaneHalfWidth` / `InteractRadius` tuning unless a new playtest finding says so — that's settled.
+4. Don't restart board/path art polish unprompted — see the Day 9 sign-off note at the top of this doc.
 
 ## Blockers / notes
 
