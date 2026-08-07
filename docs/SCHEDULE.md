@@ -88,16 +88,16 @@ If behind: **freeze at last green milestone**; do not start the next. Cut order:
 - [x] Day 2 — grid + clock + phases  
 - [x] Day 3 — Program Move/Shoot + local payload  
 - [x] Day 3b — Match pool / Time Card lifecycle (**C33**)  
-- [ ] Day 4 — **M1 Slice 1** (cold observer; no new breadth)  
-- [ ] Day 5 — path + stance  
-- [ ] Day 6 — Snap vs Hold Angle  
-- [ ] Day 7 — **M2** one door + local E2E  
-- [ ] Day 7b — continuous pivot Phase 1 (geometry primitives)  
-- [ ] Day 7c — continuous pivot Phase 2 (Sim/Net retarget)  
-- [ ] Day 7d — continuous pivot Phase 3 (PawnProgram retarget)  
-- [ ] Day 7e–7f — continuous pivot Phase 4 (Unity views, whole-project-green)  
-- [ ] Day 7g — **M2.5** continuous pivot Phase 5–6 (HUD/tests, tuning)  
-- [ ] Day 8 — URP + diorama lighting foundation (compressed scope)  
+- [x] Day 4 — **M1 Slice 1** (cold observer; no new breadth)  
+- [x] Day 5 — path + stance  
+- [x] Day 6 — Snap vs Hold Angle  
+- [x] Day 7 — **M2** one door + local E2E  
+- [x] Day 7b — continuous pivot Phase 1 (geometry primitives)  
+- [x] Day 7c — continuous pivot Phase 2 (Sim/Net retarget)  
+- [x] Day 7d — continuous pivot Phase 3 (PawnProgram retarget)  
+- [x] Day 7e–7f — continuous pivot Phase 4 (Unity views, whole-project-green)  
+- [x] Day 7g — **M2.5** continuous pivot Phase 5–6 (HUD/tests, tuning) — Phase 6 human call landed 2026-08-07 (see `DRAFT_HANDOFF.md`)  
+- [x] Day 8 — URP + diorama lighting foundation (compressed scope)  
 - [ ] Day 9 — board/UI identity (yarn, Time Card)  
 - [ ] Day 10 — clay motion + physical VFX  
 - [ ] Day 11 — audio + feedback  
