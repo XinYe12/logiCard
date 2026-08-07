@@ -18,11 +18,20 @@ namespace LogiCard.Boot
         /// <summary>How long a tracer stays lit after its shot, in Time Resource seconds.</summary>
         private const float TracerVisibleSeconds = 2.5f;
 
+        /// <summary>
+        /// How long a muzzle flash stays lit, in Time Resource seconds (ART_DIRECTION §3: "2 frames,
+        /// then gone"). Short and fixed rather than converted from real playback fps — RoundPlayback
+        /// only ever deals in Time Resource seconds (C27), never real/engine frames.
+        /// </summary>
+        private const float MuzzleFlashVisibleSeconds = 0.15f;
+
         private static readonly Color TracerColor = new Color(1f, 0.85f, 0.45f, 1f);
 
         private readonly List<PawnEntry> _pawns = new List<PawnEntry>();
         private readonly List<GhostInput> _inputs = new List<GhostInput>();
         private readonly List<TracerEntry> _tracers = new List<TracerEntry>();
+        private readonly List<MuzzleFlashEntry> _muzzleFlashes = new List<MuzzleFlashEntry>();
+        private readonly List<WoundSplatEntry> _woundSplats = new List<WoundSplatEntry>();
         private readonly Dictionary<Door, DoorState> _doorStateAtArm = new Dictionary<Door, DoorState>();
 
         private BoardView _board;
@@ -121,6 +130,7 @@ namespace LogiCard.Boot
             }
 
             BuildTracers();
+            BuildHitVfx();
             SnapshotDoorStatesAtArm();
 
             Debug.Log($"[logiCard] Ghost resolve: {_tape.Events.Count} event(s), " +
@@ -239,6 +249,7 @@ namespace LogiCard.Boot
             _eventCursor = 0;
             _lastAppliedSeconds = 0f;
             ClearTracers();
+            ClearHitVfx();
             OutcomeReported?.Invoke(string.Empty);
 
             for (int i = 0; i < _pawns.Count; i++)
@@ -275,6 +286,7 @@ namespace LogiCard.Boot
             }
 
             UpdateTracers(seconds);
+            UpdateHitVfx(seconds);
             SyncDoorsToSeconds(seconds);
 
             if (seconds < _lastAppliedSeconds)
@@ -392,6 +404,104 @@ namespace LogiCard.Boot
             _tracers.Clear();
         }
 
+        /// <summary>
+        /// Muzzle flash on <see cref="TapeEventType.ShootFire"/>, wound splat on
+        /// <see cref="TapeEventType.Wounded"/>/<see cref="TapeEventType.Killed"/> — same
+        /// build-once-at-arm pattern as <see cref="BuildTracers"/>.
+        /// </summary>
+        private void BuildHitVfx()
+        {
+            ClearHitVfx();
+
+            foreach (TapeEvent tapeEvent in _tape.Events)
+            {
+                switch (tapeEvent.Type)
+                {
+                    case TapeEventType.ShootFire:
+                        BuildMuzzleFlash(tapeEvent);
+                        break;
+                    case TapeEventType.Wounded:
+                    case TapeEventType.Killed:
+                        BuildWoundSplat(tapeEvent);
+                        break;
+                }
+            }
+        }
+
+        private void BuildMuzzleFlash(TapeEvent tapeEvent)
+        {
+            if (!_tape.Tracks.TryGetValue(tapeEvent.PawnId, out ScheduledPath shooter))
+            {
+                return;
+            }
+
+            var go = new GameObject($"MuzzleFlash_{tapeEvent.PawnId}_{tapeEvent.Seconds:0.00}");
+            go.transform.SetParent(transform, false);
+            var flash = go.AddComponent<MuzzleFlashView>();
+            flash.Init();
+            // Shooter's position at the completion instant (when the shot actually fires), not the
+            // aim-in/hold window start the tracer uses — the flash is the muzzle igniting, not the beam.
+            flash.Place(
+                _board.WorldFromPlanar(shooter.Evaluate(tapeEvent.Seconds)),
+                _board.WorldFromPlanar(tapeEvent.Position));
+
+            _muzzleFlashes.Add(new MuzzleFlashEntry(tapeEvent.Seconds, flash));
+        }
+
+        private void BuildWoundSplat(TapeEvent tapeEvent)
+        {
+            var go = new GameObject($"WoundSplat_{tapeEvent.TargetPawnId}_{tapeEvent.Seconds:0.00}");
+            go.transform.SetParent(transform, false);
+            var splat = go.AddComponent<WoundSplatView>();
+            splat.Init();
+            // Position is the victim's position for a hit event (TapeEvent doc comment) — no track
+            // lookup needed, unlike the shooter-origin case above.
+            splat.Place(_board.WorldFromPlanar(tapeEvent.Position));
+
+            _woundSplats.Add(new WoundSplatEntry(tapeEvent.Seconds, splat));
+        }
+
+        private void UpdateHitVfx(float seconds)
+        {
+            for (int i = 0; i < _muzzleFlashes.Count; i++)
+            {
+                MuzzleFlashEntry flash = _muzzleFlashes[i];
+                bool lit = seconds >= flash.Seconds && seconds <= flash.Seconds + MuzzleFlashVisibleSeconds;
+                flash.View.SetVisible(lit);
+            }
+
+            for (int i = 0; i < _woundSplats.Count; i++)
+            {
+                WoundSplatEntry splat = _woundSplats[i];
+                // Persistent once shown (ART_DIRECTION §3) — visible once the scrubber has passed the
+                // hit, hidden again on rewind past it, same rule the tracer/banner logic already uses.
+                splat.View.SetVisible(seconds >= splat.Seconds);
+            }
+        }
+
+        private void ClearHitVfx()
+        {
+            for (int i = 0; i < _muzzleFlashes.Count; i++)
+            {
+                if (_muzzleFlashes[i].View != null)
+                {
+                    Destroy(_muzzleFlashes[i].View.gameObject);
+                }
+            }
+
+            _muzzleFlashes.Clear();
+
+            for (int i = 0; i < _woundSplats.Count; i++)
+            {
+                if (_woundSplats[i].View != null)
+                {
+                    Destroy(_woundSplats[i].View.gameObject);
+                }
+            }
+
+            _woundSplats.Clear();
+        }
+
         private struct PawnEntry
         {
             private readonly Func<TimelinePayload> _payloadSource;
@@ -431,6 +541,32 @@ namespace LogiCard.Boot
             {
                 WindowStartSeconds = windowStartSeconds;
                 CompleteSeconds = completeSeconds;
+                View = view;
+            }
+        }
+
+        private readonly struct MuzzleFlashEntry
+        {
+            public float Seconds { get; }
+
+            public MuzzleFlashView View { get; }
+
+            public MuzzleFlashEntry(float seconds, MuzzleFlashView view)
+            {
+                Seconds = seconds;
+                View = view;
+            }
+        }
+
+        private readonly struct WoundSplatEntry
+        {
+            public float Seconds { get; }
+
+            public WoundSplatView View { get; }
+
+            public WoundSplatEntry(float seconds, WoundSplatView view)
+            {
+                Seconds = seconds;
                 View = view;
             }
         }
