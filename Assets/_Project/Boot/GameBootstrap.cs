@@ -4,6 +4,8 @@ using LogiCard.Sim;
 using LogiCard.Timeline;
 using LogiCard.UI;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace LogiCard.Boot
 {
@@ -265,6 +267,11 @@ namespace LogiCard.Boot
             var rotation = Quaternion.Euler(52f, 0f, 0f);
             cam.transform.rotation = rotation;
             cam.transform.position = _board.CenterWorld - (rotation * Vector3.forward * 14f);
+
+            // Post-processing is off by default per camera (URP) even when the pipeline supports it;
+            // without this the diorama Volume below has nothing to render through (playtest 2026-08-07:
+            // "too plain and dull" — the scene had no shadows, fill light, or grade at all).
+            cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
         }
 
         private void BuildLighting()
@@ -274,13 +281,76 @@ namespace LogiCard.Boot
                 return;
             }
 
-            var lightGo = new GameObject("Desk Lamp");
-            lightGo.transform.SetParent(transform, false);
-            var light = lightGo.AddComponent<Light>();
-            light.type = LightType.Directional;
-            light.color = new Color(1f, 0.95f, 0.85f);
-            light.intensity = 1.1f;
-            light.transform.rotation = Quaternion.Euler(50f, -35f, 0f);
+            // Desk-lamp key: warm, angled, casts the soft contact shadows a flat single light can't.
+            var keyGo = new GameObject("Desk Lamp Key");
+            keyGo.transform.SetParent(transform, false);
+            var key = keyGo.AddComponent<Light>();
+            key.type = LightType.Directional;
+            key.color = new Color(1f, 0.92f, 0.78f);
+            key.intensity = 1.35f;
+            key.shadows = LightShadows.Soft;
+            key.shadowStrength = 0.75f;
+            key.transform.rotation = Quaternion.Euler(55f, -35f, 0f);
+
+            // Cool, dim fill so the key's shadows read as shape, not pure black (ART_DIRECTION §6:
+            // "warm key, soft fill"). No shadows of its own — a second shadow direction would just
+            // muddy the read.
+            var fillGo = new GameObject("Soft Fill");
+            fillGo.transform.SetParent(transform, false);
+            var fill = fillGo.AddComponent<Light>();
+            fill.type = LightType.Directional;
+            fill.color = new Color(0.72f, 0.80f, 0.95f);
+            fill.intensity = 0.35f;
+            fill.shadows = LightShadows.None;
+            fill.transform.rotation = Quaternion.Euler(35f, 150f, 0f);
+
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.16f, 0.14f, 0.13f);
+
+            BuildDioramaVolume();
+        }
+
+        /// <summary>
+        /// Global post-process grade for the "desk-lamp diorama" read: warm/saturated painted-
+        /// miniature color, a restrained bloom (glints, not glow-game lasers — ART_DIRECTION §3 bans
+        /// that), and a vignette that sells "lit stage in a dark room" around the void (§1 Environment).
+        /// </summary>
+        private void BuildDioramaVolume()
+        {
+            var volumeGo = new GameObject("Diorama Volume");
+            volumeGo.transform.SetParent(transform, false);
+            var volume = volumeGo.AddComponent<Volume>();
+            volume.isGlobal = true;
+
+            var profile = ScriptableObject.CreateInstance<VolumeProfile>();
+
+            var color = profile.Add<ColorAdjustments>(true);
+            color.postExposure.overrideState = true;
+            color.postExposure.value = 0.15f;
+            color.contrast.overrideState = true;
+            color.contrast.value = 8f;
+            color.colorFilter.overrideState = true;
+            color.colorFilter.value = new Color(1f, 0.96f, 0.9f);
+            color.saturation.overrideState = true;
+            color.saturation.value = 14f;
+
+            var bloom = profile.Add<Bloom>(true);
+            bloom.threshold.overrideState = true;
+            bloom.threshold.value = 1.1f;
+            bloom.intensity.overrideState = true;
+            bloom.intensity.value = 0.25f;
+            bloom.scatter.overrideState = true;
+            bloom.scatter.value = 0.6f;
+
+            var vignette = profile.Add<Vignette>(true);
+            vignette.color.overrideState = true;
+            vignette.color.value = new Color(0.02f, 0.02f, 0.02f);
+            vignette.intensity.overrideState = true;
+            vignette.intensity.value = 0.32f;
+            vignette.smoothness.overrideState = true;
+            vignette.smoothness.value = 0.65f;
+
+            volume.sharedProfile = profile;
         }
     }
 }
