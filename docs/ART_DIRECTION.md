@@ -30,7 +30,7 @@ Ship fails presentation acceptance if any of these are missing:
 | **Board** | Physical plywood/plastic **base**; painted or etched grid; dark **void** outside the board | Messy workbench silhouette in the void |
 | **Lighting** | Warm desk-lamp **key** + soft fill; readable painted-miniature silhouettes | Strong tilt-shift DoF |
 | **Materials** | Clay-tint / matte polymer look with **subtle** procedural noise (no stock shiny PBR chrome) | True SSS, thumbprint normals |
-| **Paths** | **Yarn** or **chalk** path visualization (not neon cyber lines) | Cloth sim / pin beads |
+| **Paths** | Thin, slightly wobbly hand-drawn **ink line** on the board surface — FragPunk/界外狂潮-style "线稿涂鸦" (decision 2026-08-07, supersedes the earlier yarn/chalk direction); not fat spray, not a glitchy HUD line, not neon | Waypoint ink dots in the same stroke language |
 | **Time Card / HUD** | Cardstock Time Card in thumb zone; Lock In feels like a physical switch; **AR scrubber** stays clean/high-contrast vs clay board | Soft card shadow on the diorama |
 | **Characters** | Distinct clay-like pawn silhouettes (Scout vs Juggernaut readable); **stepped 8–12 fps** motion in Playback | Bespoke modeled clay characters, facial detail |
 | **VFX** | **Physical** muzzle-flash mesh (~2 frames); persistent **clay wound splat** on hit | Cotton Flashbang smoke (post-demo card) |
@@ -38,7 +38,7 @@ Ship fails presentation acceptance if any of these are missing:
 
 **Render note:** Prefer **URP** early in the art pass for lighting/material control; keep an Android-safe fallback profile if a smoke build is attempted.
 
-**Cut order inside art (if behind):** optional DoF/SSS → Crawl-specific AV nuance → door reopen nuance. **Never** cut: warm diorama composition, yarn/chalk path, physical shot feedback, Time Card/Lock In readability, Windows stability.
+**Cut order inside art (if behind):** optional DoF/SSS → Crawl-specific AV nuance → door reopen nuance. **Never** cut: warm diorama composition, sketchy ink-line path, physical shot feedback, Time Card/Lock In readability, Windows stability.
 
 ---
 
@@ -84,7 +84,7 @@ UI bridges “Player as Commander” and “Physical Board.”
 
 * **Time Card:** Thick cardstock; soft shadow when confirmed; lives in the thumb zone (**C30** / **C33**).
 * **Timeline (Time Resource scrubber):** Clean high-tech / AR-like overlay — deliberate contrast with messy clay board.
-* **Path drawing:** Not a generic neon line — **colored yarn** pinned to the board, or **chalk** on floor tiles.
+* **Path drawing:** Not a generic neon line, fat spray, or glitchy HUD line — a thin, slightly wobbly hand-drawn **ink line** on the board surface (FragPunk/界外狂潮-style "线稿涂鸦," decision 2026-08-07; supersedes the earlier yarn/chalk direction). Draft reads like pencil (lighter, rougher); booked reads like settled ink (darker, bolder).
 * **Layout / touch:** **Portrait, one-handed** (**C30**) — board framed as a tall diorama, controls in the bottom thumb zone; large Lock In; follow D12. Program timer is **real-world** seconds (**C27**).
 
 ---
@@ -114,7 +114,7 @@ Soundscape sells miniature tactile scale.
 | Diorama base + void outside board | Infinite open-world horizon |
 | Stepped clay motion | Buttery mocap loops with root motion |
 | Physicalized VFX (mesh pops, clay splats) | Glow trails, soft particle fog |
-| Yarn/chalk paths | Generic cyber grid lines |
+| Sketchy ink-line paths (线稿涂鸦) | Generic cyber grid lines, fat spray, glitchy HUD lines |
 | Compress Playback Duration when needed | Force long Time Resource = long wall-clock walk |
 | Ship the **Demo art floor** | Treat presentation as “Later polish” after C34 |
 

@@ -5,24 +5,32 @@ using UnityEngine;
 namespace LogiCard.Board
 {
     /// <summary>
-    /// Day 9 path readability: muted yarn strand + pin beads on the board (ART_DIRECTION Demo
-    /// art floor — not neon cyber lines). Draft yarn reads lighter/unsettled; booked is settled.
+    /// FragPunk/界外狂潮-style "线稿涂鸦" (sketchy ink line): a thin, slightly wobbly hand-drawn
+    /// stroke on the board surface. Design pivot 2026-08-07 — replaces Day 9's 3D yarn/pin-bead
+    /// look (see docs/ART_DIRECTION.md path pillar); not fat spray, not a glitchy HUD line, not
+    /// neon. Draft reads like pencil (lighter, rougher, unsettled); booked reads like settled ink
+    /// (darker, bolder, steadier) — a sketch-to-ink metaphor, not a port of yarn's old logic.
     /// </summary>
     public sealed class PathPreviewView : MonoBehaviour
     {
-        // Match Assets/_Project/Art/Materials/Mat_PathYarn (_BaseColor ≈ terracotta yarn).
-        private static readonly Color DraftYarn = new Color(0.92f, 0.55f, 0.42f, 1f);
-        private static readonly Color BookedYarn = new Color(0.78f, 0.28f, 0.22f, 1f);
-        private static readonly Color DraftPin = new Color(0.95f, 0.82f, 0.55f, 1f);
-        private static readonly Color BookedPin = new Color(0.55f, 0.42f, 0.28f, 1f);
+        private static readonly Color DraftInk = new Color(0.62f, 0.58f, 0.54f, 1f);
+        private static readonly Color BookedInk = new Color(0.14f, 0.12f, 0.11f, 1f);
 
-        private const float YarnHeight = 0.18f;
-        private const float PinHeight = 0.22f;
-        private const float YarnWidthDraft = 0.07f;
-        private const float YarnWidthBooked = 0.055f;
+        private const float StrokeHeight = 0.03f;
+        private const float DotHeight = 0.032f;
+        private const float DraftWidth = 0.028f;
+        private const float BookedWidth = 0.036f;
+        private const float DraftDotRadius = 0.045f;
+        private const float BookedDotRadius = 0.055f;
 
-        private readonly List<Transform> _pins = new List<Transform>();
-        private LineRenderer _yarn;
+        // How far a point can wander perpendicular to its leg, in world units — draft wobbles more
+        // (rough sketch), booked settles down (confident inked line) while staying hand-drawn.
+        private const float DraftWobble = 0.06f;
+        private const float BookedWobble = 0.02f;
+        private const int SubdivisionsPerLeg = 8;
+
+        private LineRenderer _stroke;
+        private readonly List<Transform> _dots = new List<Transform>();
         private BoardView _board;
 
         public void Init(BoardView board)
@@ -38,76 +46,124 @@ namespace LogiCard.Board
                 return;
             }
 
-            Color yarnColor = isDraft ? DraftYarn : BookedYarn;
-            Color pinColor = isDraft ? DraftPin : BookedPin;
-            float yarnWidth = isDraft ? YarnWidthDraft : YarnWidthBooked;
+            if (waypoints.Count > 1)
+            {
+                BuildStroke(waypoints, isDraft);
+            }
 
-            EnsureYarn();
-            _yarn.positionCount = waypoints.Count;
-            _yarn.startWidth = yarnWidth;
-            _yarn.endWidth = yarnWidth;
-            _yarn.sharedMaterial = PrimitiveMaterialFactory.Tinted(yarnColor);
-            _yarn.startColor = yarnColor;
-            _yarn.endColor = yarnColor;
-
+            Color dotColor = isDraft ? DraftInk : BookedInk;
+            float dotRadius = isDraft ? DraftDotRadius : BookedDotRadius;
             for (int i = 0; i < waypoints.Count; i++)
             {
-                Vector3 world = _board.WorldFromPlanar(waypoints[i]);
-                _yarn.SetPosition(i, world + (Vector3.up * YarnHeight));
-
-                // Yarn pins — small matte beads at each waypoint (ART_DIRECTION optional pin beads).
-                var pin = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                pin.name = $"PathPin_{i}";
-                pin.transform.SetParent(transform, false);
-                pin.transform.position = world + (Vector3.up * PinHeight);
-                pin.transform.localScale = Vector3.one * (isDraft ? 0.14f : 0.11f);
-                pin.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(pinColor);
-
-                Collider col = pin.GetComponent<Collider>();
-                if (col != null)
-                {
-                    Object.Destroy(col);
-                }
-
-                _pins.Add(pin.transform);
+                BuildDot(waypoints[i], dotColor, dotRadius);
             }
         }
 
         public void Clear()
         {
-            for (int i = 0; i < _pins.Count; i++)
+            if (_stroke != null)
             {
-                if (_pins[i] != null)
+                Object.Destroy(_stroke.gameObject);
+                _stroke = null;
+            }
+
+            for (int i = 0; i < _dots.Count; i++)
+            {
+                if (_dots[i] != null)
                 {
-                    Object.Destroy(_pins[i].gameObject);
+                    Object.Destroy(_dots[i].gameObject);
                 }
             }
 
-            _pins.Clear();
-
-            if (_yarn != null)
-            {
-                _yarn.positionCount = 0;
-            }
+            _dots.Clear();
         }
 
-        private void EnsureYarn()
+        private void BuildStroke(IReadOnlyList<PlanarPosition> waypoints, bool isDraft)
         {
-            if (_yarn != null)
+            var go = new GameObject("PathInk");
+            go.transform.SetParent(transform, false);
+
+            var line = go.AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.alignment = LineAlignment.View;
+            line.numCapVertices = 3;
+            line.numCornerVertices = 2;
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.receiveShadows = false;
+
+            float width = isDraft ? DraftWidth : BookedWidth;
+            line.startWidth = width;
+            line.endWidth = width;
+
+            Color color = isDraft ? DraftInk : BookedInk;
+            line.sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
+            line.startColor = color;
+            line.endColor = color;
+
+            List<Vector3> points = BuildWobblyPoints(waypoints, isDraft);
+            line.positionCount = points.Count;
+            for (int i = 0; i < points.Count; i++)
             {
-                return;
+                line.SetPosition(i, points[i]);
             }
 
-            var yarnGo = new GameObject("YarnStrand");
-            yarnGo.transform.SetParent(transform, false);
-            _yarn = yarnGo.AddComponent<LineRenderer>();
-            _yarn.useWorldSpace = true;
-            _yarn.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            _yarn.receiveShadows = false;
-            _yarn.numCapVertices = 4;
-            _yarn.numCornerVertices = 4;
-            _yarn.alignment = LineAlignment.View;
-            _yarn.textureMode = LineTextureMode.Stretch;
+            _stroke = line;
+        }
+
+        /// <summary>
+        /// Subdivides each leg and nudges interior points sideways by a small, deterministic
+        /// (Perlin-seeded) amount — a stable hand-drawn wobble that looks the same every time for the
+        /// same waypoints, unlike true per-frame randomness (which would visibly jitter while a
+        /// player is still dragging a draft). Wobble tapers to zero at each waypoint so legs still
+        /// meet exactly — no gaps or kinks at turns.
+        /// </summary>
+        private List<Vector3> BuildWobblyPoints(IReadOnlyList<PlanarPosition> waypoints, bool isDraft)
+        {
+            float wobble = isDraft ? DraftWobble : BookedWobble;
+            var points = new List<Vector3>();
+
+            for (int leg = 0; leg < waypoints.Count - 1; leg++)
+            {
+                Vector3 a = _board.WorldFromPlanar(waypoints[leg]) + (Vector3.up * StrokeHeight);
+                Vector3 b = _board.WorldFromPlanar(waypoints[leg + 1]) + (Vector3.up * StrokeHeight);
+                Vector3 delta = b - a;
+                Vector3 perp = new Vector3(-delta.z, 0f, delta.x).normalized;
+                float seed = leg * 17.13f;
+
+                int steps = Mathf.Max(1, SubdivisionsPerLeg);
+                int startIndex = leg == 0 ? 0 : 1;
+                for (int s = startIndex; s <= steps; s++)
+                {
+                    float t = s / (float)steps;
+                    Vector3 point = Vector3.Lerp(a, b, t);
+
+                    float taper = Mathf.Sin(t * Mathf.PI);
+                    float noise = (Mathf.PerlinNoise(seed, t * 6f) - 0.5f) * 2f;
+                    point += perp * (noise * wobble * taper);
+
+                    points.Add(point);
+                }
+            }
+
+            return points;
+        }
+
+        private void BuildDot(PlanarPosition point, Color color, float radius)
+        {
+            var dot = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            dot.name = "PathInkDot";
+            dot.transform.SetParent(transform, false);
+            dot.transform.position = _board.WorldFromPlanar(point) + (Vector3.up * DotHeight);
+            dot.transform.localScale = new Vector3(radius, 0.01f, radius);
+            dot.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
+
+            Collider col = dot.GetComponent<Collider>();
+            if (col != null)
+            {
+                Object.Destroy(col);
+            }
+
+            _dots.Add(dot.transform);
         }
     }
 }
