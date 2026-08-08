@@ -104,7 +104,7 @@ Log answers in a short playtest note (date, who, 3 findings).
 | Paper (D5) | Digital (D4 / C28) |
 |------------|-------------------|
 | 60s continuous Time Resource track | Continuous Time Resource (demo round window TBD; 60s placeholder) |
-| 10×10 map | 5×5 + 5×5 attic |
+| 10×10 map | see `GDD.md` §1 for current digital footprint |
 | Scout / Heavy base seconds/tile | Scout / Juggernaut tiles × stance math |
 | Manual Timekeeper pawn | Host ghost sim + ReplayTape; **Playback Duration** may compress cinema |
 | Wound → +1s base speed rest of slice | Wound → surcharge + Bandage deadline |

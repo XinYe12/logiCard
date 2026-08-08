@@ -2,26 +2,26 @@
 
 **Status:** Drafted 2026-08-06, first playtest cycle of the continuous-space slice.
 **Depends on:** [UI_FLOW.md](UI_FLOW.md) (high-level UX flow this implements), `ProgramHud.cs` / `BoardInputController.cs` / `BoardView.cs`.
-**Scope:** any future UI element that must appear tied to a *world/board position* — not a fixed row in the thumb zone — so the player interacts with it where the thing it controls actually is. The door OPEN/CLOSE button is the first and reference example.
+**Scope:** any future UI element that must appear tied to a *world/board position* — not a fixed row in the HUD dock — so the player interacts with it where the thing it controls actually is. The door OPEN/CLOSE button is the first and reference example.
 
 ## Why this exists
 
 Playtest feedback (2026-08-06) on the door interaction flow went through three iterations before landing:
-1. A fixed OPEN/CLOSE row in the thumb zone, gated on tapping the door first — functionally correct, but disconnected from *where* the door was, and read as "ambiguous."
+1. A fixed OPEN/CLOSE row in the HUD dock, gated on selecting the door first — functionally correct, but disconnected from *where* the door was, and read as "ambiguous."
 2. A floating panel meant to appear at the door — shipped with an anchor/pivot bug that put it near the bottom of the screen instead. See the pitfall below; don't repeat it.
 3. A small button cluster correctly anchored beside the door — the shape this doc describes.
 
-Any new context-specific control (a pickup prompt, a hazard warning, a future "vault here" button, etc.) should follow this pattern rather than reinventing it or falling back to a thumb-zone row that's disconnected from the board.
+Any new context-specific control (a pickup prompt, a hazard warning, a future "vault here" button, etc.) should follow this pattern rather than reinventing it or falling back to a HUD-dock row that's disconnected from the board.
 
-## When to use a board-anchored component vs. a thumb-zone row
+## When to use a board-anchored component vs. a HUD-dock row
 
-| Use a board-anchored component when... | Use a thumb-zone row when... |
+| Use a board-anchored component when... | Use a HUD-dock row when... |
 |---|---|
 | The action targets one specific, currently-visible board object (a door, a pickup, an interactable) | The action is a mode/verb the player picks in the abstract (Move, Shoot, stance) before touching the board |
-| The player just tapped that object to select it | The control needs to always be reachable regardless of what's currently selected |
-| Losing the visual link to *what* you're acting on would be confusing | Screen space in the board viewport is too tight for the control (it's ~50% of a portrait screen — see `UI_FLOW.md`'s band table) |
+| The player just selected that object | The control needs to always be reachable regardless of what's currently selected |
+| Losing the visual link to *what* you're acting on would be confusing | Screen space in the board viewport is too tight for the control (board is the majority of a landscape frame; HUD docks occupy the margins — see `UI_FLOW.md`) |
 
-Doors are the first case. Move/Shoot mode buttons, the stance band, and Lock In stay in the thumb zone — they're verb pickers, not object-targeted actions.
+Doors are the first case. Move/Shoot mode buttons, the stance band, and Lock In stay in the HUD dock — they're verb pickers, not object-targeted actions.
 
 ## Content contract — every interaction prompt needs three things
 
@@ -69,7 +69,7 @@ BoardView.WorldFromPlanar(planarPosition)   // Sim-space point -> Unity world sp
 ```
 
 Notes specific to this project's setup:
-- The game camera (`GameBootstrap.ConfigureCamera`) uses a **restricted viewport rect**, not the full screen (it leaves room for the top strip and thumb zone). `Camera.WorldToScreenPoint` already accounts for this and returns coordinates usable directly as full-screen pixels — no manual adjustment needed.
+- The game camera (`GameBootstrap.ConfigureCamera`) uses a **restricted viewport rect**, not the full screen (it leaves room for the top bar and HUD dock margins). `Camera.WorldToScreenPoint` already accounts for this and returns coordinates usable directly as full-screen pixels — no manual adjustment needed.
 - The HUD canvas is `RenderMode.ScreenSpaceOverlay` (`ProgramHud.BuildCanvas`). For overlay canvases, the `camera` argument to `ScreenPointToLocalPointInRectangle` must be `null` — passing `Camera.main` there is for Screen Space - Camera or World Space canvases and will silently give the wrong answer for this project's canvas.
 - The board and camera are both **static** — recompute the projection only when the underlying selection changes (e.g. a new door gets picked), never every frame. `Update()`-driven tracking is unnecessary cost and unnecessary risk here.
 
@@ -89,13 +89,13 @@ The bug: the first version anchored the element to the parent's *bottom-center* 
 
 ## Sizing and placement
 
-- These are small, single-purpose controls — a button or a tight cluster of 2–3 buttons, not a panel with prose. The board viewport is only ~50% of a portrait screen (`UI_FLOW.md`); anything bigger crowds out the thing it's supposed to be next to.
-- Prefer **beside** the target (a small horizontal offset, e.g. ~15–20px gap before the element starts) over **above** it — above tends to run off the top of the small board viewport or overlap other board geometry; beside stays within the board's own horizontal footprint on this project's layouts.
-- Still respect the ≥48dp tap-target minimum from `UI_FLOW.md`'s interaction rules even though the element is compact.
+- These are small, single-purpose controls — a button or a tight cluster of 2–3 buttons, not a panel with prose. The board viewport is the majority of a landscape screen (`UI_FLOW.md`); anything bigger still crowds out the thing it's supposed to be next to.
+- Prefer **beside** the target (a small horizontal offset, e.g. ~15–20px gap before the element starts) over **above** it — above tends to run off the top of the board viewport or overlap other board geometry; beside stays within the board's own horizontal footprint on this project's layouts.
+- Still respect standard desktop click-target sizing from `UI_FLOW.md`'s interaction rules even though the element is compact.
 
 ## Lifecycle — enumerate every hide case explicitly
 
-A board-anchored element does **not** automatically inherit visibility from the thumb-zone panel it's conceptually related to, because it's parented directly under the canvas root, not under that panel. The first version of the door prompt stayed stuck on screen after switching modes and after the round moved past Program, because only one of its hide paths was wired. Hide it explicitly on **all** of:
+A board-anchored element does **not** automatically inherit visibility from the HUD-dock panel it's conceptually related to, because it's parented directly under the canvas root, not under that panel. The first version of the door prompt stayed stuck on screen after switching modes and after the round moved past Program, because only one of its hide paths was wired. Hide it explicitly on **all** of:
 
 1. **Selection cleared** — the thing it targets is no longer selected (refresh call already passes `null`/no-target and the refresh function hides it).
 2. **Mode/verb switched away** from the one that owns this element (e.g. leaving Door mode) — don't rely on the generic per-mode panel refresh catching this; add an explicit hide alongside it.
