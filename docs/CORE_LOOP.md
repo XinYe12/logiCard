@@ -17,7 +17,7 @@
 | Role | Meaning in demo |
 |------|-----------------|
 | Attacker / Defender | Spawn labels (**C18**); Character preset may differ |
-| Players | **1v1 local** for 14-day ship (**C34**). Online Fusion = post-demo. Bot = nice-to-have (**C19**) |
+| Players | **1v1** (**C2**); local play supported for testing; online PvP is the ship target (**C51**). |
 
 ---
 
@@ -52,7 +52,7 @@ flowchart LR
 ```
 
 ### 1. Spawn
-- Place both pawns on the **continuous ground arena** (`[0,4]×[0,4]` footprint — Attacker vs Defender spawns).
+- Place both pawns on the **continuous ground arena** (`[0,8]×[0,10]` footprint — Attacker vs Defender spawns).
 - Both fully visible (FoW Out).
 - Match pool starts full (demo 900s). Round 1 Time Card chooser = Attacker.
 
@@ -111,7 +111,7 @@ flowchart LR
 
 ## Map loop (how space enters decisions)
 
-- **Continuous ground arena** (`[0,4]×[0,4]`) + **one door** (demo ship — **C35/C39**, amended 2026-08-03).
+- **Continuous ground arena** (`[0,8]×[0,10]`) + **two doors** (multi-room — **C45** / **C35/C39**).
 - Attic / Vent / Monitor / 高铁 = Later (**C34** / **C31**).
 
 ---
@@ -122,13 +122,13 @@ flowchart LR
 2. **Playback Duration** never confuses players into thinking TR seconds = wall-clock animation length.  
 3. Walk / Sprint / Snap / Hold Angle feel like **mind-game RPS**, not arithmetic.  
 4. The **door** changes a fight once.  
-5. The board reads as a **desk-lamp diorama**, not a default Unity prototype (**C34**).
+5. The board reads as a **desk-lamp diorama**, not a default Unity prototype — commercial ship art bar in [ART_DIRECTION.md](ART_DIRECTION.md).
 
 ---
 
 ## Explicitly not in this loop (Out / Later)
 
-FoW, decoys, extraction, loot, classes beyond attrs, alarm track, 4v4, Fusion online, full Android polish, gear cards, Otherwise library, attic/vent/monitor, final SSS/thumbprint clay. Long-term only, not this loop: destructible breach-state geometry (**C36**), asymmetric objective win (**C37**), Downed state + revive + Detonator (**C38**). **Continuous movement is now IN this loop** (**C35** promoted 2026-08-03 — no longer long-term-only, see `CONTINUOUS_PIVOT_PLAN.md`).
+FoW, decoys, extraction, loot, classes beyond attrs, alarm track, 4v4, gear cards, Otherwise library, attic/vent/monitor. Android / portrait mobile is a separate future consideration (**C48**), not this ship’s polish target. Final SSS/thumbprint clay is Phase 5 commercial art bar scope (see `ART_DIRECTION.md`), not cut from this loop. Long-term only, not this loop: destructible breach-state geometry (**C36**), asymmetric objective win (**C37**), Downed state + revive + Detonator (**C38**). **Continuous movement is now IN this loop** (**C35** promoted 2026-08-03 — no longer long-term-only, see `CONTINUOUS_PIVOT_PLAN.md`). Online PvP is in ship scope (**C51**).
 
 ---
 

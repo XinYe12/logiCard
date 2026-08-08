@@ -21,7 +21,7 @@ Gear cards (Bandage / Flashbang / Adrenaline / Interact-as-card), Otherwise Stop
 
 ## 1. Structure & Match Flow
 
-- **Player Count:** 1v1 (Attacker vs Defender) — spawn labels; same *rules*; Character Cards may differ (Section 2). Local play for the 14-day ship; online is post-demo (**C34**).
+- **Player Count:** 1v1 (Attacker vs Defender) — spawn labels; same *rules*; Character Cards may differ (Section 2). Local play remains supported for testing/offline; online PvP via real networking is the ship target (**C51**) — see `NETWORKING_DESIGN.md`. A matchmaking-fallback bot (**C49**) may substitute an opponent — see `AI_FALLBACK_BOT.md`.
 - **Win Condition:** Opponent Physical State → **Dead**.
 - **Map:** One **continuous ground arena** for the demo ship — a multi-room `[0,8]×[0,10]` footprint (Yard →
   a walled Hall kill-box with two doors → Vault, plus two unguarded flank corridors around Hall) per **C45**,
@@ -175,22 +175,21 @@ Placeholder magnitudes — tune in playtest. "unit" = continuous board distance 
 
 ---
 
-## 8. Presentation (ship requirement — C34)
+## 8. Presentation (commercial ship art bar)
 
-The demo must read as a **Desk-Lamp Diorama**, not a default Unity prototype. Binding art/audio floor lives in [ART_DIRECTION.md](ART_DIRECTION.md) § Demo art floor. Summary:
+The ship must read as a **Desk-Lamp Diorama**, not a default Unity prototype. Binding art/audio bar lives in [ART_DIRECTION.md](ART_DIRECTION.md) § Commercial ship art bar. Summary:
 
 - Board on a physical base in a dark void; warm desk-lamp lighting; clay-like materials.
 - Sketchy **线稿涂鸦** paths on the clay board (FragPunk/界外狂潮-style ink line — see ART_DIRECTION; supersedes yarn/chalk); cardstock Time Card; AR scrubber contrast.
 - Stepped pawn motion; physical muzzle flash; clay wound splat.
 - Tactile foley for move, shot, Time Card, Lock In.
 
-Full SSS, thumbprint maps, and bespoke character rigs remain optional.
+Full SSS, thumbprint maps, and bespoke character rigs are in scope for Phase 5 (Commercial Art Bar) — see `ART_DIRECTION.md` and `SCHEDULE.md`.
 
 ---
 
-## 9. Out of Scope (14-day ship — C34)
+## 9. Out of Scope
 
-- Photon Fusion online multiplayer (**C5** deferred).
 - Full Android polish / dual-platform ship (**C6** → Windows polished; Android smoke optional).
 - FoW, decoys, facing cones, numeric HP bars, armor.
 - Gear cards: Bandage, Flashbang, Adrenaline, Interact-as-card.
@@ -206,6 +205,6 @@ Full SSS, thumbprint maps, and bespoke character rigs remain optional.
 3. **One door** materially changes movement or LoS at least once.  
 4. Without narration, an observer reads the scene as a **handmade desk-lamp miniature** — not stock Unity primitives.  
 5. Move, Shoot, hit, Time Card, and Lock In each have **distinct** visual and/or audio feedback.  
-6. **Windows build** runs reliably and is presentation-ready for a 60–90s capture.
+6. **Windows build** is ship-stable (reliable for repeated full-match play).
 
 Scout vs Juggernaut feel different; cause/effect order remains readable even when Playback Duration compresses Time Resource.

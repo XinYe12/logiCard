@@ -1,9 +1,9 @@
-# D12: UI / UX Flow — 2-Week Demo
+# D12: UI / UX Flow — Landscape Desktop (Steam)
 
 **Doc ID:** D12  
-**Status:** Drafted 2026-07-29  
+**Status:** Updated 2026-08-08 — landscape desktop-first (**C48**); matchmaking lobby (**C51** / **C49**)  
 **Depends on:** [GDD.md](GDD.md), [TDD.md](TDD.md), [ART_DIRECTION.md](ART_DIRECTION.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md)  
-**Platforms:** Windows (mouse) + Android (touch), **portrait, one-handed** primary (**C30**).
+**Platforms:** Windows (mouse + keyboard, landscape desktop) primary; Steam first; portrait/mobile deferred to a future, separate consideration (**C48**).
 
 Glossary (**C27**): **Time Resource** = budget scrubber; **Playback Duration** = cinema length; **Real-world** = wall-clock only (e.g. Program countdown).
 
@@ -15,7 +15,7 @@ Glossary (**C27**): **Time Resource** = budget scrubber; **Playback Duration** =
 flowchart TD
   boot[Boot_Title]
   boot --> charSelect[Character_Select]
-  charSelect --> lobby[Lobby_CreateOrJoin]
+  charSelect --> lobby[Lobby_FindMatch]
   lobby --> program[Program_Phase]
   program --> waiting[Waiting_Simulating]
   waiting --> reveal[Reveal_Flash]
@@ -31,7 +31,7 @@ flowchart TD
 ## 1. Boot / Title
 
 - Game name + **Play**.  
-- Minimal; no settings deep dive in demo.
+- Minimal; no settings deep dive in early ship.
 
 ---
 
@@ -44,40 +44,40 @@ flowchart TD
 
 ## 3. Lobby (1v1)
 
-- **Create room** → show join code.  
-- **Join** → enter code.  
+- **Find Match** → enter queue.  
+- Matched with a human opponent, or (after a timeout defined in `AI_FALLBACK_BOT.md`) invisibly paired with the matchmaking-fallback bot (**C49**).  
 - Labels: Attacker / Defender (spawn only).  
-- **Start** when 2 players ready (or debug Start with 1 for local Slice 1).  
-- Note: prefer **Windows as Host** when mixed with Android.
+- Session/topology details live in `NETWORKING_DESIGN.md` — not this doc.  
+- Local/offline play remains available for testing.
 
 ---
 
 ## 4. Program Phase (core UX)
 
-**Layout (portrait, one-handed — C30):** screen splits into three stacked bands, ordered so the further from the thumb, the less it is touched.
+**Layout (landscape desktop — C48):** board is centered and dominant (majority of a 16:9 frame). Status and verb controls live in the margins — not a bottom thumb zone.
 
-| Band | Screen share | Content | Touch |
-|------|--------------|---------|-------|
-| **Top strip** | ~10% | **Real-world** Program countdown (e.g. 30s), round/phase label, wound badges. | Read-only |
-| **Board** | ~50% | Diorama board (tilt-shift camera), both 5×5 floors stacked. **线稿涂鸦** path while drawing (FragPunk-A ink on clay — ART_DIRECTION). | Taps only — target tiles, aim tiles |
-| **Thumb zone** | ~40% | **Time Resource scrubber**, gear **cards** (max 3), stance/shoot-mode band, **Lock In**. | All drags and precision input |
+| Region | Frame role | Content | Input |
+|--------|------------|---------|-------|
+| **Top bar** | Slim status strip | **Real-world** Program countdown (e.g. 30s), round/phase label, wound badges. | Read-only |
+| **Board** | Dominant center (majority of 16:9) | Diorama board (tilt-shift camera). **线稿涂鸦** path while drawing (FragPunk-A ink on clay — ART_DIRECTION). | Click to place waypoints / aim points |
+| **HUD dock** | Side or bottom margin | **Time Resource scrubber**, stance/shoot-mode selectors, **Lock In**; gear cards when in scope. | Mouse-driven (click / scrub) |
 
-**Thumb-zone rules:**
+**HUD dock rules:**
 
-- **Lock In** anchored bottom-right (right-thumb arc), ≥56dp, miss-tap resistant.
-- Cards are a **horizontal strip** at the bottom — swipe to browse, tap to arm, then tap board target. **No card→board drag is ever required** (drag across the board is out of one-thumb reach).
-- Scrubber sits directly above the cards so a thumb can scrub without covering the board.
-- Nothing critical in the top two corners.
+- **Lock In** is a clear primary action in the dock (mouse click), not a thumb-arc placement.
+- Cards (when in scope) are a dock strip — click to arm, then click board target.
+- Scrubber sits in the dock so scrubbing never covers the board.
+- Path drawing is click-to-place waypoints (mechanically unchanged) — not free scribble.
 
 **Flow:**
 
-1. **Move (base verb):** tap pawn → draw/set path → allot Time Resource → stance band (Sprint / Walk / Crawl) updates automatically or via slider.  
-2. **Shoot (base verb):** aim direction/tile → allot Time Resource → mode Snap / Hold Angle.  
-3. **Cards:** tap Bandage / Interact / Flashbang to arm, then tap the path node or scrubber time to place. Adrenaline is **Execution-only** (hidden or disabled here).  
+1. **Move (base verb):** click pawn → set path via waypoint clicks → pick stance (Sprint / Walk / Crawl); Time Resource cost updates automatically.  
+2. **Shoot (base verb):** aim point → mode Snap / Hold Angle; Time Resource cost updates automatically.  
+3. **Cards:** click Bandage / Interact / Flashbang to arm, then click the path node or scrubber time to place. Adrenaline is **Execution-only** (hidden or disabled here).  
 4. Client validates TR budget fit before Lock allowed.  
 5. Timer hit 0 or Lock → freeze input.
 
-**One-handed (C30):** every step above is tap-then-tap — arm in the thumb zone, confirm on the board. Path uses waypoint taps, not free scribble. No two-finger gesture is required; pinch/rotate camera is optional convenience only.
+Camera pan (optional drag) and keyboard shortcuts are welcome on desktop — two-handed mouse+keyboard makes them genuinely useful, not optional convenience only.
 
 ---
 
@@ -99,9 +99,9 @@ flowchart TD
 
 - Same board; paths may ghost.  
 - Scrubber plays in **Playback Duration** time (may be faster than Time Resource).  
-- Optional dual readout later: TR marker vs playback head — **Slice 1:** one scrubber showing event order is enough if labels say “Playback.”  
+- Optional dual readout later: TR marker vs playback head — one scrubber showing event order is enough if labels say “Playback.”  
 - **Adrenaline:** large button during Playback, **1/match**, only while you have an active segment.  
-- No pause required for demo; Skip optional for debug builds only.
+- No pause required for early ship; Skip optional for debug builds only.
 
 ---
 
@@ -123,20 +123,22 @@ flowchart TD
 
 | Rule | Spec |
 |------|------|
-| Orientation | **Portrait lock** (no autorotate); Windows uses the same portrait layout in a tall window (**C30**) |
-| Reach | Every primary action inside the bottom ~40% thumb arc; board taps are single, forgiving targets |
-| Gestures | Single-thumb tap only for required actions; no mandatory drag or multi-touch |
-| Tap targets | ≥48dp; Lock In / Adrenaline ≥56dp |
+| Orientation | **Landscape**, resizable window, target **16:9** (**C48**) |
+| Reach | Primary actions live in the HUD dock (side or bottom margin); board clicks are clear, forgiving targets |
+| Gestures | Mouse click for required actions; optional drag-to-pan camera; optional keyboard shortcuts |
+| Click targets | Standard desktop click-target sizing (comfortable hit areas for mouse; Lock In / Adrenaline remain large primary actions) |
 | Contrast | AR timeline readable on clay board ([ART_DIRECTION.md](ART_DIRECTION.md)) |
-| Feedback | Lock In = physical switch SFX; card drag = paper shuffle |
+| Feedback | Lock In = physical switch SFX; card select = paper shuffle |
 | Errors | Invalid path/budget → inline message, cannot Lock |
 
 ---
 
-## Slice mapping
+## Build history
 
-| Slice | UI must have |
-|-------|----------------|
+Historical UI milestones already landed (see `docs/SCHEDULE.md` Day ticks). Not a forward-looking target list.
+
+| Slice | UI that shipped |
+|-------|-----------------|
 | **1** | Minimal Program (click destination Move + aim Shoot), Lock, scrubber, Playback move/shoot distinct |
 | **2** | Path waypoints + stance allotment UI; Snap vs Hold mode toggle |
 | **3** | Wound state badge; Bandage/Interact; door feedback |
@@ -146,8 +148,8 @@ flowchart TD
 
 ## Acceptance
 
-1. Cold user can Lock a Move + Shoot without a coach (Slice 1).  
+1. Cold user can Lock a Move + Shoot without a coach.  
 2. Never labels Playback as “real-world time.”  
-3. Win + Android run the same **portrait** layout; phone playable **one-handed, thumb only**, phone held upright.  
-4. Lock In and Adrenaline are miss-tap resistant.  
-5. A full round can be completed without the second hand touching the device.
+3. Steam Windows build runs a **landscape** layout; mouse + keyboard only, no touch requirement.  
+4. Lock In and Adrenaline remain large, obvious primary actions under mouse.  
+5. A full round can be completed with mouse + keyboard alone.

@@ -1,7 +1,7 @@
 # D10: Art Direction & Audio Bible
 
 **Doc ID:** D10  
-**Status:** Updated 2026-08-07 — path pillar = FragPunk/界外狂潮-style **线稿涂鸦** (supersedes yarn/chalk); **C34** demo art floor still required  
+**Status:** Updated 2026-08-08 — commercial ship art bar (**C46**); path pillar = FragPunk/界外狂潮-style **线稿涂鸦** (supersedes yarn/chalk)  
 **Depends on:** [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md) (D9), [SCOPE.md](SCOPE.md), [GDD.md](GDD.md)  
 **Canonical path:** `docs/ART_DIRECTION.md` (also referenced as `D10_Art_Direction.md`)
 
@@ -9,7 +9,7 @@
 
 The visual goal is to make the player feel like they are standing over a meticulously crafted **physical tabletop miniature set**. Tactical SWAT-raid seriousness is contrasted with the tactile, handmade charm of **digital clay**.
 
-**Demo vs target (C34):** The 14-day Windows ship **must** hit the **Demo art floor** below so a cold observer reads “handmade miniature game,” not “default Unity scene.” Full SSS, thumbprint maps, bespoke character rigs, and cinematic DoF remain **optional** if time allows — never cut the required floor to chase them.
+**Commercial ship bar:** The bar below is the **required commercial-ship floor**, not a demo floor with optional stretch goals. Full SSS, thumbprint maps, bespoke character rigs, and cinematic DoF move from “optional if time allows” into **in scope for Phase 5 (Commercial Art Bar, see `docs/SCHEDULE.md`)** — not cut-first items.
 
 ---
 
@@ -21,24 +21,24 @@ High-angle tilt-shift townscape: shallow DoF band, toy-like buildings and cars, 
 
 ---
 
-## Demo art floor (required for 14-day ship — C34)
+## Commercial ship art bar
 
 Ship fails presentation acceptance if any of these are missing:
 
-| Pillar | Required floor | Optional (nice) |
-|--------|----------------|-----------------|
+| Pillar | Required floor | Phase 5 target (in scope — not optional nice-to-have) |
+|--------|----------------|------------------------------------------------------|
 | **Board** | Physical plywood/plastic **base**; painted or etched grid; dark **void** outside the board | Messy workbench silhouette in the void |
 | **Lighting** | Warm desk-lamp **key** + soft fill; readable painted-miniature silhouettes | Strong tilt-shift DoF |
 | **Materials** | Clay-tint / matte polymer look with **subtle** procedural noise (no stock shiny PBR chrome) | True SSS, thumbprint normals |
 | **Paths** | Thin, slightly wobbly hand-drawn **ink line** on the board surface — FragPunk/界外狂潮-style "线稿涂鸦" (decision 2026-08-07, supersedes the earlier yarn/chalk direction); not fat spray, not a glitchy HUD line, not neon | Waypoint ink dots in the same stroke language |
-| **Time Card / HUD** | Cardstock Time Card in thumb zone; Lock In feels like a physical switch; **AR scrubber** stays clean/high-contrast vs clay board | Soft card shadow on the diorama |
-| **Characters** | Distinct toy-figurine silhouettes (*Legend of Zelda: Link's Awakening* 2019 remake reference) — Scout vs Juggernaut readable via imported CC0 Quaternius meshes; **stepped 8–12 fps** motion in Playback | Bespoke modeled clay characters, facial detail |
-| **VFX** | **Physical** muzzle-flash mesh (~2 frames); persistent **clay wound splat** on hit | Cotton Flashbang smoke (post-demo card) |
+| **Time Card / HUD** | Cardstock Time Card in the HUD dock; Lock In feels like a physical switch; **AR scrubber** stays clean/high-contrast vs clay board | Soft card shadow on the diorama |
+| **Characters** | Distinct toy-figurine silhouettes (*Legend of Zelda: Link's Awakening* 2019 remake reference) — Scout vs Juggernaut readable via imported CC0 Quaternius meshes; **stepped 8–12 fps** motion in Playback. *Note:* current Quaternius imports (see `docs/PAWN_ART_REWORK_PLAN.md` — do not edit that in-progress plan here) are fine for the current build but likely too generic/undifferentiated for a paid, distinctly-branded product; replacement or heavy rework is a Phase 5 candidate, not immediate work. | Bespoke modeled clay characters, facial detail |
+| **VFX** | **Physical** muzzle-flash mesh (~2 frames); persistent **clay wound splat** on hit | Cotton Flashbang smoke (when that card is in scope) |
 | **Audio** | Tactile foley: clay-on-board footsteps; cap-gun / heavy-stapler shot; paper Time Card; Lock In switch snap | Full mix / music bed |
 
 **Render note:** Prefer **URP** early in the art pass for lighting/material control; keep an Android-safe fallback profile if a smoke build is attempted.
 
-**Cut order inside art (if behind):** optional DoF/SSS → Crawl-specific AV nuance → door reopen nuance. **Never** cut: warm diorama composition, sketchy ink-line path, physical shot feedback, Time Card/Lock In readability, Windows stability.
+**Phase prioritization (art):** if capacity is tight, sequence Phase 5 stretch items after the required floor — DoF/SSS → Crawl-specific AV nuance → door reopen nuance. **Never** drop: warm diorama composition, sketchy ink-line path, physical shot feedback, Time Card/Lock In readability, Windows stability.
 
 ---
 
@@ -82,10 +82,10 @@ Ban standard glow-game VFX (no bloom lasers, no magical fading smoke).
 
 UI bridges “Player as Commander” and “Physical Board.”
 
-* **Time Card:** Thick cardstock; soft shadow when confirmed; lives in the thumb zone (**C30** / **C33**).
+* **Time Card:** Thick cardstock; soft shadow when confirmed; lives in the HUD dock (**C48** / **C33**).
 * **Timeline (Time Resource scrubber):** Clean high-tech / AR-like overlay — deliberate contrast with messy clay board.
 * **Path drawing:** Not a generic neon line, fat spray, or glitchy HUD line — a thin, slightly wobbly hand-drawn **ink line** on the board surface (FragPunk/界外狂潮-style "线稿涂鸦," decision 2026-08-07; supersedes the earlier yarn/chalk direction). Draft reads like pencil (lighter, rougher); booked reads like settled ink (darker, bolder).
-* **Layout / touch:** **Portrait, one-handed** (**C30**) — board framed as a tall diorama, controls in the bottom thumb zone; large Lock In; follow D12. Program timer is **real-world** seconds (**C27**).
+* **Layout:** landscape desktop-first (**C48**) — see `UI_FLOW.md`. Program timer is **real-world** seconds (**C27**).
 
 ---
 
@@ -116,7 +116,7 @@ Soundscape sells miniature tactile scale.
 | Physicalized VFX (mesh pops, clay splats) | Glow trails, soft particle fog |
 | Sketchy ink-line paths (线稿涂鸦) | Generic cyber grid lines, fat spray, glitchy HUD lines |
 | Compress Playback Duration when needed | Force long Time Resource = long wall-clock walk |
-| Ship the **Demo art floor** | Treat presentation as “Later polish” after C34 |
+| Ship the **Commercial ship art bar** | Treat presentation as “Later polish” after core loop |
 
 ---
 
