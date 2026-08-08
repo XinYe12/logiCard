@@ -1,88 +1,68 @@
-# D8: Schedule + Milestone DoD — 14-Day Implementation
+# D8: Schedule — Phase / Milestone Plan
 
 **Doc ID:** D8  
-**Status:** Revised 2026-08-03 — **continuous-space pivot inserted** (C35/C39, see [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)) — art pass now **compressed**, not full-scope, to keep Day 14; Revised 2026-07-30 — **C34 Polished Core Demo** (art-protected remaining days)  
-**Depends on:** [VERTICAL_SLICE.md](VERTICAL_SLICE.md), [TDD.md](TDD.md), [GDD.md](GDD.md), [SCOPE.md](SCOPE.md), [ART_DIRECTION.md](ART_DIRECTION.md)  
-**Assumes:** Pre-implementation gate passed; ~6 focused hours/day (~84h).
+**Status:** Revised 2026-08-08 — **C46/C50 full scope pivot**: replaces the Day-1–14 calendar with a
+phase/milestone model, no fixed date (see `PRODUCT_MEMORY.md` C46–C51). Prior: 2026-08-03 continuous-space
+pivot inserted (C35/C39); 2026-07-30 C34 Polished Core Demo (both superseded).  
+**Depends on:** [VERTICAL_SLICE.md](VERTICAL_SLICE.md), [TDD.md](TDD.md), [GDD.md](GDD.md), [SCOPE.md](SCOPE.md), [ART_DIRECTION.md](ART_DIRECTION.md), [MONETIZATION.md](MONETIZATION.md), [NETWORKING_DESIGN.md](NETWORKING_DESIGN.md), [AI_FALLBACK_BOT.md](AI_FALLBACK_BOT.md)
 
-Clock starts on **Implementation Day 1** (first Unity scaffold commit), not calendar date of this doc.
-
----
-
-## Ship bar (end of Day 14) — C34
-
-Must have:
-
-1. **Windows build** playable locally through Allot (Time Card) → Program → Reveal → Time Resource resolve → Playback → Aftermath → next round.  
-2. Core combat readable: path/stance Move, Snap/Hold Shoot, wounds/death, **one door** changes move or LoS once.  
-3. **Desk-Lamp Diorama presentation floor** met ([ART_DIRECTION.md](ART_DIRECTION.md) § Demo art floor) — cold observer does not call it a default Unity prototype.  
-4. README case study + 60–90s capture video.  
-5. Repo pushed with docs + architecture notes.
-
-Nice-to-have (not ship blockers): Android smoke build, bots (**C19**), optional DoF/SSS, Fusion online (**C5** deferred).
+**No fixed calendar.** Progress is measured by phase exit criteria — what must be true before the next phase
+starts — not by day count. The pre-pivot build (below, "Pre-pivot build history") already proved the core
+loop end-to-end; this phase table is what's left to reach a real Steam ship.
 
 ---
 
-## Milestone map (C34)
+## Ship bar — C46
 
-| Milestone | Days | Theme | Exit criteria |
-|-----------|------|--------|----------------|
-| **M0** | 1 | Project + folders | Unity project, platforms listed, folders, stubs |
-| **M1 / Slice 1** | 2–4 | Pipeline proof | Time Card + Move + Shoot → Playback; second round; LoS Wound stub |
-| **M2 / Core Combat** | 5–7 | Path, RPS, door | Stance bands; Snap vs Hold; one door; local match end-to-end (grid-based — later retargeted by M2.5) |
-| **M2.5 / Continuous Pivot** | 7b–7g | Grid → continuous | See Phase 1–6 in [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md) — geometry primitives, resolver/authoring retarget, Unity view retarget, whole-project-green |
-| **M3 / Diorama Art** | 8–11 (**compressed**) | Presentation | URP/lighting, board/UI identity, clay motion/VFX, tactile audio — scope trimmed per the cut order below to absorb M2.5's cost without moving Day 14 |
-| **M4 / Ship** | 12–14 | Build + portfolio | Windows candidate, playtest, capture, README |
+Must have to ship:
 
-If behind: **freeze at last green milestone**; do not start the next. Cut order: Android smoke → door reopen nuance → Crawl AV nuance → optional DoF/SSS → **never** cut Time Card loop, Move/Shoot readability, warm diorama composition, **线稿涂鸦** path, physical shot feedback, or Windows build stability (**C34**). **As of the continuous pivot (2026-08-03), this cut order is expected to be used more aggressively than originally planned** — M2.5 (~5.5–7.5 engineer-days) eats most of the runway that was going to Week 2's art pass; that tradeoff was made explicitly (see `CONTINUOUS_PIVOT_PLAN.md` §F), not discovered late.
+1. Real online 1v1 PvP through the full loop (Allot → Program → Reveal → Resolve → Playback → Aftermath),
+   landscape desktop, Steam.
+2. Core combat unchanged and readable: path/stance Move, Snap/Hold Shoot, wounds/death, both doors change
+   move or LoS.
+3. **Commercial ship art bar** met ([ART_DIRECTION.md](ART_DIRECTION.md) § Commercial ship art bar) — reads
+   as a real game, not a prototype.
+4. Free-to-play, cosmetic-only IAP live and enforced (no pay-to-win).
+5. Matchmaking-fallback bot live, invisible, meeting its difficulty/disclosure bounds.
+6. Steam storefront certified and live.
 
-**Day 3b is absorbed, not a 15th calendar day.** M1/Slice 1 still spans **Days 2–4** — 3b is scoped as same-day-or-buffer insert work within that window (C33 filled a gap C4 already implied but D8 never scheduled), not an extra day tacked onto the plan. **M2.5 (7b–7g) works the same way** — inserted days, not a 15th-day extension; Day 14 ship date is unchanged, absorbed by compressing M3 instead.
+## Phase table
 
----
+| Phase | Theme | Exit criteria (what must be true to start the next phase) |
+|-------|-------|-------------------------------------------------------------|
+| **Phase 0** | Pivot Lock (docs) | This docs rewrite fully landed: `PRODUCT_MEMORY.md` C46–C51 confirmed, `SCOPE`/`RISKS`/`GDD`/`CORE_LOOP` updated, `MONETIZATION`/`NETWORKING_DESIGN`/`AI_FALLBACK_BOT` exist (even with OPEN numerics). No code work starts before this gate — same "docs before code" discipline as the original pre-implementation gate. |
+| **Phase 1** | Landscape Desktop UI | `UI_FLOW.md`'s new layout implemented; playable mouse+keyboard only; PlayMode tests updated/green against landscape geometry. |
+| **Phase 2** | Real Networking Foundation | `NETWORKING_DESIGN.md`'s transport/topology decided and its first slice built — a real, two-process, real-transport tape-synced match replacing the same-process `GhostResolver` stand-in; host-integrity question has an explicit answer. |
+| **Phase 3** | Matchmaking Fallback Bot | `AI_FALLBACK_BOT.md`'s bot substitutes in behind the same interfaces Phase 2 built, invisibly, meeting its defined difficulty/behavior bounds. |
+| **Phase 4** | Monetization Foundation | `MONETIZATION.md`'s economy model implemented at skeleton depth — at least one earned and one purchasable cosmetic wired through Steam's IAP sandbox; no-pay-to-win guardrails enforced in code, not just docs. |
+| **Phase 5** | Commercial Art Bar | `ART_DIRECTION.md`'s raised bar met for the shipped roster — placeholder Quaternius meshes replaced/substantially reworked; a cold observer calls it "a real game," not "a prototype." |
+| **Phase 6** | Steam Certification & Ship | Steamworks integration complete, store page live, cert/review passed, `SHIP_README_DRAFT.md`/`CAPTURE_CHECKLIST.md` produced for the real product. |
 
-## Day-by-day
-
-### Week 1 — Prove the tape + core combat
-
-| Day | Focus | DoD (exit) |
-|-----|--------|------------|
-| **1** | Unity 6 project; Win + Android modules; **portrait lock (C30)**; gitignore; `_Project` folders; Bootstrap; SO stubs | Project opens; platforms listed; portrait-only; folders committed |
-| **2** | Grid board 5×5; pawn; **Time Resource timeline scrubber**; phase enum (local) | Scrubber advances; phases switch |
-| **3** | Program UI: schedule Move + Shoot; Lock; build `TimelinePayload` locally | Payload logs ExecuteTime + GridPosition + Stance + Modifier |
-| **3b** | **Match lifecycle (C33):** shared pool; Time Card allotment; Allot→…→Aftermath; carry state | Two consecutive rounds playable |
-| **4** | **Slice 1 green:** ghost resolve + playback; Wound stub; cold-observer Move/Shoot/Time Card test — **no new breadth** | **M1:** D7 Slice 1 checklist |
-| **5** | Path drawing (waypoints) + time allotment → stance band | Sprint/Walk/Crawl change Move timing on Clock |
-| **6** | Hold Angle vs Snap Shot; mutual same-second rule | RPS readable in one playtest |
-| **7** | **One-door** micro-map (contextual open/close; blocks move + LoS); local match E2E | **M2:** Core Combat local playable |
-| **7b** | Continuous pivot Phase 1: geometry primitives (`PlanarPosition`, `Segment`, `ArenaBoard`, `ContinuousLineOfSight`, `ContinuousPathfinder`) — handed to a second agent in a parallel worktree | New EditMode suites green in isolation; no other file touched |
-| **7c** | Continuous pivot Phase 2: Sim/Net consumer retarget (`ScheduledPath`, `GhostResolver`, `Door`, `ActionNode`, `TapeEvent`) | `Sim`/`Net` compile + pass; `Timeline`/`Board`/`Boot` not yet green |
-| **7d** | Continuous pivot Phase 3: `PawnProgram` retarget; revisit-tile guard removed; draft cost → Euclidean sum | `Timeline` compiles + passes |
-| **7e–7f** | Continuous pivot Phase 4: Unity view/composition-root retarget (`BoardView`, `BoardInputController`, `GameBootstrap`, `RoundPlayback`); old grid files deleted | **First whole-project-green checkpoint since before 7c** |
-| **7g** | Continuous pivot Phase 5–6: HUD wording + PlayMode test rewrite (parallelizable), tuning pass on `HitRadius`/`LaneHalfWidth`/`InteractRadius` | **M2.5:** continuous-space pivot complete, cold-observer playtest of the "door changes a fight once" bar |
-
-### Week 2 — Diorama art pass (compressed — see M2.5 cost above) + ship
-
-| Day | Focus | DoD |
-|-----|--------|-----|
-| **8** | Render/art foundation: **URP** migration, portrait camera composition, diorama base, warm lighting, material palette | Board reads as desk diorama under lamp light |
-| **9** | Board/UI identity: handmade board dressing, painted grid, **线稿涂鸦** paths (FragPunk-A ink on clay), cardstock Time Card, AR scrubber polish | Paths + Time Card match ART_DIRECTION floor |
-| **10** | Character/VFX motion: clay pawn silhouettes, **stepped** playback, physical muzzle flash, wound splat | Move vs Shoot vs hit visually distinct |
-| **11** | Audio + feedback: tactile foley, transitions, hit feedback, visual hierarchy pass | Footsteps / shot / Time Card / Lock In distinct |
-| **12** | Windows release-candidate; optional Android smoke; perf — drop costly FX before readability | **M3→ship candidate** Windows build runs |
-| **13** | Cold observer + friend playtest; fix comprehension & presentation blockers only | Findings filed; blockers fixed |
-| **14** | Final Windows build; 60–90s capture; README/case study; screenshots | **M4:** portfolio ship |
+Phases 1, 2, and 5 have no hard interdependency and can run as parallel worker slices per `PARALLEL_OPS.md`.
+Phase 3 depends on Phase 2's interfaces. Phase 4 and 6 depend on Steam integration groundwork that can start
+as early as convenient. If a phase's scope turns out heavier than expected: **freeze at the last completed
+phase**, don't half-start the next one — same discipline the old cut-order rule protected, now applied to
+phases instead of days.
 
 ---
 
 ## Cadence
 
-- **Daily:** ≥1 commit; tick checkboxes in this file when a Day DoD is met.  
-- **Playtests:** end of Day 4 (Slice 1), Day 7 (Core Combat, grid), Day 7g (**M2.5** continuous pivot — same "door changes a fight once" bar, continuous version), Day 13 (presentation). Three written findings each.  
-- **Scope knife owner:** you — when late, follow **C34** cut order above.
+- Commit at natural checkpoints within a phase; tick a phase's exit criteria only when genuinely met.
+- **Playtests:** at each phase gate, not a fixed calendar day — mirrors the "three written findings" cadence
+  the pre-pivot build already used (see `DAY13_PLAYTEST_FINDINGS.md` for the template).
+- **Scope knife owner:** you — when a phase is heavier than expected, freeze at the last completed phase
+  rather than partially building the next one.
 
 ---
 
-## Day DoD checklist (living)
+## Pre-pivot build history (historical appendix — the core loop below is already built and working)
+
+Everything in this section predates the pivot and is kept as a real, valuable record — the core loop it
+describes is exactly what Phase 1–6 above build on top of, unchanged. Do not re-litigate or rebuild any of
+this; it's done.
+
+### Day DoD checklist (historical)
 
 - [x] Day 1 — project + folders  
 - [x] Day 2 — grid + clock + phases  
@@ -107,15 +87,7 @@ If behind: **freeze at last green milestone**; do not start the next. Cut order:
 
 ---
 
-## Risks that own calendar days
+## Risks
 
-| Risk | Hits days | Mitigation in schedule |
-|------|-----------|-------------------------|
-| Art pass overrun | 8–11 | Required floor only; cut optional DoF/SSS first (**C34**) |
-| Path UI overruns | 5–6 | Keep Day 3 click-destination if needed; 线稿涂鸦 path is Day 9 |
-| URP migration pain | 8 | Start Day 8 early; primitives stay playable until materials land |
-| Scope creep (full old GDD) | any | **C34** freeze: no Fusion/gear cards/attic in 14-day ship |
-| Android SDK pain | 12 | Smoke only if Windows candidate is already green |
-| Continuous pivot overrun | 7b–7g | Phase 1 and Phase 5 run in parallel worktrees to compress the critical path; if still behind, art pass (8–11) absorbs the overflow per the cut order — Day 14 ship date does not move |
-
-Detail register: [RISKS.md](RISKS.md).
+The old calendar-day risk table is retired along with the Day-1–14 schedule it was keyed to. Current risks
+are tracked per-phase in [RISKS.md](RISKS.md), which was rewritten alongside this doc for the same pivot.

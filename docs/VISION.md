@@ -1,7 +1,7 @@
 # Vision One-Pager: Untitled Tactical Heist Game
 
 **Doc ID:** D1  
-**Status:** Updated 2026-07-27 (stakeholder rewrite)  
+**Status:** Updated 2026-08-08 (**C46 — full scope pivot**: monetizing PvP game shipping to Steam, supersedes the 14-day portfolio-demo framing; core loop unchanged. See `PRODUCT_MEMORY.md` C46–C51.) Prior: 2026-07-27 stakeholder rewrite.
 **Next:** D2 Scope (companion) · then D3 Core loop  
 
 Working title in repo: **logiCard** (may change).
@@ -20,8 +20,16 @@ Fans of tactical extraction shooters (*Escape from Tarkov*, *Rainbow Six Siege*)
 
 ## Players & Platforms
 
-- **Players:** 2–8 players online (supporting 1v1 up to 4v4 team play).
-- **Platforms:** Cross-platform on **Windows** and **Android**.
+- **Players:** 2–8 players online (supporting 1v1 up to 4v4 team play). Current build is 1v1 (**C2**).
+- **Platforms:** **Windows via Steam**, landscape desktop, is the active ship target (**C48**). Android/mobile
+  is a separate future consideration, not part of this pivot's scope (**C6**/**C48**).
+
+## Business Model
+
+**Free-to-play, cosmetic-only in-app purchases, no pay-to-win** (**C47**). Nothing purchasable may affect
+`HitRadius`/`LaneHalfWidth`/movement speed/costs, or reduce a pawn's board visibility/contrast below the
+floor `ART_DIRECTION.md` sets — the core loop's fairness depends on both being read correctly by both
+players. Detail, guardrails, and open economy numerics: [MONETIZATION.md](MONETIZATION.md).
 
 ## Art Direction
 
@@ -46,7 +54,9 @@ The **Time Resource** timeline UI must be visual and intuitive enough that a new
 - Procedurally generated maps (want tightly crafted, learnable puzzle-box spaces).
 - Real-time twitch shooting (combat is completely **deterministic** based on the timeline).
 - Dice-based RNG combat.
-- Deep single-player PvE campaigns.
+- Deep single-player PvE campaigns. *(An invisible matchmaking-fallback bot, **C49**, is not this — see
+  [AI_FALLBACK_BOT.md](AI_FALLBACK_BOT.md). It substitutes for a missing PvP opponent; it is not a marketed
+  mode, tutorial, or content pipeline of its own.)*
 
 ## Confirmed pillars (product memory)
 
@@ -54,13 +64,16 @@ The **Time Resource** timeline UI must be visual and intuitive enough that a new
 |----|------|
 | C13 | Lightweight **2.5D** + clear 2D timeline/HUD |
 | C15 | **Cards → timeline**; timeline = gameplay + Master Clock execution |
-| C16 | **Attack vs Defend PvP**; bots fill for testing |
+| C16 | **Attack vs Defend PvP**; bots are a matchmaking fallback only, never a marketed mode (**C49**) |
 
-## Long-Term Systems (Post-Demo)
+## Long-Term Systems (Future Roadmap)
 
-Confirmed direction for the full game, none of it required or built for the 14-day demo (see `PRODUCT_MEMORY.md` C35–C38 and C42–C44 for detail):
+Confirmed direction for the full game. None of it is promoted into active build scope by the pivot itself
+(**C46**) — sequenced by the phase model in `SCHEDULE.md`, see `PRODUCT_MEMORY.md` C36–C38/C42–C44 for detail.
+(**C35**, continuous movement replacing the tile grid, is **not** in this list — it was promoted to current
+scope and shipped back on 2026-08-03; see `CONTINUOUS_PIVOT_PLAN.md`. The board these systems would build on
+top of already exists.)
 
-- **Continuous movement** over a navmesh, replacing the tile grid (**C35**).
 - **Destructible geometry** as discrete breach states — the map as a weapon, made literal (**C36**).
 - **Asymmetric objective win condition** (vault/cashbox-style) — the actual long-term realization of the "Asymmetric Heist" pillar above, once the demo's elimination-only win ships (**C37**).
 - **Revive**, via a Downed state and a tile-targeted revive action, plus a "Detonator" martyr archetype that turns a finished-off ally into a tactical weapon (**C38**).
@@ -68,4 +81,5 @@ Confirmed direction for the full game, none of it required or built for the 14-d
 
 ## Out of this doc
 
-Exact numbers, full card lists, FoW rules, net architecture — GDD / TDD / Scope / Core loop.
+Exact numbers, full card lists, FoW rules, net architecture — GDD / TDD / Scope / Core loop. Monetization
+economy — `MONETIZATION.md`. Networking/matchmaking design — `NETWORKING_DESIGN.md`. UI layout — `UI_FLOW.md`.

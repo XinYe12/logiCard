@@ -1,32 +1,35 @@
-# 2-Week Demo Scope
+# Product Scope — Steam F2P PvP Ship
 
 **Doc ID:** D2  
-**Status:** Updated 2026-08-03 — continuous-space pivot (**C35/C39**, see [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)); Updated 2026-07-30 — **C34 Polished Core Demo** (art + tight gameplay)  
-**Goal:** Ship a **portfolio-ready local Windows** vertical slice: Desk-Lamp Diorama presentation + readable Time Card / Move / Shoot duel.
+**Status:** Updated 2026-08-08 — **C46 full scope pivot** (supersedes the 14-day-demo framing; see `PRODUCT_MEMORY.md` C46–C51). Prior: 2026-08-03 continuous-space pivot (**C35/C39**, see [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)); 2026-07-30 **C34 Polished Core Demo** (superseded).  
+**Goal:** Ship a **free-to-play PvP** game to **Steam** (landscape desktop): Desk-Lamp Diorama presentation, raised to a commercial art bar, wrapped around the same Time Card / Move / Shoot duel — see "What must not change" in `PRODUCT_MEMORY.md` C46.
 
 Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.md) · Art floor: [ART_DIRECTION.md](ART_DIRECTION.md)
 
 ---
 
-## IN (Must Have for Demo)
+## IN (Must Have for Ship)
 
-### The Diorama Micro-Map
-- **Continuous ground arena** (`[0,4]×[0,4]` footprint — was a 5×5 grid, see **C35/C39**) on a physical base in a dark void.
-- **One door** (wall segment, radius-based interact) that blocks move + LoS when closed (contextual open/close).
+### The Diorama Map
+- **Continuous, multi-room ground arena** (`[0,8]×[0,10]` footprint, Yard/Hall/Vault + flank corridors — **C45**) on a physical base in a dark void.
+- **Two doors** (wall segments, radius-based interact) that block move + LoS when closed (contextual open/close).
 
-### Presentation (required — C34 / C29)
+### Presentation (required — commercial ship bar, C46/C29)
 - Warm desk-lamp lighting, clay-like materials, **线稿涂鸦** paths (FragPunk-style ink on board — see ART_DIRECTION).
-- Cardstock Time Card + tactile thumb-zone HUD; clean AR Time Resource scrubber.
+- Cardstock Time Card + clean AR Time Resource scrubber, now laid out landscape desktop-first (**C48**).
 - Stepped pawn motion; physical muzzle flash; clay wound splat.
 - Basic tactile foley (footsteps, shot, Time Card, Lock In).
-- Detail floor: [ART_DIRECTION.md](ART_DIRECTION.md) § Demo art floor.
+- Detail bar: [ART_DIRECTION.md](ART_DIRECTION.md) § Commercial ship art bar.
 
 ### Multiplayer / platforms
-- **1v1 local** (Attacker vs Defender labels + spawns — **C18**).
-- **Windows** polished ship build.
-- **Android:** optional smoke build only if time remains — not a polish target for Day 14 (**C34**).
-- **Bots:** Nice-to-have (**C19**), not Must-Have.
-- **Fusion online:** deferred (**C5** / **C34**).
+- **1v1 real online PvP** (Attacker vs Defender labels + spawns — **C18**), landscape desktop, Steam.
+- **Windows via Steam** ship build.
+- **Android:** separate future consideration, not part of this pivot's scope (**C6**/**C48**).
+- **Matchmaking-fallback bot:** required, invisible substitute when no PvP opponent is available — not
+  optional, not a marketed mode (**C49**). Detail: [AI_FALLBACK_BOT.md](AI_FALLBACK_BOT.md).
+- **Real networking (Fusion or confirmed alternative):** in scope, biggest open build item — see
+  [NETWORKING_DESIGN.md](NETWORKING_DESIGN.md) (**C51**).
+- **Free-to-play, cosmetic-only IAP, no pay-to-win:** see [MONETIZATION.md](MONETIZATION.md) (**C47**).
 
 ### Core Game Loop
 - **Allot (Time Card) → Program (30 real-world s) → Reveal → continuous Time Resource resolve → Playback → Aftermath** → repeat until Dead or pool empty (**C33** / **C4**).
@@ -46,10 +49,9 @@ Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.m
 
 ---
 
-## OUT (Do NOT Build for 14-day ship — C34)
+## OUT (Do NOT Build for this ship — C46)
 
-- Photon Fusion online multiplayer.
-- Full Android UI/polish / dual-platform feature parity.
+- Full Android UI/polish / dual-platform feature parity (portrait UI is a separate future consideration, **C48**).
 - Attic floor, vent, monitor.
 - Gear cards: Bandage, Interact-as-card, Flashbang, Adrenaline.
 - Otherwise Invalid→Stop library.
@@ -61,9 +63,9 @@ Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.m
 
 ---
 
-## LATER (Post-Demo Roadmap)
+## LATER (Future Roadmap — phase-sequenced, see SCHEDULE.md)
 
-- Fusion Host 1v1 + Android cross-play polish (**C5** / **C6**).
+- Android cross-play polish (**C6**/**C48**, separate future consideration).
 - Attic + vent + monitor; Bandage / Otherwise / Flashbang / Adrenaline.
 - Full clay SSS, thumbprints, bespoke models.
 - Hidden movement, decoys, Defense bluffing.
@@ -79,7 +81,12 @@ Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.m
 ## Clarifications (still in force)
 
 1. Attack/Defend = labels + spawns (**C18**).  
-2. Bots = nice to have (**C19**).  
+2. Bots = required matchmaking fallback, not a marketed mode (**C49**, amends **C19**'s "nice to have").  
 3. Personal timelines + shared continuous **Time Resource** clock; **Playback Duration** separate (**C27**).  
-4. **C34** supersedes older “primitives OK / full GDD Section 9” ship language for the 14-day artifact.
-5. **C35/C39 (2026-08-03):** the board is continuous, not a grid — reverses C35's original "long-term only" framing. Art/polish pass (Days 8–14) is now planned **compressed** to absorb the pivot's cost, per the schedule-handling call in `CONTINUOUS_PIVOT_PLAN.md`.
+4. **C46 (2026-08-08)** supersedes **C34**'s "primitives OK / 14-day artifact" ship language entirely — this
+   is a commercial ship, not a portfolio demo. Art/polish is now in scope (Phase 5, `SCHEDULE.md`), not an
+   optional stretch goal.
+5. **C35/C39 (2026-08-03, historical):** the board is continuous, not a grid — this was itself once a
+   "long-term only" item that got promoted mid-build; already shipped, see `CONTINUOUS_PIVOT_PLAN.md`.
+6. **C48 (2026-08-08):** UI is landscape desktop-first for Steam, superseding **C30**'s portrait-lock. Portrait
+   remains documented (`PRODUCT_MEMORY.md` C30) as a possible future mobile-port direction, not deleted.
