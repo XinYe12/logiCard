@@ -1,7 +1,7 @@
 # Core Loop Sheet
 
 **Doc ID:** D3  
-**Status:** Updated 2026-08-03 — continuous-space pivot (**C35/C39**); Updated 2026-07-30 — Time Card match loop (**C33**) + Polished Core Demo (**C34**)  
+**Status:** Updated 2026-08-08 — **C46 full scope pivot** (14-day-demo framing retired; loop unchanged — see `PRODUCT_MEMORY.md` C46). Prior: 2026-08-03 continuous-space pivot (**C35/C39**); 2026-07-30 Time Card match loop (**C33**) + C34 Polished Core Demo (superseded).  
 **Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [GDD.md](GDD.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md), [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)
 
 ---
@@ -33,7 +33,7 @@
 - Program phase limited in **real-world** seconds (30s).
 - **Presentation:** Desk-Lamp Diorama required floor (**C29** / **C34**).
 
-**Deferred from 14-day ship:** Bandage / Flashbang / Adrenaline / Interact-as-card / Otherwise library / attic / vent / monitor / 高铁.
+**Future roadmap, not in this ship's core loop:** Bandage / Flashbang / Adrenaline / Interact-as-card / Otherwise library / attic / vent / monitor / 高铁.
 
 ---
 
@@ -73,7 +73,7 @@ flowchart LR
 - Play a Snap Shot/Hold Angle card
 - Aim with twitch controls
 - Manually allot seconds to a Move or Shoot before it's scheduled — cost is automatic (**C21**)
-- Draw Bandage/Flashbang/Adrenaline (post-demo)
+- Draw Bandage/Flashbang/Adrenaline (future roadmap)
 
 ### 4. Lock
 - Each player Ready / timer auto-lock (UI must show waiting state; local demo may auto-advance).
@@ -86,17 +86,17 @@ flowchart LR
 - **Playback Duration** may compress long Time Resource spans so cinema stays watchable.
 - Outcomes update pawn positions, door state, wounds/elim.
 
-### 7. Invalid moves (demo simplification)
-- Blocked path / closed door → stop before the block. Full Otherwise card library = post-demo (**C34**).
+### 7. Invalid moves (simplified for this ship)
+- Blocked path / closed door → stop before the block. Full Otherwise card library remains future roadmap (**C46**, amends C34).
 
 ### 8. Aftermath / End check
-- If a player is **eliminated** → Match Over (demo win).
+- If a player is **eliminated** → Match Over.
 - Else if the remaining pool cannot fund `MinRoundSeconds` → Match Over.
 - Else → return to **Allot** for another round on **carried** map state (positions + wounds) (**C33**).
 
 ---
 
-## Operations (demo verbs)
+## Operations (ship verbs)
 
 **Base verbs (not cards):**
 - **Movement:** path + stance — Sprint (evades Snap) / Tactical Walk / Stealth Crawl.
@@ -105,7 +105,7 @@ flowchart LR
 **Map action:**
 - **Door** — open/close; Strength affects Time Resource cost (see GDD).
 
-**Post-demo cards** (confirmed design, not 14-day ship): Bandage, Interact-as-card, Flashbang, Adrenaline.
+**Future roadmap cards** (confirmed design, not in this ship's core loop): Bandage, Interact-as-card, Flashbang, Adrenaline.
 
 ---
 

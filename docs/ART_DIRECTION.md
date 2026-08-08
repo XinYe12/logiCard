@@ -47,12 +47,12 @@ Ship fails presentation acceptance if any of these are missing:
 Achieve “physical” feel via lighting, shaders, and camera more than ultra-high-poly meshes. **Characters are an approved exception** to the clay/SSS framing below — they use imported CC0 meshes (Quaternius) with URP/Lit + pushed smoothness for a glossy-toy read (*Link's Awakening* 2019), not clay-tint/SSS. Board materials and dynamic props keep the clay language unchanged; see `PAWN_ART_REWORK_PLAN.md`.
 
 * **Material (Subsurface Scattering):** Dynamic props use shaders with SSS so light bleeds through thin forms (ears, gun edges) like polymer clay. Characters: superseded — URP/Lit + glossy smoothness on imported meshes, not clay-tint/SSS.  
-  *Demo floor:* clay-tint materials + soft lighting for props/board; true SSS optional. Characters: glossy toy sheen on imported meshes.
+  *Ship floor:* clay-tint materials + soft lighting for props/board; true SSS optional. Characters: glossy toy sheen on imported meshes.
 * **Texture (Thumbprints):** Nothing perfectly smooth — subtle thumbprints, dust, smudges in normals.  
-  *Demo floor:* light procedural noise / imperfect albedo OK.
+  *Ship floor:* light procedural noise / imperfect albedo OK.
 * **Environment:** Map sits on a physical **base** (plywood / plastic board). Grid lines painted or etched into the floor. Outside the board: dark void, optional faint messy workbench silhouette.
 * **Camera (Tilt-Shift):** Strong DoF — blur near and far so pawns read ~**2-inch** miniatures.  
-  *Demo floor:* moderate DoF on Windows; kill DoF before readability on any Android smoke (**C13**).
+  *Ship floor:* moderate DoF on Windows; kill DoF before readability on any Android smoke (**C13**).
 
 ---
 
@@ -73,7 +73,7 @@ Smooth 60fps character motion kills the illusion.
 Ban standard glow-game VFX (no bloom lasers, no magical fading smoke).
 
 * **Muzzle flashes:** Jagged static mesh (yellow cotton / orange resin) — **2 frames**, then gone. **Required.**
-* **Smoke (Flashbang):** Cotton-wool puffs — post-demo (card deferred under **C34**).
+* **Smoke (Flashbang):** Cotton-wool puffs — future roadmap (card deferred, **C46** amends **C34**).
 * **Blood / wounds:** Wet red clay splats that stick to floor or models. **Required on hit.**
 
 ---
@@ -120,7 +120,7 @@ Soundscape sells miniature tactile scale.
 
 ---
 
-## Acceptance (art for demo ship)
+## Acceptance (art for ship)
 
 1. Board reads as a **desk diorama** even without final character models.  
 2. Move vs Shoot are **visually distinct** in Playback.  

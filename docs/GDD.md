@@ -1,12 +1,12 @@
-# D4: Game Design Document (v0.2) — Polished Core Demo
+# D4: Game Design Document (v0.2) — Core Ruleset
 
 **Doc ID:** D4  
-**Status:** Revised 2026-08-03 — **continuous-space pivot** (C35 promoted to demo scope + C39 technical decisions — see [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)); C21 amended (multi-waypoint path + automatic Time Resource cost, no allotment slider); Revised 2026-07-30 — **C34 Polished Core Demo** (art + tight gameplay); Time Card match loop (**C33**)  
+**Status:** Revised 2026-08-08 — **C46 full scope pivot** (14-day-demo framing retired; this ruleset is now the shipping product's binding rules, unchanged in substance — see `PRODUCT_MEMORY.md` C46). Prior: 2026-08-03 continuous-space pivot (C35 promoted to demo scope + C39 technical decisions — see [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)); C21 amended; 2026-07-30 C34 Polished Core Demo (superseded).  
 **Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [CORE_LOOP.md](CORE_LOOP.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md), [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)
 
 **Scope note:** the board is **continuous position**, not a discrete grid (**C35/C39**, amended 2026-08-03 — this reverses an earlier "long-term only" framing after a cold-observer playtest). Distances/costs below still use the same numeric footprint and formulas the grid version used (`[0,4]×[0,4]`, `seconds = distance × BaseSecondsPerTile × StanceMult`) — only the underlying coordinate/LoS/pathfinding math changed, from tile-based to continuous. Full phased implementation: [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md). Destructible geometry, an asymmetric objective win, and a Downed+revive+Detonator system remain **long-term-only**, not part of this pivot — see `PRODUCT_MEMORY.md` **C36–C38**.
 
-This document defines rules, numeric tuning, and content for the **14-day portfolio prototype**. Focus: a **readable timeline duel** that looks like a handmade desk-lamp miniature — not a feature checklist.
+This document defines rules, numeric tuning, and content for the **shipping product**. Focus: a **readable timeline duel** that looks like a handmade desk-lamp miniature — not a feature checklist.
 
 **Core model:**
 1. **Character Card** sets base attributes (Speed / Agility / Strength).  
@@ -15,7 +15,7 @@ This document defines rules, numeric tuning, and content for the **14-day portfo
 4. **Shoot** = aim (free-aim point + LoS — **C35/C39**) + allot time → mode (Snap Shot / Hold Angle). Base verb, not a card.  
 5. **One door** = contextual map action (open/close) that blocks move + LoS — **not** a full Interact card system for this ship.
 
-Gear cards (Bandage / Flashbang / Adrenaline / Interact-as-card), Otherwise Stop, attic/vent/monitor, Fusion online, and full Android polish are **post-demo** (**C34**).
+Gear cards (Bandage / Flashbang / Adrenaline / Interact-as-card), Otherwise Stop, and attic/vent/monitor remain **future roadmap** (**C46**, amends **C34**). Fusion/real networking is now core ship scope (**C51**); Android is a separate future consideration (**C6**/**C48**).
 
 ---
 
@@ -100,7 +100,7 @@ Base Time Resource costs (Section 6) are placeholders; Agility scaling (**C25**)
 
 ## 4. Door (Map Action — Not a Gear Card)
 
-For the 14-day ship, **one door** on the continuous arena (a wall **segment** with a gap, amended 2026-08-03 — was a grid tile, see **C35/C39**):
+For this ship, **two doors** on the continuous arena (each a wall **segment** with a gap, amended 2026-08-03 — was a grid tile, see **C35/C39**; expanded from one door on the earlier single-room board to two on the multi-room board, **C45**):
 
 - Scheduled as a **contextual map action** when the pawn is within **`InteractRadius`** of the door's segment during Program (tap door → open/close at a booked Time Resource second) — replaces the old "current/adjacent tile" rule.
 - **Closed** blocks movement across the segment and **blocks LoS** across it.
@@ -116,7 +116,7 @@ For the 14-day ship, **one door** on the continuous arena (a wall **segment** wi
 | State | Effect |
 |-------|--------|
 | **Healthy** | Normal. |
-| **Wounded** | Visible wounded state; second wound (or Hold Angle lethal) → **Dead**. *(Full +1s surcharge and Bandage-by-next-round bleed are **post-demo** under C34 — demo still shows wound → death so combat stakes read.)* |
+| **Wounded** | Visible wounded state; second wound (or Hold Angle lethal) → **Dead**. *(Full +1s surcharge and Bandage-by-next-round bleed remain **future roadmap** (**C46**, amends C34) — this ship still shows wound → death so combat stakes read.)* |
 | **Dead** | Eliminated (Hold Angle lethality / second wound / mutual kill). |
 
 ### Shooting & LoS
@@ -156,22 +156,22 @@ Placeholder magnitudes — tune in playtest. "unit" = continuous board distance 
 | **Snap Shot** | **2s** | Wound on LoS within `HitRadius` of the aim point; misses Sprint |
 | **Hold Angle** | **3s** aim lock | Lethal on LoS; hits Sprint |
 
-### Deferred cards (post-demo — do not implement for C34 ship)
+### Deferred cards (future roadmap — not part of this ship's core loop)
 
 | Card | Notes |
 |------|-------|
-| Bandage / Interact-as-card / Flashbang / Adrenaline | Confirmed long-term design; **out of 14-day ship** |
+| Bandage / Interact-as-card / Flashbang / Adrenaline | Confirmed long-term design; **not in this ship's core loop** |
 
 ---
 
 ## 7. Map Elements
 
-| Element | 14-day ship |
+| Element | This ship |
 |---------|-------------|
 | **Two Doors** | Contextual open/close (radius-based interact — **C39**); blocks move + LoS when closed — was one door pre-**C45** |
 | **Continuous ground arena, multi-room** (`[0,8]×[0,10]` footprint — **C45**) | Yes |
-| Attic / Vent / Monitor | **Post-demo** |
-| 高铁 / High-speed rail (**C31**) | Confirmed design; **post-demo** |
+| Attic / Vent / Monitor | **Future roadmap** |
+| 高铁 / High-speed rail (**C31**) | Confirmed design; **future roadmap** |
 
 ---
 
@@ -198,7 +198,7 @@ Full SSS, thumbprint maps, and bespoke character rigs are in scope for Phase 5 (
 
 ---
 
-## 10. Acceptance (14-day ship)
+## 10. Acceptance
 
 1. A new player can complete **at least two Time Card rounds** locally (Allot → Program → Reveal → Execute → Aftermath → Allot).  
 2. Path + stance and Snap / Hold produce understandable tactical consequences on the **Time Resource scrubber**.  
