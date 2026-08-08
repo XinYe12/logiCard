@@ -39,10 +39,13 @@ something to assume.
 
 ## Implementation steps
 
-1. **Source & vet (do this before writing any code).** Fetch preview imagery for the shortlisted packs
-   (Kenney Blocky Characters, Quaternius Ultimate Modular Men, and any close alternative that turns up) and
-   actually look at them against the Link's Awakening reference — rounded vs. blocky, glossy vs. flat-shaded,
-   chibi vs. realistic proportions. Pick final pack(s). Confirm CC0/license text at the source.
+1. **Source & vet — DONE (2026-08-08).** Both shortlisted packs were downloaded and previewed against the
+   Link's Awakening reference. **Kenney "Blocky Characters" rejected** — blocky/Minecraft-style, single rigid
+   base mesh, wrong silhouette trap. **Quaternius "Ultimate Modular Men" selected** as the geometry base —
+   genuinely modular parts let Scout/Juggernaut differ in silhouette, but it's not a visual match for the
+   target out of the box either (faceted, adult-proportioned, matte) — the gap gets compensated downstream
+   (smoothed normals, glossy material, existing lighting/post Volume), not by finding a better free pack.
+   Full findings, licenses, and source URLs: `Assets/_Project/Art/Characters/THIRD_PARTY.md`.
 
 2. **Import minimally.** Bring only the specific meshes actually needed (not the whole pack) into a new
    `Assets/_Project/Art/Characters/` folder, mirroring the existing `Assets/_Project/Art/URP/...` layout

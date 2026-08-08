@@ -1,5 +1,14 @@
 # Draft Handoff — 2026-08-07
 
+**Pawn art rework: moved from planned to in progress (2026-08-08).** Step 1 (source & vet candidate packs)
+is done: Kenney "Blocky Characters" was downloaded, previewed, and rejected (blocky, single rigid mesh, wrong
+silhouette trap); Quaternius "Ultimate Modular Men" was downloaded, previewed, and selected as the geometry
+base (modular parts give Scout/Juggernaut a real silhouette difference, though it's not a visual match for
+the Link's Awakening target out of the box — that gap gets compensated downstream via shader/lighting work).
+Full findings + licenses: `Assets/_Project/Art/Characters/THIRD_PARTY.md`. Plan status: `docs/PAWN_ART_REWORK_PLAN.md`.
+The shader/import/`PawnView.cs` work this unblocks is still underway in the main worktree as of this note —
+**not finished or verified, do not treat as done.**
+
 **Pawn art rework in progress, read `docs/PAWN_ART_REWORK_PLAN.md` before touching `PawnView.cs` (2026-08-08):**
 `377029f`'s primitive-assembled Scout/Juggernaut silhouettes were rejected by human review on sight (before
 even being run) — cube parts + matte grain read as "default Unity primitives glued together," not handmade
