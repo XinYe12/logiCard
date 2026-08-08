@@ -6,6 +6,8 @@ Continuous-space tactics prototype (Unity 6000.5.5f1). Turn-based programmed-mov
 
 When more than one agent is in flight, also read `docs/PARALLEL_OPS.md` and `docs/departments/INDEX.md` at session start (then peer `STATUS.md` + `docs/contracts/CURRENT.md`). Never share a working tree with another agent; workers update only their own department STATUS; Integrator alone edits DRAFT_HANDOFF, SCHEDULE ticks, and contracts.
 
+`docs/DIRECTING_AGENTS.md` is the companion doc for the human's side of this system — what to check before trusting a "done" report, when a delegation is real parallelism vs. rework, what batchmode tests can't tell you. Point the human there if they're asking how to run this multi-agent setup effectively, not just what the rules are.
+
 ## Before touching UI that lets the player change a board object's state
 
 **Read `docs/UI_BOARD_ANCHORED_COMPONENTS.md` before writing or modifying any interaction control tied to a board object** — a door, a future power station/terminal/pickup, anything the player selects and then changes the state of. This covers two things, both mandatory, not optional style guidance:

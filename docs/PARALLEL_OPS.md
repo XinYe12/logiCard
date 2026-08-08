@@ -1,7 +1,8 @@
 # Parallel Ops — Multi-Agent Constitution
 
 **Status:** Active 2026-08-07. Permanent operating system for concurrent agents on logiCard.  
-**Product truth stays elsewhere:** `PRODUCT_MEMORY.md`, `ART_DIRECTION.md`, `SCHEDULE.md`, `DRAFT_HANDOFF.md`. This file and `docs/departments/` track **who owns what and how to stay consistent**, not design decisions.
+**Product truth stays elsewhere:** `PRODUCT_MEMORY.md`, `ART_DIRECTION.md`, `SCHEDULE.md`, `DRAFT_HANDOFF.md`. This file and `docs/departments/` track **who owns what and how to stay consistent**, not design decisions.  
+**This doc is the agent-side rulebook.** For the human's side — how to review reports, when a delegation is real vs. rework, what to check before approving a merge — see `docs/DIRECTING_AGENTS.md`.
 
 ## Locked defaults
 
