@@ -32,7 +32,7 @@ Ship fails presentation acceptance if any of these are missing:
 | **Materials** | Clay-tint / matte polymer look with **subtle** procedural noise (no stock shiny PBR chrome) | True SSS, thumbprint normals |
 | **Paths** | Thin, slightly wobbly hand-drawn **ink line** on the board surface — FragPunk/界外狂潮-style "线稿涂鸦" (decision 2026-08-07, supersedes the earlier yarn/chalk direction); not fat spray, not a glitchy HUD line, not neon | Waypoint ink dots in the same stroke language |
 | **Time Card / HUD** | Cardstock Time Card in thumb zone; Lock In feels like a physical switch; **AR scrubber** stays clean/high-contrast vs clay board | Soft card shadow on the diorama |
-| **Characters** | Distinct clay-like pawn silhouettes (Scout vs Juggernaut readable); **stepped 8–12 fps** motion in Playback | Bespoke modeled clay characters, facial detail |
+| **Characters** | Distinct toy-figurine silhouettes (*Legend of Zelda: Link's Awakening* 2019 remake reference) — Scout vs Juggernaut readable via imported CC0 Quaternius meshes; **stepped 8–12 fps** motion in Playback | Bespoke modeled clay characters, facial detail |
 | **VFX** | **Physical** muzzle-flash mesh (~2 frames); persistent **clay wound splat** on hit | Cotton Flashbang smoke (post-demo card) |
 | **Audio** | Tactile foley: clay-on-board footsteps; cap-gun / heavy-stapler shot; paper Time Card; Lock In switch snap | Full mix / music bed |
 
@@ -44,10 +44,10 @@ Ship fails presentation acceptance if any of these are missing:
 
 ## 1. Visual Pillars (Digital Claymation)
 
-Achieve “physical” feel via lighting, shaders, and camera more than ultra-high-poly meshes.
+Achieve “physical” feel via lighting, shaders, and camera more than ultra-high-poly meshes. **Characters are an approved exception** to the clay/SSS framing below — they use imported CC0 meshes (Quaternius) with URP/Lit + pushed smoothness for a glossy-toy read (*Link's Awakening* 2019), not clay-tint/SSS. Board materials and dynamic props keep the clay language unchanged; see `PAWN_ART_REWORK_PLAN.md`.
 
-* **Material (Subsurface Scattering):** Characters and dynamic props use shaders with SSS so light bleeds through thin forms (ears, gun edges) like polymer clay.  
-  *Demo floor:* clay-tint materials + soft lighting; true SSS optional.
+* **Material (Subsurface Scattering):** Dynamic props use shaders with SSS so light bleeds through thin forms (ears, gun edges) like polymer clay. Characters: superseded — URP/Lit + glossy smoothness on imported meshes, not clay-tint/SSS.  
+  *Demo floor:* clay-tint materials + soft lighting for props/board; true SSS optional. Characters: glossy toy sheen on imported meshes.
 * **Texture (Thumbprints):** Nothing perfectly smooth — subtle thumbprints, dust, smudges in normals.  
   *Demo floor:* light procedural noise / imperfect albedo OK.
 * **Environment:** Map sits on a physical **base** (plywood / plastic board). Grid lines painted or etched into the floor. Outside the board: dark void, optional faint messy workbench silhouette.

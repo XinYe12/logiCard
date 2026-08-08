@@ -20,7 +20,7 @@ That one round should surface: stepped pawn motion, a muzzle flash, a wound spla
 
 ## Day 10 — visuals (`a57d095` stepped motion + VFX wiring)
 
-- [ ] Attacker (Scout: lean capsule + small head) and defender (Juggernaut: wide capsule + blocky head + shoulder pads) read as visually distinct silhouettes, not "two capsules, different color" (`377029f`, 2026-08-08 — this was a gap in the original Day 10 landing, fixed same day).
+- [ ] Attacker (Scout: Quaternius Adventurer outfit) and defender (Juggernaut: Quaternius Swat outfit) read as visually distinct silhouettes via imported meshes with team color tinted onto the torso part only — not "same mesh, different color."
 - [ ] Stepped motion reads as "pose snaps, not blends" during Playback, not a smooth 60fps glide.
 - [ ] Muzzle flash appears at the shooter, oriented toward the aim point, briefly, when a shot fires.
 - [ ] Wound splat appears at the victim's position on Wounded/Killed, persists, disappears again on rewind.
