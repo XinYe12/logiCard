@@ -51,20 +51,46 @@ hygiene pass — deleted the two dead pointer stubs + `D10_Art_Direction.md`, ba
 A final grep swept the whole `docs/` corpus for stray "14-day"/"demo" framing — nothing left outside
 intentional historical references or amendment-clause pointers.
 
-**Decided (2026-08-08, human call):** finish the two older board-rework workers before starting any Phase
-1/2/5 implementation — closes real loose ends (the PlayMode suite is currently red because of the `C45` board
-change) before piling more on top.
+**DONE (2026-08-08).** Both board workers reported back, were reviewed against their briefs (clean, in
+boundary, matched their own reports), and merged:
+- `feat/board-edge-dressing` → merged `4a9a992` (worker commit `325e83e`): physical board-edge lip (four cubes
+  along `model` bounds) + void apron/workbench clutter dressing in `BoardView.cs`, all bounds-driven, no
+  hardcoded board size. EditMode 107/107 in the worker's own worktree; PlayMode correctly deferred (was
+  expected-red pending the sibling merge). **Still needs a human Editor look** — the worker flagged lip
+  thickness (0.14/0.16), apron margin (2.75), and clutter scale as possibly too strong/faint at actual
+  diorama camera distance (ortho 9.0 + Bokeh DoF) — not verified visually yet.
+- `feat/playmode-board-rewrite` → merged `d81ffeb` (worker commit `07711b6`): mechanical coordinate retarget
+  of the 3 PlayMode files to the `C45` board, plus disclosed `DisplayName == "Door #1"` hardening asserts in
+  the door-selection tests (two doors now exist; substituted coords already resolved unambiguously, this just
+  locks it in). EditMode 107/107, **PlayMode 29/29 — all three suites full green** in the worker's own
+  worktree, verified against the real post-`C45` `GameBootstrap.cs`. **This clears the red PlayMode suite**
+  that's existed since `C45` landed.
 
-**Board workers — recreated fresh, both queued, neither started yet:** their worktrees were originally forked
-at `0cb64e5`, *before* `C45`'s board rework even landed on `master` — badly stale after the whole docs pivot
-landed on top. Deleted and recreated both off current `master` (`4fdc423`) with updated briefs:
-- `feat/board-edge-dressing` (`D:\projects\Game\logiCard-board-edge-dressing`) — board perimeter/void
-  dressing in `BoardView.cs`. Brief: `BOARD_EDGE_DRESSING_AGENT_BRIEF.md` in that worktree.
-- `feat/playmode-board-rewrite` (`D:\projects\Game\logiCard-playmode-board-rewrite`) — rewrite the 3 PlayMode
-  test files still hardcoding the old single-room board geometry (currently red). Brief:
-  `PLAYMODE_BOARD_REWRITE_AGENT_BRIEF.md` in that worktree. **Improvement over the original scoping:** this
-  worktree now has the real `C45` `GameBootstrap.cs`, so this worker can actually compile and run the suite
-  green, not just write substitutions against a frozen spec blind.
+**Post-merge verification:** ran EditMode batchmode on the merged `master` (`d81ffeb`) in a disposable
+worktree (`logiCard-verify-board-merge`) — **107/107 passed.** PlayMode was not re-run on the combined merge
+before the session had to stop for a machine switch — risk is low (the two branches are file-disjoint,
+`BoardView.cs` vs. 3 test files, and each already passed PlayMode individually pre-merge) but **whoever picks
+this up next should run the full PlayMode suite on `master` once, to be sure**, before treating this as fully
+closed. The disposable verify worktree (`D:\projects\Game\logiCard-verify-board-merge`) is still sitting on
+this machine's disk if useful; otherwise safe to ignore/remove, it's not tracked by git.
+
+**Also committed this session, previously-uncommitted pawn-art-rework work** (paused mid-flight when focus
+shifted to the board/scope work, now captured so it isn't stranded across the machine switch): `PawnView.cs`
+per-part team-color tinting, `Editor/PawnImportTool.cs`, and the full `Art/Characters/**` tree — Scout
+(`Adventurer.fbx` + full material set) and **Juggernaut** (`Swat.fbx` + `Juggernaut.prefab` + materials) both
+now have real generated prefabs/materials, not just the raw source Scout had before. Round 2 (Juggernaut) may
+be further along than last known — **nobody has looked at it in-Editor yet**, that's the next pawn-art step
+whenever that thread picks back up.
+
+**Deliberately left uncommitted, not mine to touch:** `.claude/skills/parallel-development/SKILL.md` +
+`.cursor/skills/parallel-development/` (a different concurrent session's edits, flagged as such since early
+in this project's history), `ProjectSettings/ProjectSettings.asset` (recurring Sentis-analytics churn, never
+shipped), `image.png` (unrelated pre-existing drift).
+
+**What's next, in order:** (1) a human/fresh-session PlayMode run on `master` to confirm the board merge is
+fully green, (2) a human Editor look at the board dressing's visual tuning, (3) whenever convenient, pick a
+Phase 1/2/5 slice from `docs/SCHEDULE.md`'s phase table and start real implementation on the scope pivot —
+still nothing but docs has landed for that yet.
 
 **Once both land:** pick a Phase 1/2/5 slice from `docs/SCHEDULE.md`'s phase table and start real
 implementation — the pivot itself was docs-only, no code changed yet. `contracts/CURRENT.md` and

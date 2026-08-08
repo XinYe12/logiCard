@@ -24,6 +24,15 @@ namespace LogiCard.Board
         private const float BodyHeight = 0.8f;
 
         /// <summary>
+        /// Uniform target height (world units) an imported archetype mesh is rescaled to, measured
+        /// from its combined renderer bounds — CC0 packs (docs/PAWN_ART_REWORK_PLAN.md) come in at
+        /// arbitrary real-world human scale, not this project's board-tile scale, so this can't be
+        /// assumed and must be normalized per-import. Roughly matches the old primitive pawns' overall
+        /// height (BodyHeight torso + head) so the board's camera framing doesn't need retuning.
+        /// </summary>
+        private const float TargetVisualHeight = 1.0f;
+
+        /// <summary>
         /// Real-world seconds between visible pose updates while riding an already-armed tape —
         /// ART_DIRECTION §2's stepped 8-12fps ("pose snaps, not blends"); ~10fps sits mid-band.
         /// A fresh <see cref="SetPath"/> (new draft preview, newly armed tape, Disarm's carry-point
@@ -50,18 +59,88 @@ namespace LogiCard.Board
             visual.transform.SetParent(transform, false);
             _visual = visual.transform;
 
-            Material material = PrimitiveMaterialFactory.Tinted(color);
-            if (build == PawnBuild.Juggernaut)
+            string resourcePath = build == PawnBuild.Juggernaut ? "Juggernaut/Juggernaut" : "Scout/Scout";
+            if (!TryBuildImported(_visual, resourcePath, color))
             {
-                BuildJuggernaut(_visual, material);
-            }
-            else
-            {
-                BuildScout(_visual, material);
+                // Fallback while an archetype's imported CC0 mesh isn't landed yet (staged rollout,
+                // docs/PAWN_ART_REWORK_PLAN.md's verification loop) — never leaves a pawn invisible.
+                Material material = PrimitiveMaterialFactory.Tinted(color);
+                if (build == PawnBuild.Juggernaut)
+                {
+                    BuildJuggernaut(_visual, material);
+                }
+                else
+                {
+                    BuildScout(_visual, material);
+                }
             }
 
             _forceNextApply = true;
             ApplyTime(0f);
+        }
+
+        /// <summary>
+        /// Renderer name substring that marks a part as team-colored (its torso/jersey) — everything
+        /// else (head/skin, hair, feet, backpack, ...) keeps the imported model's own per-part color.
+        /// A uniform tint across every renderer was tried first and rejected on sight (2026-08-08) —
+        /// it flattened the whole figure to one solid-color blob, losing all the toy-figure detail
+        /// <see cref="PawnImportTool"/>'s per-part materials now preserve.
+        /// </summary>
+        private const string TintedPartNameMarker = "Body";
+
+        /// <summary>
+        /// Loads an archetype's imported CC0 mesh (docs/PAWN_ART_REWORK_PLAN.md) from
+        /// <c>Resources/&lt;resourcePath&gt;.prefab</c> and instantiates it under <paramref name="parent"/>,
+        /// rescaled to <see cref="TargetVisualHeight"/> and tinted with the team color on its torso part
+        /// only (<see cref="TintedPartNameMarker"/>). Returns false (no side effects) if that archetype
+        /// hasn't been imported yet, so callers can fall back to the primitive assembly. Doesn't mutate
+        /// the prefab's material asset — team tint goes through a per-renderer
+        /// <see cref="MaterialPropertyBlock"/> instead (plan step 4).
+        /// </summary>
+        private static bool TryBuildImported(Transform parent, string resourcePath, Color color)
+        {
+            var prefab = Resources.Load<GameObject>(resourcePath);
+            if (prefab == null)
+            {
+                return false;
+            }
+
+            GameObject instance = Object.Instantiate(prefab, parent, false);
+            instance.name = prefab.name;
+
+            Renderer[] renderers = instance.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0)
+            {
+                Object.Destroy(instance);
+                return false;
+            }
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            if (bounds.size.y > 0.0001f)
+            {
+                float scale = TargetVisualHeight / bounds.size.y;
+                instance.transform.localScale *= scale;
+            }
+
+            var block = new MaterialPropertyBlock();
+            foreach (Renderer renderer in renderers)
+            {
+                if (renderer.name.IndexOf(TintedPartNameMarker, System.StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    continue;
+                }
+
+                renderer.GetPropertyBlock(block);
+                block.SetColor("_BaseColor", color);
+                renderer.SetPropertyBlock(block);
+            }
+
+            return true;
         }
 
         /// <summary>
