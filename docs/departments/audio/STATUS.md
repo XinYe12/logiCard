@@ -1,47 +1,33 @@
 # Audio — STATUS
 
-**Wave / Day:** Wave 1 — Day 11 audio stub (pre-wire)  
-**Branch / worktree:** `feat/day11-audio-stub` @ `a5c276a` — `/Users/xuxinye/Documents/projects/Game/logiCard-day11-audio`  
-**Brief:** `DAY11_AUDIO_STUB_AGENT_BRIEF.md` (worktree root)  
-**Last cross-reviewed:** 2026-08-07 — core/STATUS, contracts/CURRENT
+**Wave / Day:** none active — reset 2026-08-08 for the **C46** scope pivot. Wave 1 (Day 11 audio stub) fully
+delivered, merged, and wired; see git history (`ef6e3f5`, `7e08aba`, `04f9191`) or prior versions of this
+file for the full record.
+**Branch / worktree:** none — worktree removed after merge
+**Brief:** n/a until a new slice is briefed
+**Last cross-reviewed:** 2026-08-08 — reset alongside `departments/INDEX.md` and `contracts/CURRENT.md`
 
 ## Owned files (this wave)
 
-- `Assets/_Project/Audio/**` (new) — `FoleyPlayer` / `IFoleyPlayer`, asmdef, placeholder clips or runtime tone stubs  
-- This STATUS file  
-
-**Must not touch:** `Boot/`, `UI/ProgramHud.cs`, `Board/`, Sim/Net, DRAFT_HANDOFF, SCHEDULE
+*(populate when a new slice is briefed — likely candidate: real foley/clip work for Phase 5 Commercial Art
+Bar, replacing the current synthesized placeholder clips)*
 
 ## Done
 
-- Contract frozen: `IFoleyPlayer.Play(FoleyId)` in `contracts/CURRENT.md`
-- `Assets/_Project/Audio/LogiCard.Audio.asmdef` — no references beyond default UnityEngine, `autoReferenced: true`
-- `Assets/_Project/Audio/IFoleyPlayer.cs` — `FoleyId` enum + `IFoleyPlayer` interface, verbatim to the frozen contract
-- `Assets/_Project/Audio/FoleyPlayer.cs` — `MonoBehaviour` implementing `IFoleyPlayer`; lazily synthesizes and caches one runtime `AudioClip` per `FoleyId` (tone/noise/envelope mix, no binary clip assets), plays via `AudioSource.PlayOneShot`. No Boot/UI/Board/Sim references, no `Update` auto-play.
-- All new files + folder have `.meta` companions (hand-authored GUIDs; Unity will re-validate on next Editor open in this worktree)
-- STATUS updated to Done
-
-## Deviations from brief
-
-- Skipped the optional EditMode smoke test: it would require adding a reference to `LogiCard.Audio` in the shared `Assets/_Project/Tests/EditMode/LogiCard.Tests.EditMode.asmdef`, which this dept doesn't own and other in-flight depts also touch — out of scope for a new-files-only slice. `FoleyPlayer`/`IFoleyPlayer` are otherwise unchanged from the frozen contract.
-
-## Verified
-
-- Batchmode EditMode run on this worktree path (`/Users/xuxinye/Documents/projects/Game/logiCard-day11-audio`), 2026-08-07: clean compile (0 `error CS` lines in the run log), 102/102 EditMode tests passed, 0 failed. No blocker for Integrator merge.
+*(pre-pivot record lives in git history / prior file versions, not restated here)*
 
 ## In progress
 
-- None — stub complete, awaiting Integrator merge + Wave 2 wire
+- Nothing. No Audio slice is currently briefed under the new phase table (`docs/SCHEDULE.md`).
 
 ## Blocked
 
-- Wave 2 wire is Core’s job after this stub merges
+- Nothing.
 
 ## Depends on
 
-- ART_DIRECTION audio floor (footstep / shot / Time Card / Lock In)  
-- No dependency on VFX merge (new-files-only slice)
+- `docs/ART_DIRECTION.md`'s reframed commercial ship art/audio bar.
 
 ## Offers
 
-- Dead-code `IFoleyPlayer` implementation Core can reference in Wave 2
+- Available for the next briefed slice.

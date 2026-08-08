@@ -1,41 +1,36 @@
 # Ship — STATUS
 
-**Wave / Day:** Wave 2 prep — Day 14 writing off critical path  
-**Branch / worktree:** `feat/ship-docs` @ `a5c276a` — `/Users/xuxinye/Documents/projects/Game/logiCard-ship-docs`  
-**Brief:** `SHIP_DOCS_AGENT_BRIEF.md` (worktree root)  
-**Last cross-reviewed:** 2026-08-07 — VERTICAL_SLICE, ART_DIRECTION, SCHEDULE ship bar, SCOPE/C34  
-**Agent pass finished:** 2026-08-07
+**Wave / Day:** none active — reset 2026-08-08 for the **C46** scope pivot. The old Wave 2 docs-only slice
+(README case study + capture checklist) fully delivered and merged; see git history (`950ff63`) or prior
+versions of this file for the full record. Both files it produced (`SHIP_README_DRAFT.md`,
+`CAPTURE_CHECKLIST.md`) were substantially rewritten for the pivot by the Integrator directly (2026-08-08) —
+portfolio-demo framing replaced with real-product framing, landscape aspect, phase-gate reusability.
+**Branch / worktree:** none — worktree removed after merge
+**Brief:** n/a until a new slice is briefed
+**Last cross-reviewed:** 2026-08-08 — reset alongside `departments/INDEX.md` and `contracts/CURRENT.md`
 
-## Owned files (active)
+## Owned files (this wave)
 
-- `docs/SHIP_README_DRAFT.md` — portfolio case-study **draft** (prose filled; still DRAFT until capture + Windows candidate)  
-- `docs/CAPTURE_CHECKLIST.md` — 60–90s shot list (operator notes + fail criteria)  
-- Later (human): stills under `screenshots/`, video link, promote draft → root `README.md`
-
-**Must not touch:** gameplay code; ProjectSettings; `DRAFT_HANDOFF.md`; SCHEDULE ticks; contracts
+*(populate when a new slice is briefed — likely candidate: Phase 6 Steam Certification & Ship, once a real
+build/capture exists)*
 
 ## Done
 
-- Worktree + brief created  
-- Seed drafts expanded into merge-ready ship writing  
-- `SHIP_README_DRAFT.md` — one-liner, pitch, C34 in/out, full case-study narrative, architecture, run steps, capture placeholders  
-- `CAPTURE_CHECKLIST.md` — pre-roll, timed shot list with operator notes, stills, export, fail criteria  
-- Docs-only — safe to merge anytime; no dependency on Day 10 Integrator wiring
+*(pre-pivot record lives in git history / prior file versions, not restated here)*
 
 ## In progress
 
-- None (writing slice complete)
+- Nothing. No Ship slice is currently briefed — `docs/SHIP_README_DRAFT.md`/`docs/CAPTURE_CHECKLIST.md` stay
+  DRAFT pending a real build and capture per `docs/SCHEDULE.md`'s Phase 6.
 
 ## Blocked
 
-- Final README promotion blocked on human capture + Windows candidate (Day 12+)  
-- Not blocked on Presentation merge or RoundPlayback VFX wire-up (docs-only)
+- A real capture/build to embed, per both docs' own "DRAFT until real capture exists" status lines.
 
 ## Depends on
 
-- `VERTICAL_SLICE.md`, `ART_DIRECTION.md`, `SCHEDULE.md` ship bar (read)  
-- Human capture footage for final README (Day 14)
+- Phases 1–5 landing enough of the real product to be worth capturing.
 
 ## Offers
 
-- Merge-ready ship docs on `feat/ship-docs` whenever Integrator wants them on `master`
+- Available for the next briefed slice.

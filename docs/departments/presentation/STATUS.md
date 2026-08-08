@@ -1,37 +1,34 @@
 # Presentation — STATUS
 
-**Wave / Day:** Wave 1 — Day 10 hit VFX  
-**Branch / worktree:** `feat/day10-hit-vfx` @ `08112e1` — `/Users/xuxinye/Documents/projects/Game/logiCard-day10-vfx`  
-**Brief:** `DAY10_HIT_VFX_AGENT_BRIEF.md` (worktree root)  
-**Last cross-reviewed:** 2026-08-07 — core/STATUS, contracts/CURRENT
+**Wave / Day:** none active — reset 2026-08-08 for the **C46** scope pivot. Wave 1 (Day 10 hit VFX) fully
+delivered and merged; see git history (`fc32a2d`, `a57d095`) or prior versions of this file for the full
+record.
+**Branch / worktree:** none — worktree removed after merge
+**Brief:** n/a until a new slice is briefed
+**Last cross-reviewed:** 2026-08-08 — reset alongside `departments/INDEX.md` and `contracts/CURRENT.md`
 
 ## Owned files (this wave)
 
-- `Assets/_Project/Board/MuzzleFlashView.cs` (new)  
-- `Assets/_Project/Board/WoundSplatView.cs` (new)  
-- Matching `.meta` files Unity generates  
-
-**Must not touch:** `PawnView.cs`, `RoundPlayback.cs`, `GameBootstrap.cs`, Sim/Net/Timeline, DRAFT_HANDOFF, SCHEDULE
+*(populate when a new slice is briefed)*
 
 ## Done
 
-- Worktree + brief created from `08112e1`  
-- Contract frozen: `Init` / `Place` / `SetVisible` (see `contracts/CURRENT.md`)
+*(pre-pivot record lives in git history / prior file versions, not restated here)*
 
 ## In progress
 
-- Build muzzle flash + wound splat components matching `ShotTracerView` pattern  
-- Check `git log --oneline master..feat/day10-hit-vfx` from main for report-back commits
+- Nothing. No Presentation slice is currently briefed under the new phase table (`docs/SCHEDULE.md`) —
+  candidates include board dressing (already partly in flight elsewhere, see `DRAFT_HANDOFF.md`) or
+  Phase 5 (Commercial Art Bar) work once that phase opens.
 
 ## Blocked
 
-- Nothing on Presentation side; Core is blocked on this merge
+- Nothing.
 
 ## Depends on
 
-- Pattern reference: `ShotTracerView.cs`, `PrimitiveMaterialFactory`  
-- ART_DIRECTION §3 (physical VFX — no bloom lasers)
+- `docs/ART_DIRECTION.md`'s reframed commercial ship art bar.
 
 ## Offers
 
-- `MuzzleFlashView` + `WoundSplatView` ready for Core to wire after local commit on `feat/day10-hit-vfx`
+- Available for the next briefed slice.

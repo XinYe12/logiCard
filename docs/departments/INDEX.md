@@ -1,43 +1,45 @@
 # Departments — Active Index
 
-**Updated:** 2026-08-07  
-**Ops constitution:** [`../PARALLEL_OPS.md`](../PARALLEL_OPS.md)  
-**Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md)  
+**Updated:** 2026-08-08 — reset for the **C46** scope pivot (see `docs/PRODUCT_MEMORY.md` C46–C51,
+`docs/SCHEDULE.md`'s new phase table). Wave 1+2 (Day 10 VFX / Day 11 Audio / Ship docs) is fully shipped and
+merged — see git history for the old rows if needed.
+**Ops constitution:** [`../PARALLEL_OPS.md`](../PARALLEL_OPS.md) · human-side playbook: [`../DIRECTING_AGENTS.md`](../DIRECTING_AGENTS.md)
+**Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md)
 **Human rollup:** [`../DRAFT_HANDOFF.md`](../DRAFT_HANDOFF.md)
 
 ## Capacity
 
-Integrator + up to **2** coding workers. Current coding fill: **0/2** — Presentation and Audio have both delivered, merged, and been wired in; nothing in flight right now. Ship was docs-only and has also delivered.
+Integrator + up to **2** coding workers. Current coding fill: depends on what's in flight — check
+`git worktree list` and `DRAFT_HANDOFF.md`'s top section before assuming this table is current; a docs-pivot
+wave (two workers, `docs/pivot-new-design-docs` + `docs/pivot-gameplay-art-ui`) landed and merged
+2026-08-08, and two older board-rework worker slots (`feat/board-edge-dressing`, `feat/playmode-board-rewrite`)
+are still queued but not yet started as of this reset — see `DRAFT_HANDOFF.md` for the live capacity picture.
 
 ## Active agents / worktrees
 
-All four dept slices for this wave are delivered and merged into `master`. Nothing is currently in-flight, and **all worker/verify worktrees have been removed** (2026-08-07) — branches still exist, just no working-tree checkout. Recreate with `git worktree add` per `../PARALLEL_OPS.md` if a new wave needs them.
+Blank pending the next wave. Populate this table when a new wave's workers spin up — same shape as before
+(Dept | Branch | Status file | Notes), one row per active worker.
 
 | Dept | Branch | Status file | Notes |
 |------|--------|--------------|-------|
-| **Core / Integrator** | `master` @ `2a60abc` (main tree, `/Users/xuxinye/Documents/projects/Game/LogiCard`) | [core/STATUS.md](core/STATUS.md) | Stepped motion, VFX (merged+wired), Audio (merged+wired), Ship docs — all committed. Nothing queued; waiting on human Editor look + ear-check before ticking Day 10/11 on SCHEDULE |
-| **Presentation** | `feat/day10-hit-vfx` @ `f2256f6` — merged + wired | [presentation/STATUS.md](presentation/STATUS.md) | `MuzzleFlashView` + `WoundSplatView` landed on master (`fc32a2d`), driven by RoundPlayback's tape-event loop (`a57d095`) |
-| **Audio** | `feat/day11-audio-stub` @ `5c402db` — merged + wired | [audio/STATUS.md](audio/STATUS.md) | `FoleyPlayer`/`IFoleyPlayer` landed (`ef6e3f5`, `7e08aba`), `Play()` fires from RoundPlayback/ProgramHud (`04f9191`) |
-| **Ship** | `feat/ship-docs` @ `fc58db3` — landed | [ship/STATUS.md](ship/STATUS.md) | README case study + capture checklist landed (`950ff63`); still DRAFT pending human capture + Windows candidate (now happening on the user's own Windows machine, not this repo's agent workflow) |
-| **Verify** | `verify/playtest-door-scrub` @ `54b051a` — parked, worktree removed | — | Had uncommitted drift; stashed (not discarded) before removal — see `DRAFT_HANDOFF.md` |
+| — | — | — | — |
 
 ## Ownership matrix (write locks)
+
+Blank pending the next wave's actual work breakdown — the old rows (`MuzzleFlashView.cs`, `Audio/**`, etc.)
+were specific to the shipped Wave 1+2 split and don't map onto whatever this pivot's phases (`SCHEDULE.md`)
+actually need. Repopulate per-wave. These rows are **evergreen, not wave-specific** — keep them:
 
 | Path / concern | Owner now |
 |----------------|-----------|
 | `Boot/`, `Net/`, `Timeline/`, `Sim/` (fixes) | Core |
-| `Board/PawnView.cs`, `Board` wiring via Boot | Core |
-| `Board/MuzzleFlashView.cs`, `Board/WoundSplatView.cs` | Presentation |
-| `Assets/_Project/Audio/**` | Audio |
-| `UI/ProgramHud.cs` (allot/Lock In logic) | Core (Audio may get **sound call** sites only in Wave 2 via Integrator) |
-| `docs/DRAFT_HANDOFF.md`, `docs/SCHEDULE.md` ticks, `docs/contracts/CURRENT.md` | Core / Integrator |
+| `docs/DRAFT_HANDOFF.md`, `docs/SCHEDULE.md` ticks, `docs/contracts/CURRENT.md`, `docs/PRODUCT_MEMORY.md` | Core / Integrator |
 | `docs/departments/<dept>/STATUS.md` | That dept only |
-| `docs/SHIP_README_DRAFT.md`, `docs/CAPTURE_CHECKLIST.md` | Ship |
 
 ## Cross-review checklist (session start)
 
-- [ ] Read DRAFT_HANDOFF  
-- [ ] Read this INDEX  
-- [ ] Read peer STATUS for every **In progress** row above  
-- [ ] Read contracts/CURRENT  
-- [ ] Confirm no file overlap before editing  
+- [ ] Read DRAFT_HANDOFF
+- [ ] Read this INDEX
+- [ ] Read peer STATUS for every **In progress** row above
+- [ ] Read contracts/CURRENT
+- [ ] Confirm no file overlap before editing
