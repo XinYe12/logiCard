@@ -1,5 +1,68 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-08 — Full scope pivot: 14-day portfolio demo → F2P PvP Steam ship (C46–C51)
+
+**Read this section first — it supersedes the framing (not the facts) of everything below it.** The user
+dropped the 14-day-sprint/portfolio-demo scope entirely. New target: a monetizing PvP game shipping to Steam —
+free-to-play with cosmetic-only IAP (no pay-to-win), commercial-grade landscape-desktop UI and art bar, AI
+used only as an invisible matchmaking-fallback bot (never a marketed mode), phase-based schedule instead of a
+calendar. **The core gameplay loop is explicitly unchanged** — Move/Shoot/Door mechanics, Time Card/Time
+Resource numbers, Scout/Juggernaut attributes, wound ladder, win condition, and the `C45` multi-room board
+(see the section right below this one) all carry forward untouched. This is a scope/business reframe, not a
+mechanics redesign.
+
+Recorded as `PRODUCT_MEMORY.md` decisions `C46` (the pivot itself) through `C51` (real networking promoted to
+core scope) — read those six rows first if you're picking this up fresh, they're the authoritative summary.
+Four decisions were confirmed with the human before any doc got rewritten: F2P + cosmetic IAP, landscape
+desktop redesign, AI as invisible fallback only, phase/milestone schedule with no fixed date.
+
+**Committed to `master` (`cf4cd32`):** `PRODUCT_MEMORY.md` (`C46`–`C51` + amendment-pointer clauses on every
+decision the pivot touches), `VISION.md` (new Business Model section, Non-Goals carve-out for the fallback
+bot), `SCOPE.md` (full IN/OUT/LATER restructure), `SCHEDULE.md` (Day-1–14 calendar → 7-phase table with exit
+criteria, old build history kept as a historical appendix, not deleted), `RISKS.md` (reframed/parked/closed
+existing risks, six new risks — notably a **host-integrity gap**: under Fusion Host Mode a real player *is*
+the host computing the authoritative resolve, a real cheating vector once PvP is real money-adjacent, not
+solved yet).
+
+**Key technical finding driving a lot of this:** the host-authoritative deterministic resolve model (Host
+computes on plain float math, clients play back, Host revalidates payloads) is real and code-verified in
+`Assets/_Project/Net/` — genuinely reusable. But "Photon Fusion" is currently a *label only* — no package
+installed, zero transport/session/matchmaking code, today's `GhostResolver` runs both players' programs in the
+same Unity process. Real networking is the single biggest gap between demo and shippable PvP product.
+
+**In flight, parallel, zero file overlap with each other:**
+- `docs/pivot-new-design-docs` worktree (`D:\projects\Game\logiCard-pivot-new-docs`) — three new docs
+  (`MONETIZATION.md`, `NETWORKING_DESIGN.md`, `AI_FALLBACK_BOT.md`) plus a targeted `TDD.md` rewrite (its
+  stale grid-era §2/§4 language, plus §1 becoming a pointer to the new networking doc). Brief:
+  `PIVOT_NEW_DOCS_AGENT_BRIEF.md` in that worktree. **Not yet started as of this note** — worktree and brief
+  exist, nobody's opened a session there yet.
+- `docs/pivot-gameplay-art-ui` worktree (`D:\projects\Game\logiCard-pivot-gameplay-art-ui`) — `GDD.md`/
+  `CORE_LOOP.md`/`TABLETOP_RULES.md` cross-ref fixes (including two pre-existing stale-`[0,4]×[0,4]`/"one
+  door" bugs unrelated to this pivot, left over from `C45` never being fully propagated), `ART_DIRECTION.md`
+  reframed from "demo floor" to "commercial ship art bar," `UI_FLOW.md` rewritten portrait→landscape (the
+  biggest single piece), `UI_BOARD_ANCHORED_COMPONENTS.md` light touch. Brief:
+  `PIVOT_GAMEPLAY_ART_UI_AGENT_BRIEF.md` in that worktree. **Also not yet started.**
+
+**Queued after both land (Integrator tail, not yet started):** `CHARACTER_ROSTER_LONGTERM.md` (light reframe +
+monetization guardrail callout), `VERTICAL_SLICE.md` (mark historical/SHIPPED), `CAPTURE_CHECKLIST.md` +
+`SHIP_README_DRAFT.md` (both need real rewrites — currently entirely premised on the old local-only/portrait
+demo), a reset of `contracts/CURRENT.md` + `departments/INDEX.md` + the four `departments/*/STATUS.md` files
+(clear the now-fully-shipped Wave 1+2 content, keep the reusable document shape for whatever wave starts
+next), and a hygiene pass (delete `TDD_v1.0_Engine_Architecture.md`/`GDD_v2.0_Tabletop_Prototype.md` — dead
+pointer stubs — and `D10_Art_Direction.md` if the human wants; banner `CONTINUOUS_PIVOT_PLAN.md` as SHIPPED
+and the Day 4/Day 7 research docs as superseded-but-historical).
+
+**Capacity note:** the two docs-pivot workers above put this session at the 1-Integrator+2-Worker cap. Two
+*older* worker slots from before this pivot (`feat/board-edge-dressing`, `feat/playmode-board-rewrite` — see
+the `C45` board-rework section immediately below) are still queued, never started, and not abandoned — just
+waiting. Starting all four at once would exceed the stated cap; flagged to the human, their call.
+
+**Everything below this point (the `C45` board rework, the pawn-art rework) is still accurate and still real
+work-in-progress — the pivot doesn't invalidate any of it, it just wasn't reframed as "the top priority" until
+this note.**
+
+---
+
 **Board rework: multi-room layout in progress (2026-08-08), C45.** User redirected focus from the pawn rework
 to "scene setting, map building, and lighting" — the board/AI/camera side is implemented in this main tree as
 of this note; two parallel workers are in flight for the rest. Tilt-shift DoF (`GameBootstrap.BuildDioramaVolume`,
