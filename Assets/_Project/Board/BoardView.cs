@@ -6,7 +6,8 @@ namespace LogiCard.Board
 {
     /// <summary>
     /// Scene view for <see cref="ArenaBoard"/> (C35/C39 Phase 4): one ground plane plus thin boxes
-    /// for wall/door segments. Sim owns geometry truth; this only draws and converts coordinates.
+    /// for wall/door segments, plus physical board-edge lip and dark void dressing
+    /// (ART_DIRECTION Board pillar). Sim owns geometry truth; this only draws and converts coordinates.
     /// </summary>
     public sealed class BoardView : MonoBehaviour
     {
@@ -19,6 +20,11 @@ namespace LogiCard.Board
         // Closed used a near-wall rust and read as "door never changes color."
         private static readonly Color DoorOpenColor = new Color(0.35f, 0.82f, 0.42f);
         private static readonly Color DoorClosedColor = new Color(0.82f, 0.22f, 0.18f);
+
+        // Void apron + clutter — near camera clear-color (GameBootstrap ~0.07/0.07/0.09) so the
+        // board reads as a lit stage in a dark room, not a plane floating in empty black.
+        private static readonly Color VoidApronColor = new Color(0.05f, 0.045f, 0.055f);
+        private static readonly Color VoidClutterColor = new Color(0.11f, 0.09f, 0.08f);
 
         private ArenaBoard _model;
         private readonly List<DoorVisual> _doorVisuals = new List<DoorVisual>();
@@ -53,6 +59,10 @@ namespace LogiCard.Board
                                             + new Vector3(0f, -0.05f, 0f);
             ground.transform.localScale = new Vector3(width * WorldScale, 0.1f, depth * WorldScale);
             ground.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(groundColor);
+
+            // ART_DIRECTION Board pillar: physical edge + dark void beyond the playable face.
+            PlaceBoardEdge(model, groundColor);
+            PlaceVoidDressing(model);
 
             // Day 9: painted/etched unit grid on the board face (ART_DIRECTION Demo art floor).
             PlacePaintedGrid(model);
@@ -116,6 +126,175 @@ namespace LogiCard.Board
             Vector3 local = transform.InverseTransformPoint(world);
             float scale = WorldScale <= 0f ? 1f : WorldScale;
             return new PlanarPosition(local.x / scale, local.z / scale, Floor.Ground);
+        }
+
+        /// <summary>
+        /// Raised lip around the ground plane perimeter so the board reads as a physical plywood/
+        /// plastic base rather than a plane that stops in space. Bounds come from the model —
+        /// never a hardcoded board size.
+        /// </summary>
+        private void PlaceBoardEdge(ArenaBoard model, Color groundColor)
+        {
+            var edgeRoot = new GameObject("BoardEdge");
+            edgeRoot.transform.SetParent(transform, false);
+
+            // Darker than the playable face — plywood edge / bevel strip.
+            Color lipColor = new Color(
+                groundColor.r * 0.55f,
+                groundColor.g * 0.48f,
+                groundColor.b * 0.42f,
+                1f);
+
+            const float lipThickness = 0.14f;
+            // Ground top is at local y=0; lip rises slightly above so the edge catches key light.
+            const float lipHeight = 0.16f;
+            const float lipCenterY = 0.02f;
+
+            float width = model.MaxX - model.MinX;
+            float depth = model.MaxY - model.MinY;
+            float centerX = (model.MinX + model.MaxX) * 0.5f;
+            float centerY = (model.MinY + model.MaxY) * 0.5f;
+
+            // Long edges span full width (corners covered); short edges span depth only.
+            PlaceEdgeLip(
+                edgeRoot.transform,
+                "Edge_MinY",
+                new PlanarPosition(centerX, model.MinY),
+                new Vector3((width + lipThickness) * WorldScale, lipHeight, lipThickness * WorldScale),
+                lipCenterY,
+                lipColor);
+            PlaceEdgeLip(
+                edgeRoot.transform,
+                "Edge_MaxY",
+                new PlanarPosition(centerX, model.MaxY),
+                new Vector3((width + lipThickness) * WorldScale, lipHeight, lipThickness * WorldScale),
+                lipCenterY,
+                lipColor);
+            PlaceEdgeLip(
+                edgeRoot.transform,
+                "Edge_MinX",
+                new PlanarPosition(model.MinX, centerY),
+                new Vector3(lipThickness * WorldScale, lipHeight, depth * WorldScale),
+                lipCenterY,
+                lipColor);
+            PlaceEdgeLip(
+                edgeRoot.transform,
+                "Edge_MaxX",
+                new PlanarPosition(model.MaxX, centerY),
+                new Vector3(lipThickness * WorldScale, lipHeight, depth * WorldScale),
+                lipCenterY,
+                lipColor);
+        }
+
+        private void PlaceEdgeLip(
+            Transform parent,
+            string name,
+            PlanarPosition planarCenter,
+            Vector3 localScale,
+            float localY,
+            Color color)
+        {
+            var lip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            lip.name = name;
+            lip.transform.SetParent(parent, false);
+            lip.transform.localPosition = LocalFromPlanar(planarCenter) + new Vector3(0f, localY, 0f);
+            lip.transform.localScale = localScale;
+            lip.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
+            StripCollider(lip);
+        }
+
+        /// <summary>
+        /// Dark recessed apron beyond the board plus a few dim primitive silhouettes (messy
+        /// workbench cue). Tilt-shift DoF blurs them further — they only need to read as
+        /// "something in the void," not detailed props.
+        /// </summary>
+        private void PlaceVoidDressing(ArenaBoard model)
+        {
+            var voidRoot = new GameObject("VoidDressing");
+            voidRoot.transform.SetParent(transform, false);
+
+            float width = model.MaxX - model.MinX;
+            float depth = model.MaxY - model.MinY;
+            float centerX = (model.MinX + model.MaxX) * 0.5f;
+            float centerY = (model.MinY + model.MaxY) * 0.5f;
+
+            // Apron extends past every edge; sits below the ground slab so only the outer ring shows.
+            const float apronMargin = 2.75f;
+            var apron = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            apron.name = "VoidApron";
+            apron.transform.SetParent(voidRoot.transform, false);
+            apron.transform.localPosition = LocalFromPlanar(new PlanarPosition(centerX, centerY))
+                                            + new Vector3(0f, -0.22f, 0f);
+            apron.transform.localScale = new Vector3(
+                (width + (apronMargin * 2f)) * WorldScale,
+                0.06f,
+                (depth + (apronMargin * 2f)) * WorldScale);
+            apron.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(VoidApronColor);
+            StripCollider(apron);
+
+            // Sparse workbench clutter — offsets from model bounds, not a fixed board size.
+            PlaceVoidClutter(
+                voidRoot.transform,
+                "Clutter_Block",
+                new PlanarPosition(model.MinX - 1.35f, model.MinY + (depth * 0.28f)),
+                new Vector3(0.9f * WorldScale, 0.35f, 0.55f * WorldScale),
+                -0.12f,
+                18f);
+            PlaceVoidClutter(
+                voidRoot.transform,
+                "Clutter_Slab",
+                new PlanarPosition(model.MaxX + 1.45f, model.MaxY - (depth * 0.22f)),
+                new Vector3(1.2f * WorldScale, 0.18f, 0.7f * WorldScale),
+                -0.14f,
+                -25f);
+            PlaceVoidClutter(
+                voidRoot.transform,
+                "Clutter_Can",
+                new PlanarPosition(model.MinX + (width * 0.18f), model.MaxY + 1.55f),
+                new Vector3(0.35f * WorldScale, 0.55f, 0.35f * WorldScale),
+                -0.08f,
+                40f);
+            PlaceVoidClutter(
+                voidRoot.transform,
+                "Clutter_Tray",
+                new PlanarPosition(model.MaxX - (width * 0.25f), model.MinY - 1.4f),
+                new Vector3(0.85f * WorldScale, 0.12f, 0.45f * WorldScale),
+                -0.16f,
+                8f);
+            PlaceVoidClutter(
+                voidRoot.transform,
+                "Clutter_Peg",
+                new PlanarPosition(model.MinX - 1.6f, model.MaxY - (depth * 0.35f)),
+                new Vector3(0.22f * WorldScale, 0.7f, 0.22f * WorldScale),
+                -0.05f,
+                -12f);
+        }
+
+        private void PlaceVoidClutter(
+            Transform parent,
+            string name,
+            PlanarPosition planarCenter,
+            Vector3 localScale,
+            float localY,
+            float yawDegrees)
+        {
+            var clutter = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            clutter.name = name;
+            clutter.transform.SetParent(parent, false);
+            clutter.transform.localPosition = LocalFromPlanar(planarCenter) + new Vector3(0f, localY, 0f);
+            clutter.transform.localScale = localScale;
+            clutter.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            clutter.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(VoidClutterColor);
+            StripCollider(clutter);
+        }
+
+        private static void StripCollider(GameObject go)
+        {
+            Collider col = go.GetComponent<Collider>();
+            if (col != null)
+            {
+                Object.Destroy(col);
+            }
         }
 
         private void PlacePaintedGrid(ArenaBoard model)
