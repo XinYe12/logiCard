@@ -178,8 +178,10 @@ namespace LogiCard.Boot
             const float attackerSecondsPerTile = 1f;
             var defenderSpawn = new PlanarPosition(2f, 4f);
 
-            PawnView attacker = SpawnPawn("Pawn_Attacker", new Color(0.90f, 0.35f, 0.28f), attackerHome, attackerSecondsPerTile);
-            PawnView defender = SpawnPawn("Pawn_Defender", new Color(0.32f, 0.58f, 0.86f), defenderSpawn, DefenderSecondsPerTile);
+            // Speeds already match the Scout/Juggernaut CharacterData presets (1s vs 2s per tile) —
+            // the visual build follows the same archetype so silhouette and movement read together.
+            PawnView attacker = SpawnPawn("Pawn_Attacker", new Color(0.90f, 0.35f, 0.28f), attackerHome, attackerSecondsPerTile, PawnBuild.Scout);
+            PawnView defender = SpawnPawn("Pawn_Defender", new Color(0.32f, 0.58f, 0.86f), defenderSpawn, DefenderSecondsPerTile, PawnBuild.Juggernaut);
 
             _attackerInput = attacker.gameObject.AddComponent<BoardInputController>();
             _attackerInput.Init(attacker, _phase, attackerHome, attackerSecondsPerTile, 0f, _board);
@@ -242,12 +244,12 @@ namespace LogiCard.Boot
             }
         }
 
-        private PawnView SpawnPawn(string name, Color color, PlanarPosition home, float baseSecondsPerTile)
+        private PawnView SpawnPawn(string name, Color color, PlanarPosition home, float baseSecondsPerTile, PawnBuild build)
         {
             var go = new GameObject(name);
             go.transform.SetParent(transform, false);
             var pawn = go.AddComponent<PawnView>();
-            pawn.Init(_board, color, ScheduledPath.FromWaypoints(new[] { home }, baseSecondsPerTile, StanceType.Walk));
+            pawn.Init(_board, color, ScheduledPath.FromWaypoints(new[] { home }, baseSecondsPerTile, StanceType.Walk), build);
             return pawn;
         }
 

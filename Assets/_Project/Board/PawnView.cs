@@ -4,6 +4,18 @@ using UnityEngine;
 namespace LogiCard.Board
 {
     /// <summary>
+    /// Which clay-like silhouette a pawn reads as (ART_DIRECTION Demo art floor: "Distinct
+    /// clay-like pawn silhouettes, Scout vs Juggernaut readable"). Matches the archetype naming
+    /// in <see cref="LogiCard.Characters.CharacterData"/> (Scout/Juggernaut assets) — this enum
+    /// only drives the primitive shape assembly, it does not read the ScriptableObject.
+    /// </summary>
+    public enum PawnBuild
+    {
+        Scout,
+        Juggernaut,
+    }
+
+    /// <summary>
     /// Renders one character. The view is dumb on purpose: it only samples a
     /// ScheduledPath at a Time Resource second, exactly like playback will read a tape (TDD 5).
     /// </summary>
@@ -23,27 +35,93 @@ namespace LogiCard.Board
         private const float StepIntervalSeconds = 1f / 10f;
 
         private BoardView _board;
-        private Transform _body;
+        private Transform _visual;
         private float _nextStepRealTime;
         private bool _forceNextApply;
 
         public ScheduledPath Path { get; private set; }
 
-        public void Init(BoardView board, Color color, ScheduledPath path)
+        public void Init(BoardView board, Color color, ScheduledPath path, PawnBuild build = PawnBuild.Scout)
         {
             _board = board;
             Path = path;
 
-            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Body";
-            body.transform.SetParent(transform, false);
-            body.transform.localScale = new Vector3(0.5f, BodyHeight * 0.5f, 0.5f);
-            body.transform.localPosition = new Vector3(0f, BodyHeight * 0.5f, 0f);
-            body.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
-            _body = body.transform;
+            var visual = new GameObject("Visual");
+            visual.transform.SetParent(transform, false);
+            _visual = visual.transform;
+
+            Material material = PrimitiveMaterialFactory.Tinted(color);
+            if (build == PawnBuild.Juggernaut)
+            {
+                BuildJuggernaut(_visual, material);
+            }
+            else
+            {
+                BuildScout(_visual, material);
+            }
 
             _forceNextApply = true;
             ApplyTime(0f);
+        }
+
+        /// <summary>
+        /// Lean/tall silhouette (ART_DIRECTION: "Scout vs Juggernaut readable") — narrow capsule
+        /// torso plus a small head, reading as agile/recon.
+        /// </summary>
+        private static void BuildScout(Transform parent, Material material)
+        {
+            AddPrimitive(parent, PrimitiveType.Capsule, "Torso", material,
+                localScale: new Vector3(0.38f, BodyHeight * 0.5f, 0.38f),
+                localPosition: new Vector3(0f, BodyHeight * 0.5f, 0f));
+
+            const float headDiameter = 0.24f;
+            AddPrimitive(parent, PrimitiveType.Sphere, "Head", material,
+                localScale: new Vector3(headDiameter, headDiameter, headDiameter),
+                localPosition: new Vector3(0f, BodyHeight + (headDiameter * 0.5f), 0f));
+        }
+
+        /// <summary>
+        /// Wide/squat silhouette with blocky shoulder pads — reads as heavy/armored, deliberately
+        /// distinct from the Scout's lean profile at a glance (top-down diorama readability).
+        /// </summary>
+        private static void BuildJuggernaut(Transform parent, Material material)
+        {
+            const float torsoHeight = BodyHeight * 0.85f;
+            AddPrimitive(parent, PrimitiveType.Capsule, "Torso", material,
+                localScale: new Vector3(0.62f, torsoHeight * 0.5f, 0.62f),
+                localPosition: new Vector3(0f, torsoHeight * 0.5f, 0f));
+
+            const float headSize = 0.26f;
+            AddPrimitive(parent, PrimitiveType.Cube, "Head", material,
+                localScale: new Vector3(headSize, headSize, headSize),
+                localPosition: new Vector3(0f, torsoHeight + (headSize * 0.5f), 0f));
+
+            const float padSize = 0.26f;
+            const float shoulderY = torsoHeight * 0.78f;
+            const float shoulderX = 0.42f;
+            AddPrimitive(parent, PrimitiveType.Cube, "ShoulderPadLeft", material,
+                localScale: new Vector3(padSize, padSize, padSize),
+                localPosition: new Vector3(-shoulderX, shoulderY, 0f));
+            AddPrimitive(parent, PrimitiveType.Cube, "ShoulderPadRight", material,
+                localScale: new Vector3(padSize, padSize, padSize),
+                localPosition: new Vector3(shoulderX, shoulderY, 0f));
+        }
+
+        private static void AddPrimitive(
+            Transform parent,
+            PrimitiveType type,
+            string name,
+            Material material,
+            Vector3 localScale,
+            Vector3 localPosition)
+        {
+            var go = GameObject.CreatePrimitive(type);
+            go.name = name;
+            go.transform.SetParent(parent, false);
+            go.transform.localScale = localScale;
+            go.transform.localPosition = localPosition;
+            go.GetComponent<MeshRenderer>().sharedMaterial = material;
+            Object.Destroy(go.GetComponent<Collider>());
         }
 
         public void SetPath(ScheduledPath path)
@@ -75,13 +153,13 @@ namespace LogiCard.Board
 
         public void SetHighlighted(bool on)
         {
-            if (_body == null)
+            if (_visual == null)
             {
                 return;
             }
 
-            float width = on ? 0.58f : 0.5f;
-            _body.localScale = new Vector3(width, BodyHeight * 0.5f, width);
+            float scale = on ? 1.15f : 1f;
+            _visual.localScale = new Vector3(scale, scale, scale);
         }
     }
 }
