@@ -19,11 +19,11 @@ namespace LogiCard.Tests.PlayMode
     public sealed class RoundPlaybackPlayModeTests : SliceSceneFixture
     {
         /// <summary>
-        /// Defender's scripted Snap aims at (2,1); attacker standing there (within HitRadius) gets hit.
-        /// Door starts Closed — the scripted defender opens it before the Snap so LoS through the choke
-        /// is legal (see <see cref="GameBootstrap"/> BuildDefenderPayload).
+        /// Defender's scripted Snap aims at (4,3); attacker standing there (within HitRadius) gets hit.
+        /// Door #1 (frontal Hall entrance at y=4) starts Closed — the scripted defender opens it before
+        /// the Snap so LoS through Door #1 is legal (see <see cref="GameBootstrap"/> BuildDefenderPayload).
         /// </summary>
-        private static readonly PlanarPosition AmbushPoint = new PlanarPosition(2f, 1f);
+        private static readonly PlanarPosition AmbushPoint = new PlanarPosition(4f, 3f);
 
         private void ArmWithAttackerMoveTo(PlanarPosition destination)
         {
@@ -69,7 +69,7 @@ namespace LogiCard.Tests.PlayMode
         {
             Clock.Pause();
             Clock.SetSeconds(20f);
-            Vector3 home = BoardVisual.WorldFromPlanar(new PlanarPosition(2f, 4f));
+            Vector3 home = BoardVisual.WorldFromPlanar(new PlanarPosition(4f, 6f));
             Assert.That(Vector3.Distance(DefenderPawn.transform.position, home), Is.LessThan(0.0001f));
 
             ArmWithAttackerMoveTo(AmbushPoint);
@@ -78,9 +78,9 @@ namespace LogiCard.Tests.PlayMode
             // hold (ART_DIRECTION §2) before the next scrub so it isn't read back mid-throttle.
             yield return WaitForPawnStepRelease();
 
-            // Defender Walk base 2s/unit × Walk×2: 1.4 units to (2, 2.6) ⇒ 5.6s.
+            // Defender Walk base 2s/unit × Walk×2: 1.4 units to (4, 4.6) ⇒ 5.6s.
             Clock.SetSeconds(5.6f);
-            Vector3 approaching = BoardVisual.WorldFromPlanar(new PlanarPosition(2f, 2.6f));
+            Vector3 approaching = BoardVisual.WorldFromPlanar(new PlanarPosition(4f, 4.6f));
             Assert.That(Vector3.Distance(DefenderPawn.transform.position, approaching), Is.LessThan(0.05f));
         }
 
@@ -162,6 +162,8 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(opened.HasValue, Is.True, "Defender script must open the door before Snap.");
 
             Assert.That(BoardVisual.Model.TryGetDoor(opened.Value.Position, out Door door), Is.True);
+            Assert.That(door.DisplayName, Is.EqualTo("Door #1"),
+                "Scripted defender must open Door #1 (frontal), not Door #2 (Hall→Vault).");
             Clock.SetSeconds(0f);
             Assert.That(BoardVisual.Model.GetDoorState(door), Is.EqualTo(DoorState.Closed),
                 "At t=0 the shared board must still show the round-start Closed state.");

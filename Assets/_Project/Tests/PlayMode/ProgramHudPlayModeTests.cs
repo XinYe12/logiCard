@@ -16,8 +16,8 @@ namespace LogiCard.Tests.PlayMode
     public sealed class ProgramHudPlayModeTests : SliceSceneFixture
     {
         /// <summary>
-        /// South of the door choke (door segment sits on y=2 at x∈[1.75,2.25]). Destinations on
-        /// that segment become unreachable once the demo door starts Closed.
+        /// South of Door #1 (door segment sits on y=4 at x∈[3.75,4.25]). Destinations on
+        /// that segment become unreachable once Door #1 starts Closed.
         /// </summary>
         private PlanarPosition SafeMoveDestination => new PlanarPosition(Home.X, Home.Y + 1f);
         [Test]
@@ -60,8 +60,10 @@ namespace LogiCard.Tests.PlayMode
             close.onClick.Invoke();
             Assert.That(AttackerInput.Program.Nodes, Is.Empty, "Confirming with nothing selected must not book anything.");
 
-            Assert.That(AttackerInput.TryTapPoint(new PlanarPosition(2f, 2f)), Is.True);
+            Assert.That(AttackerInput.TryTapPoint(new PlanarPosition(4f, 4f)), Is.True);
             Assert.That(AttackerInput.PendingDoor, Is.Not.Null, "Tapping near the door should select it.");
+            Assert.That(AttackerInput.PendingDoor.DisplayName, Is.EqualTo("Door #1"),
+                "Near-door tap must resolve Door #1 (frontal), not Door #2.");
             Assert.That(AttackerInput.Program.Nodes, Is.Empty, "Selecting a door must not book anything by itself.");
 
             Assert.That(AttackerInput.TryTapPoint(new PlanarPosition(0.2f, 0.2f)), Is.True);
@@ -77,7 +79,7 @@ namespace LogiCard.Tests.PlayMode
         public void DoorOpenConfirmUpdatesScheduledStatusAndKeepsSelection()
         {
             // Must already be within InteractRadius — same constraint as a real Open tap after a Move.
-            PlanarPosition besideDoor = new PlanarPosition(2f, 1.85f);
+            PlanarPosition besideDoor = new PlanarPosition(4f, 3.85f);
             AttackerInput.PrepareRound(besideDoor, 60f);
             Phase.GoTo(RoundPhase.Reveal);
             Phase.GoTo(RoundPhase.Program);
@@ -89,6 +91,8 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(AttackerInput.TryTapPoint(besideDoor), Is.True);
             Door selected = AttackerInput.PendingDoor;
             Assert.That(selected, Is.Not.Null);
+            Assert.That(selected.DisplayName, Is.EqualTo("Door #1"),
+                "Beside-door start must resolve Door #1 (frontal), not Door #2.");
 
             Assert.That(AttackerInput.Board.GetDoorState(selected), Is.EqualTo(DoorState.Closed));
             Assert.That(AttackerInput.Program.ScheduledDoorState(selected), Is.EqualTo(DoorState.Closed));
