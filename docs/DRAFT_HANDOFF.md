@@ -51,13 +51,24 @@ hygiene pass — deleted the two dead pointer stubs + `D10_Art_Direction.md`, ba
 A final grep swept the whole `docs/` corpus for stray "14-day"/"demo" framing — nothing left outside
 intentional historical references or amendment-clause pointers.
 
-**What's actually next:** pick a Phase 1/2/5 slice from `docs/SCHEDULE.md`'s phase table and start real
-implementation — this session only did the docs side of the pivot, no code changed. `contracts/CURRENT.md`
-and `departments/INDEX.md` are reset and empty, ready to populate once a wave starts.
+**Decided (2026-08-08, human call):** finish the two older board-rework workers before starting any Phase
+1/2/5 implementation — closes real loose ends (the PlayMode suite is currently red because of the `C45` board
+change) before piling more on top.
 
-**Capacity note, still relevant:** two *older* worker slots from before this pivot
-(`feat/board-edge-dressing`, `feat/playmode-board-rewrite` — see the `C45` board-rework section immediately
-below) are still queued, never started. Check `git worktree list` before assuming capacity is free.
+**Board workers — recreated fresh, both queued, neither started yet:** their worktrees were originally forked
+at `0cb64e5`, *before* `C45`'s board rework even landed on `master` — badly stale after the whole docs pivot
+landed on top. Deleted and recreated both off current `master` (`4fdc423`) with updated briefs:
+- `feat/board-edge-dressing` (`D:\projects\Game\logiCard-board-edge-dressing`) — board perimeter/void
+  dressing in `BoardView.cs`. Brief: `BOARD_EDGE_DRESSING_AGENT_BRIEF.md` in that worktree.
+- `feat/playmode-board-rewrite` (`D:\projects\Game\logiCard-playmode-board-rewrite`) — rewrite the 3 PlayMode
+  test files still hardcoding the old single-room board geometry (currently red). Brief:
+  `PLAYMODE_BOARD_REWRITE_AGENT_BRIEF.md` in that worktree. **Improvement over the original scoping:** this
+  worktree now has the real `C45` `GameBootstrap.cs`, so this worker can actually compile and run the suite
+  green, not just write substitutions against a frozen spec blind.
+
+**Once both land:** pick a Phase 1/2/5 slice from `docs/SCHEDULE.md`'s phase table and start real
+implementation — the pivot itself was docs-only, no code changed yet. `contracts/CURRENT.md` and
+`departments/INDEX.md` are reset and empty, ready to populate once that wave starts.
 
 **Everything below this point (the `C45` board rework, the pawn-art rework) is still accurate and still real
 work-in-progress — the pivot doesn't invalidate any of it, it just wasn't reframed as "the top priority" until
