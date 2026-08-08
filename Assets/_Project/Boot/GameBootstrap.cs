@@ -155,17 +155,33 @@ namespace LogiCard.Boot
             var boardGo = new GameObject("Board");
             boardGo.transform.SetParent(transform, false);
 
-            // Continuous translation of DAY7 wall-with-gap: walls along y=2 with a door gap at x≈2.
-            // Door starts Closed (Phase 6 / CONTINUOUS_PIVOT_PLAN.md): the scripted defender opens it
-            // before Snap so AmbushPoint LoS still works, and PlayMode HUD destinations stay south
-            // of the segment so they remain legal move targets.
-            var model = new ArenaBoard(0f, 0f, 4f, 4f, new[] { Floor.Ground });
-            model.RegisterWall(new Segment(new PlanarPosition(0f, 2f), new PlanarPosition(1.75f, 2f)));
-            model.RegisterWall(new Segment(new PlanarPosition(2.25f, 2f), new PlanarPosition(4f, 2f)));
+            // Multi-room layout (C45, 2026-08-08 — supersedes the earlier single-room [0,4]x[0,4] board,
+            // C39 item 7): Yard (open, attacker spawn) -> Hall (walled kill-box, Door #1 frontal / Door #2
+            // rear) -> Vault (open), with unguarded flank corridors on either side of Hall (x<2 / x>6).
+            // Hall's side walls are solid, so a defender holed up inside has zero LoS into either flank —
+            // flanking is safe by construction, not AI restraint. Gives the Scout/Juggernaut Sprint-speed
+            // asymmetry (1s vs 2s per tile) an actual tactical lever: short-but-guarded center vs.
+            // longer-but-safe flank. Both doors start Closed (Phase 6 / CONTINUOUS_PIVOT_PLAN.md); the
+            // scripted defender opens Door #1 before its Snap so AmbushPoint LoS works. Door #2 is a
+            // player-discoverable depth objective the scripted defender never touches.
+            var model = new ArenaBoard(0f, 0f, 8f, 10f, new[] { Floor.Ground });
+
+            model.RegisterWall(new Segment(new PlanarPosition(2f, 4f), new PlanarPosition(3.75f, 4f)));
+            model.RegisterWall(new Segment(new PlanarPosition(4.25f, 4f), new PlanarPosition(6f, 4f)));
             model.RegisterDoor(new Door(
-                new Segment(new PlanarPosition(1.75f, 2f), new PlanarPosition(2.25f, 2f)),
+                new Segment(new PlanarPosition(3.75f, 4f), new PlanarPosition(4.25f, 4f)),
                 DoorState.Closed,
                 displayName: "Door #1"));
+
+            model.RegisterWall(new Segment(new PlanarPosition(2f, 4f), new PlanarPosition(2f, 7f)));
+            model.RegisterWall(new Segment(new PlanarPosition(6f, 4f), new PlanarPosition(6f, 7f)));
+
+            model.RegisterWall(new Segment(new PlanarPosition(2f, 7f), new PlanarPosition(3.75f, 7f)));
+            model.RegisterWall(new Segment(new PlanarPosition(4.25f, 7f), new PlanarPosition(6f, 7f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(3.75f, 7f), new PlanarPosition(4.25f, 7f)),
+                DoorState.Closed,
+                displayName: "Door #2"));
 
             _board = boardGo.AddComponent<BoardView>();
             _board.Build(model, new Color(0.72f, 0.55f, 0.38f), new Color(0.42f, 0.38f, 0.34f));
@@ -173,10 +189,11 @@ namespace LogiCard.Boot
 
         private void BuildPawns()
         {
-            // Column-aligned with the door choke (DAY7 research layout).
-            var attackerHome = new PlanarPosition(2f, 0f);
+            // Column-aligned with Hall's spine (C45 multi-room layout) — attacker starts at the south
+            // edge of the Yard, defender spawns inside Hall near its north wall.
+            var attackerHome = new PlanarPosition(4f, 0f);
             const float attackerSecondsPerTile = 1f;
-            var defenderSpawn = new PlanarPosition(2f, 4f);
+            var defenderSpawn = new PlanarPosition(4f, 6f);
 
             // Speeds already match the Scout/Juggernaut CharacterData presets (1s vs 2s per tile) —
             // the visual build follows the same archetype so silhouette and movement read together.
@@ -203,14 +220,18 @@ namespace LogiCard.Boot
             float budget = _matchClock.RoundAllotment;
             var program = new PawnProgram(start, DefenderSecondsPerTile, budget, StanceType.Walk, _board.Model);
 
-            // Approach the choke from the north, step into InteractRadius, open the Closed door,
-            // Snap south onto AmbushPoint (2,1), then edge closer. Opening is what makes the shot's
-            // LoS legal — without it the Closed door blocks the wound the PlayMode suite asserts.
-            TryScriptMove(program, new PlanarPosition(2f, 2.6f));
-            TryScriptMove(program, new PlanarPosition(2f, 2.35f));
+            // Approach Door #1 from inside Hall (north side), step into InteractRadius, open it, Snap
+            // south onto AmbushPoint (4,3), then edge back. Opening is what makes the shot's LoS legal —
+            // without it the Closed door blocks the wound the PlayMode suite asserts. Door #1 is always
+            // the nearer door from this approach (0.35 units vs. Door #2's ~2.65), so
+            // TryGetNearestDoor(..., float.MaxValue) inside TryScriptDoor still resolves it correctly
+            // now that the board has two doors. The defender never interacts with Door #2 (Hall->Vault) —
+            // that's a player-discoverable depth objective, not scripted-AI scope (C45).
+            TryScriptMove(program, new PlanarPosition(4f, 4.6f));
+            TryScriptMove(program, new PlanarPosition(4f, 4.35f));
             TryScriptDoor(program, DoorAction.Open);
-            TryScriptShoot(program, new PlanarPosition(2f, 1f));
-            TryScriptMove(program, new PlanarPosition(2f, 2.3f));
+            TryScriptShoot(program, new PlanarPosition(4f, 3f));
+            TryScriptMove(program, new PlanarPosition(4f, 4.3f));
 
             return program.Build();
         }
@@ -276,7 +297,11 @@ namespace LogiCard.Boot
 
             cam.rect = new Rect(0f, ProgramHud.ThumbZoneHeight, 1f, 1f - ProgramHud.ThumbZoneHeight - ProgramHud.TopStripHeight);
             cam.orthographic = true;
-            cam.orthographicSize = 3.6f;
+            // Was 3.6f for the old 4x4 board; scaled proportionally to the new [0,8]x[0,10] board's
+            // largest extent (4 -> 10 units, C45). First-pass estimate, not derived from the tilt/rect
+            // math — needs an Editor eyeball check to confirm the whole Yard/Hall/Vault footprint frames
+            // without the HUD's thumb-zone/top-strip cropping it; tune ±20% if not.
+            cam.orthographicSize = 9.0f;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.07f, 0.07f, 0.09f);
 
@@ -374,6 +399,23 @@ namespace LogiCard.Boot
             vignette.intensity.value = 0.32f;
             vignette.smoothness.overrideState = true;
             vignette.smoothness.value = 0.65f;
+
+            // Tilt-shift DoF: the moodboard's core visual identity ("blur near and far so pawns read
+            // ~2-inch miniatures") had no implementation at all until now — Bokeh mode blurs both sides
+            // of the focus plane (Gaussian mode only does background blur), which is what sells the
+            // toy-scale illusion. Focus distance matches ConfigureCamera's board-to-camera offset (14
+            // world units) so the board stays sharp and only its near/far edges soften.
+            var dof = profile.Add<DepthOfField>(true);
+            dof.mode.overrideState = true;
+            dof.mode.value = DepthOfFieldMode.Bokeh;
+            dof.focusDistance.overrideState = true;
+            dof.focusDistance.value = 14f;
+            dof.aperture.overrideState = true;
+            dof.aperture.value = 2.8f;
+            dof.focalLength.overrideState = true;
+            dof.focalLength.value = 135f;
+            dof.bladeCount.overrideState = true;
+            dof.bladeCount.value = 6;
 
             volume.sharedProfile = profile;
         }

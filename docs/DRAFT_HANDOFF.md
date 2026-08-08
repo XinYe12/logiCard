@@ -1,5 +1,34 @@
 # Draft Handoff — 2026-08-07
 
+**Board rework: multi-room layout in progress (2026-08-08), C45.** User redirected focus from the pawn rework
+to "scene setting, map building, and lighting" — the board/AI/camera side is implemented in this main tree as
+of this note; two parallel workers are in flight for the rest. Tilt-shift DoF (`GameBootstrap.BuildDioramaVolume`,
+Bokeh mode) landed first and is done, not part of this item.
+
+New board: `ArenaBoard(0,0,8,10)` — Yard (open, attacker spawn `(4,0)`) → Hall (walled kill-box, Door #1
+frontal + Door #2 rear, defender spawns inside at `(4,6)`) → Vault (open), with unguarded flank corridors on
+either side of Hall. Reverses the previously locked `[0,4]×[0,4]` footprint (`PRODUCT_MEMORY.md` `C39` item
+7 / `C17`) via a new superseding decision, `C45` — see `PRODUCT_MEMORY.md` and `GDD.md` (both updated). New
+`AmbushPoint = (4,3)`; scripted defender AI rewritten with the same relative choreography as before, just
+recentered (`GameBootstrap.BuildDefenderPayload`). Camera `orthographicSize` scaled `3.6f → 9.0f`
+(proportional estimate, **not yet eyeballed in the Editor — needs a human look** to confirm the whole board
+frames without HUD cropping).
+
+**Expected-red until the parallel workers land — not a regression:** `RoundPlaybackPlayModeTests.cs`,
+`ProgramHudPlayModeTests.cs`, and `BoardInputPlayModeTests.cs` all hardcode positions from the *old* single-room
+board and will fail against this new geometry until `feat/playmode-board-rewrite` (Worker B, briefed with the
+frozen coordinate spec, building in parallel — see `PLAYMODE_BOARD_REWRITE_AGENT_BRIEF.md` in that worktree)
+lands and merges. All EditMode tests are confirmed independent (synthetic boards, no `GameBootstrap`
+dependency) and should stay green throughout.
+
+**Also in flight, parallel, zero overlap:** `feat/board-edge-dressing` (Worker A) — board perimeter/void
+dressing in `BoardView.cs`, addressing the Day 9 "not fully satisfied" visual note, developed against the
+current small board (it reads bounds generically, so it carries over unmodified once this merges).
+
+**Still needed before this is done:** human Editor smoke-test of a full round on the new board (defender
+choreography lands the wound, flank corridors walkable and LoS-safe from Hall, camera frames the whole
+board), then merge both workers, batchmode-verify in a disposable worktree, tick `SCHEDULE.md`.
+
 **Pawn art rework: moved from planned to in progress (2026-08-08).** Step 1 (source & vet candidate packs)
 is done: Kenney "Blocky Characters" was downloaded, previewed, and rejected (blocky, single rigid mesh, wrong
 silhouette trap); Quaternius "Ultimate Modular Men" was downloaded, previewed, and selected as the geometry

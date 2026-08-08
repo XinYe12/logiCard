@@ -23,7 +23,10 @@ Gear cards (Bandage / Flashbang / Adrenaline / Interact-as-card), Otherwise Stop
 
 - **Player Count:** 1v1 (Attacker vs Defender) — spawn labels; same *rules*; Character Cards may differ (Section 2). Local play for the 14-day ship; online is post-demo (**C34**).
 - **Win Condition:** Opponent Physical State → **Dead**.
-- **Map:** One **continuous ground arena** for the demo ship (`[0,4]×[0,4]` footprint — same numeric size the old 5×5 grid used). Attic / vent / monitor deferred (**C34**). Distances are **continuous (Euclidean)**, not tile counts (**C35/C39**).
+- **Map:** One **continuous ground arena** for the demo ship — a multi-room `[0,8]×[0,10]` footprint (Yard →
+  a walled Hall kill-box with two doors → Vault, plus two unguarded flank corridors around Hall) per **C45**,
+  superseding the earlier single-room `[0,4]×[0,4]` footprint. Attic / vent / monitor deferred (**C34**).
+  Distances are **continuous (Euclidean)**, not tile counts (**C35/C39**).
 - **Match Loop (C33 / C4):**
   1. **Select Character Card** (pre-match).
   2. **Allot (Time Card):** current chooser commits **N** from the shared match pool (round 1 = Attacker; then alternates). **N spent in full.**
@@ -165,8 +168,8 @@ Placeholder magnitudes — tune in playtest. "unit" = continuous board distance 
 
 | Element | 14-day ship |
 |---------|-------------|
-| **One Door** | Contextual open/close (radius-based interact — **C39**); blocks move + LoS when closed |
-| **Continuous ground arena** (`[0,4]×[0,4]` footprint) | Yes |
+| **Two Doors** | Contextual open/close (radius-based interact — **C39**); blocks move + LoS when closed — was one door pre-**C45** |
+| **Continuous ground arena, multi-room** (`[0,8]×[0,10]` footprint — **C45**) | Yes |
 | Attic / Vent / Monitor | **Post-demo** |
 | 高铁 / High-speed rail (**C31**) | Confirmed design; **post-demo** |
 
