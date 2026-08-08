@@ -142,18 +142,27 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Lock In's entry point. Returns false — and leaves the round unlocked — if a pending
-        /// draft exists but fails to commit (e.g. over budget), instead of silently discarding that
-        /// draft and locking in anyway with whatever was already committed (BUG FOUND 2026-08-06,
-        /// playtest: a drafted path that didn't fit the round's Time Resource budget vanished
-        /// silently at Lock In, leaving the pawn with zero Move nodes — it just stood still through
-        /// the whole playback with no on-screen explanation).
+        /// Lock In's entry point. Tries to commit any pending draft first. If that draft does not
+        /// fit the budget but already-committed actions do, the draft is dropped and Lock In
+        /// proceeds with the committed queue (playtest 2026-08-07: Used looked fine after UNDO of
+        /// queue rows while an over-budget pending path silently kept failing Lock In at the same
+        /// total). Returns false only when even the committed actions alone cannot lock.
         /// </summary>
         public bool CommitToPlayback()
         {
             if (Program != null && Program.HasDraft && !TryCommitDraftPath())
             {
-                return false;
+                if (Program.UsedSeconds > Program.BudgetSeconds + 0.001f)
+                {
+                    return false;
+                }
+
+                Debug.Log(
+                    "[logiCard] Dropping over-budget pending draft so Lock In can proceed with " +
+                    $"committed actions ({Program.UsedSeconds:0.0}s / {Program.BudgetSeconds:0.0}s).");
+                Program.ClearDraft();
+                RefreshPreview();
+                QueueChanged?.Invoke(Program);
             }
 
             _locked = true;
@@ -364,7 +373,8 @@ namespace LogiCard.Board
                 return false;
             }
 
-            _pendingDoor = null;
+            // Keep selection so the prompt stays up and can show the new scheduled status
+            // (playtest 2026-08-07: clearing here forced a re-tap that still read live CLOSED).
             RefreshPreview();
             QueueChanged?.Invoke(Program);
             return true;
@@ -391,6 +401,32 @@ namespace LogiCard.Board
 
             _pawn.ApplyTime(previewTime);
             RefreshPathBeads();
+            RefreshDoorSchedulePreview();
+        }
+
+        /// <summary>
+        /// Tint doors from <see cref="PawnProgram.ScheduledDoorState"/> — visual only. The shared
+        /// <see cref="ArenaBoard"/> stays at round-start until Aftermath so pathfinding cannot
+        /// open-and-walk in the same draft once Open is booked (pathfinding uses a scheduled-state
+        /// clone; this tint mirrors that). Shared <see cref="ArenaBoard"/> stays at round-start until
+        /// Aftermath so Lock In still arms correctly (playtest 2026-08-06/07).
+        /// </summary>
+        private void RefreshDoorSchedulePreview()
+        {
+            if (_boardView == null || _board == null || Program == null)
+            {
+                return;
+            }
+
+            var states = new Dictionary<Door, DoorState>();
+            IReadOnlyList<Door> doors = _board.Doors;
+            for (int i = 0; i < doors.Count; i++)
+            {
+                Door door = doors[i];
+                states[door] = Program.ScheduledDoorState(door);
+            }
+
+            _boardView.RefreshDoorVisuals(states);
         }
 
         private void RefreshPathBeads()

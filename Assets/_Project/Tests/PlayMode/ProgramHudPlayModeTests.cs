@@ -68,6 +68,43 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(AttackerInput.PendingDoor, Is.Null, "A tap away from any door should cancel the pending selection.");
         }
 
+        /// <summary>
+        /// Playtest 2026-08-07: OPEN must change the prompt's status. Live board stays Closed until
+        /// Aftermath; ScheduledDoorState + keeping PendingDoor after confirm are what make the
+        /// label actually flip.
+        /// </summary>
+        [Test]
+        public void DoorOpenConfirmUpdatesScheduledStatusAndKeepsSelection()
+        {
+            // Must already be within InteractRadius — same constraint as a real Open tap after a Move.
+            PlanarPosition besideDoor = new PlanarPosition(2f, 1.85f);
+            AttackerInput.PrepareRound(besideDoor, 60f);
+            Phase.GoTo(RoundPhase.Reveal);
+            Phase.GoTo(RoundPhase.Program);
+
+            Button doorMode = FindByName<Button>("Mode_Door");
+            Button open = FindByName<Button>("Door_Open");
+            doorMode.onClick.Invoke();
+
+            Assert.That(AttackerInput.TryTapPoint(besideDoor), Is.True);
+            Door selected = AttackerInput.PendingDoor;
+            Assert.That(selected, Is.Not.Null);
+
+            Assert.That(AttackerInput.Board.GetDoorState(selected), Is.EqualTo(DoorState.Closed));
+            Assert.That(AttackerInput.Program.ScheduledDoorState(selected), Is.EqualTo(DoorState.Closed));
+
+            open.onClick.Invoke();
+
+            Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(1),
+                "Open confirm should book one Door node (pawn starts beside door).");
+            Assert.That(AttackerInput.Program.Nodes[0].Door, Is.EqualTo(DoorAction.Open));
+            Assert.That(AttackerInput.PendingDoor, Is.SameAs(selected),
+                "Selection must stay so the prompt can show the new status.");
+            Assert.That(AttackerInput.Program.ScheduledDoorState(selected), Is.EqualTo(DoorState.Open));
+            Assert.That(AttackerInput.Board.GetDoorState(selected), Is.EqualTo(DoorState.Closed),
+                "Live passability still waits for Aftermath.");
+        }
+
         [Test]
         public void ShootModeButtonsSelectSnapAndHold()
         {
@@ -154,8 +191,34 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(Phase.Phase, Is.EqualTo(RoundPhase.Execute), "Lock In never reached Execute.");
         }
 
+        /// <summary>
+        /// BUG FOUND 2026-08-07 (playtest): the end screen showed a stale "Rn · SIDE PICKS" top
+        /// strip and the word "MATCH OVER" twice (headline + dead button) once the match actually
+        /// ended.
+        /// </summary>
         [Test]
-        public void PlaybackPlacesThePawnOnItsScheduledPointAtTheArrivalSecond()
+        public void MatchOverClearsTheStaleHeaderAndDoesNotRepeatItsHeadlineOnTheButton()
+        {
+            Text matchLabel = FindByName<Text>("MatchLabel");
+            Text aftermathLabel = FindByName<Text>("AftermathLabel");
+            Button nextRoundButton = FindByName<Button>("NextRoundButton");
+            Assert.That(matchLabel, Is.Not.Null, "HUD has no MatchLabel text.");
+            Assert.That(aftermathLabel, Is.Not.Null, "HUD has no AftermathLabel text.");
+            Assert.That(nextRoundButton, Is.Not.Null, "HUD has no NextRoundButton.");
+            Text nextRoundButtonLabel = nextRoundButton.GetComponentInChildren<Text>();
+
+            Phase.GoTo(RoundPhase.MatchOver);
+
+            Assert.That(matchLabel.text, Does.Not.Contain("PICKS"),
+                "Top strip should not still frame the match as mid-round once it is over.");
+            Assert.That(aftermathLabel.text, Does.Contain("MATCH OVER"));
+            Assert.That(nextRoundButtonLabel.text, Is.Not.EqualTo(aftermathLabel.text),
+                "Button must not repeat the exact same headline text.");
+            Assert.That(nextRoundButton.interactable, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator PlaybackPlacesThePawnOnItsScheduledPointAtTheArrivalSecond()
         {
             PlanarPosition destination = SafeMoveDestination;
             float arrival = MoveSeconds(Home, destination);
@@ -170,11 +233,19 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(Vector3.Distance(AttackerPawn.transform.position, BoardVisual.WorldFromPlanar(Home)),
                 Is.LessThan(0.0001f), "Pawn does not start on its home point.");
 
+            // Committing a path forces one exact apply at t=0; wait past PawnView's stepped-playback
+            // hold (ART_DIRECTION §2 — pose snaps, not blends) before scrubbing to the mid-segment
+            // instant below, or it would read back that stale t=0 pose instead.
+            yield return WaitForPawnStepRelease();
+
             Clock.SetSeconds(arrival * 0.5f);
             Vector3 midpoint = Vector3.Lerp(
                 BoardVisual.WorldFromPlanar(Home), BoardVisual.WorldFromPlanar(destination), 0.5f);
             Assert.That(Vector3.Distance(AttackerPawn.transform.position, midpoint), Is.LessThan(0.001f),
-                "Playback snaps instead of interpolating across the Time Resource segment.");
+                "Scrubbing to an exact instant (after the stepped-playback hold clears) must show that " +
+                "instant's precise point, not a stale held pose.");
+
+            yield return WaitForPawnStepRelease();
 
             Clock.SetSeconds(arrival);
             Assert.That(Vector3.Distance(AttackerPawn.transform.position, BoardVisual.WorldFromPlanar(destination)),

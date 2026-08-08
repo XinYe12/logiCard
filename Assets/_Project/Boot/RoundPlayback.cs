@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using LogiCard.Audio;
 using LogiCard.Board;
 using LogiCard.Net;
 using LogiCard.Sim;
@@ -18,19 +19,31 @@ namespace LogiCard.Boot
         /// <summary>How long a tracer stays lit after its shot, in Time Resource seconds.</summary>
         private const float TracerVisibleSeconds = 2.5f;
 
+        /// <summary>
+        /// How long a muzzle flash stays lit, in Time Resource seconds (ART_DIRECTION §3: "2 frames,
+        /// then gone"). Short and fixed rather than converted from real playback fps — RoundPlayback
+        /// only ever deals in Time Resource seconds (C27), never real/engine frames.
+        /// </summary>
+        private const float MuzzleFlashVisibleSeconds = 0.15f;
+
         private static readonly Color TracerColor = new Color(1f, 0.85f, 0.45f, 1f);
 
         private readonly List<PawnEntry> _pawns = new List<PawnEntry>();
         private readonly List<GhostInput> _inputs = new List<GhostInput>();
         private readonly List<TracerEntry> _tracers = new List<TracerEntry>();
+        private readonly List<MuzzleFlashEntry> _muzzleFlashes = new List<MuzzleFlashEntry>();
+        private readonly List<WoundSplatEntry> _woundSplats = new List<WoundSplatEntry>();
+        private readonly Dictionary<Door, DoorState> _doorStateAtArm = new Dictionary<Door, DoorState>();
 
         private BoardView _board;
         private TimeResourceClockDriver _clock;
         private RoundPhaseController _phase;
+        private IFoleyPlayer _foley;
         private GhostResolver _resolver;
         private ReplayTape _tape;
         private int _eventCursor;
         private float _lastAppliedSeconds;
+        private float _doorsSyncedToSeconds = float.NaN;
         private bool _anyoneDead;
 
         /// <summary>Stub outcome text for the HUD; empty string means "clear the banner".</summary>
@@ -40,11 +53,12 @@ namespace LogiCard.Boot
 
         public bool AnyoneDead => _anyoneDead;
 
-        public void Init(BoardView board, TimeResourceClockDriver clock, RoundPhaseController phase)
+        public void Init(BoardView board, TimeResourceClockDriver clock, RoundPhaseController phase, IFoleyPlayer foley = null)
         {
             _board = board;
             _clock = clock;
             _phase = phase;
+            _foley = foley;
             _resolver = new GhostResolver(board.Model);
 
             _clock.TimeChanged += ApplyTime;
@@ -119,7 +133,8 @@ namespace LogiCard.Boot
             }
 
             BuildTracers();
-            _board.RefreshDoorVisuals();
+            BuildHitVfx();
+            SnapshotDoorStatesAtArm();
 
             Debug.Log($"[logiCard] Ghost resolve: {_tape.Events.Count} event(s), " +
                       $"{_tape.Tracks.Count} pawn(s), tape ends at {_tape.EndSeconds:0.0}s TR.");
@@ -155,8 +170,24 @@ namespace LogiCard.Boot
                 _pawns[i] = pawn;
             }
 
-            ApplyDoorStateFromTape();
-            _board.RefreshDoorVisuals();
+            // Final authoritative apply (covers Aftermath without scrubbing to the tape end).
+            SyncDoorsToSeconds(float.PositiveInfinity);
+        }
+
+        /// <summary>
+        /// Snapshot live door state at Lock In so scrubbing can restore round-start (which may
+        /// already differ from each door's <see cref="Door.InitialState"/> after prior rounds).
+        /// </summary>
+        private void SnapshotDoorStatesAtArm()
+        {
+            _doorStateAtArm.Clear();
+            _doorsSyncedToSeconds = float.NaN;
+            IReadOnlyList<Door> doors = _board.Model.Doors;
+            for (int i = 0; i < doors.Count; i++)
+            {
+                Door door = doors[i];
+                _doorStateAtArm[door] = _board.Model.GetDoorState(door);
+            }
         }
 
         /// <summary>
@@ -165,26 +196,53 @@ namespace LogiCard.Boot
         /// nothing ever copied the result back onto the shared <see cref="ArenaBoard"/> that the next
         /// round's pathfinding and the door's rendered tint both read from. A player who booked and
         /// resolved an Open had it silently reset to Closed the instant the round ended; the door
-        /// could never actually be gotten through. Walking the tape's Door events in order (already
-        /// chronological) and applying each to the real board leaves it at the correct final state.
+        /// could never actually be gotten through.
+        ///
+        /// Additionally, tint used to refresh only at arm/Aftermath — during playback a Closed-looking
+        /// door could show a tracer "through" it after the tape had already opened it. Syncing from the
+        /// arm snapshot + tape events up to the scrubber second keeps model + tint matched while scrubbing.
         /// </summary>
-        private void ApplyDoorStateFromTape()
+        private void SyncDoorsToSeconds(float seconds)
         {
-            for (int i = 0; i < _tape.Events.Count; i++)
+            // Scrubber can re-fire the same second; skip so we don't allocate fresh door materials
+            // via RefreshDoorVisuals on every identical tick.
+            if (_doorsSyncedToSeconds == seconds)
             {
-                TapeEvent tapeEvent = _tape.Events[i];
-                if (tapeEvent.Type != TapeEventType.DoorOpened && tapeEvent.Type != TapeEventType.DoorClosed)
-                {
-                    continue;
-                }
+                return;
+            }
 
-                if (_board.Model.TryGetDoor(tapeEvent.Position, out Door door))
+            foreach (KeyValuePair<Door, DoorState> pair in _doorStateAtArm)
+            {
+                _board.Model.SetDoorState(pair.Key, pair.Value);
+            }
+
+            if (_tape != null)
+            {
+                for (int i = 0; i < _tape.Events.Count; i++)
                 {
-                    _board.Model.SetDoorState(
-                        door,
-                        tapeEvent.Type == TapeEventType.DoorOpened ? DoorState.Open : DoorState.Closed);
+                    TapeEvent tapeEvent = _tape.Events[i];
+                    // Events are sorted by Seconds (GhostResolver.CompareEvents).
+                    if (tapeEvent.Seconds > seconds)
+                    {
+                        break;
+                    }
+
+                    if (tapeEvent.Type != TapeEventType.DoorOpened && tapeEvent.Type != TapeEventType.DoorClosed)
+                    {
+                        continue;
+                    }
+
+                    if (_board.Model.TryGetDoor(tapeEvent.Position, out Door door))
+                    {
+                        _board.Model.SetDoorState(
+                            door,
+                            tapeEvent.Type == TapeEventType.DoorOpened ? DoorState.Open : DoorState.Closed);
+                    }
                 }
             }
+
+            _board.RefreshDoorVisuals();
+            _doorsSyncedToSeconds = seconds;
         }
 
         /// <summary>Back to Allot/Program: drop the tape and stand everyone on their carried point.</summary>
@@ -194,6 +252,7 @@ namespace LogiCard.Boot
             _eventCursor = 0;
             _lastAppliedSeconds = 0f;
             ClearTracers();
+            ClearHitVfx();
             OutcomeReported?.Invoke(string.Empty);
 
             for (int i = 0; i < _pawns.Count; i++)
@@ -230,6 +289,8 @@ namespace LogiCard.Boot
             }
 
             UpdateTracers(seconds);
+            UpdateHitVfx(seconds);
+            SyncDoorsToSeconds(seconds);
 
             if (seconds < _lastAppliedSeconds)
             {
@@ -257,6 +318,12 @@ namespace LogiCard.Boot
         {
             switch (tapeEvent.Type)
             {
+                case TapeEventType.MoveArrive:
+                    _foley?.Play(FoleyId.Footstep);
+                    break;
+                case TapeEventType.ShootFire:
+                    _foley?.Play(FoleyId.Shot);
+                    break;
                 case TapeEventType.Wounded:
                     OutcomeReported?.Invoke($"WOUNDED  P{tapeEvent.PawnId}  @{tapeEvent.Seconds:0.0}s");
                     break;
@@ -346,6 +413,104 @@ namespace LogiCard.Boot
             _tracers.Clear();
         }
 
+        /// <summary>
+        /// Muzzle flash on <see cref="TapeEventType.ShootFire"/>, wound splat on
+        /// <see cref="TapeEventType.Wounded"/>/<see cref="TapeEventType.Killed"/> — same
+        /// build-once-at-arm pattern as <see cref="BuildTracers"/>.
+        /// </summary>
+        private void BuildHitVfx()
+        {
+            ClearHitVfx();
+
+            foreach (TapeEvent tapeEvent in _tape.Events)
+            {
+                switch (tapeEvent.Type)
+                {
+                    case TapeEventType.ShootFire:
+                        BuildMuzzleFlash(tapeEvent);
+                        break;
+                    case TapeEventType.Wounded:
+                    case TapeEventType.Killed:
+                        BuildWoundSplat(tapeEvent);
+                        break;
+                }
+            }
+        }
+
+        private void BuildMuzzleFlash(TapeEvent tapeEvent)
+        {
+            if (!_tape.Tracks.TryGetValue(tapeEvent.PawnId, out ScheduledPath shooter))
+            {
+                return;
+            }
+
+            var go = new GameObject($"MuzzleFlash_{tapeEvent.PawnId}_{tapeEvent.Seconds:0.00}");
+            go.transform.SetParent(transform, false);
+            var flash = go.AddComponent<MuzzleFlashView>();
+            flash.Init();
+            // Shooter's position at the completion instant (when the shot actually fires), not the
+            // aim-in/hold window start the tracer uses — the flash is the muzzle igniting, not the beam.
+            flash.Place(
+                _board.WorldFromPlanar(shooter.Evaluate(tapeEvent.Seconds)),
+                _board.WorldFromPlanar(tapeEvent.Position));
+
+            _muzzleFlashes.Add(new MuzzleFlashEntry(tapeEvent.Seconds, flash));
+        }
+
+        private void BuildWoundSplat(TapeEvent tapeEvent)
+        {
+            var go = new GameObject($"WoundSplat_{tapeEvent.TargetPawnId}_{tapeEvent.Seconds:0.00}");
+            go.transform.SetParent(transform, false);
+            var splat = go.AddComponent<WoundSplatView>();
+            splat.Init();
+            // Position is the victim's position for a hit event (TapeEvent doc comment) — no track
+            // lookup needed, unlike the shooter-origin case above.
+            splat.Place(_board.WorldFromPlanar(tapeEvent.Position));
+
+            _woundSplats.Add(new WoundSplatEntry(tapeEvent.Seconds, splat));
+        }
+
+        private void UpdateHitVfx(float seconds)
+        {
+            for (int i = 0; i < _muzzleFlashes.Count; i++)
+            {
+                MuzzleFlashEntry flash = _muzzleFlashes[i];
+                bool lit = seconds >= flash.Seconds && seconds <= flash.Seconds + MuzzleFlashVisibleSeconds;
+                flash.View.SetVisible(lit);
+            }
+
+            for (int i = 0; i < _woundSplats.Count; i++)
+            {
+                WoundSplatEntry splat = _woundSplats[i];
+                // Persistent once shown (ART_DIRECTION §3) — visible once the scrubber has passed the
+                // hit, hidden again on rewind past it, same rule the tracer/banner logic already uses.
+                splat.View.SetVisible(seconds >= splat.Seconds);
+            }
+        }
+
+        private void ClearHitVfx()
+        {
+            for (int i = 0; i < _muzzleFlashes.Count; i++)
+            {
+                if (_muzzleFlashes[i].View != null)
+                {
+                    Destroy(_muzzleFlashes[i].View.gameObject);
+                }
+            }
+
+            _muzzleFlashes.Clear();
+
+            for (int i = 0; i < _woundSplats.Count; i++)
+            {
+                if (_woundSplats[i].View != null)
+                {
+                    Destroy(_woundSplats[i].View.gameObject);
+                }
+            }
+
+            _woundSplats.Clear();
+        }
+
         private struct PawnEntry
         {
             private readonly Func<TimelinePayload> _payloadSource;
@@ -385,6 +550,32 @@ namespace LogiCard.Boot
             {
                 WindowStartSeconds = windowStartSeconds;
                 CompleteSeconds = completeSeconds;
+                View = view;
+            }
+        }
+
+        private readonly struct MuzzleFlashEntry
+        {
+            public float Seconds { get; }
+
+            public MuzzleFlashView View { get; }
+
+            public MuzzleFlashEntry(float seconds, MuzzleFlashView view)
+            {
+                Seconds = seconds;
+                View = view;
+            }
+        }
+
+        private readonly struct WoundSplatEntry
+        {
+            public float Seconds { get; }
+
+            public WoundSplatView View { get; }
+
+            public WoundSplatEntry(float seconds, WoundSplatView view)
+            {
+                Seconds = seconds;
                 View = view;
             }
         }

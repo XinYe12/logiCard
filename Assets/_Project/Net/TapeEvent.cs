@@ -31,7 +31,11 @@ namespace LogiCard.Net
 
         public TapeEventType Type { get; }
 
-        /// <summary>Arrival point for a Move, aim point for a Shoot, victim's position for a hit.</summary>
+        /// <summary>
+        /// Arrival point for a Move; victim's position for a hit. For a Shoot, the tracer's visual
+        /// endpoint — the aim point, or the nearest wall/closed-door crossing if the shot is blocked
+        /// (2026-08-07) — not necessarily the raw aim point.
+        /// </summary>
         public PlanarPosition Position { get; }
 
         public int TargetPawnId { get; }

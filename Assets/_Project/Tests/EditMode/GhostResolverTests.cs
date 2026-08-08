@@ -144,6 +144,61 @@ namespace LogiCard.Tests.EditMode
             Assert.That(EventsOfType(tape, TapeEventType.Wounded), Is.Empty);
         }
 
+        /// <summary>
+        /// BUG FOUND 2026-08-07 (playtest): the tracer drew a straight line to the aim point even
+        /// when the shot was blocked, so the beam visually passed through the wall even though it
+        /// never actually wounded anyone. ShootFire's Position must stop at the wall.
+        /// </summary>
+        [Test]
+        public void ShotThroughAWallTruncatesItsTracerAtTheWall()
+        {
+            ArenaBoard board = NewBoard();
+            board.RegisterWall(new Segment(new PlanarPosition(0, 1), new PlanarPosition(4, 1)));
+            var resolver = new GhostResolver(board);
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(2f, 0, 2)),
+            });
+
+            List<TapeEvent> fires = EventsOfType(tape, TapeEventType.ShootFire);
+            Assert.That(fires.Count, Is.EqualTo(1));
+            Assert.That(fires[0].Position, Is.EqualTo(new PlanarPosition(0, 1)));
+        }
+
+        [Test]
+        public void ShotThroughAClosedDoorTruncatesItsTracerAtTheDoor()
+        {
+            ArenaBoard board = NewBoard();
+            var door = new Door(new Segment(new PlanarPosition(0, 1), new PlanarPosition(4, 1)), DoorState.Closed);
+            board.RegisterDoor(door);
+            var resolver = new GhostResolver(board);
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(2f, 0, 2)),
+            });
+
+            List<TapeEvent> fires = EventsOfType(tape, TapeEventType.ShootFire);
+            Assert.That(fires.Count, Is.EqualTo(1));
+            Assert.That(fires[0].Position, Is.EqualTo(new PlanarPosition(0, 1)));
+        }
+
+        [Test]
+        public void UnblockedShotTracerReachesTheAimPoint()
+        {
+            var resolver = new GhostResolver(NewBoard());
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new PlanarPosition(0, 0), Shoot(2f, 0, 4)),
+            });
+
+            List<TapeEvent> fires = EventsOfType(tape, TapeEventType.ShootFire);
+            Assert.That(fires.Count, Is.EqualTo(1));
+            Assert.That(fires[0].Position, Is.EqualTo(new PlanarPosition(0, 4)));
+        }
+
         [Test]
         public void ShotMissesATargetThatHasAlreadyMovedOn()
         {

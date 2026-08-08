@@ -15,7 +15,7 @@ Companion: [VISION.md](VISION.md) · Authority for rules/numbers: [GDD.md](GDD.m
 - **One door** (wall segment, radius-based interact) that blocks move + LoS when closed (contextual open/close).
 
 ### Presentation (required — C34 / C29)
-- Warm desk-lamp lighting, clay-like materials, yarn/chalk paths.
+- Warm desk-lamp lighting, clay-like materials, **线稿涂鸦** paths (FragPunk-style ink on board — see ART_DIRECTION).
 - Cardstock Time Card + tactile thumb-zone HUD; clean AR Time Resource scrubber.
 - Stepped pawn motion; physical muzzle flash; clay wound splat.
 - Basic tactile foley (footsteps, shot, Time Card, Lock In).

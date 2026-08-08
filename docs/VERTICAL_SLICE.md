@@ -41,7 +41,7 @@
 
 1. **Slice 1 — Pipeline proof:** Time Card + scheduled Move + Snap Shoot → Playback → second round. Local/scripted OK.  
 2. **Core Combat:** waypoint path + stance bands; Snap vs Hold Angle; wounds/death readability; **one door** that changes move/LoS. Local match playable end-to-end.  
-3. **Diorama Art Pass:** URP/lighting, board dressing, yarn paths, cardstock Time Card, clay pawns, stepped motion, physical VFX, tactile audio — required ship floor (**ART_DIRECTION**).  
+3. **Diorama Art Pass:** URP/lighting, board dressing, **线稿涂鸦** paths, cardstock Time Card, clay pawns, stepped motion, physical VFX, tactile audio — required ship floor (**ART_DIRECTION**).  
 4. **Ship:** Windows candidate, playtest, capture video, README. Optional Android smoke only if time remains.
 
 Win/Android dual polish and Fusion are **not** required for this demo’s ship bar (**C34**).
@@ -63,4 +63,4 @@ Win/Android dual polish and Fusion are **not** required for this demo’s ship b
 
 ## Explicitly not in Slice 1 / Core Combat ship
 
-Path-draw yarn polish (art pass), full gear card deck, Bandage/Otherwise, attic/vent/monitor, Flashbang/Adrenaline, Fusion networking, Android polish, final SSS. Covered by SCOPE Later / post-demo under **C34**.
+Path-draw 线稿涂鸦 polish (art pass), full gear card deck, Bandage/Otherwise, attic/vent/monitor, Flashbang/Adrenaline, Fusion networking, Android polish, final SSS. Covered by SCOPE Later / post-demo under **C34**.

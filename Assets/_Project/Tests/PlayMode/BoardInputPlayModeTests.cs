@@ -135,5 +135,95 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(AttackerInput.TryTapPoint(new PlanarPosition(Home.X + 2f, Home.Y)), Is.False);
             Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(queuedBeforeExtraTap));
         }
+
+        /// <summary>
+        /// BUG FOUND 2026-08-06: Lock In used to discard an over-budget pending draft and lock in
+        /// anyway with no explanation. It must not silently keep a draft that blocks forever either
+        /// (playtest 2026-08-07): when committed actions fit, Lock In drops the pending draft and
+        /// proceeds.
+        /// </summary>
+        [Test]
+        public void OverBudgetPendingDraftIsDroppedSoCommitToPlaybackCanProceed()
+        {
+            PlanarPosition start = AttackerInput.Program.CurrentPosition;
+            AttackerInput.PrepareRound(start, 1f);
+            Phase.GoTo(RoundPhase.Reveal);
+            Phase.GoTo(RoundPhase.Program);
+
+            PlanarPosition destination = new PlanarPosition(start.X, start.Y + 1f);
+            float draftCost = MoveSeconds(start, destination);
+            Assert.That(draftCost, Is.GreaterThan(1f), "Fixture assumption: 1m Walk costs more than 1s.");
+            Assert.That(AttackerInput.Program.BudgetSeconds, Is.EqualTo(1f).Within(0.0001f));
+
+            AttackerInput.Mode = ActionVerb.Move;
+            Assert.That(AttackerInput.TryTapPoint(destination), Is.True);
+            Assert.That(AttackerInput.Program.HasDraft, Is.True);
+
+            Assert.That(AttackerInput.CommitToPlayback(), Is.True,
+                "Over-budget pending draft must be dropped so Lock In can proceed with committed actions.");
+            Assert.That(AttackerInput.Program.HasDraft, Is.False);
+            Assert.That(AttackerInput.Program.Nodes, Is.Empty);
+        }
+
+        /// <summary>
+        /// Playtest 2026-08-07: after Lock In rejects an over-budget draft, UNDO must clear that
+        /// draft so a later Lock In can succeed (UNDO is the scheduled fix path, not Rewind).
+        /// </summary>
+        [Test]
+        public void UndoClearsOverBudgetDraftSoCommitToPlaybackCanSucceed()
+        {
+            PlanarPosition start = AttackerInput.Program.CurrentPosition;
+            AttackerInput.PrepareRound(start, 1f);
+            Phase.GoTo(RoundPhase.Reveal);
+            Phase.GoTo(RoundPhase.Program);
+
+            PlanarPosition destination = new PlanarPosition(start.X, start.Y + 1f);
+            Assert.That(MoveSeconds(start, destination), Is.GreaterThan(1f));
+
+            AttackerInput.Mode = ActionVerb.Move;
+            Assert.That(AttackerInput.TryTapPoint(destination), Is.True);
+            Assert.That(AttackerInput.TryCommitDraftPath(), Is.False);
+            Assert.That(AttackerInput.Program.HasDraft, Is.True);
+
+            Assert.That(AttackerInput.TryUndoLastStep(), Is.True);
+            Assert.That(AttackerInput.Program.HasDraft, Is.False);
+            Assert.That(AttackerInput.Program.Nodes, Is.Empty);
+
+            Assert.That(AttackerInput.CommitToPlayback(), Is.True,
+                "After undoing the over-budget draft, Lock In must succeed.");
+        }
+
+        /// <summary>
+        /// Committed queue under budget + pending over-budget draft: Lock In keeps the committed
+        /// nodes and drops only the draft.
+        /// </summary>
+        [Test]
+        public void CommitToPlaybackDropsOverBudgetDraftButKeepsCommittedNodes()
+        {
+            PlanarPosition start = AttackerInput.Program.CurrentPosition;
+            AttackerInput.PrepareRound(start, 3f);
+            Phase.GoTo(RoundPhase.Reveal);
+            Phase.GoTo(RoundPhase.Program);
+
+            // Stay south of the Closed door (y=2): 1m Walk = 2s committed.
+            PlanarPosition first = new PlanarPosition(start.X, start.Y + 1f);
+            AttackerInput.Mode = ActionVerb.Move;
+            Assert.That(AttackerInput.TryTapPoint(first), Is.True);
+            Assert.That(AttackerInput.TryCommitDraftPath(), Is.True);
+            Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(1));
+            float committed = AttackerInput.Program.UsedSeconds;
+            Assert.That(committed, Is.EqualTo(2f).Within(0.01f));
+
+            // Another 1m Walk draft would be +2s → 4s total > 3s budget.
+            PlanarPosition second = new PlanarPosition(start.X + 1f, start.Y + 1f);
+            Assert.That(AttackerInput.TryTapPoint(second), Is.True);
+            Assert.That(AttackerInput.Program.HasDraft, Is.True);
+            Assert.That(committed + AttackerInput.Program.DraftAllottedSeconds, Is.GreaterThan(3f));
+
+            Assert.That(AttackerInput.CommitToPlayback(), Is.True);
+            Assert.That(AttackerInput.Program.HasDraft, Is.False);
+            Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(1));
+            Assert.That(AttackerInput.Program.UsedSeconds, Is.EqualTo(committed).Within(0.0001f));
+        }
     }
 }

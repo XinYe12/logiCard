@@ -1,106 +1,124 @@
-# Draft Handoff — 2026-08-06
+# Draft Handoff — 2026-08-07
 
-**Schedule:** M2.5 continuous pivot (Days 7b–7g) code-complete and verified green. Day 8 URP art foundation merged. Phase 6 (tune + cold-observer) is the only thing standing between here and Day 9 — and it's human-only (playtest feel + door Closed-at-start fixture rework), not agent-delegable.
+**Pawn art rework in progress, read `docs/PAWN_ART_REWORK_PLAN.md` before touching `PawnView.cs` (2026-08-08):**
+`377029f`'s primitive-assembled Scout/Juggernaut silhouettes were rejected by human review on sight (before
+even being run) — cube parts + matte grain read as "default Unity primitives glued together," not handmade
+toy art. Human confirmed the actual target: **The Legend of Zelda: Link's Awakening (2019 Switch remake)**
+diorama/toy style — rounded, glossy, chibi — achieved by importing a free CC0 low-poly character pack
+(Kenney "Blocky Characters" or Quaternius "Ultimate Modular Men Pack" are the researched candidates), not by
+hand-tuning more primitives. This is a deliberate, approved exception to the project's usual
+"everything procedural, nothing imported" convention, for character models only. Full implementation plan,
+verification-loop protocol (no agent-side screenshot capture exists — human must Play + paste screenshots),
+and doc-update checklist are in `docs/PAWN_ART_REWORK_PLAN.md`. **Not yet implemented** — pick up from step 1
+(source & vet candidate packs) next session.
+
+**Schedule:** M2.5 continuous pivot + Day 8 URP done; Phase 6 human gate cleared. **Day 9 is DONE and accepted** (2026-08-07). **Day 10 (clay motion + physical VFX) is fully wired and committed** (`a57d095`) — stepped playback, the muzzle-flash/wound-splat views, and their wiring into `RoundPlayback`'s tape-event loop are all on `master`; still needs a human Editor look before ticking SCHEDULE. **Day 11 audio is fully wired too** (`04f9191`, 2026-08-07) — `FoleyPlayer.Play()` now fires on Footstep/Shot (`RoundPlayback`) and Time Card/Lock In (`ProgramHud`); still needs a human ear-check before ticking SCHEDULE. **Day 14 ship case-study draft + capture checklist landed** (`950ff63`). **Multi-agent Parallel Ops is live** — see `docs/PARALLEL_OPS.md` + `docs/departments/INDEX.md` before starting any concurrent session. **Wave 3 (Days 12–14) plan is written up in `PARALLEL_OPS.md`'s "Wave 3 kickoff" section and `docs/DAY13_PLAYTEST_FINDINGS.md`** — read those before spawning agents for what's next.
+
+**Day 12 Windows candidate — attempted, cancelled in favor of building on Windows directly (2026-08-07):** tried a batchmode `-buildTarget Win64` build from this Mac (Unity has no native Windows machine here, so this meant installing the Windows Build Support (Mono) module via Unity Hub CLI first, then building from a disposable worktree). Compiled clean, but the actual build ran 40+ minutes without finishing — likely a cold `Library/` cache in the fresh worktree stacked with a first-time platform switch, plus the project's unrelated Sentis package dependency (538 log mentions, not used by any gameplay code — same "Sentis analytics churn" already flagged on `ProjectSettings.asset` elsewhere in this doc) adding real overhead, plus dozens of failed license/telemetry network calls retrying. User (**has a real Windows machine**) called it and will build there directly instead — much simpler than fighting a cross-compile from Mac. Build stopped, disposable worktree removed, the one-off `BuildScript.cs` batchmode entry point deleted (unneeded once building natively). **If Day 12 comes up again on a Mac-only setup:** the Windows Build Support module *is* now installed on this machine's Unity (`6000.5.5f1`) if that helps, but consider first checking whether Sentis is actually needed in this project — it wasn't traced to any gameplay code and may be safe to remove, which would likely fix build time on its own.
+
+**Concurrent-session note (2026-08-07, resolved):** while Core was mid-edit on `RoundPlayback.cs` for VFX wiring, a second Integrator-role session reviewed and merged the Audio stub (`ef6e3f5`) directly into this same `master` working tree, updating `DRAFT_HANDOFF.md`/`contracts/CURRENT.md`/`departments/INDEX.md` concurrently. No file overlap occurred (Audio touched only `Assets/_Project/Audio/**` + its own STATUS.md) and both sessions' doc edits were reconciled by hand. The human confirmed and cancelled that other session afterward — as of this note, this is the only session on `master`. Third instance of the same "two agents, one working tree" risk this doc has now logged; if you're a fresh session, confirm who else might be pointed at this exact path before editing, every time.
+
+**Day 9 sign-off, read this before touching board/path art again:** human accepted the current board/path look **with reservations** — not fully satisfied with the board's visual quality, but explicit that schedule takes priority over further art polish right now ("if that is what we can do in this schedule I am fine with it," said about both the board and the path). This is a **conscious tradeoff, not an oversight** — don't restart art iteration on the board or path without the human raising it again. If Day 10+ work touches rendering and there's slack, revisiting board quality is fair game, but it is not blocking and was not asked for.
+
+**Heads up — read this if you're a fresh session:** at least one other concurrent session (Cursor-based, working from a "Art UI Decisions" plan) was actively editing this exact `master` working tree today, at the same time as this session, more than once. Both collisions were caught and reconciled cleanly (see below), but don't assume you're the only one touching this repo. Check `git status`, `git log`, and **`docs/departments/INDEX.md`** before building on anything, and if a file changes under you mid-task, stop and reconcile before continuing. **Never two agents on the same working tree.**
+
+## Parallel worktrees
+
+**All worktrees removed as of this save (2026-08-07)** — every dept slice for this wave delivered and merged; nothing left in flight. Branches still exist locally (nothing force-deleted), just no working-tree checkout:
+
+| Branch | Last commit | Status |
+|--------|-------------|--------|
+| `feat/day10-hit-vfx` | `f2256f6` | **Merged into `master` (`fc32a2d`) and wired (`a57d095`).** `MuzzleFlashView` + `WoundSplatView`, re-verified (EditMode 102/102, PlayMode 29/29), then wired into `RoundPlayback`'s tape-event loop. STATUS: `docs/departments/presentation/STATUS.md`. |
+| `feat/day11-audio-stub` | `5c402db` | **Merged in two passes** (`ef6e3f5`, then `7e08aba`). **Wired** (`04f9191`) — `Play()` fires from `RoundPlayback` (Footstep/Shot) and `ProgramHud` (TimeCard/LockIn). STATUS: `docs/departments/audio/STATUS.md`. |
+| `feat/ship-docs` | `fc58db3` | **Landed on `master` (`950ff63`)** — only the three files Ship owns, not the stale doc snapshot their commit also carried. STATUS: `docs/departments/ship/STATUS.md`. |
+| `verify/playtest-door-scrub` | `54b051a` | Had uncommitted drift on top (door-sync logic that appears superseded by what's already on `master` — matched verbatim). **Stashed, not discarded**, before removing the worktree: `git stash list` from the main tree, recoverable via `git stash pop` if ever needed. Never committed here; nothing lost either way. |
+| `logiCard-match-over-hud` / `logiCard-day9-yarn` | — | Already removed in an earlier session (merged or superseded). |
+
+Ops constitution: `docs/PARALLEL_OPS.md`. Contracts this wave: `docs/contracts/CURRENT.md`.
 
 ## Implemented
 
-Continuous-space pivot **Phases 1–5** on `master` (C35/C39/C40/C41):
+**Committed on `master`, newest first:**
 
-- **Sim geometry:** `PlanarPosition`, `Segment`, `ArenaBoard`, `ContinuousLineOfSight`, `ContinuousPathfinder` (+ EditMode suites). Grid board/LoS/pathfinder/coordinate + their tests **deleted**.
-- **Sim/Net/Timeline:** `ScheduledPath`, `Door`, `TimeResourceMath`, `ActionNode`, `TapeEvent`, `GhostResolver` (analytic Hold sweep), `PawnProgram` (Euclidean draft cost, free-aim Shoot, radius Door, revisit legal).
-- **Board/Boot/UI:** ground-plane + segment walls/doors; `PlanarFromWorld` taps; `TryGetNearestDoor`; RoundPlayback continuous carry (no tile snap); HUD `DraftDistance` / free-aim wording. `TileMarker` deleted.
-- **Bootstrap:** DAY7 wall-with-gap + door starts **Open** (Closed-at-start deferred to Phase 6). Spawns `(2,0)` / `(2,4)`.
-- **PlayMode** fixtures retargeted (`SliceSceneFixture`, BoardInput / RoundPlayback / ProgramHud).
-- **Docs/memory:** C40 no pawn-vs-pawn collision; C41 Phase-1 merge locks (Door-typed API, inclusive `Segment.Intersects`). Draft note: `docs/drafts/pawn-collision-tradeoff.md`.
+- `377029f` — **Day 10 gap fix: distinct Scout/Juggernaut pawn silhouettes** — `ART_DIRECTION.md`'s Demo art floor requires "Distinct clay-like pawn silhouettes (Scout vs Juggernaut readable)," but this was never actually built: it fell through the cracks when Day 10 was split into stepped-motion (Core) and VFX (Presentation) worktrees, and neither slice covered it — `DRAFT_HANDOFF`'s own "Still unfinished" list never flagged it either. `PawnView.Init` previously built the same plain capsule for every pawn, tinted only by color. Added a `PawnBuild` enum (`Scout`/`Juggernaut`) driving a per-archetype primitive assembly: Scout is a lean narrow capsule + small head; Juggernaut is a wide squat capsule + blocky head + shoulder pads — all still primitives/clay-tint material (ART_DIRECTION explicitly allows this: "physical feel via lighting, shaders, camera more than ultra-high-poly meshes"; bespoke modeled characters are optional, not floor). `GameBootstrap.BuildPawns` passes Scout for the attacker and Juggernaut for the defender, matching the `CharacterData` Scout/Juggernaut speed presets (1s vs 2s per tile) already hardcoded there — note `CharacterData`'s `Scout.asset`/`Juggernaut.asset` ScriptableObjects still aren't actually loaded/wired anywhere; `GameBootstrap` continues hardcoding the matching numbers instead (pre-existing, out of scope here). Verified in a disposable worktree (Editor was open on this path) — **EditMode 102/102, PlayMode 29/29**, no exceptions. Still needs the same human Editor look as the rest of Day 10's visuals (silhouette shape has no automated test coverage, same gap as flash/splat/motion).
+- `04f9191` — **Wave 2: wire `FoleyPlayer` into `RoundPlayback`/`ProgramHud`** — `GameBootstrap` builds one `FoleyPlayer` and threads it into both `Init` calls as a new optional trailing `IFoleyPlayer` parameter. Call sites: `RoundPlayback.Report` (the same forward-only, once-per-crossing hook already driving the WOUNDED/DOWN banner — rewinding past an event doesn't replay its sound) — `MoveArrive` → `Play(Footstep)` once per completed move leg, `ShootFire` → `Play(Shot)` at the shot's completion instant; `ProgramHud.OnLockInPressed` → `Play(LockIn)`, `ConfirmTimeCard` → `Play(TimeCard)`. Also added an `AudioListener` to the scripted camera in `GameBootstrap.ConfigureCamera` — Unity only auto-adds one via the Editor's "GameObject > Camera" menu, which this project's fully-scripted camera never goes through; without it `Play()` would have produced no audible sound at all, silently, and the human ear-check would have had nothing to listen to. `LogiCard.UI.asmdef`/`LogiCard.Boot.asmdef` gained an explicit `LogiCard.Audio` reference (asmdef references don't propagate automatically between named assemblies). Verified: **EditMode 102/102, PlayMode 29/29**, no exceptions, no "no audio listener" warnings in the log.
+- `7e08aba` — merge of a small Day 11 Audio follow-up (`feat/day11-audio-stub` @ `5c402db`): dropped an unused `using System;` from `FoleyPlayer.cs`, updated the dept's own STATUS.md with their own batchmode confirmation (102/102 EditMode). No functional change.
+- `950ff63` — **Land Day 14 ship case-study draft + capture checklist** — pulled `docs/SHIP_README_DRAFT.md`, `docs/CAPTURE_CHECKLIST.md`, `docs/departments/ship/STATUS.md` directly from `feat/ship-docs` @ `fc58db3` rather than merging the branch, since that commit also carried a stale pre-Day-10 snapshot of `PARALLEL_OPS.md`/`contracts/CURRENT.md`/`departments/INDEX.md` from when their worktree forked at `a5c276a` — a plain merge would have tried to check those out over today's current uncommitted versions of the same paths. README expanded into a full case study (hook, constraint, core loop, readable-combat bar, presentation bets, post-demo next steps); checklist got a timed 60–90s shot list with operator notes and fail criteria. Both still marked DRAFT pending human capture + Windows candidate. Docs-only, no gameplay code touched.
+- `a57d095` — **Wire `MuzzleFlashView`/`WoundSplatView` into `RoundPlayback`** — same build-once-at-arm / per-scrub-visibility pattern as the existing `ShotTracerView` tape loop (`BuildTracers`/`UpdateTracers`). `BuildHitVfx` spawns a flash per `ShootFire` event and a splat per `Wounded`/`Killed` event when the tape arms; `UpdateHitVfx` toggles visibility each `ApplyTime` call; `ClearHitVfx` tears both down on `Disarm`. Flash: shooter's position at the shot's *completion* instant (not the tracer's aim-in/hold window start — the flash is the muzzle igniting, not the beam), lit for a short fixed Time Resource window (`MuzzleFlashVisibleSeconds = 0.15f`; ART_DIRECTION §3's "2 frames, then gone" translated to TR-seconds since RoundPlayback never deals in real/engine frames). Splat: victim's position (`TapeEvent.Position` for a hit), persistent once the scrubber has passed it, hidden again on rewind — same rule the tracer/banner logic already uses. No `GameBootstrap` changes needed — like `ShotTracerView`, both views are created dynamically inside `RoundPlayback`, never spawned from the bootstrap.
+- `ef6e3f5` — **Merge Day 11 Audio Wave 1**: `IFoleyPlayer`/`FoleyId` (from `feat/day11-audio-stub` @ `764a42e`), verbatim to the frozen contract in `contracts/CURRENT.md`; `FoleyPlayer` (`MonoBehaviour`) lazily synthesizes and caches one runtime `AudioClip` per `FoleyId` (tone/noise/envelope recipe distinct per Footstep/Shot/TimeCard/LockIn) and plays via `AudioSource.PlayOneShot` — no binary clip assets, no Boot/UI/Board/Sim references (grep-confirmed), no auto-play. New assembly `LogiCard.Audio` (`autoReferenced: true`, no extra references). Reviewed + batchmode-verified before merge (see Verification below); only new files under `Assets/_Project/Audio/**` plus the dept's own `STATUS.md` — nothing else touched. Dead code — Core wires `Play()` calls into `RoundPlayback`/`ProgramHud` in Wave 2.
+- `fc32a2d` — **Merge Day 10 Presentation**: `MuzzleFlashView.cs` + `WoundSplatView.cs` (from `feat/day10-hit-vfx` @ `f2256f6`), matching the frozen `Init`/`Place(...)`/`SetVisible(bool)` contract in `contracts/CURRENT.md`. Jagged 7-shard yellow/orange resin burst for the muzzle flash (no particles/bloom, colliders stripped, starts hidden); wet dark-red 4-lobe clay blob for the wound splat (bumped smoothness for "wet," persistent once shown). Reviewed against contract + boundary before merging — only the two new files + `.meta`, nothing else touched. Standalone; not wired into `RoundPlayback`/`GameBootstrap` yet.
+- `d60f01d` — **Day 10 Core: stepped 8–12fps playback on `PawnView`** (ART_DIRECTION §2) — `Assets/_Project/Board/PawnView.cs` holds its rendered pose ~1/10 real second once a path is already armed, instead of updating every engine frame; a fresh `SetPath` and path start/end still always snap exactly (draft preview and key poses stay precise). Self-contained — `RoundPlayback.cs`/`GameBootstrap.cs` untouched, reserved for VFX wiring next. Two PlayMode tests encoded the old "exact position at any scrub instant" contract and needed updating to match the new deliberate behavior (see Verification below), not a workaround — they still assert exact positions, just after the hold legitimately clears.
+- *(uncommitted on main working tree)* **Parallel Ops system** — `docs/PARALLEL_OPS.md`, `docs/departments/**`, `docs/contracts/CURRENT.md`, `docs/SHIP_README_DRAFT.md`, `docs/CAPTURE_CHECKLIST.md`; pointers in `CLAUDE.md` + parallel-development skill. Audio + Ship worktrees spun. Commit when asked.
+- `a5c276a` — Save draft: Day 9 accepted, Day 10 split in progress.
+- `727ebd4` — **Fixed a real bug the human's first in-Editor look caught**: board/walls/pawns all rendered nearly pure red, while the untouched camera background stayed correct. Root cause: `PrimitiveMaterialFactory`'s clay-grain texture (added in `12f8a02`) used `TextureFormat.R8` — a single-channel format. `SetPixels32` was fed matching R=G=B pixel values, but R8 only physically stores red; green/blue silently drop on `Apply()`. Sampled as `_BaseMap`, that comes back `(r, 0, 0, 1)`, so `BaseColor * BaseMap` crushed every tinted material's green/blue toward zero regardless of its intended tint — hence everything reading red-ish. Fix: `RGB24` instead of `R8`. This is exactly the kind of bug automated tests can't catch (nothing asserts on rendered color) — first reason this session needed an actual human look, not just green test runs.
+- `d4eb6ca` — finished propagating the path-art decision's terminology across the whole doc corpus (`SCHEDULE.md`, `GDD.md`, `PRODUCT_MEMORY.md`, `RISKS.md`, `SCOPE.md`, `UI_FLOW.md`, `VERTICAL_SLICE.md`, `Art/README.md`, `URP_AGENT_BRIEF.md`, `.cursor/rules/logicard-product-memory.mdc`) — a concurrent session started this, this session finished the remaining "yarn/chalk" references.
+- `950b0ac` — **Path visual pivot, code + docs**: human decision (2026-08-07, via a Cursor plan) dropped Day 9's 3D yarn entirely in favor of a FragPunk/界外狂潮-style **线稿涂鸦** (thin, slightly wobbly hand-drawn ink line on the board surface — not fat spray, not a glitchy HUD line, not neon).
+  - `PathPreviewView.cs` rewritten: `LineRenderer` stroke lying close to the board surface, subdivided per leg with a deterministic Perlin-seeded sideways wobble (stable across calls — a draft path being actively dragged doesn't jitter). Draft reads like **pencil** (lighter gray, thinner, rougher/more wobble); booked reads like **settled ink** (dark charcoal, bolder, steadier) — a sketch-to-ink metaphor, not a port of yarn's old opacity logic. Waypoint dots restyled to the same ink language instead of the old warm terracotta pins. `Init`/`Show`/`Clear` API unchanged — no caller needed to change.
+  - `ART_DIRECTION.md`: path pillar (Demo art floor table), §4 UI/UX bullet, cut-order line, Do/Don't table all updated to describe the ink line and explicitly mark yarn/chalk as superseded.
+- `5ea34aa` / `c3a3832` — asmdef fixes: `LogiCard.Boot.asmdef` needed references to `Unity.RenderPipelines.Universal.Runtime` and `Unity.RenderPipelines.Core.Runtime` for the lighting code below to compile.
+- `12f8a02` — **Lighting/post-processing fix**, in response to human feedback that Day 9 read as "too plain and dull" despite the path/cardstock/grid work landing:
+  - Root cause wasn't color choice — the scene had one shadowless light, no fill, no ambient tuning, and **post-processing was off at both the URP Renderer asset level and the per-camera level**, so a Volume would have done nothing even before any of this.
+  - `Assets/_Project/Art/URP/LogiCardURP_Renderer.asset`: wired in URP's built-in default `PostProcessData` asset (was `fileID: 0`).
+  - `GameBootstrap.ConfigureCamera`: `renderPostProcessing = true` on the camera (URP defaults this to **off** per-camera even when the pipeline supports it).
+  - `GameBootstrap.BuildLighting`: key light now casts soft shadows; added a dim cool fill light; flat ambient tuned warm.
+  - `GameBootstrap.BuildDioramaVolume` (new): global Volume — warm/saturated color grade, restrained bloom, vignette (the "lit stage in a dark room" read ART_DIRECTION asks for).
+  - `PrimitiveMaterialFactory`: materials now get a faint tiled procedural-noise grain (ART_DIRECTION's "subtle procedural noise," generated at runtime, no texture asset needed) and smoothness bumped 0.05 → 0.18 (dead-flat matte was reading as "unlit cardboard"). This same factory is what the new ink-line stroke/dots use too.
+- `0ad1991` — merge of `feat/match-over-hud`.
+- `57fc1cd` — Day 9 presentation pass: painted board grid (`BoardView.PlacePaintedGrid`), plywood ground tint, cardstock Time Card + AR scrubber styling (`ProgramHud`). (Its yarn path piece was superseded by `950b0ac` above.)
+- `0b4f147` — SCHEDULE.md Days 4–8 ticked.
+- `6f7acf9` — Tracer truncation fix: a blocked shot's tracer now stops at the wall/closed door instead of drawing through it.
+- `ef05061` / `54b051a` — earlier playtest packs (door scrub, snap LoS, UNDO row, Lock In draft-drop; wall render, Hold Angle timing, door lifecycle).
+
+**Leave uncommitted / do not ship:** `ProjectSettings.asset` (Sentis analytics churn), `unity-first-open.log`, and the parallel-development skill edits under `.claude/skills/parallel-development/` + `.cursor/skills/` — a different concurrent session touched those; not this workstream's to commit.
 
 ## Verification
 
-- **Green as of `d2f9171`** (2026-08-05): 95/95 EditMode + 23/23 PlayMode, after the undo-scope + path-preview-bead fixes. `73ea58e`'s Closed-door probe re-ran PlayMode at 23/23 green (on the *reverted* Open state).
-- URP merge (`4cfe8ea`) + its Editor-generated `ProjectSettings` churn (`6466f4a`) landed after that verify pass but touched no gameplay code — treat green as still current, but a fresh EditMode+PlayMode pass after opening the Editor post-merge hasn't been explicitly re-recorded.
-- Manual Bootstrap smoke (continuous tap Move, free-aim Snap/Hold, wall LoS, Lock In → playback → round carry) is still **not recorded** — human-only, not agent-delegable.
+- Foley wiring (`04f9191`): disposable worktree, created and removed same session — **EditMode 102/102**, **PlayMode 29/29**, no exceptions, no "no audio listener" warnings (confirming `Play()` actually fires during the Lock In / Time Card / Move / Shoot paths the PlayMode suite already exercises, not just that it compiles). No automated test asserts on *which* clip played or its content — same gap as the VFX visuals; still needs a human ear-check.
+- Ship docs (`950ff63`): docs-only, no batchmode run needed (no code touched).
+- VFX wiring (`a57d095`): re-verified against `master` at `ef6e3f5` (which already carries both the VFX merge and the Audio merge) in a disposable worktree, created and removed same session — **EditMode 102/102**, **PlayMode 29/29**, no exceptions. No existing test touches `MuzzleFlashView`/`WoundSplatView` counts directly, so this confirms no regression, not new coverage of the flash/splat behavior itself — still needs a human Editor look.
+- Audio Wave 1 stub (`ef6e3f5`): batchmode EditMode run directly on the `logiCard-day11-audio` worktree (separate project path, so the main Editor staying open didn't block it) — **EditMode 118/118**, **0 compile errors**. Merge itself was clean (`--no-ff`, no conflicts — new-files-only slice). The department's own batchmode run wasn't possible in their session (no Unity install there); this was Integrator's pre-merge check.
+- Day 10 merge (`fc32a2d`): re-verified with stepped motion + the two VFX views together in a disposable worktree (`logiCard-verify-day10-merge`, created and removed same session) before merging — **EditMode 102/102**, **PlayMode 29/29**, no failures, no exceptions. Merge itself was clean (`--no-ff`, no conflicts — the VFX branch only adds two brand-new files).
+- Stepped playback (`PawnView.cs`, `d60f01d`): disposable worktree (`logiCard-verify-day10`, created and removed same session, copied the 4 changed files in since worktrees only see committed history) — **EditMode 102/102**, **PlayMode 29/29**, no exceptions in the PlayMode log.
+- Red-tint fix (`727ebd4`): **EditMode 102/102**, **PlayMode 29/29**. Caught by the human's first real look in the Editor — the whole board/walls/pawns had gone red. Not yet re-confirmed visually after the fix (tests pass, but tests don't check color).
+- Path visual pivot (`950b0ac`): disposable worktree, created and removed same session — **EditMode 102/102**, **PlayMode 29/29**.
+- Lighting/post-processing fix (`5ea34aa`): **EditMode 102/102**, **PlayMode 29/29**, no exceptions in the PlayMode log. First attempt hit two compile errors (missing asmdef references), both fixed and reverified before this passed.
+- Post-merge state (`0ad1991`, match-over-hud + Day 9 together): **EditMode 102/102**, **PlayMode 29/29**.
+- Day 9 presentation (`57fc1cd`) standalone: **EditMode 102/102**, **PlayMode 28/28**.
+- Match-over HUD (on its branch before merge): **EditMode 102/102**, **PlayMode 29/29**.
+- Tracer truncation (`6f7acf9`): **EditMode 102/102**, **PlayMode 28/28**.
+- Playtest pack (`ef05061`): **EditMode 99/99**, **PlayMode 28/28**.
+- **Phase 6 human call: good enough as-is** — user declined further radius tuning.
+- **Manual Bootstrap smoke: confirmed good by human** — full Time Card → Program → Lock In → playback → next round.
+- **Wall/door "wound behind the wall" playtest finding: investigated, closed as not-a-bug.** A pawn opened the door, then shot through the gap it created. The wall itself held.
+- **Human visual sign-off (2026-08-07): DONE.** Colors confirmed back to normal after the red-tint fix. Board accepted with reservations (not fully satisfied with visual quality, but schedule > further polish — see the sign-off note at the top of this doc). Path accepted on the same terms. **SCHEDULE Day 9 ticked.**
 
 ## Still unfinished
 
-1. **Phase 6 tuning** — `HitRadius` / `LaneHalfWidth` / `InteractRadius` (still ~`0.45f`) untouched against real play. **Human playtest — not agent-delegable.**
-2. **Manual Bootstrap smoke** — see Verification above. **Human — not agent-delegable.**
-3. **SCHEDULE.md checkboxes** — Day 7–7g and Day 8 boxes are still unticked pending the human cold-observer playtest call; don't tick them from code inspection alone.
-4. **Full batchmode re-verify** — needed after the door-Closed-at-start rework (see below) plus this session's 4 fixes land together. Appears to already be in flight in worktree `logiCard-verify-day8` (branch `verify/post-urp-day8`, `VERIFY_POST_URP_AGENT_BRIEF.md`) — check there before starting a second one.
+1. ~~**Day 10, main's half:** stepped 8–12fps playback motion (`PawnView.cs`).~~ **Done, committed** (`d60f01d`, 2026-08-07).
+2. ~~**Day 10, parallel half:** VFX report-back, verify, merge, wire.~~ **Done** — merged `fc32a2d`, wired `a57d095` (2026-08-07). ~~**Day 10 gap:** pawn silhouettes were never actually distinct (plain capsule × 2).~~ **Fixed** `377029f` (2026-08-08) — see Implemented above. **Remaining:** human Editor look before ticking Day 10 on SCHEDULE (silhouette shape, flash/splat behavior, and stepped motion all have no automated test coverage — see Verification and `DAY13_PLAYTEST_FINDINGS.md`, which now includes a silhouette check).
+3. ~~**Day 11 audio stub:** report-back, review, merge, wire.~~ **Done** — merged `ef6e3f5`/`7e08aba`, wired `04f9191` (2026-08-07). **Remaining:** human ear-check before ticking Day 11 on SCHEDULE.
+4. ~~**Ship docs:** drafts seeded on `feat/ship-docs`.~~ **Done, landed** (`950ff63`, 2026-08-07). Still DRAFT pending human capture + Windows candidate (expected — not a blocker for anything else).
+5. ~~Optional cleanup: remove parked/delivered worktrees.~~ **Done** (2026-08-07) — all four removed; branches intact. `logiCard-verify-playtest`'s uncommitted drift stashed first, not discarded (see Parallel worktrees table).
+6. **Day 12 Windows candidate:** attempted from this Mac, cancelled — user is building natively on their own Windows machine instead. See the note near the top of this doc for why the Mac attempt was slow.
+7. Optional, not requested: board visual polish — see Day 9 sign-off before touching unprompted.
 
-## Door Closed-at-start — now done (uncommitted, in this working tree)
+## Known issues (deferred, cosmetic — not a gate)
 
-Previously deferred (`73ea58e`, see git history) because flipping the flag broke `RoundPlaybackPlayModeTests`' AmbushPoint scenario and a few HUD test destinations that sat on the door segment. As of this session that rework landed directly in `D:\projects\Game\logiCard` (concurrent with this session's playtest-bugfix work, not done by this thread):
+- Pawn model visually pokes through wall/closed-door geometry when its logical position sits at/near the wall plane. Cause: the sim tracks pawns as a point with no collider (deliberate — no Physics/Physics2D anywhere in resolve). Doesn't affect hit resolution, pathing, or LoS. User call: defer to a later pawn-model/art pass.
 
-- `GameBootstrap.cs`: door now starts **Closed**; `BuildDefenderPayload` steps into range and explicitly opens it before the scripted Snap, so AmbushPoint LoS still holds.
-- `RoundPlaybackPlayModeTests.cs` / `ProgramHudPlayModeTests.cs`: destinations/comments updated to stay legal against a Closed-by-default door.
-- `GhostResolverTests.cs`: gained `HoldAngleShootFireCarriesWindowStartSoPlaybackCanLitTracerBeforeContact`, covering this session's `TapeEvent.WindowStartSeconds` fix (see below) — the two changes are compatible.
+## Tomorrow / next agent — Wave 3 kickoff
 
-Not yet compiled/run as a whole — needs the same fresh EditMode+PlayMode pass as this session's fixes (see #4 above).
+**Read `docs/PARALLEL_OPS.md`'s "Wave 3 kickoff" section (bottom of file) before spawning anything** — it's the
+step-by-step for Days 12–14 and the full reasoning, this is just the short version:
 
-## Tomorrow (2026-08-06)
-
-1. Phase 6 cold-observer playtest pass (human): tune the three radii, decide Closed-vs-Open door start for real, then have an agent do the matching fixture rework in one pass.
-2. Manual Bootstrap smoke, same checklist as above (retest — 4 bugs fixed today, see below).
-3. Once both land: tick SCHEDULE.md Day 7–8 boxes, consider starting Day 9 (board/UI identity).
-
-## 2026-08-06 playtest fixes (not yet re-verified by a batchmode run)
-
-First human playtest pass of the continuous slice surfaced 4 issues, all fixed in-tree (Editor was open during this session, so no batchmode re-run happened — do that before trusting these):
-
-1. **Wall/door boxes rendered rotated 90° from their real `Segment`** (`BoardView.PlaceSegmentBox`) — `yaw = atan2(dx,dy)` was wrong for a box whose long axis is local +X; needed `atan2(-dy,dx)`. This is why a wall spanning X looked like a bar spanning Y, and made it look like walls didn't block movement (they did — only the render was wrong) and made path-preview stop-points look misplaced.
-2. **Hold Angle looked like it never fired** — it *was* resolving correctly (contact math checked out against the demo layout), but the firing tracer only lit up starting at the shot's completion instant, while a Hold's contact (and the wound it causes) can land anywhere earlier in the hold window — so the wound banner could appear with no beam yet on screen. `TapeEvent` now carries `WindowStartSeconds`; `RoundPlayback`'s tracer is lit for the whole `[WindowStart, Complete+TracerVisibleSeconds]` span. Same tracer mechanism Snap already used — no new animation needed once the timing was fixed.
-3. **Door Open/Close was ambiguous** — tapping the board used to book an Open/Close immediately against a HUD-preselected action, silently flipped to its *opposite* whenever it already matched the door's live state, so the HUD could show "selected: OPEN" while the tap actually booked a Close. Reworked to a two-step confirm: tapping near a door only selects it (`BoardInputController.PendingDoor`); the OPEN/CLOSE buttons are the explicit confirm (`TryConfirmPendingDoor`) and are disabled until a door is selected. `PreferredDoorAction` API removed.
-4. Branches `continuous/phase1-geometry` and `feature/hud-door-verb` deleted (content already on `master`).
-
-`ProgramHudPlayModeTests.DoorModeButtonSwitchesTheInputVerbAndAction` rewritten as `DoorModeSelectsADoorThenRequiresExplicitConfirm` to match the new select-then-confirm flow. No other test files touched — everything else should still hold, but **run EditMode + PlayMode fresh** (Editor closed) before trusting that.
-
-## 2026-08-06 second playtest pass — the actually-critical door bug
-
-Retesting the fixes above (against the door-Closed-at-start rework, see above) surfaced the real bug hiding behind "door interaction is ambiguous":
-
-1. **Door state never persisted, at all, ever** (`RoundPlayback`) — `GhostResolver.Resolve` only ever mutated its own resolve-local scratch clone of the board (intentional: keeps Resolve a pure function of board+inputs, per its doc comment). Nothing ever copied that resolved state back onto the shared `ArenaBoard` that the *next* round's pathfinding and the door's rendered tint both read from. A player who booked and resolved an Open watched it silently reset to Closed the instant the round ended — the door could never actually be gotten through, no matter how many times you "opened" it. Fixed: `RoundPlayback.CommitRoundState` now walks the tape's `DoorOpened`/`DoorClosed` events in chronological order and applies each to the real board (`ApplyDoorStateFromTape`), same lifecycle point where wounds/positions already carry over. **This means opening a door only takes effect starting the *next* round** (consistent with every other queued action resolving, not executing live) — you cannot open-and-walk-through in the same Program draft.
-2. **Rejected taps were silent** — a Move blocked by a closed door (no route at all, since the door starts Closed and there's no way around) just logged to the Debug console; nothing on screen told the player why nothing happened. `BoardInputController` now has an `ActionRejected` event; the HUD shows the reason in the existing outcome banner ("Can't do that — …") until the next successful action clears it. This is *not* a new modal/dialogue — it reuses the banner already used for wound/kill text. A fuller "detected you're blocked by a door, want to switch to opening it" flow is still open if this isn't enough after retesting.
-3. **Snap/Hold shots may pass through a closed door** — user-flagged as minor/deferred to a later phase, not investigated this pass. `ContinuousLineOfSight`/`ArenaBoard.IsBlocking` *should* already account for closed doors in the shot's line-of-sight check, so if it recurs after retesting, that mismatch (not "doors don't block LoS at all") is where to start looking.
-
-None of this has been re-verified by a test run — same caveat as above, retest live and/or run batchmode once free.
-
-## 2026-08-06 third playtest pass
-
-1. **`InteractRadius` too small** (`PawnProgram.cs`) — a pawn visibly adjacent to the door (0.58 world units from the segment) still read "out of interaction range" against the old 0.45 placeholder. Raised to `0.7f`.
-2. **The rejection banner from the pass above didn't cover every rejection path** — it fired correctly for tap-based rejections (Move/Shoot/Door-select/confirm — confirmed working in a screenshot: "Can't do that — Door is out of interaction range.") but `BoardInputController.TryCommitDraftPath` (the SET PATH / Lock In commit path) never raised `ActionRejected` at all. Now it does.
-3. **Root cause of "character freezes at Lock In"** — this is the bug #2 was hiding. `ProgramHud.OnLockInPressed`'s budget guard only checked `Program.UsedSeconds` (already-*committed* cost), never the pending draft's cost. A drafted-but-not-yet-"SET PATH"ed move that didn't fit the round's Time Resource budget sailed past that guard; `BoardInputController.CommitToPlayback` then called `TryCommitDraftPath`, which correctly rejected it for being over budget — but `CommitToPlayback` locked the round in anyway, discarding the draft. Net effect: Lock In "succeeded," the pawn had zero Move nodes, and playback showed it standing frozen the whole round with no explanation. Fixed: `CommitToPlayback` now returns `false` (and leaves the round unlocked) when a pending draft exists and fails to commit; `OnLockInPressed` checks that return value and aborts instead of proceeding, and the rejection reason now shows in the outcome banner via #2's fix (e.g. "Can't do that — Would exceed Time Resource budget (30.6s of 30.0s).").
-
-Still not re-verified by a test run.
-
-## 2026-08-06 fourth pass — the door "dialogue" request, clarified
-
-User clarified: the ask was never about error messages — they wanted an actual interactive UI element to open/close the door, not a fixed row buried in the thumb zone. Built it:
-
-- **`ProgramHud.BuildDoorPrompt`/`RefreshDoorPrompt`** — a small floating panel (label + OPEN/CLOSE buttons, same `Door_Open`/`Door_Close` names the existing test looks up) that spawns anchored *at the selected door's own screen position* — projected each time the selection changes via `BoardInputController.BoardView.WorldFromPlanar` -> `Camera.main.WorldToScreenPoint` -> `RectTransformUtility.ScreenPointToLocalPointInRectangle` into the HUD's screen-space-overlay canvas. Hidden whenever no door is selected, whenever the player leaves Door mode, and whenever the phase isn't Program (so it can't float over playback).
-- The old static OPEN/CLOSE buttons that lived in the thumb zone's Door row are gone; that row is now just an orienting label ("DOOR — tap near a door to select it").
-- Added `BoardInputController.BoardView` (read-only) so the HUD can do the world-to-screen projection — previously it only exposed the Sim-level `ArenaBoard`, not the view.
-
-Not yet visually verified in the Editor (this was built from code reading — the projection math is standard Unity technique but hasn't been eyeballed against the real camera rig). First thing to check on retest: does the prompt actually land visually on/near the door, not offset or off-screen.
-
-## 2026-08-06 fifth pass — the prompt landed in the wrong place, plus a standing convention doc
-
-Screenshot confirmed the "not yet visually verified" caveat above was warranted: the prompt rendered near the bottom of the screen, nowhere near the door.
-
-- **Root cause:** anchor/pivot mismatch. `RectTransformUtility.ScreenPointToLocalPointInRectangle` returns a point measured relative to the target rect's own *pivot* (canvas root's pivot is its center, so `(0,0)` = screen center) — but the prompt was anchored to the parent's *bottom-center* (`anchorMin=anchorMax=(0.5,0)`) and then given that center-relative point as its `anchoredPosition` directly. Two different coordinate origins added together, offsetting it by roughly half the screen height.
-- **Fix + redesign:** `anchorMin=anchorMax=(0.5,0.5)` (matches the coordinate space `local` is measured in) with the prompt's own `pivot=(0,0.5)` (left-center, so it extends rightward — "beside" — from the anchor point instead of centering on top of it or floating above it). Also shrunk it from a labelled panel to a compact two-button cluster (`96×84`), per the user's actual ask: "an interaction button that appears beside the door," not a dialogue panel.
-- **New doc: `docs/UI_BOARD_ANCHORED_COMPONENTS.md`** — the user asked for this to be written down so the pattern (and this exact pitfall) doesn't have to be rediscovered for the next board-anchored control (a pickup prompt, a hazard warning, etc.). Covers the conversion pipeline, the anchor-vs-pivot pitfall above, sizing/placement rules, and the lifecycle hide-cases (mode switch, phase change, selection cleared) the first version also missed one of.
-
-Still not visually re-verified — same caveat as the pass above, now doubly warranted.
-
-## 2026-08-06 sixth pass — formalized the interaction-prompt contract + process enforcement
-
-User asked to generalize past just the door: any UI that changes a board object's state needs (1) the object's identity, (2) its live current state, (3) the explicit options available — and asked how to make sure future agents actually follow that, not just this one instance.
-
-- **`docs/UI_BOARD_ANCHORED_COMPONENTS.md`** gained a "Content contract" section (identity/state/options, each with the failure mode that happens if you skip it — sourced from bugs already found this session) plus a copy-paste checklist for the next such control.
-- **`Door.cs`** gained an optional `DisplayName` (defaults `null`, so none of the dozen+ existing `new Door(...)` call sites in tests needed touching). `GameBootstrap`'s demo door is now `"Door #1"`.
-- **`ProgramHud`** door prompt now shows identity + state on the cluster itself (`"Door #1 · CLOSED"`) above the OPEN/CLOSE buttons, not just in the thumb-zone label.
-- **`CLAUDE.md`** created at repo root (didn't exist before) — this is the actual enforcement mechanism: it's loaded into every agent session automatically and explicitly points at `UI_BOARD_ANCHORED_COMPONENTS.md` before any board-object-state UI work starts, plus a standing instruction that decisions worth a future session knowing get written to `docs/` with a pointer added here, not left to be rediscovered.
-
-Not yet visually re-verified.
+1. Read `docs/departments/INDEX.md` + `docs/contracts/CURRENT.md`. Stepped motion, VFX (wired), Audio (wired), and Ship docs are all on `master` (`842ce27` is the tip as of this save). No Core-side implementation queued.
+2. **Gate: human fills in `docs/DAY13_PLAYTEST_FINDINGS.md`** (Editor look + ear-check, repro steps included in that file) before anything else happens. Nothing is safe to hand a fresh worker off a vague verbal note — this project has already eaten real time from that kind of shortcut.
+3. Integrator triages each written finding per that file's key (ship-as-is / quick fix / `/parallel-development` a real fix / defer), then ticks Day 10 + Day 11 on `SCHEDULE.md`.
+4. Windows candidate (Day 12) is happening natively on the user's own Windows machine — **not an agent task**. Once it exists, tick Day 12 and note the build location here.
+5. Day 13 is the same findings-file loop, framed as the "presentation playtest" `SCHEDULE.md`'s cadence rule asks for.
+6. Day 14: once the Windows build + capture footage/screenshots exist, spin a fresh Ship worktree to embed them into `SHIP_README_DRAFT.md` and promote it to root `README.md`.
+7. Don't reopen tracer / radius tuning unless a new playtest finding says so.
+8. Don't restart board/path art polish unprompted.
 
 ## 2026-08-06 seventh pass — same-round door open+cross, and the GDD-mandated block re-check that was never built
 
@@ -122,7 +140,9 @@ Not yet re-verified by the user or a test run — should be a quick recheck give
 
 ## Blockers / notes
 
-- Unity **6000.5.5f1**; project path `D:\projects\Game\logiCard`.
-- Batchmode needs Editor **closed** on this project.
-- `master` is ahead of `origin/master` by 16 commits as of `6466f4a`; nothing pushed yet.
-- Do not start M3 art absorption until M2.5 verify + Phase 6 bar is honest — Phase 6 itself is still open (see above), so that gate has not been cleared yet even though verify has.
+- Unity **6000.5.5f1**; main project `/Users/xuxinye/Documents/projects/Game/LogiCard`. Editor is typically open there (user playtests live) — batchmode needs a different worktree path. Spin up a disposable one (`git worktree add`) and remove it after.
+- If you edit a `.asset`/pipeline file on disk while the Editor has the project open (as this session did for the URP Renderer asset), Unity should pick it up via its file watcher on focus regain — if visuals don't update, try `Assets > Refresh` in the Editor.
+- Do **not** pass `-quit` with `-runTests` (exits before the suite runs); use `-acceptSoftwareTermsForThisRunOnly`.
+- Hub "Add project": select parent `…/Game`, not `LogiCard` itself.
+- `master` tracks `origin/master`; everything above is local-only, not pushed.
+- Two separate concurrent-session collisions happened this session (a duplicate Day 9 implementation, and a live doc-editing overlap during the path-art pivot). Both were caught by checking `git status`/`git log` before committing and reconciled without losing work, but it cost real time. If you're picking this up next: check for concurrent activity *before* you start building, not after.

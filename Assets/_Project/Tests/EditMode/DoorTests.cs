@@ -120,6 +120,25 @@ namespace LogiCard.Tests.EditMode
             Assert.That(HasEventType(tape, TapeEventType.Wounded), Is.False);
         }
 
+        /// <summary>
+        /// Aim sits short of a closed door on the shooter's side; victim is just past it within
+        /// HitRadius. Aim-only LoS would let the wound through — victim LoS must also be required.
+        /// </summary>
+        [Test]
+        public void ClosedDoor_BlocksSnapWhoseAimIsShortOfTheDoorButVictimIsPastIt()
+        {
+            var resolver = new GhostResolver(NewBoardWithDoor(DoorState.Closed));
+
+            ReplayTape tape = resolver.Resolve(new[]
+            {
+                Input(Attacker, new PlanarPosition(0, 2), Shoot(2f, 1.8f, 2f)),
+                Input(Defender, new PlanarPosition(2.2f, 2f)),
+            });
+
+            Assert.That(HasEventType(tape, TapeEventType.Wounded), Is.False,
+                "Snap must not wound a victim past a closed door just because HitRadius reaches them from an aim short of the door.");
+        }
+
         [Test]
         public void OpeningTheDoorBeforeAShot_LetsItThrough()
         {
@@ -245,6 +264,53 @@ namespace LogiCard.Tests.EditMode
             Assert.That(program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Door));
             Assert.That(program.Nodes[0].Position, Is.EqualTo(DoorPosition));
             Assert.That(program.Nodes[0].Door, Is.EqualTo(DoorAction.Open));
+        }
+
+        [Test]
+        public void ScheduledDoorState_FollowsBookedTogglesWithoutMutatingLiveBoard()
+        {
+            ArenaBoard board = NewBoardWithDoor(DoorState.Closed);
+            Assert.That(board.TryGetDoor(DoorPosition, out Door door), Is.True);
+            var program = new PawnProgram(new PlanarPosition(2.3f, 2f), baseSecondsPerTile: 1f, budgetSeconds: 60f,
+                board: board, doorInteractBaseSeconds: 4f);
+
+            Assert.That(program.ScheduledDoorState(door), Is.EqualTo(DoorState.Closed));
+            Assert.That(program.TryQueueDoor(door, DoorAction.Open, out _), Is.True);
+            Assert.That(program.ScheduledDoorState(door), Is.EqualTo(DoorState.Open),
+                "Prompt status must flip to OPEN after booking Open.");
+            Assert.That(board.GetDoorState(door), Is.EqualTo(DoorState.Closed),
+                "Live board must stay Closed until Aftermath.");
+
+            Assert.That(program.TryQueueDoor(door, DoorAction.Close, out _), Is.True);
+            Assert.That(program.ScheduledDoorState(door), Is.EqualTo(DoorState.Closed));
+            Assert.That(board.GetDoorState(door), Is.EqualTo(DoorState.Closed));
+        }
+
+        /// <summary>
+        /// Playtest 2026-08-07: after booking Open, Move drafting must path through the door even
+        /// though the shared board is still Closed (resolve arm needs round-start).
+        /// </summary>
+        [Test]
+        public void AfterBookingOpen_TryAddWaypoint_CanPathThroughDoor()
+        {
+            // Full-height closed door splits west/east — same shape as ContinuousPathfinderTests.
+            var board = new ArenaBoard();
+            var door = new Door(new Segment(new PlanarPosition(2f, 0f), new PlanarPosition(2f, 4f)), DoorState.Closed);
+            board.RegisterDoor(door);
+            var program = new PawnProgram(new PlanarPosition(1.5f, 2f), baseSecondsPerTile: 1f, budgetSeconds: 60f,
+                board: board, doorInteractBaseSeconds: 4f);
+
+            Assert.That(program.TryAddWaypoint(new PlanarPosition(3f, 2f), out string blockedReason), Is.False,
+                blockedReason);
+            Assert.That(blockedReason, Does.Contain("No route"));
+
+            Assert.That(program.TryQueueDoor(door, DoorAction.Open, out string doorReason), Is.True, doorReason);
+            Assert.That(board.GetDoorState(door), Is.EqualTo(DoorState.Closed),
+                "Shared board must remain Closed for Lock In arm.");
+
+            Assert.That(program.TryAddWaypoint(new PlanarPosition(3f, 2f), out string openReason), Is.True,
+                openReason);
+            Assert.That(program.HasDraft, Is.True);
         }
 
         [Test]

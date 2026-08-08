@@ -45,7 +45,7 @@ namespace LogiCard.Net
     ///
     /// Combat (Days 4–6):
     /// - <see cref="ActionNode.ExecuteTime"/> is a *completion* second.
-    /// - Snap Shot: within <see cref="HitRadius"/> of the aim point at completion only (C32); wounds; misses Sprint.
+    /// - Snap Shot: within <see cref="HitRadius"/> of the aim point at completion only (C32); needs LoS to aim and victim; wounds; misses Sprint.
     /// - Hold Angle: covers the aim lane (within <see cref="LaneHalfWidth"/>) across its window; lethal; hits Sprint.
     /// - Simultaneous shots in a group are judged before wounds apply (mutual exchange / mutual lethal).
     /// </summary>
@@ -476,7 +476,19 @@ namespace LogiCard.Net
             ArenaBoard board)
         {
             GhostTrack shooter = tracks[shot.ShooterId];
-            events.Add(new TapeEvent(shot.CompleteSeconds, shot.ShooterId, TapeEventType.ShootFire, shot.Aim,
+
+            // Tracer should stop at the wall/closed door it hits, not draw straight through it
+            // (playtest 2026-08-07). Origin matches whichever Resolve* below evaluates LoS from:
+            // Snap fires at CompleteSeconds, Hold Angle fires from where the shooter stood when the
+            // hold window opened.
+            PlanarPosition tracerOrigin = shot.Mode == ShootMode.HoldAngle
+                ? shooter.PositionAt(shot.WindowStartSeconds)
+                : shooter.PositionAt(shot.CompleteSeconds);
+            PlanarPosition tracerEnd = board.TryGetNearestBlockPoint(new Segment(tracerOrigin, shot.Aim), out PlanarPosition blockPoint)
+                ? blockPoint
+                : shot.Aim;
+
+            events.Add(new TapeEvent(shot.CompleteSeconds, shot.ShooterId, TapeEventType.ShootFire, tracerEnd,
                 windowStartSeconds: shot.WindowStartSeconds));
 
             if (shot.Mode == ShootMode.HoldAngle)
@@ -513,6 +525,14 @@ namespace LogiCard.Net
                 GhostTrack victim = tracks[victimId];
                 PlanarPosition victimPosition = victim.PositionAt(shot.CompleteSeconds);
                 if (victimPosition.DistanceTo(shot.Aim) > HitRadius)
+                {
+                    continue;
+                }
+
+                // Aim-point LoS alone is not enough: HitRadius can reach a victim just past a closed
+                // door when the aim sits short of the door on the shooter's side (playtest 2026-08-06).
+                // Require clear LoS to the victim too — Hold Angle already did this at contact.
+                if (!ContinuousLineOfSight.HasLineOfSight(board, origin, victimPosition))
                 {
                     continue;
                 }

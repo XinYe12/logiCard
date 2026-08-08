@@ -1,3 +1,4 @@
+using System.Collections;
 using LogiCard.Board;
 using LogiCard.Boot;
 using LogiCard.Sim;
@@ -95,6 +96,17 @@ namespace LogiCard.Tests.PlayMode
         protected float MoveSeconds(PlanarPosition from, PlanarPosition to)
         {
             return TimeResourceMath.SegmentSeconds(from, to, AttackerInput.Program.BaseSecondsPerTile, StanceType.Walk);
+        }
+
+        /// <summary>
+        /// Clears PawnView's stepped-playback hold (ART_DIRECTION §2, ~10fps real-time throttle
+        /// between poses on an already-armed tape) so a follow-up scrub lands exactly on the requested
+        /// instant instead of a held prior pose. Real-world wait, not a TR-second one — the throttle is
+        /// keyed off <c>Time.unscaledTime</c>.
+        /// </summary>
+        protected static IEnumerator WaitForPawnStepRelease()
+        {
+            yield return new WaitForSecondsRealtime(0.15f);
         }
 
         protected static T FindByName<T>(string name) where T : Component

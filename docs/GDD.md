@@ -177,7 +177,7 @@ Placeholder magnitudes — tune in playtest. "unit" = continuous board distance 
 The demo must read as a **Desk-Lamp Diorama**, not a default Unity prototype. Binding art/audio floor lives in [ART_DIRECTION.md](ART_DIRECTION.md) § Demo art floor. Summary:
 
 - Board on a physical base in a dark void; warm desk-lamp lighting; clay-like materials.
-- Yarn/chalk paths; cardstock Time Card; AR scrubber contrast.
+- Sketchy **线稿涂鸦** paths on the clay board (FragPunk/界外狂潮-style ink line — see ART_DIRECTION; supersedes yarn/chalk); cardstock Time Card; AR scrubber contrast.
 - Stepped pawn motion; physical muzzle flash; clay wound splat.
 - Tactile foley for move, shot, Time Card, Lock In.
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using LogiCard.Audio;
 using LogiCard.Board;
 using LogiCard.Net;
 using LogiCard.Sim;
@@ -43,10 +44,21 @@ namespace LogiCard.UI
         private static readonly Color ShootMarkerColor = new Color(0.95f, 0.35f, 0.30f, 1f);
         private static readonly Color DoorMarkerColor = new Color(0.55f, 0.85f, 0.55f, 1f);
 
+        // Day 9 — cardstock Time Card (paper in the thumb zone) vs AR scrubber (cool contrast on clay).
+        private static readonly Color CardstockPaper = new Color(0.93f, 0.88f, 0.78f, 1f);
+        private static readonly Color CardstockPaperDeep = new Color(0.86f, 0.78f, 0.64f, 1f);
+        private static readonly Color CardstockInk = new Color(0.22f, 0.16f, 0.12f, 1f);
+        private static readonly Color CardstockShadow = new Color(0.05f, 0.04f, 0.03f, 0.45f);
+        private static readonly Color CardstockConfirm = new Color(0.78f, 0.42f, 0.22f, 1f);
+        private static readonly Color ArTrack = new Color(0.08f, 0.14f, 0.22f, 1f);
+        private static readonly Color ArFill = new Color(0.35f, 0.85f, 0.95f, 1f);
+        private static readonly Color ArHandle = new Color(0.95f, 0.98f, 1f, 1f);
+
         private TimeResourceClockDriver _clock;
         private RoundPhaseController _phase;
         private BoardInputController _input;
         private MatchClock _matchClock;
+        private IFoleyPlayer _foley;
 
         private Text _phaseLabel;
         private Text _programTimerLabel;
@@ -112,13 +124,15 @@ namespace LogiCard.UI
             RoundPhaseController phase,
             BoardInputController input,
             MatchClock matchClock,
-            bool showPhaseDebugControls = false)
+            bool showPhaseDebugControls = false,
+            IFoleyPlayer foley = null)
         {
             _clock = clock;
             _phase = phase;
             _input = input;
             _matchClock = matchClock;
             _showPhaseDebugControls = showPhaseDebugControls;
+            _foley = foley;
             _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             EnsureEventSystem();
@@ -258,10 +272,11 @@ namespace LogiCard.UI
 
             float cursor = -Pad;
 
-            _scrubLabel = CreateText(rt, "ScrubLabel", "Time Resource  0.0s / 0.0s", 34, TextAnchor.MiddleLeft, Ink);
+            // AR scrubber: cool cyan/white on a dark track — deliberate contrast vs clay board (ART_DIRECTION §4).
+            _scrubLabel = CreateText(rt, "ScrubLabel", "Time Resource  0.0s / 0.0s", 34, TextAnchor.MiddleLeft, ArFill);
             PlaceRow(_scrubLabel.rectTransform, ref cursor, 48f, 12f);
 
-            _scrubber = CreateSlider(rt, "Scrubber");
+            _scrubber = CreateSlider(rt, "Scrubber", ArTrack, ArFill, ArHandle);
             PlaceRow(_scrubber.GetComponent<RectTransform>(), ref cursor, 56f, RowGap);
             _scrubber.onValueChanged.AddListener(OnScrubberMoved);
 
@@ -284,31 +299,40 @@ namespace LogiCard.UI
             rt.SetParent(zone, false);
             Stretch(rt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
+            // Soft cardstock shadow + paper face (Day 9 Demo art floor — physical Time Card in thumb zone).
+            RectTransform shadow = CreatePanel(rt, "TimeCardShadow", CardstockShadow, Vector2.zero, Vector2.one);
+            shadow.offsetMin = new Vector2(Pad + 10f, Pad);
+            shadow.offsetMax = new Vector2(-Pad + 10f, -Pad - 10f);
+
+            RectTransform card = CreatePanel(rt, "TimeCardFace", CardstockPaper, Vector2.zero, Vector2.one);
+            card.offsetMin = new Vector2(Pad, Pad + 12f);
+            card.offsetMax = new Vector2(-Pad, -Pad);
+
             float cursor = -Pad;
-            _allotChooserLabel = CreateText(rt, "ChooserLabel", "ATTACKER PLAYS TIME CARD", 36, TextAnchor.MiddleLeft, Accent);
+            _allotChooserLabel = CreateText(card, "ChooserLabel", "ATTACKER PLAYS TIME CARD", 36, TextAnchor.MiddleLeft, CardstockInk);
             PlaceRow(_allotChooserLabel.rectTransform, ref cursor, 56f, RowGap);
 
             for (int i = 0; i < TimeCardPresets.Length; i++)
             {
                 float preset = TimeCardPresets[i];
-                Button presetButton = CreateButton(rt, $"TimeCard_{preset:0}", $"{preset:0}s", PanelMid, Ink, 34,
+                Button presetButton = CreateButton(card, $"TimeCard_{preset:0}", $"{preset:0}s", CardstockPaperDeep, CardstockInk, 34,
                     () => ConfirmTimeCard(preset));
                 PlaceSplitCell(presetButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, i, TimeCardPresets.Length + 1);
             }
 
-            Button allIn = CreateButton(rt, "TimeCard_AllIn", "ALL IN", Accent, new Color(0.1f, 0.09f, 0.07f), 34,
+            Button allIn = CreateButton(card, "TimeCard_AllIn", "ALL IN", CardstockConfirm, CardstockPaper, 34,
                 () => ConfirmTimeCard(_matchClock != null ? _matchClock.RemainingSeconds : 0f));
             PlaceSplitCell(allIn.GetComponent<RectTransform>(), cursor, VerbRowHeight, TimeCardPresets.Length, TimeCardPresets.Length + 1);
             cursor -= VerbRowHeight + RowGap;
 
-            _allotSliderLabel = CreateText(rt, "AllotSliderLabel", "Custom  60s", 30, TextAnchor.MiddleLeft, Ink);
+            _allotSliderLabel = CreateText(card, "AllotSliderLabel", "Custom  60s", 30, TextAnchor.MiddleLeft, CardstockInk);
             PlaceRow(_allotSliderLabel.rectTransform, ref cursor, 44f, 8f);
 
-            _allotSlider = CreateSlider(rt, "AllotSlider");
+            _allotSlider = CreateSlider(card, "AllotSlider", CardstockPaperDeep, CardstockConfirm, CardstockInk);
             PlaceRow(_allotSlider.GetComponent<RectTransform>(), ref cursor, 56f, RowGap);
             _allotSlider.onValueChanged.AddListener(OnAllotSliderMoved);
 
-            Button confirm = CreateButton(rt, "ConfirmTimeCard", "PLAY TIME CARD", Accent, new Color(0.1f, 0.09f, 0.07f), 40,
+            Button confirm = CreateButton(card, "ConfirmTimeCard", "PLAY TIME CARD", CardstockConfirm, CardstockPaper, 40,
                 () => ConfirmTimeCard(_pendingAllotment));
             PlaceRow(confirm.GetComponent<RectTransform>(), ref cursor, ActionRowHeight, 0f);
         }
@@ -374,17 +398,11 @@ namespace LogiCard.UI
 
             _crawlButton = CreateButton(moveRt, "Stance_Crawl", "CRAWL", PanelMid, Ink, 28,
                 () => SetStanceBand(StanceType.Crawl));
-            PlaceSplitCell(_crawlButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 2, 5);
-
-            // Reliable "revert to previous step" — walks back through the whole program one step at
-            // a time: in-progress draft first, then previously committed Move/Shoot/Door actions.
-            _undoWaypointButton = CreateButton(moveRt, "UndoWaypointButton", "UNDO", PanelMid, Ink, 28,
-                () => _input.TryUndoLastStep());
-            PlaceSplitCell(_undoWaypointButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 3, 5);
+            PlaceSplitCell(_crawlButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 2, 4);
 
             _setPathButton = CreateButton(moveRt, "SetPathButton", "SET PATH", Accent, new Color(0.1f, 0.09f, 0.07f), 28,
                 () => _input.TryCommitDraftPath());
-            PlaceSplitCell(_setPathButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 4, 5);
+            PlaceSplitCell(_setPathButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 3, 4);
 
             _shootModeControls = new GameObject("ShootModeControls", typeof(RectTransform));
             var shootRt = _shootModeControls.GetComponent<RectTransform>();
@@ -443,13 +461,31 @@ namespace LogiCard.UI
             Button rewind = CreateButton(zone, "RewindButton", "Rewind", PanelMid, Ink, 34, () => _clock.Rewind());
             PlaceActionCell(rewind.GetComponent<RectTransform>(), rewindLeft, rewindLeft + TransportButtonWidth);
 
+            // UNDO must stay mode-agnostic (playtest 2026-08-07): it used to live only on the Move
+            // stance row, so Door/Shoot mode hid it — players hit Rewind instead and thought undo
+            // "didn't clear the queue." Same name as before so existing lookups keep working.
+            float undoLeft = rewindLeft + TransportButtonWidth + Gap;
+            _undoWaypointButton = CreateButton(zone, "UndoWaypointButton", "UNDO", PanelMid, Ink, 34, OnUndoPressed);
+            PlaceActionCell(_undoWaypointButton.GetComponent<RectTransform>(), undoLeft, undoLeft + TransportButtonWidth);
+
             // Lock In takes every remaining pixel of the row so the commit action reads as primary.
             Button lockIn = CreateButton(zone, "LockInButton", "LOCK IN", Accent, new Color(0.1f, 0.09f, 0.07f), 44, OnLockInPressed);
             RectTransform rt = lockIn.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0f, 0f);
             rt.anchorMax = new Vector2(1f, 0f);
-            rt.offsetMin = new Vector2(rewindLeft + TransportButtonWidth + Gap, Pad);
+            rt.offsetMin = new Vector2(undoLeft + TransportButtonWidth + Gap, Pad);
             rt.offsetMax = new Vector2(-Pad, Pad + ActionRowHeight);
+        }
+
+        private void OnUndoPressed()
+        {
+            if (_input == null)
+            {
+                return;
+            }
+
+            _input.TryUndoLastStep();
+            RefreshUndoButton(_input.Program);
         }
 
         /// <summary>
@@ -681,22 +717,20 @@ namespace LogiCard.UI
             float cost = program != null ? program.DoorInteractSeconds : 4f;
             Door pending = _input.PendingDoor;
 
-            // BUG FOUND 2026-08-06 (playtest): tapping the board used to book an Open/Close
-            // immediately against a HUD-preselected action, silently flipped to its opposite
-            // whenever it matched the door's live state — confusing/"ambiguous" since the booked
-            // action didn't always match what the HUD showed as selected. Tapping now only
-            // *selects* a door; OPEN/CLOSE below is the explicit confirm, so what you press is
-            // exactly what gets booked.
-            string stateLabel = pending != null && _input.Board != null
-                ? (_input.Board.GetDoorState(pending) == DoorState.Open ? "OPEN" : "CLOSED")
-                : null;
+            // Scheduled state (live ⊕ this program's Door toggles) — not raw GetDoorState alone.
+            // Playtest 2026-08-07: live-only read stayed CLOSED after OPEN, so the prompt looked dead.
+            string stateLabel = null;
+            if (pending != null && program != null)
+            {
+                stateLabel = program.ScheduledDoorState(pending) == DoorState.Open ? "OPEN" : "CLOSED";
+            }
 
             // Identity leg of the content contract (docs/UI_BOARD_ANCHORED_COMPONENTS.md) — falls
             // back to a generic label for any Door registered without a DisplayName.
             string targetName = pending?.DisplayName ?? "DOOR";
 
             _doorModeLabel.text = stateLabel != null
-                ? $"{targetName} selected, currently {stateLabel} — use the prompt on the board to confirm"
+                ? $"{targetName} selected · {stateLabel} — board prompt books Open/Close for this round"
                 : "DOOR — tap near a door to select it";
 
             RefreshDoorPrompt(pending, targetName, stateLabel, cost);
@@ -758,8 +792,11 @@ namespace LogiCard.UI
                 closeLabel.text = $"CLOSE\n{cost:0}s";
             }
 
-            _openDoorButton.GetComponent<Image>().color = stateLabel == "OPEN" ? AccentDim : PanelMid;
-            _closeDoorButton.GetComponent<Image>().color = stateLabel == "CLOSED" ? AccentDim : PanelMid;
+            // Highlight the action that would change live state (not the one that matches it) —
+            // dimming "current" used to make CLOSE look selected/disabled while CLOSED (playtest).
+            bool closed = stateLabel == "CLOSED";
+            _openDoorButton.GetComponent<Image>().color = closed ? Accent : PanelMid;
+            _closeDoorButton.GetComponent<Image>().color = closed ? PanelMid : Accent;
             _doorPromptRoot.SetActive(true);
         }
 
@@ -790,10 +827,17 @@ namespace LogiCard.UI
                 _setPathButton.interactable = program.HasDraft;
             }
 
-            if (_undoWaypointButton != null)
+            RefreshUndoButton(program);
+        }
+
+        private void RefreshUndoButton(PawnProgram program)
+        {
+            if (_undoWaypointButton == null)
             {
-                _undoWaypointButton.interactable = program.CanUndoLastStep;
+                return;
             }
+
+            _undoWaypointButton.interactable = program != null && program.CanUndoLastStep;
         }
 
         /// <summary>
@@ -818,7 +862,11 @@ namespace LogiCard.UI
             string text = $"Used {program.UsedSeconds:0.0} / {program.BudgetSeconds:0.0}s";
             if (program.HasDraft)
             {
-                text += $"\nDRAFT {program.DraftDistance:0.0}m · {StanceMath.Label(program.DraftStance)} · {program.DraftAllottedSeconds:0.0}s";
+                float total = program.UsedSeconds + program.DraftAllottedSeconds;
+                text +=
+                    $"\nDRAFT {program.DraftDistance:0.0}m · {StanceMath.Label(program.DraftStance)} · " +
+                    $"{program.DraftAllottedSeconds:0.0}s → total {total:0.0}s" +
+                    (total > program.BudgetSeconds + 0.001f ? " (over budget — UNDO draft or Lock In drops it)" : "");
             }
 
             if (program.Nodes.Count == 0 && !program.HasDraft)
@@ -850,6 +898,7 @@ namespace LogiCard.UI
 
             _queueText.text = text;
             RefreshVerbContextControls(program);
+            RefreshUndoButton(program);
             RefreshScrubberMarkers(program);
         }
 
@@ -912,9 +961,9 @@ namespace LogiCard.UI
             // BUG FOUND 2026-08-06 (playtest): this used to only check *already-committed*
             // UsedSeconds, never the pending draft's cost — a drafted-but-not-yet-"SET PATH"ed
             // move that didn't fit the budget sailed past this check, then got silently discarded
-            // by CommitToPlayback while Lock In proceeded anyway. CommitToPlayback itself is now
-            // the single source of truth: it fails (and leaves the round unlocked) exactly when a
-            // pending draft exists and doesn't fit, and OnActionRejected already showed why.
+            // by CommitToPlayback while Lock In proceeded anyway. CommitToPlayback is now the
+            // source of truth: it either commits a fitting draft, or drops an over-budget draft
+            // and locks the committed queue (playtest 2026-08-07).
             if (!_input.CommitToPlayback())
             {
                 return;
@@ -930,6 +979,7 @@ namespace LogiCard.UI
                           $"modifier={modifier}");
             }
 
+            _foley?.Play(FoleyId.LockIn);
             LockedIn?.Invoke();
 
             StopAllCoroutines();
@@ -951,6 +1001,7 @@ namespace LogiCard.UI
                 return;
             }
 
+            _foley?.Play(FoleyId.TimeCard);
             TimeCardPlayed?.Invoke(seconds);
         }
 
@@ -1072,6 +1123,16 @@ namespace LogiCard.UI
 
             int minutes = Mathf.FloorToInt(_matchClock.RemainingSeconds / 60f);
             int seconds = Mathf.FloorToInt(_matchClock.RemainingSeconds % 60f);
+
+            // Once the match has ended there is no next chooser to pick anything, so the live-round
+            // "Rn · SIDE PICKS" framing no longer applies (playtest 2026-08-07: header stayed stuck
+            // on stale round info after MatchOver).
+            if (_phase != null && _phase.Phase == RoundPhase.MatchOver)
+            {
+                _matchLabel.text = $"MATCH OVER · R{_matchClock.RoundIndex} played · {minutes}:{seconds:00} left";
+                return;
+            }
+
             string chooser = _matchClock.CurrentChooser == MatchSide.Attacker ? "ATTACKER" : "DEFENDER";
             _matchLabel.text = $"MATCH {minutes}:{seconds:00} left · R{_matchClock.RoundIndex} · {chooser} PICKS";
         }
@@ -1117,7 +1178,13 @@ namespace LogiCard.UI
 
             if (_nextRoundButtonLabel != null)
             {
-                _nextRoundButtonLabel.text = matchOver ? "MATCH OVER" : "NEXT ROUND";
+                // Aftermath-with-no-funding still shows "MATCH OVER" here so the click that advances
+                // into RoundPhase.MatchOver reads correctly; once actually on MatchOver the headline
+                // above already says it, so the dead button reads "DONE" instead of repeating it
+                // (playtest 2026-08-07: same three words shown twice on the end screen).
+                _nextRoundButtonLabel.text = phase == RoundPhase.MatchOver
+                    ? "DONE"
+                    : matchOver ? "MATCH OVER" : "NEXT ROUND";
             }
 
             if (_nextRoundButton != null)
@@ -1178,13 +1245,13 @@ namespace LogiCard.UI
             return button;
         }
 
-        private Slider CreateSlider(RectTransform parent, string name)
+        private Slider CreateSlider(RectTransform parent, string name, Color track, Color fillColor, Color handleColor)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Slider));
             var rt = go.GetComponent<RectTransform>();
             rt.SetParent(parent, false);
 
-            RectTransform background = CreatePanel(rt, "Background", AccentDim, Vector2.zero, Vector2.one);
+            RectTransform background = CreatePanel(rt, "Background", track, Vector2.zero, Vector2.one);
 
             var fillArea = new GameObject("Fill Area", typeof(RectTransform)).GetComponent<RectTransform>();
             fillArea.SetParent(rt, false);
@@ -1193,7 +1260,7 @@ namespace LogiCard.UI
             fillArea.offsetMin = new Vector2(0f, 0f);
             fillArea.offsetMax = new Vector2(0f, 0f);
 
-            RectTransform fill = CreatePanel(fillArea, "Fill", Accent, Vector2.zero, Vector2.one);
+            RectTransform fill = CreatePanel(fillArea, "Fill", fillColor, Vector2.zero, Vector2.one);
 
             var handleArea = new GameObject("Handle Slide Area", typeof(RectTransform)).GetComponent<RectTransform>();
             handleArea.SetParent(rt, false);
@@ -1202,7 +1269,7 @@ namespace LogiCard.UI
             handleArea.offsetMin = new Vector2(20f, 0f);
             handleArea.offsetMax = new Vector2(-20f, 0f);
 
-            RectTransform handle = CreatePanel(handleArea, "Handle", Ink, Vector2.zero, Vector2.one);
+            RectTransform handle = CreatePanel(handleArea, "Handle", handleColor, Vector2.zero, Vector2.one);
             handle.sizeDelta = new Vector2(40f, 0f);
 
             var slider = go.GetComponent<Slider>();
