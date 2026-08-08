@@ -1,10 +1,14 @@
 # Vertical Slice Spec
 
 **Doc ID:** D7  
-**Status:** Updated 2026-07-30 — **C34 Polished Core Demo**  
+**Status:** SHIPPED — 2026-08-08. This bring-up slice is complete; the core loop it proved out (Time Card,
+path/stance Move, Snap/Hold Shoot, wounds/death, doors, playback) is implemented, playable, and is now the
+shipping product's core loop (**C46**). Kept as historical reference for how the pipeline was proven, not a
+forward-looking target — see `docs/SCHEDULE.md`'s phase table for what's actually next. Prior: 2026-07-30 C34
+Polished Core Demo (superseded).  
 **Depends on:** [CORE_LOOP.md](CORE_LOOP.md), [GDD.md](GDD.md), [SCOPE.md](SCOPE.md), [ART_DIRECTION.md](ART_DIRECTION.md)
 
-**Purpose:** Cut the 14-day demo to a **pipeline proof**, then a **tight combat core**, then a **protected diorama art pass** — not an ever-growing GDD feature pile.
+**Purpose (historical):** Cut the original 14-day demo build to a **pipeline proof**, then a **tight combat core**, then a **protected diorama art pass** — not an ever-growing GDD feature pile. All three stages are done.
 
 ---
 

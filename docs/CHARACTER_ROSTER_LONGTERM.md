@@ -1,18 +1,33 @@
 # Character Roster — Long-Term Unique-Verb Operators
 
-**Status:** Drafted 2026-08-06 — **long-term vision, not 14-day demo scope.** Design-phase only; nothing here is scheduled or implemented. See scope note below before assuming otherwise.
-**Depends on:** [VISION.md](VISION.md) (Long-Term Systems list), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md) **C36–C38** (existing long-term systems this roster builds on: destructible geometry, objective win, revive/martyr), **C42–C44** (the binding pointer entries for this doc).
+**Status:** Drafted 2026-08-06 — **long-term/future roadmap**, sequenced by **C50**'s phase model, not tied to
+a retired calendar (updated 2026-08-08 for the **C46** scope pivot — see `PRODUCT_MEMORY.md`). Design-phase
+only; nothing here is scheduled or implemented. See scope note below before assuming otherwise.
+**Depends on:** [VISION.md](VISION.md) (Long-Term Systems list), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md) **C36–C38** (existing long-term systems this roster builds on: destructible geometry, objective win, revive/martyr), **C42–C44** (the binding pointer entries for this doc), [MONETIZATION.md](MONETIZATION.md) (the guardrail below).
 
 ---
 
-## Scope note — why this is long-term, not demo
+## Scope note — why this is future roadmap, not active build scope
 
-The user described these characters as ones they "want for this demo," but both concepts require systems explicitly deferred out of the 14-day ship:
+The user described these characters as ones they "want for this demo" back when this doc was drafted, but
+both concepts require systems still not built:
 
-- **Bomber** needs real multi-floor obstacle/occupancy infrastructure. Today, `Floor` is a vestigial field on `PlanarPosition` — `GameBootstrap.BuildBoard()` only ever constructs `Floor.Ground`, and **C39 item 6** explicitly locked "no per-floor obstacle infrastructure built" for the demo. Attic/vent/monitor are out-of-scope per **C17/C34**, and multi-floor is called out as long-term in `VISION.md` ("ground floor and an attic").
-- **Time Player** needs a generalized "reverse an object's state" mechanic layered on **C36** (destructible geometry), which is itself already long-term-only, not built for the demo.
+- **Bomber** needs real multi-floor obstacle/occupancy infrastructure. Today, `Floor` is a vestigial field on `PlanarPosition` — `GameBootstrap.BuildBoard()` only ever constructs `Floor.Ground`, and **C39 item 6** explicitly locked "no per-floor obstacle infrastructure built." Attic/vent/monitor are out-of-scope per **C17**, and multi-floor is called out as long-term in `VISION.md` ("ground floor and an attic").
+- **Time Player** needs a generalized "reverse an object's state" mechanic layered on **C36** (destructible geometry), which is itself already long-term-only, not built yet.
 
-Filed here as long-term vision (same bucket as **C36–C38**), pointed to from `PRODUCT_MEMORY.md` **C42–C44**. If the intent really is "build this inside the 14-day window," that's a scope conversation to have explicitly against `SCHEDULE.md`'s zero slack days — say so and this doc gets reclassified.
+Filed here as long-term vision (same bucket as **C36–C38**), pointed to from `PRODUCT_MEMORY.md` **C42–C44**.
+These prerequisites are unchanged by the **C46** scope pivot — neither character is promoted into active build
+scope by the pivot itself. If either becomes real work, that's an explicit scope conversation against
+`SCHEDULE.md`'s phase table — say so and this doc gets reclassified.
+
+## Monetization guardrail (added 2026-08-08, C47)
+
+Both Bomber and Time Player are **gameplay content — a genuinely new verb — not cosmetics.** Per
+`MONETIZATION.md`'s no-pay-to-win rule, if/when either gets promoted out of this doc's long-term-vision
+status into a shippable roster, it must ship **free** or gated only by skill/grind every player can complete
+without paying. Putting a unique verb behind a paywall breaks the F2P no-pay-to-win guarantee, even if the
+store frames the unlock as a "character pack." Whoever eventually promotes either character out of this doc
+owns satisfying this constraint, not just the technical prerequisites above.
 
 ---
 
