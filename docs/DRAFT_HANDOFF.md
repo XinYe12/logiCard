@@ -30,32 +30,34 @@ computes on plain float math, clients play back, Host revalidates payloads) is r
 installed, zero transport/session/matchmaking code, today's `GhostResolver` runs both players' programs in the
 same Unity process. Real networking is the single biggest gap between demo and shippable PvP product.
 
-**In flight, parallel, zero file overlap with each other:**
-- `docs/pivot-new-design-docs` worktree (`D:\projects\Game\logiCard-pivot-new-docs`) — three new docs
-  (`MONETIZATION.md`, `NETWORKING_DESIGN.md`, `AI_FALLBACK_BOT.md`) plus a targeted `TDD.md` rewrite (its
-  stale grid-era §2/§4 language, plus §1 becoming a pointer to the new networking doc). Brief:
-  `PIVOT_NEW_DOCS_AGENT_BRIEF.md` in that worktree. **Not yet started as of this note** — worktree and brief
-  exist, nobody's opened a session there yet.
-- `docs/pivot-gameplay-art-ui` worktree (`D:\projects\Game\logiCard-pivot-gameplay-art-ui`) — `GDD.md`/
-  `CORE_LOOP.md`/`TABLETOP_RULES.md` cross-ref fixes (including two pre-existing stale-`[0,4]×[0,4]`/"one
-  door" bugs unrelated to this pivot, left over from `C45` never being fully propagated), `ART_DIRECTION.md`
-  reframed from "demo floor" to "commercial ship art bar," `UI_FLOW.md` rewritten portrait→landscape (the
-  biggest single piece), `UI_BOARD_ANCHORED_COMPONENTS.md` light touch. Brief:
-  `PIVOT_GAMEPLAY_ART_UI_AGENT_BRIEF.md` in that worktree. **Also not yet started.**
+**DONE as of `4f403cf` — the full docs rewrite landed.** Both parallel workers reported back, were reviewed
+against their briefs (clean, no boundary violations, correctly left OPEN numerics OPEN instead of inventing
+them), and merged:
+- `docs/pivot-new-design-docs` → merged `d74aab8`: `MONETIZATION.md`, `NETWORKING_DESIGN.md`,
+  `AI_FALLBACK_BOT.md` (all new, D13–D15), plus `TDD.md`'s targeted retarget (§1 now points to
+  `NETWORKING_DESIGN.md`, §2/§4's stale grid-era language fixed).
+- `docs/pivot-gameplay-art-ui` → merged `afa5c0b`: `GDD.md`/`CORE_LOOP.md`/`TABLETOP_RULES.md` cross-ref
+  fixes (including the pre-existing `C45` staleness bugs), `ART_DIRECTION.md` reframed to "commercial ship art
+  bar," `UI_FLOW.md` rewritten portrait→landscape, `UI_BOARD_ANCHORED_COMPONENTS.md` light touch.
 
-**Queued after both land (Integrator tail, not yet started):** `CHARACTER_ROSTER_LONGTERM.md` (light reframe +
-monetization guardrail callout), `VERTICAL_SLICE.md` (mark historical/SHIPPED), `CAPTURE_CHECKLIST.md` +
-`SHIP_README_DRAFT.md` (both need real rewrites — currently entirely premised on the old local-only/portrait
-demo), a reset of `contracts/CURRENT.md` + `departments/INDEX.md` + the four `departments/*/STATUS.md` files
-(clear the now-fully-shipped Wave 1+2 content, keep the reusable document shape for whatever wave starts
-next), and a hygiene pass (delete `TDD_v1.0_Engine_Architecture.md`/`GDD_v2.0_Tabletop_Prototype.md` — dead
-pointer stubs — and `D10_Art_Direction.md` if the human wants; banner `CONTINUOUS_PIVOT_PLAN.md` as SHIPPED
-and the Day 4/Day 7 research docs as superseded-but-historical).
+Then Integrator follow-up closed out everything both workers correctly flagged as outside their tight brief
+scope rather than silently over-fixing: remaining "14-day"/"demo" framing in `GDD.md`/`CORE_LOOP.md`/
+`ART_DIRECTION.md` (`858e66c`); `CHARACTER_ROSTER_LONGTERM.md` reframe + monetization guardrail,
+`VERTICAL_SLICE.md` SHIPPED banner, `CAPTURE_CHECKLIST.md` + `SHIP_README_DRAFT.md` full rewrites (`b8f5591`);
+`contracts/CURRENT.md` + `departments/INDEX.md` + all four `STATUS.md` reset for the next wave (`c6b3ee0`);
+hygiene pass — deleted the two dead pointer stubs + `D10_Art_Direction.md`, banner-marked
+`CONTINUOUS_PIVOT_PLAN.md` SHIPPED and the Day 4/Day 7 research notes historical (`4f403cf`).
 
-**Capacity note:** the two docs-pivot workers above put this session at the 1-Integrator+2-Worker cap. Two
-*older* worker slots from before this pivot (`feat/board-edge-dressing`, `feat/playmode-board-rewrite` — see
-the `C45` board-rework section immediately below) are still queued, never started, and not abandoned — just
-waiting. Starting all four at once would exceed the stated cap; flagged to the human, their call.
+A final grep swept the whole `docs/` corpus for stray "14-day"/"demo" framing — nothing left outside
+intentional historical references or amendment-clause pointers.
+
+**What's actually next:** pick a Phase 1/2/5 slice from `docs/SCHEDULE.md`'s phase table and start real
+implementation — this session only did the docs side of the pivot, no code changed. `contracts/CURRENT.md`
+and `departments/INDEX.md` are reset and empty, ready to populate once a wave starts.
+
+**Capacity note, still relevant:** two *older* worker slots from before this pivot
+(`feat/board-edge-dressing`, `feat/playmode-board-rewrite` — see the `C45` board-rework section immediately
+below) are still queued, never started. Check `git worktree list` before assuming capacity is free.
 
 **Everything below this point (the `C45` board rework, the pawn-art rework) is still accurate and still real
 work-in-progress — the pivot doesn't invalidate any of it, it just wasn't reframed as "the top priority" until
