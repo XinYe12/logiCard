@@ -1,6 +1,11 @@
 # Continuous-Space Architecture Pivot — Phased Plan
 
-**Status:** Confirmed 2026-08-03. Supersedes **C35**'s "long-term only" framing — continuous movement is now **current demo scope**, not deferred.
+**Status:** SHIPPED — verified against code on disk (2026-08-08); every phase in this plan is implemented and
+live (`Assets/_Project/Sim/PlanarPosition.cs`, `Segment.cs`, `ArenaBoard.cs`, `ContinuousLineOfSight.cs`,
+`ContinuousPathfinder.cs` all exist; the old grid files this plan deletes are gone). Kept as historical
+reference for the continuous-space architecture's reasoning, not an in-flight plan. Not part of the **C46**
+scope pivot's active work — that pivot doesn't touch movement/combat mechanics. Confirmed 2026-08-03 —
+supersedes **C35**'s "long-term only" framing — continuous movement was, at the time, current demo scope.
 **Depends on:** [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md) (decisions recorded as CONFIRMED entries), [DAY7_DOOR_RESEARCH.md](DAY7_DOOR_RESEARCH.md) (the door mechanic being adapted here, not re-derived).
 
 ---

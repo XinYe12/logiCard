@@ -1,6 +1,6 @@
 # Day 4 / M1 Slice 1 — Ghost Resolve + Playback Research Note
 
-**Status:** Research only, 2026-07-30. Not a confirmed design change — see [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md) (C26).
+**Status:** Research only, 2026-07-30. Not a confirmed design change — see [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md) (C26). **Historical note (2026-08-08):** written against the pre-pivot grid model (`GridCoordinate` types throughout) — superseded by the shipped continuous-space model, see [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md). The assembly-boundary reasoning in §D still applies verbatim to the continuous version; the grid-specific code sketches do not.
 **Scope:** Day 4 of [SCHEDULE.md](SCHEDULE.md) — local Host-style ghost resolve + playback of moves/shoots, Wound stub text on hit.
 
 Sources read: [VERTICAL_SLICE.md](VERTICAL_SLICE.md) (D7), [TDD.md](TDD.md) (D6 §2–§6), [GDD.md](GDD.md) (D4 §3A, §5, §6), [CORE_LOOP.md](CORE_LOOP.md) (D3), [SCHEDULE.md](SCHEDULE.md) (D8 Day 4), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md) (C23/C24/C27/C28), [TABLETOP_RULES.md](TABLETOP_RULES.md) (D5 §IV), [UI_FLOW.md](UI_FLOW.md) §7. Also read current code: `Sim/*`, `Net/*`, `Timeline/PawnProgram.cs`, `Board/*`, `UI/ProgramHud.cs`, `Boot/GameBootstrap.cs`, and all four `.asmdef` files.
