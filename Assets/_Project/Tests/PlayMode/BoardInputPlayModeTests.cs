@@ -24,9 +24,9 @@ namespace LogiCard.Tests.PlayMode
             var probes = new[]
             {
                 new PlanarPosition(1f, 1f),
-                new PlanarPosition(3f, 0.5f),
-                new PlanarPosition(0.5f, 3.5f),
-                new PlanarPosition(3.5f, 3.5f),
+                new PlanarPosition(6.5f, 2f),
+                new PlanarPosition(1f, 8.5f),
+                new PlanarPosition(7f, 9f),
             };
 
             foreach (PlanarPosition point in probes)
@@ -205,7 +205,7 @@ namespace LogiCard.Tests.PlayMode
             Phase.GoTo(RoundPhase.Reveal);
             Phase.GoTo(RoundPhase.Program);
 
-            // Stay south of the Closed door (y=2): 1m Walk = 2s committed.
+            // Stay south of Closed Door #1 (y=4): 1m Walk = 2s committed.
             PlanarPosition first = new PlanarPosition(start.X, start.Y + 1f);
             AttackerInput.Mode = ActionVerb.Move;
             Assert.That(AttackerInput.TryTapPoint(first), Is.True);
