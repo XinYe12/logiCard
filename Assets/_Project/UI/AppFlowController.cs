@@ -6,9 +6,9 @@ using UnityEngine.UI;
 namespace LogiCard.UI
 {
     /// <summary>
-    /// Minimal click-through shell for <c>docs/UI_FLOW.md</c>'s screen map (C48).
-    /// Functional only — Phase 5 owns polish. Local/offline play is always available;
-    /// Find Match is a short stub delay (real matchmaking is Phase 2).
+    /// Pre-match shell for <c>docs/UI_FLOW.md</c>'s screen map (C48): Boot/Title → Character Select
+    /// → Lobby → Waiting/Reveal bridge → Round Result → Match End. Built on <see cref="UiFactory"/>
+    /// so chrome matches the in-match HUD.
     /// </summary>
     public sealed class AppFlowController : MonoBehaviour
     {
@@ -28,12 +28,7 @@ namespace LogiCard.UI
         private const float RevealFlashSeconds = 1.2f;
         private const float WaitingStubSeconds = 0.6f;
 
-        private static readonly Color Ink = new Color(0.93f, 0.92f, 0.88f, 1f);
-        private static readonly Color PanelDark = new Color(0.10f, 0.10f, 0.12f, 0.96f);
-        private static readonly Color PanelMid = new Color(0.17f, 0.17f, 0.20f, 1f);
-        private static readonly Color Accent = new Color(0.98f, 0.72f, 0.25f, 1f);
-
-        private Font _font;
+        private UiFactory _ui;
         private RectTransform _root;
         private GameObject _boot;
         private GameObject _characterSelect;
@@ -46,10 +41,10 @@ namespace LogiCard.UI
         private Text _lobbyStatus;
         private Text _roundResultLabel;
         private Text _matchEndLabel;
-        private Button _scoutButton;
-        private Button _juggernautButton;
+        private SelectionGrid _characterGrid;
         private string _selectedArchetype = "Scout";
         private bool _inMatch;
+        private ModalDialog _openDialog;
 
         /// <summary>
         /// Raised when Lobby Local Play / Find Match completes and the match HUD should show. The
@@ -73,8 +68,8 @@ namespace LogiCard.UI
 
         public void Init(RectTransform canvasRoot, Font font)
         {
-            _font = font;
-            _root = CreatePanel(canvasRoot, "AppFlow", PanelDark, Vector2.zero, Vector2.one);
+            _ui = new UiFactory(font);
+            _root = _ui.CreatePanel(canvasRoot, "AppFlow", UiStyle.PanelDark, Vector2.zero, Vector2.one);
             _root.SetAsLastSibling();
 
             _boot = BuildBoot();
@@ -172,15 +167,16 @@ namespace LogiCard.UI
             GameObject screen = CreateScreen("BootTitle");
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            Text title = CreateText(rt, "Title", "logiCard", 72, TextAnchor.MiddleCenter, Accent);
-            Stretch(title.rectTransform, new Vector2(0.1f, 0.55f), new Vector2(0.9f, 0.8f));
+            Text title = _ui.CreateText(rt, "Title", "logiCard", 72, TextAnchor.MiddleCenter, UiStyle.Accent);
+            UiFactory.Stretch(title.rectTransform, new Vector2(0.1f, 0.55f), new Vector2(0.9f, 0.8f));
 
-            Text tag = CreateText(rt, "Tag", "Landscape desktop tactics — programmed movement", 28, TextAnchor.MiddleCenter, Ink);
-            Stretch(tag.rectTransform, new Vector2(0.15f, 0.42f), new Vector2(0.85f, 0.55f));
+            Text tag = _ui.CreateText(rt, "Tag", "Landscape desktop tactics — programmed movement", 28,
+                TextAnchor.MiddleCenter, UiStyle.Ink);
+            UiFactory.Stretch(tag.rectTransform, new Vector2(0.15f, 0.42f), new Vector2(0.85f, 0.55f));
 
-            Button play = CreateButton(rt, "TitlePlayButton", "PLAY", Accent, new Color(0.1f, 0.09f, 0.07f), 40,
+            Button play = _ui.CreateButton(rt, "TitlePlayButton", "PLAY", UiStyle.Accent, UiStyle.InkDark, 40,
                 () => Show(Screen.CharacterSelect));
-            Stretch(play.GetComponent<RectTransform>(), new Vector2(0.35f, 0.22f), new Vector2(0.65f, 0.36f));
+            UiFactory.Stretch(play.GetComponent<RectTransform>(), new Vector2(0.35f, 0.22f), new Vector2(0.65f, 0.36f));
             return screen;
         }
 
@@ -189,24 +185,31 @@ namespace LogiCard.UI
             GameObject screen = CreateScreen("CharacterSelect");
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            Text title = CreateText(rt, "Title", "CHARACTER SELECT", 48, TextAnchor.MiddleCenter, Accent);
-            Stretch(title.rectTransform, new Vector2(0.1f, 0.82f), new Vector2(0.9f, 0.95f));
+            Text title = _ui.CreateText(rt, "Title", "CHARACTER SELECT", 48, TextAnchor.MiddleCenter, UiStyle.Accent);
+            UiFactory.Stretch(title.rectTransform, new Vector2(0.1f, 0.82f), new Vector2(0.9f, 0.95f));
 
-            _scoutButton = CreateButton(rt, "Pick_Scout", "SCOUT", PanelMid, Ink, 32, () => SelectArchetype("Scout"));
-            Stretch(_scoutButton.GetComponent<RectTransform>(), new Vector2(0.12f, 0.48f), new Vector2(0.48f, 0.72f));
+            _characterGrid = SelectionGrid.Build(
+                _ui,
+                rt,
+                new[]
+                {
+                    new SelectionOption("Scout", "SCOUT"),
+                    new SelectionOption("Juggernaut", "JUGGERNAUT"),
+                },
+                new Vector2(0.12f, 0.48f),
+                new Vector2(0.88f, 0.74f),
+                columns: 2,
+                fontSize: 32);
+            _characterGrid.SelectionChanged += OnCharacterSelectionChanged;
 
-            _juggernautButton = CreateButton(rt, "Pick_Juggernaut", "JUGGERNAUT", PanelMid, Ink, 32,
-                () => SelectArchetype("Juggernaut"));
-            Stretch(_juggernautButton.GetComponent<RectTransform>(), new Vector2(0.52f, 0.48f), new Vector2(0.88f, 0.72f));
+            _characterDetail = _ui.CreateText(rt, "Detail", string.Empty, 26, TextAnchor.MiddleCenter, UiStyle.Ink);
+            UiFactory.Stretch(_characterDetail.rectTransform, new Vector2(0.1f, 0.28f), new Vector2(0.9f, 0.46f));
 
-            _characterDetail = CreateText(rt, "Detail", string.Empty, 26, TextAnchor.MiddleCenter, Ink);
-            Stretch(_characterDetail.rectTransform, new Vector2(0.1f, 0.28f), new Vector2(0.9f, 0.46f));
-
-            Button confirm = CreateButton(rt, "ConfirmCharacter", "CONFIRM", Accent, new Color(0.1f, 0.09f, 0.07f), 34,
+            Button confirm = _ui.CreateButton(rt, "ConfirmCharacter", "CONFIRM", UiStyle.Accent, UiStyle.InkDark, 34,
                 () => Show(Screen.Lobby));
-            Stretch(confirm.GetComponent<RectTransform>(), new Vector2(0.35f, 0.10f), new Vector2(0.65f, 0.22f));
+            UiFactory.Stretch(confirm.GetComponent<RectTransform>(), new Vector2(0.35f, 0.10f), new Vector2(0.65f, 0.22f));
 
-            SelectArchetype("Scout");
+            OnCharacterSelectionChanged(_characterGrid.SelectedId);
             return screen;
         }
 
@@ -215,27 +218,30 @@ namespace LogiCard.UI
             GameObject screen = CreateScreen("LobbyFindMatch");
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            Text title = CreateText(rt, "Title", "LOBBY", 48, TextAnchor.MiddleCenter, Accent);
-            Stretch(title.rectTransform, new Vector2(0.1f, 0.78f), new Vector2(0.9f, 0.92f));
+            Text title = _ui.CreateText(rt, "Title", "LOBBY", 48, TextAnchor.MiddleCenter, UiStyle.Accent);
+            UiFactory.Stretch(title.rectTransform, new Vector2(0.1f, 0.78f), new Vector2(0.9f, 0.92f));
 
-            _lobbyStatus = CreateText(rt, "LobbyStatus", "1v1 Lobby — Find Match or play Local.", 26, TextAnchor.MiddleCenter, Ink);
-            Stretch(_lobbyStatus.rectTransform, new Vector2(0.1f, 0.58f), new Vector2(0.9f, 0.74f));
+            _lobbyStatus = _ui.CreateText(rt, "LobbyStatus", "1v1 Lobby — Find Match or play Local.", 26,
+                TextAnchor.MiddleCenter, UiStyle.Ink);
+            UiFactory.Stretch(_lobbyStatus.rectTransform, new Vector2(0.1f, 0.58f), new Vector2(0.9f, 0.74f));
 
-            Text roles = CreateText(rt, "Roles", "Labels: Attacker / Defender (spawn only)", 22, TextAnchor.MiddleCenter, Ink);
-            Stretch(roles.rectTransform, new Vector2(0.1f, 0.48f), new Vector2(0.9f, 0.58f));
+            Text roles = _ui.CreateText(rt, "Roles", "Labels: Attacker / Defender (spawn only)", 22,
+                TextAnchor.MiddleCenter, UiStyle.Ink);
+            UiFactory.Stretch(roles.rectTransform, new Vector2(0.1f, 0.48f), new Vector2(0.9f, 0.58f));
 
-            Button find = CreateButton(rt, "FindMatchButton", "FIND MATCH", Accent, new Color(0.1f, 0.09f, 0.07f), 32,
+            Button find = _ui.CreateButton(rt, "FindMatchButton", "FIND MATCH", UiStyle.Accent, UiStyle.InkDark, 32,
                 () => StartCoroutine(FindMatchStub()));
-            Stretch(find.GetComponent<RectTransform>(), new Vector2(0.18f, 0.28f), new Vector2(0.48f, 0.42f));
+            UiFactory.Stretch(find.GetComponent<RectTransform>(), new Vector2(0.18f, 0.28f), new Vector2(0.48f, 0.42f));
 
-            Button local = CreateButton(rt, "LocalPlayButton", "LOCAL PLAY", PanelMid, Ink, 32, () => EnterMatch(viaRelay: false));
-            Stretch(local.GetComponent<RectTransform>(), new Vector2(0.52f, 0.28f), new Vector2(0.82f, 0.42f));
+            Button local = _ui.CreateButton(rt, "LocalPlayButton", "LOCAL PLAY", UiStyle.PanelMid, UiStyle.Ink, 32,
+                () => EnterMatch(viaRelay: false));
+            UiFactory.Stretch(local.GetComponent<RectTransform>(), new Vector2(0.52f, 0.28f), new Vector2(0.82f, 0.42f));
 
-            Text note = CreateText(rt, "Note",
+            Text note = _ui.CreateText(rt, "Note",
                 "Find Match connects to a resolve relay on 127.0.0.1:7777 — start one manually for now " +
                 "(real matchmaking is still open, C52). Local stays same-process for testing.", 20,
-                TextAnchor.MiddleCenter, Ink);
-            Stretch(note.rectTransform, new Vector2(0.1f, 0.12f), new Vector2(0.9f, 0.24f));
+                TextAnchor.MiddleCenter, UiStyle.Ink);
+            UiFactory.Stretch(note.rectTransform, new Vector2(0.1f, 0.12f), new Vector2(0.9f, 0.24f));
             return screen;
         }
 
@@ -244,12 +250,13 @@ namespace LogiCard.UI
             GameObject screen = CreateScreen("RoundResult");
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            _roundResultLabel = CreateText(rt, "RoundResultLabel", "ROUND COMPLETE", 44, TextAnchor.MiddleCenter, Accent);
-            Stretch(_roundResultLabel.rectTransform, new Vector2(0.1f, 0.45f), new Vector2(0.9f, 0.7f));
+            _roundResultLabel = _ui.CreateText(rt, "RoundResultLabel", "ROUND COMPLETE", 44, TextAnchor.MiddleCenter,
+                UiStyle.Accent);
+            UiFactory.Stretch(_roundResultLabel.rectTransform, new Vector2(0.1f, 0.45f), new Vector2(0.9f, 0.7f));
 
-            Button cont = CreateButton(rt, "ContinueButton", "CONTINUE", Accent, new Color(0.1f, 0.09f, 0.07f), 34,
+            Button cont = _ui.CreateButton(rt, "ContinueButton", "CONTINUE", UiStyle.Accent, UiStyle.InkDark, 34,
                 () => Show(Screen.None));
-            Stretch(cont.GetComponent<RectTransform>(), new Vector2(0.35f, 0.22f), new Vector2(0.65f, 0.36f));
+            UiFactory.Stretch(cont.GetComponent<RectTransform>(), new Vector2(0.35f, 0.22f), new Vector2(0.65f, 0.36f));
             return screen;
         }
 
@@ -258,33 +265,52 @@ namespace LogiCard.UI
             GameObject screen = CreateScreen("MatchEnd");
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            _matchEndLabel = CreateText(rt, "MatchEndLabel", "MATCH OVER", 48, TextAnchor.MiddleCenter, Accent);
-            Stretch(_matchEndLabel.rectTransform, new Vector2(0.1f, 0.55f), new Vector2(0.9f, 0.78f));
+            _matchEndLabel = _ui.CreateText(rt, "MatchEndLabel", "MATCH OVER", 48, TextAnchor.MiddleCenter, UiStyle.Accent);
+            UiFactory.Stretch(_matchEndLabel.rectTransform, new Vector2(0.1f, 0.55f), new Vector2(0.9f, 0.78f));
 
-            Button rematch = CreateButton(rt, "RematchButton", "REMATCH", Accent, new Color(0.1f, 0.09f, 0.07f), 32,
+            Button rematch = _ui.CreateButton(rt, "RematchButton", "REMATCH", UiStyle.Accent, UiStyle.InkDark, 32,
                 () =>
                 {
                     ShowLobby();
                     RematchRequested?.Invoke();
                 });
-            Stretch(rematch.GetComponent<RectTransform>(), new Vector2(0.18f, 0.28f), new Vector2(0.48f, 0.42f));
+            UiFactory.Stretch(rematch.GetComponent<RectTransform>(), new Vector2(0.18f, 0.28f), new Vector2(0.48f, 0.42f));
 
-            Button quit = CreateButton(rt, "QuitToTitleButton", "QUIT", PanelMid, Ink, 32,
+            Button quit = _ui.CreateButton(rt, "QuitToTitleButton", "QUIT", UiStyle.PanelMid, UiStyle.Ink, 32,
+                ConfirmQuitToTitle);
+            UiFactory.Stretch(quit.GetComponent<RectTransform>(), new Vector2(0.52f, 0.28f), new Vector2(0.82f, 0.42f));
+            return screen;
+        }
+
+        private void ConfirmQuitToTitle()
+        {
+            if (_openDialog != null && _openDialog.IsOpen)
+            {
+                return;
+            }
+
+            _openDialog = ModalDialog.Show(
+                _ui,
+                _root,
+                "QUIT TO TITLE?",
+                "Leave this match result and return to the title screen.",
+                "QUIT",
                 () =>
                 {
+                    _openDialog = null;
                     ShowBoot();
                     QuitToTitleRequested?.Invoke();
-                });
-            Stretch(quit.GetComponent<RectTransform>(), new Vector2(0.52f, 0.28f), new Vector2(0.82f, 0.42f));
-            return screen;
+                },
+                "CANCEL",
+                () => _openDialog = null);
         }
 
         private GameObject BuildMessageScreen(string name, string message)
         {
             GameObject screen = CreateScreen(name);
             RectTransform rt = screen.GetComponent<RectTransform>();
-            Text label = CreateText(rt, "Message", message, 52, TextAnchor.MiddleCenter, Accent);
-            Stretch(label.rectTransform, new Vector2(0.1f, 0.35f), new Vector2(0.9f, 0.65f));
+            Text label = _ui.CreateText(rt, "Message", message, 52, TextAnchor.MiddleCenter, UiStyle.Accent);
+            UiFactory.Stretch(label.rectTransform, new Vector2(0.1f, 0.35f), new Vector2(0.9f, 0.65f));
             return screen;
         }
 
@@ -317,7 +343,7 @@ namespace LogiCard.UI
             EnteredMatch?.Invoke(viaRelay);
         }
 
-        private void SelectArchetype(string archetype)
+        private void OnCharacterSelectionChanged(string archetype)
         {
             _selectedArchetype = archetype;
             if (_characterDetail != null)
@@ -326,12 +352,6 @@ namespace LogiCard.UI
                     ? "Juggernaut — Speed: slow · Agility: stance/shoot switch costs · Strength: doors faster"
                     : "Scout — Speed: fast · Agility: free stance/shoot switches · Strength: standard doors";
             }
-
-            if (_scoutButton != null)
-            {
-                _scoutButton.GetComponent<Image>().color = archetype == "Scout" ? Accent : PanelMid;
-                _juggernautButton.GetComponent<Image>().color = archetype == "Juggernaut" ? Accent : PanelMid;
-            }
         }
 
         private GameObject CreateScreen(string name)
@@ -339,63 +359,10 @@ namespace LogiCard.UI
             var go = new GameObject(name, typeof(RectTransform), typeof(Image));
             var rt = go.GetComponent<RectTransform>();
             rt.SetParent(_root, false);
-            Stretch(rt, Vector2.zero, Vector2.one);
-            go.GetComponent<Image>().color = PanelDark;
+            UiFactory.Stretch(rt, Vector2.zero, Vector2.one);
+            go.GetComponent<Image>().color = UiStyle.PanelDark;
             go.SetActive(false);
             return go;
-        }
-
-        private static RectTransform CreatePanel(RectTransform parent, string name, Color color, Vector2 anchorMin, Vector2 anchorMax)
-        {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
-            var rt = go.GetComponent<RectTransform>();
-            rt.SetParent(parent, false);
-            rt.anchorMin = anchorMin;
-            rt.anchorMax = anchorMax;
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-            go.GetComponent<Image>().color = color;
-            return rt;
-        }
-
-        private Text CreateText(RectTransform parent, string name, string content, int size, TextAnchor anchor, Color color)
-        {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Text));
-            var rt = go.GetComponent<RectTransform>();
-            rt.SetParent(parent, false);
-            var text = go.GetComponent<Text>();
-            text.font = _font;
-            text.text = content;
-            text.fontSize = size;
-            text.alignment = anchor;
-            text.color = color;
-            text.horizontalOverflow = HorizontalWrapMode.Wrap;
-            text.verticalOverflow = VerticalWrapMode.Overflow;
-            return text;
-        }
-
-        private Button CreateButton(RectTransform parent, string name, string label, Color bg, Color fg, int size,
-            UnityEngine.Events.UnityAction onClick)
-        {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
-            var rt = go.GetComponent<RectTransform>();
-            rt.SetParent(parent, false);
-            go.GetComponent<Image>().color = bg;
-
-            Text text = CreateText(rt, "Label", label, size, TextAnchor.MiddleCenter, fg);
-            Stretch(text.rectTransform, Vector2.zero, Vector2.one);
-
-            var button = go.GetComponent<Button>();
-            button.onClick.AddListener(onClick);
-            return button;
-        }
-
-        private static void Stretch(RectTransform rt, Vector2 anchorMin, Vector2 anchorMax)
-        {
-            rt.anchorMin = anchorMin;
-            rt.anchorMax = anchorMax;
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
         }
 
         private static void SetActive(GameObject go, bool active)
