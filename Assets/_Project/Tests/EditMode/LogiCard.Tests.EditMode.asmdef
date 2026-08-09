@@ -6,6 +6,7 @@
         "LogiCard.Timeline",
         "LogiCard.Net",
         "LogiCard.Cards",
+        "LogiCard.UI",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

@@ -67,6 +67,9 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(DefenderPawn, Is.Not.Null, "Bootstrap built no defender pawn.");
             Assert.That(MatchClock, Is.Not.Null, "Bootstrap built no MatchClock.");
 
+            // Phase 1 landscape shell starts on Boot/Title; match HUD tests skip straight to Program.
+            Hud.BypassAppFlowForTests();
+
             Assert.That(Bootstrap.BeginRound(DefaultRoundSeconds), Is.True, "Default Time Card failed.");
             Assert.That(Phase.Phase, Is.EqualTo(RoundPhase.Program));
 
