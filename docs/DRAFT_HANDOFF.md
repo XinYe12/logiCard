@@ -1,5 +1,34 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-09 (continued) — RelayMatchResolver wired into Find Match
+
+`RelayMatchResolver` is no longer dormant — `Assets/_Project/Boot/GameBootstrap.cs` now subscribes to
+`AppFlowController.EnteredMatch` (which gained a `bool viaRelay` param: true for Find Match, false for Local
+Play) and calls `RoundPlayback`'s new `SetMatchResolver(...)` to pick `RelayMatchResolver()` (defaults to
+`127.0.0.1:7777`, matching `Relay/`'s `RelayProtocol.DefaultPort`) or `LocalMatchResolver` accordingly.
+`AppFlowController.BypassToMatch()` (the path every existing test/`SliceSceneFixture` uses) passes
+`viaRelay: false`, so `LocalMatchResolver` stays the default everywhere nothing changed.
+
+Real matchmaking/session assignment is still OPEN (`NETWORKING_DESIGN.md`) — Find Match still shows a short
+stub "searching" beat rather than a real queue, and the actual network connection only happens naturally at
+the match's first Lock In (that's structurally where `IMatchResolver.ResolveAsync` gets called). Added
+failure handling there: a connection failure (e.g. no relay running, the realistic common case during
+testing) now reports through the existing `OutcomeReported` HUD banner instead of throwing unhandled and
+silently freezing the round.
+
+**Manual two-Unity smoke test is now simpler** — no per-session `GameBootstrap` edit needed, both instances
+default to the same port automatically:
+1. `dotnet run --project Relay/LogiCard.Relay -- --port 7777 --board demo`
+2. Open two Unity instances (Editor + Editor, or Editor + a build) on this same `master` checkout.
+3. On each: Boot → Character Select → Lobby → **Find Match** (not Local Play).
+4. Both Lock In one round → both should play back the identical tape. Relay exits after one resolve (restart
+   for another round — session persistence is still OPEN).
+
+Verified: EditMode 110/110, PlayMode 32/32 (`AppFlowPlayModeTests.FindMatchStubEntersMatchAfterDelay` already
+exercises the `viaRelay: true` path through `GameBootstrap`'s new wiring end-to-end and passed clean). The
+actual live two-process network round-trip through a real relay hasn't been run by a human yet — same
+Editor-only gap as the rest of this session's pending items.
+
 ## 2026-08-09 (continued) — Phase 2 transport decision locked (C52); first slice in flight
 
 **`C52` (`PRODUCT_MEMORY.md`): custom lightweight resolve-relay backend, server-authoritative host-integrity.**

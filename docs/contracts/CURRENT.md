@@ -28,11 +28,21 @@ once a human is ready to spend time on them — see `NETWORKING_DESIGN.md`'s OPE
   pairs exactly two connections and runs the real shared `GhostResolver` once as authority. Reviewed in depth
   before merge — see `DRAFT_HANDOFF.md` for the two specific correctness checks done (CardData/Modifier
   dead-path verification, connection-order independence via `GhostResolver`'s internal `PawnId` sort).
-- **Dormant, not wired live:** `LocalMatchResolver` stays the default everywhere; nothing in `GameBootstrap`/
-  `AppFlowController`'s Find Match flow picks `RelayMatchResolver` yet. That's a separate, still-open next
-  step, not part of this contract.
 - Re-verified independently post-merge on `master`: EditMode 110/110, PlayMode 32/32, standalone xUnit 2/2
   (`dotnet test Relay/LogiCard.Relay.sln`).
+
+### `AppFlowController.EnteredMatch` gains `bool viaRelay` + `RoundPlayback.SetMatchResolver` (closed 2026-08-09)
+
+- `AppFlowController.EnteredMatch` is now `Action<bool>` — Find Match fires `true`, Local Play and every
+  test/`SliceSceneFixture`'s `BypassToMatch()` fire `false`.
+- `RoundPlayback.SetMatchResolver(IMatchResolver)`: swaps the resolver used by the next `ResolveAndArm()`.
+  Safe any time before the match's first Lock In.
+- `GameBootstrap` subscribes and picks `RelayMatchResolver()` (defaults `127.0.0.1:7777`) for Find Match,
+  `LocalMatchResolver` for Local Play — landed live, `RelayMatchResolver` is no longer dormant.
+- `RoundPlayback.ResolveAndArmRoutine()`'s resolver pump now catches a failed `MoveNext()` and reports it via
+  the existing `OutcomeReported` banner instead of an unhandled exception.
+- Verified: EditMode 110/110, PlayMode 32/32. Real two-process network round-trip through a live relay not
+  yet human-smoke-tested.
 
 ### `ProgramHud`'s HUD-dock layout constants ↔ `GameBootstrap.ConfigureCamera()`'s camera viewport rect (Phase 1, closed 2026-08-09)
 
