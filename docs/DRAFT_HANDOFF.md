@@ -1,5 +1,38 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-09 (continued) — UI worktree merged; environment worktree waiting on a human look
+
+**`feat/ui-component-system` shipped and merged** (worker commit `7bd252f` → merge commit on `master`).
+Reviewed in depth before merging, not just the report: spot-checked that the camera-rect coupling still
+resolves correctly (`GameBootstrap.cs`'s `cam.rect` reads `ProgramHud.HudDockWidth`/`TopStripHeight`
+symbolically, so widening the dock to 0.34 needed **no `GameBootstrap.cs` rewrite** — confirmed by reading the
+line, not taken on trust), confirmed the "broken 5/4-column stance row" fix is real (Phase 1's original code
+genuinely mixed `PlaceSplitCell(..., 4)` and `(..., 5)` calls in the same row — now a clean 3-way split + full-
+width SET PATH), and confirmed `ModalDialog`/`SelectionGrid` are properly generic rather than one-off. Boundary
+confirmed clean via the worker's own commit diff (`git show <sha> --stat`, not the branch-vs-master diff,
+which included unrelated doc drift from `master` moving ahead while the branch was out): only
+`Assets/_Project/UI/**` + its tests touched. Independently re-verified in the worker's own worktree before
+merging: EditMode 113/113, PlayMode 34/34 — matched the report exactly. **Batchmode on `master` itself is
+still pending** — the main tree's Editor was locked (live playtest session) when I tried; the merge was clean
+with no conflicts and the pre-merge worktree verification already covers the actual code, so this is a
+formality, not an open risk, but it should still be run once the Editor is free.
+
+**`feat/env-lookfeel-overhaul` reviewed too, not merged — by design.** Checkpoint 1 (contained sky/cloud/rain
+pocket above the board + a lighting/volume retune toward the reference's wet-dusk mood) is done, boundary-
+clean (`cam.rect` untouched, confirmed via diff — everything else touched was within the explicitly granted
+`ConfigureCamera`/`BuildLighting`/`BuildDioramaVolume` carve-out), and independently re-verified: EditMode
+110/110, PlayMode 32/32. The clouds/rain are real geometry sized to the actual board bounds (not hardcoded),
+implemented as tinted primitive spheres + a Shuriken particle system (URP has no orthographic-camera-
+compatible volumetric cloud support, confirmed by the worker — this is a deliberate substitute, not a
+shortcut). This branch **stays unmerged** — the worker's brief explicitly built in a stop-here checkpoint
+(this project has already had one blind art attempt rejected on sight, `377029f`) and it's holding to that.
+**Still needed from the human:** a Play + screenshot of this worktree, and an answer to whether the live
+in-match camera should match the reference's hero-shot mood as closely as possible or stay a lighter,
+readability-preserving version.
+
+`docs/contracts/CURRENT.md` / `departments/INDEX.md` / `SCHEDULE.md` updated: UI's camera-rect contract closed
+out, one worker slot open again, Phase 5's status line reflects both branches' real state.
+
 ## 2026-08-09 (continued) — Core gameplay paused; look-and-feel + UI wave kicked off
 
 **Human call, read this before touching `Sim/`/`Net/`/`Timeline/`/anything gameplay:** a live playtest today

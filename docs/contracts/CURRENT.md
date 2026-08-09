@@ -1,34 +1,39 @@
 # Cross-Dept Contracts — Current Wave
 
 **Wave:** Look-and-feel + UI, started 2026-08-09. Core-gameplay/networking work explicitly paused by the
-human until this wave lands — see `SCHEDULE.md`'s Cadence section. Two parallel worktrees:
-`feat/env-lookfeel-overhaul` (environment/art, C53) and `feat/ui-component-system` (UI redesign).
+human until this wave lands — see `SCHEDULE.md`'s Cadence section. **UI side landed and merged 2026-08-09**
+(`feat/ui-component-system`). **Environment side still in flight** (`feat/env-lookfeel-overhaul`) — checkpoint
+1 (sky/weather/lighting) done, waiting on a human screenshot + the hero-shot-vs-readability call before
+checkpoint 2 starts. One worker slot open again.
 **Updated:** 2026-08-09 by Integrator.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
 
-### Camera viewport-rect ↔ `ProgramHud`'s dock-width constants (carried over from Phase 1, still live)
-
-- **Owner (definition):** UI worker (`feat/ui-component-system`) — if the layout pass changes
-  `HudDockWidth`/`TopStripHeight` or the dock's shape/edge, that must be reported back explicitly.
-- **Owner (consumer, wiring):** Integrator — `GameBootstrap.cs`'s `cam.rect = new Rect(0f, 0f, 1f -
-  ProgramHud.HudDockWidth, 1f - ProgramHud.TopStripHeight)` gets rewired at merge time if the shape changes.
-- **Also touches:** the env worker owns `orthographicSize`/`BuildLighting`/`BuildDioramaVolume` in the same
-  file's `ConfigureCamera` — a different part of the same method, no line-level overlap, but both workers'
-  changes land in `GameBootstrap.cs` only via the Integrator, never directly.
-- **Merge status:** not yet landed — both worktrees just spun up.
+*(the camera-rect ↔ dock-width contract closed below — no new frozen contract needed until checkpoint 2 or a
+new worker slice starts.)*
 
 ## Ownership reminders this wave
 
-- `Assets/_Project/Board/**`, `PrimitiveMaterialFactory.cs`, `Assets/_Project/Art/**`: environment worker only.
-- `Assets/_Project/UI/**`: UI worker only.
-- `Assets/_Project/Boot/GameBootstrap.cs`: Integrator-only edit target; both workers may need something
-  wired into it (camera rect, lighting tuning) but neither edits it directly.
+- `Assets/_Project/Board/**`, `PrimitiveMaterialFactory.cs`, `Assets/_Project/Art/**`: environment worker only
+  (`feat/env-lookfeel-overhaul`, still active).
+- `Assets/_Project/UI/**`: closed out — `feat/ui-component-system` merged, no worker currently assigned.
+- `Assets/_Project/Boot/GameBootstrap.cs`: Integrator-only edit target; the env worker may still need
+  lighting/weather tuning wired in.
 - `Sim/`, `Net/`, `Timeline/`, `GhostResolver`: untouched by this wave — core gameplay is paused.
 
 ## Closed contracts (reference)
+
+### Camera viewport-rect ↔ `ProgramHud`'s dock-width constants, UI side (closed 2026-08-09)
+
+- `feat/ui-component-system` widened `HudDockWidth` 0.30 → 0.34 for cell readability; `TopStripHeight`
+  unchanged at 0.08.
+- **No `GameBootstrap.cs` rewrite needed** — `cam.rect = new Rect(0f, 0f, 1f - ProgramHud.HudDockWidth, 1f -
+  ProgramHud.TopStripHeight)` reads the constant symbolically, confirmed by Integrator before merge, not just
+  taken on the worker's word.
+- The env worker's `orthographicSize`/`BuildLighting`/`BuildDioramaVolume` changes (checkpoint 1,
+  `feat/env-lookfeel-overhaul`) land independently — different lines of the same method, no overlap.
 
 ### `IMatchResolver` + `RelayMatchResolver` (Phase 2 first slice, closed 2026-08-09)
 
