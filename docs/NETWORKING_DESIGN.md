@@ -44,16 +44,22 @@ Unique verbs (future roster) and the matchmaking-fallback bot (**C49**) must als
 
 ---
 
-## Transport choice — OPEN (do not silently assume Fusion)
+## Transport choice — LOCKED (C52, 2026-08-09)
 
-**C5** named Photon Fusion 2 Host Mode historically. **C51** promotes "real networking" to core scope but does **not** lock Fusion by itself — the package was never installed, so the choice was never proven in this codebase.
+**C5** named Photon Fusion 2 Host Mode historically. **C51** promoted "real networking" to core scope without locking Fusion by itself. That choice is now made — **see `PRODUCT_MEMORY.md` C52.**
 
-| Option | Why it might still be right | Why reopen |
-|--------|-----------------------------|------------|
-| **Photon Fusion 2** (Host Mode or Shared, TBD with integrity answer) | Built for Unity; matchmaking + relay services exist; original long-term plan; tick sync mental model already sketched in old TDD §1 | Never integrated here; Host Mode collides with the host-integrity problem below; cost / region coverage for Steam F2P unknown |
-| **Other Unity-friendly stack** (e.g. NGO + Relay, Mirror + custom relay, Steam Networking + custom session) | Steam-native paths may simplify wallet + session identity; may pair cleaner with a dedicated/neutral host | Rewrites the "Fusion" label in docs/code comments; needs its own cost/estimate pass (**R16**) |
+**Chosen: a custom lightweight resolve-relay backend, not an off-the-shelf real-time netcode package.** Rationale: this game's Program → Lock In → Resolve → Playback loop is episodic (submit-then-resolve), not continuous real-time state — Fusion/NGO/Mirror are built for tick-synced continuous simulation with client prediction, which this project doesn't need and would be paying complexity/cost for. `GhostResolver` is already pure C# with no engine-time/physics/randomness dependency, so running it as the trusted authority in a small relay service is cheap and doesn't require a full game-server deploy.
 
-**Decision required before Phase 2 exits.** Whichever stack wins must support: session create/join, reliable payload RPC (or equivalent), tape sync to both peers, and a clean handoff point for the fallback bot after queue timeout. Do not pick unilaterally in implementation — lock it here first.
+**Shape:**
+
+1. A small trusted service — plausibly a thin C# process that references the same `LogiCard.Sim`/`GhostResolver` code the client already uses, so resolve logic never drifts between "what the client previews" and "what the authority computes" — is the sole authority. It does not run Unity; it runs the same pure resolve function headless.
+2. Each client, on Lock In, sends its locked `TimelinePayload` to the relay over a reliable connection (WebSocket vs. plain HTTPS request/response — exact protocol still OPEN, see below).
+3. Once both payloads for a round arrive, the relay runs `GhostResolver.Resolve` once and returns the identical `ReplayTape` to both clients.
+4. Clients never compute their own authoritative outcome — same trust shape `NETWORKING_DESIGN.md` already required, just moved off a same-process/player-hosted split onto the relay.
+
+**Host-integrity model: server-authoritative relay** (the middle option in the table below) — chosen over a dedicated/neutral full game server (heavier ops than this needs) and over replay-audit/peer-trust (leaves the real cheating vector open, per R6, which this project already flagged as unacceptable for monetized ranked play).
+
+**Still OPEN, not resolved by locking the architecture:** exact wire protocol (WebSocket vs HTTPS polling vs other), relay hosting/deploy target (a cheap always-on host vs. serverless-per-match invocation — turn-based cadence may make serverless viable, unexplored), session/matchmaking queue mechanics, and everything else in the OPEN summary below. Phase 2's first slice only needs to prove the shape end-to-end (two real processes, real transport, relay-computed tape) — it does not need production hosting or the full matchmaking flow yet.
 
 ---
 
@@ -90,15 +96,15 @@ Under classical **Fusion Host Mode**, Player 1 *is* the host running the authori
 
 Input revalidation ("Host checks Speed × Stance × budget") is **necessary but not sufficient** when the Host itself may be adversarial.
 
-### Options (choice OPEN — describe, don't pick)
+### Options considered (choice LOCKED — C52, 2026-08-09)
 
 | Approach | Idea | Tradeoffs |
 |----------|------|-----------|
-| **Dedicated / neutral host** | Match runs on a server process neither player controls; both clients are pure playback | Strongest integrity; ongoing server cost; needs deploy/ops; best fit once population justifies it |
-| **Server-authoritative relay** | Lightweight relay re-runs (or spot-checks) ghost sim on submitted payloads and is the only party that emits `ReplayTape` | Cheaper than full dedicated game servers if sim stays pure-C# and fast; still needs trusted infra; natural fit for this project's already-pure `GhostResolver` |
-| **Replay-audit / anti-cheat layer** | Peers (or a deferred auditor) re-simulate from both payloads and flag tape divergence; bans / rollbacks on mismatch | Lower always-on cost; detection can be delayed; bad UX if a cheater already ruined the match; weaker for real-time ranked without a fast auditor |
+| **Dedicated / neutral host** | Match runs on a server process neither player controls; both clients are pure playback | Strongest integrity; ongoing server cost; needs deploy/ops; best fit once population justifies it — **rejected for now**, heavier ops than this stage needs |
+| **Server-authoritative relay** ✅ **CHOSEN** | Lightweight relay re-runs ghost sim on submitted payloads and is the only party that emits `ReplayTape` | Cheaper than full dedicated game servers since `GhostResolver` stays pure-C# and fast; still needs trusted infra (the relay itself), but that's small — natural fit for this project's already-pure resolve function |
+| **Replay-audit / anti-cheat layer** | Peers (or a deferred auditor) re-simulate from both payloads and flag tape divergence; bans / rollbacks on mismatch | Lower always-on cost; detection can be delayed; bad UX if a cheater already ruined the match — **rejected**, leaves R6's real cheating vector open, unacceptable once monetized ranked play is live |
 
-**Phase 2 cannot exit** without an explicit chosen answer. Shipping Player-1-as-Host into monetized ranked play without one of the above is a known ship-blocker (**R6**).
+Shipping Player-1-as-Host into monetized ranked play without one of the above was a known ship-blocker (**R6**) — resolved by locking server-authoritative relay.
 
 ---
 
@@ -138,20 +144,58 @@ Once there is a **cosmetic economy** and **ranked matchmaking** to protect, also
 
 Recorded here so a later networking worker doesn't rediscover them:
 
-- Install and pin the chosen transport package; remove "Fusion" wording from code comments if another stack wins.
-- Split today's same-process dual-`GhostInput` call site into real send/receive of `TimelinePayload` and broadcast of `ReplayTape`.
 - Role assign (Attacker / Defender) must survive session handshake, not only `GameBootstrap` local spawns.
 - Wire queue-timeout → [AI_FALLBACK_BOT.md](AI_FALLBACK_BOT.md) seat fill behind the **same** payload interface a human uses.
+
+### Phase 2, first slice — the exact seam and what it needs to become
+
+Traced the real integration point (2026-08-09), so a worker doesn't have to rediscover it:
+
+- **The call site:** `Assets/_Project/Boot/RoundPlayback.cs:112-140`, `ResolveAndArm()`. Today it loops every
+  *locally registered* pawn (`_pawns`, populated via `Register(...)`), builds one `GhostInput` per pawn from
+  `pawn.BuildPayload()` (a `Func<TimelinePayload>` closure reading that pawn's drafted `PawnProgram`), and
+  calls `_resolver.Resolve(_inputs)` **synchronously, in-process** — this is the "same-process dual-GhostInput
+  stand-in" the doc's Honest Inventory section already flags. Both Attacker's and Defender's (or the scripted
+  AI's) payloads exist in the same call because there's only ever one process today.
+- **Confirmed clean to relay:** `Assets/_Project/Sim/**` and `Assets/_Project/Net/GhostResolver.cs` (+ its
+  `TimelinePayload`/`ActionNode`/`ReplayTape`/`TapeEvent` neighbors) have **zero `UnityEngine` references** —
+  verified by grep, 2026-08-09. This is a plain, portable .NET library today, not just "no engine calls in the
+  hot path" — it can be referenced directly by a non-Unity relay process with no porting work and zero risk of
+  resolve-logic drift between what a client previews and what the relay computes authoritatively.
+- **The seam:** introduce an `IMatchResolver` abstraction (`Task<ReplayTape> ResolveAsync(IReadOnlyList<GhostInput> inputs)`
+  or equivalent) that `RoundPlayback` calls instead of `_resolver.Resolve(...)` directly. `ResolveAndArm()`
+  already needs to become async either way (a real network round-trip takes real time) — `ProgramHud`'s
+  `LockInRoutine()` (`Assets/_Project/UI/ProgramHud.cs`, Phase 1's addition) is already a coroutine, so
+  awaiting an async resolve there is a small, natural change, not a rearchitecture.
+- **Two implementations, both behind that one interface:**
+  1. `LocalMatchResolver` — wraps *today's exact behavior* (same-process `GhostResolver.Resolve`, wrapped to
+     return an already-completed `Task`). **Stays the default** for local hotseat, every existing PlayMode/
+     EditMode test, and the matchmaking-fallback bot (Phase 3) — none of that should need to know a relay
+     exists.
+  2. `RelayMatchResolver` — sends this client's own `GhostInput` to the relay over the network, awaits the
+     combined `ReplayTape` back. New code, new (small) relay-side project.
+- **First-slice scope (proves the architecture, not the product):** a minimal standalone relay process — a
+  plain console app referencing the same `Sim`/`Net` code — that accepts exactly two connections, pairs them
+  into one match, waits for both `GhostInput`s, runs `GhostResolver.Resolve` once, returns the identical
+  `ReplayTape` to both. No real matchmaking queue, no production hosting, no persistence — those are separate,
+  still-OPEN items (see the summary table below). Exit proof: **two real OS processes** (e.g. two Unity Editor
+  instances, or one Editor + one headless client) completing a round against each other through this relay
+  over a real socket, with a new integration test asserting both processes end up with byte-identical tapes.
+- **Exact wire protocol (WebSocket vs. plain TCP/HTTPS) is still OPEN** — pick whichever a worker can stand up
+  fastest with .NET's built-in libraries (`System.Net.WebSockets` / `HttpListener`) without adding a new
+  Unity package dependency; this is an implementation detail, not a design-review item, unlike the transport
+  *architecture* decision itself (already locked, **C52**).
 
 ---
 
 ## OPEN summary (Integrator tracking)
 
-| # | Decision |
-|---|----------|
-| 1 | Transport stack (Fusion 2 vs alternative) |
-| 2 | Host-integrity approach (dedicated / relay / replay-audit) |
-| 3 | Ranked vs casual queue split |
-| 4 | Reconnect / disconnect / forfeit / rejoin policy |
-| 5 | Matchmaking backend ongoing-cost estimate (**R16**) |
-| 6 | Anti-cheat audit retention & ban pipeline depth |
+| # | Decision | Status |
+|---|----------|--------|
+| 1 | ~~Transport stack (Fusion 2 vs alternative)~~ | **Locked C52** — custom resolve-relay backend |
+| 2 | ~~Host-integrity approach (dedicated / relay / replay-audit)~~ | **Locked C52** — server-authoritative relay |
+| 2b | Relay wire protocol (WebSocket vs HTTPS vs other) + hosting/deploy target | OPEN — not needed to prove Phase 2's first slice, needed before real ship |
+| 3 | Ranked vs casual queue split | OPEN |
+| 4 | Reconnect / disconnect / forfeit / rejoin policy | OPEN |
+| 5 | Matchmaking backend ongoing-cost estimate (**R16**) | OPEN |
+| 6 | Anti-cheat audit retention & ban pipeline depth | OPEN |
