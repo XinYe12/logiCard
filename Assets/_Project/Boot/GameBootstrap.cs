@@ -96,6 +96,7 @@ namespace LogiCard.Boot
             BuildPawns();
             ConfigureCamera();
             BuildLighting();
+            BuildWeatherPocket();
 
             var hud = new GameObject("ProgramHud").AddComponent<ProgramHud>();
             hud.transform.SetParent(transform, false);
@@ -317,8 +318,10 @@ namespace LogiCard.Boot
             // from that measurement (9.0 * 43/77, targeting ~75-80% board coverage) to 5.0f — still an
             // estimate pending another human look, not a final tuned value.
             cam.orthographicSize = 5.0f;
+            // Solid-color void stays — C53 weather is a contained pocket above the board, not a skybox
+            // horizon. Cooler near-black so the stormy pocket reads against the void (was warmer grey).
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.07f, 0.07f, 0.09f);
+            cam.backgroundColor = new Color(0.035f, 0.04f, 0.055f);
 
             var rotation = Quaternion.Euler(52f, 0f, 0f);
             cam.transform.rotation = rotation;
@@ -346,39 +349,52 @@ namespace LogiCard.Boot
                 return;
             }
 
-            // Desk-lamp key: warm, angled, casts the soft contact shadows a flat single light can't.
-            var keyGo = new GameObject("Desk Lamp Key");
+            // C53 wet-dusk key: cool overcast, softer shadows than the old warm desk-lamp. Direction
+            // stays high so the cloud pocket above the board casts readable contact on the chunk.
+            var keyGo = new GameObject("Storm Key");
             keyGo.transform.SetParent(transform, false);
             var key = keyGo.AddComponent<Light>();
             key.type = LightType.Directional;
-            key.color = new Color(1f, 0.92f, 0.78f);
-            key.intensity = 1.35f;
+            key.color = new Color(0.58f, 0.66f, 0.82f);
+            key.intensity = 0.95f;
             key.shadows = LightShadows.Soft;
-            key.shadowStrength = 0.75f;
-            key.transform.rotation = Quaternion.Euler(55f, -35f, 0f);
+            key.shadowStrength = 0.55f;
+            key.transform.rotation = Quaternion.Euler(50f, -25f, 0f);
 
-            // Cool, dim fill so the key's shadows read as shape, not pure black (ART_DIRECTION §6:
-            // "warm key, soft fill"). No shadows of its own — a second shadow direction would just
-            // muddy the read.
-            var fillGo = new GameObject("Soft Fill");
+            // Warm practical fill — stand-in for the reference's window/streetlamp bounce until
+            // real interior props land in checkpoint 2. Keeps silhouettes from going pure cool-grey.
+            var fillGo = new GameObject("Warm Practical Fill");
             fillGo.transform.SetParent(transform, false);
             var fill = fillGo.AddComponent<Light>();
             fill.type = LightType.Directional;
-            fill.color = new Color(0.72f, 0.80f, 0.95f);
-            fill.intensity = 0.35f;
+            fill.color = new Color(0.92f, 0.72f, 0.48f);
+            fill.intensity = 0.28f;
             fill.shadows = LightShadows.None;
-            fill.transform.rotation = Quaternion.Euler(35f, 150f, 0f);
+            fill.transform.rotation = Quaternion.Euler(28f, 145f, 0f);
 
             RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.16f, 0.14f, 0.13f);
+            RenderSettings.ambientLight = new Color(0.09f, 0.11f, 0.15f);
 
             BuildDioramaVolume();
         }
 
         /// <summary>
-        /// Global post-process grade for the "desk-lamp diorama" read: warm/saturated painted-
-        /// miniature color, a restrained bloom (glints, not glow-game lasers — ART_DIRECTION §3 bans
-        /// that), and a vignette that sells "lit stage in a dark room" around the void (§1 Environment).
+        /// Contained stormy sky + rain above the board (C53). Sits in the space above the existing
+        /// chunk; does not replace the dark void or change camera clear flags.
+        /// </summary>
+        private void BuildWeatherPocket()
+        {
+            var weatherGo = new GameObject("WeatherPocket");
+            weatherGo.transform.SetParent(transform, false);
+            weatherGo.AddComponent<BoardWeatherPocket>().Build(_board);
+        }
+
+        /// <summary>
+        /// Global post-process grade for the wet-dusk diorama (C53): cool color filter, higher
+        /// contrast, restrained bloom for wet glints (not glow-game lasers — ART_DIRECTION §3), and
+        /// a vignette that keeps the void reading as the stage surround. DoF kept for the miniature
+        /// tilt-shift read; aperture slightly stopped down vs. the old toy pass so checkpoint-1
+        /// gameplay readability stays available for the human look.
         /// </summary>
         private void BuildDioramaVolume()
         {
@@ -391,42 +407,41 @@ namespace LogiCard.Boot
 
             var color = profile.Add<ColorAdjustments>(true);
             color.postExposure.overrideState = true;
-            color.postExposure.value = 0.15f;
+            color.postExposure.value = -0.12f;
             color.contrast.overrideState = true;
-            color.contrast.value = 8f;
+            color.contrast.value = 16f;
             color.colorFilter.overrideState = true;
-            color.colorFilter.value = new Color(1f, 0.96f, 0.9f);
+            color.colorFilter.value = new Color(0.82f, 0.88f, 1f);
             color.saturation.overrideState = true;
-            color.saturation.value = 14f;
+            color.saturation.value = -4f;
 
             var bloom = profile.Add<Bloom>(true);
             bloom.threshold.overrideState = true;
-            bloom.threshold.value = 1.1f;
+            bloom.threshold.value = 0.95f;
             bloom.intensity.overrideState = true;
-            bloom.intensity.value = 0.25f;
+            bloom.intensity.value = 0.32f;
             bloom.scatter.overrideState = true;
-            bloom.scatter.value = 0.6f;
+            bloom.scatter.value = 0.55f;
 
             var vignette = profile.Add<Vignette>(true);
             vignette.color.overrideState = true;
-            vignette.color.value = new Color(0.02f, 0.02f, 0.02f);
+            vignette.color.value = new Color(0.01f, 0.015f, 0.03f);
             vignette.intensity.overrideState = true;
-            vignette.intensity.value = 0.32f;
+            vignette.intensity.value = 0.38f;
             vignette.smoothness.overrideState = true;
-            vignette.smoothness.value = 0.65f;
+            vignette.smoothness.value = 0.7f;
 
-            // Tilt-shift DoF: the moodboard's core visual identity ("blur near and far so pawns read
-            // ~2-inch miniatures") had no implementation at all until now — Bokeh mode blurs both sides
-            // of the focus plane (Gaussian mode only does background blur), which is what sells the
-            // toy-scale illusion. Focus distance matches ConfigureCamera's board-to-camera offset (14
-            // world units) so the board stays sharp and only its near/far edges soften.
+            // Tilt-shift DoF retained (C53 keeps the miniature framing). Focus distance matches
+            // ConfigureCamera's board-to-camera offset (14 world units). Aperture 3.5 (was 2.8)
+            // softens the miniature blur a notch so the first wet-dusk look can still answer the
+            // hero-shot-vs-readable-gameplay question without the board going mushy.
             var dof = profile.Add<DepthOfField>(true);
             dof.mode.overrideState = true;
             dof.mode.value = DepthOfFieldMode.Bokeh;
             dof.focusDistance.overrideState = true;
             dof.focusDistance.value = 14f;
             dof.aperture.overrideState = true;
-            dof.aperture.value = 2.8f;
+            dof.aperture.value = 3.5f;
             dof.focalLength.overrideState = true;
             dof.focalLength.value = 135f;
             dof.bladeCount.overrideState = true;
