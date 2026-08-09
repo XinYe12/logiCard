@@ -27,13 +27,41 @@ manually pumping the inner enumerator (`while (resolve.MoveNext()) yield return 
 restored full synchronicity for the local case with zero test changes needed. Documented the gotcha in
 `NETWORKING_DESIGN.md` so nobody rediscovers it. Verified: EditMode 108/108, PlayMode 32/32.
 
-**Phase 2 first slice (the actual `RelayMatchResolver` + relay process) kicked off as a worker slice** —
-`feat/phase2-relay-slice` worktree, brief at `PHASE2_RELAY_SLICE_AGENT_BRIEF.md`: a minimal standalone relay
-process (new `Relay/` tree, sibling to `Assets/`, referencing the actual shared `Sim`/`Net` source files, not
-a copy) pairing exactly two connections and running `GhostResolver` once as the authority, plus a new
-`RelayMatchResolver.cs` client-side implementation of the now-frozen `IMatchResolver` interface. Deliberately
-scoped to *proving the architecture* — two real processes, real transport, matching tapes — not production
-matchmaking/hosting/reconnect handling, all still OPEN. Frozen in `docs/contracts/CURRENT.md`.
+**Phase 2 first slice: shipped and merged (`47f4534`, `685f542` → merge commit on `master`, 2026-08-09).**
+Worker built a minimal standalone relay process (`Relay/LogiCard.Relay`, net8.0 console app, sibling to
+`Assets/`) pairing exactly two TCP connections and running `GhostResolver` once as authority, plus
+`RelayMatchResolver.cs` — the client-side `IMatchResolver` implementation, background-thread socket I/O polled
+from a coroutine so Unity's main thread never blocks. Wire protocol: raw TCP, 4-byte length-prefixed JSON
+envelopes (`RelayProtocol.cs`) — chosen over WebSocket to skip handshake complexity for a first slice.
+
+Reviewed in depth before merging, not just the report — this is the two highest-scored risks in the project
+(RISKS.md R1/R6), worth the extra scrutiny:
+- **`ActionNode.Modifier` is a Unity `ScriptableObject` (`CardData`)** — missed by my earlier "zero
+  `UnityEngine` references" check, which only covered `Sim/` and `GhostResolver.cs` itself, not `ActionNode.cs`.
+  Worker found it and added a non-Unity stub (`Relay/.../Shims/CardData.cs`) so the *real* `ActionNode.cs`
+  compiles unmodified in the relay; the wire protocol always sends `Modifier: null`. **Verified myself**: every
+  live call site that builds a real `ActionNode` (`PawnProgram.cs:336/415/453` — Move/Shoot/Door, the only
+  three verbs actually wired to player input) already always passes `null` — gear cards are genuinely unbuilt
+  (`C34`), so this is an honestly-flagged limitation, not a live bug.
+- **The relay combines both clients' inputs in connection order, not pawn identity** — checked whether this
+  could make match outcomes depend on who connects first. It can't: `GhostResolver.Resolve` (`GhostResolver.cs:99`,
+  `order.Sort()`) explicitly re-sorts by `PawnId` before doing anything else, independent of input-list order.
+- Boundary confirmed clean: only new files (`Relay/**`, `RelayMatchResolver.cs`, `RelayProtocol.cs`, tests) —
+  no `GameBootstrap.cs`/`RoundPlayback.cs`/`IMatchResolver.cs`/`LocalMatchResolver.cs`/`GhostResolver.cs`/`Sim/**`
+  touched.
+- Tests are real, not rubber-stamped: the standalone integration test (`Relay/LogiCard.Relay.Tests`) asserts
+  byte-level tape equality between two networked clients *and* against a local in-process resolve of the same
+  inputs — an actual determinism proof, not just "didn't crash."
+
+**Re-verified independently post-merge** (all three suites, not just trusting the worker's numbers): Unity
+EditMode 110/110, PlayMode 32/32, standalone xUnit (`dotnet test Relay/LogiCard.Relay.sln`) 2/2.
+
+**Deliberately left dormant:** `RelayMatchResolver` is landed but nothing in the live game picks it yet —
+`LocalMatchResolver` stays the default everywhere, `AppFlowController`'s Find Match button is still just a
+timer stub. Wiring the relay into that flow is a separate next step, not attempted here. `SCHEDULE.md`'s
+Phase 2 row marked "in progress," not done — wire hosting/deploy target, ranked/casual split, reconnect policy,
+matchmaking cost estimate, and anti-cheat audit depth are all still OPEN (`NETWORKING_DESIGN.md`'s OPEN
+summary).
 
 ## 2026-08-09 — Board merge confirmed green; worktree cleanup; Phase 1 shipped and merged
 

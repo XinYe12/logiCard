@@ -1,42 +1,38 @@
 # Cross-Dept Contracts — Current Wave
 
-**Wave:** Phase 2, first slice — `feat/phase2-relay-slice`, started 2026-08-09. Building `RelayMatchResolver`
-+ a minimal standalone resolve-relay process against the frozen `IMatchResolver` contract below.
+**Wave:** none active as of this reset (2026-08-09). Phase 2 first slice (resolve relay) shipped and merged —
+see git history (`47f4534`, `685f542`, merge commit) if you need the old signatures for reference.
 **Updated:** 2026-08-09 by Integrator.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
 
-### `IMatchResolver` (landed on `master`, `Assets/_Project/Net/IMatchResolver.cs`)
-
-```csharp
-public interface IMatchResolver
-{
-    IEnumerator ResolveAsync(IReadOnlyList<GhostInput> inputs, Action<ReplayTape> onResolved);
-}
-```
-
-- **Owner (interface + default impl):** Integrator — `IMatchResolver.cs` and `LocalMatchResolver.cs` are
-  landed and frozen; nobody edits them this wave.
-- **Owner (consumer):** Integrator — `RoundPlayback.ResolveAndArm()` already calls through this via
-  `Init`'s `IMatchResolver matchResolver = null` param (defaults to `LocalMatchResolver`). Not touched by
-  this wave's worker.
-- **Owner (new implementation):** Core (`feat/phase2-relay-slice`) — builds `RelayMatchResolver` against this
-  interface as-is, plus the standalone relay process it talks to.
-- **Design pointer:** `docs/NETWORKING_DESIGN.md`'s "Phase 2, first slice" section — includes a coroutine-
-  nesting gotcha worth reading before implementing `ResolveAsync`.
-- **Merge status:** not yet landed — worktree just spun up, worker not yet reported back.
+*(none yet — next wave gets its own frozen contract here once briefed. Candidates per `SCHEDULE.md`: wiring
+`RelayMatchResolver` into the live Find Match flow, a Phase 5 art-bar slice, or Phase 2's remaining OPEN items
+once a human is ready to spend time on them — see `NETWORKING_DESIGN.md`'s OPEN summary.)*
 
 ## Ownership reminders this wave
 
-- `Assets/_Project/Net/RelayMatchResolver.cs` (new) + `Relay/**` (new, repo-root): Core only, this wave.
-- `Assets/_Project/Boot/GameBootstrap.cs`, `RoundPlayback.cs`: stay Core/Integrator-owned — the seam is
-  already wired, the worker builds against it, doesn't edit it.
-- `Assets/_Project/Net/IMatchResolver.cs`, `LocalMatchResolver.cs`, `GhostResolver.cs`: frozen, landed.
-- Everything else (`Sim/` gameplay logic, `Board/*View.cs`, docs): untouched by this wave.
+*(populate once a wave starts.)*
 
 ## Closed contracts (reference)
+
+### `IMatchResolver` + `RelayMatchResolver` (Phase 2 first slice, closed 2026-08-09)
+
+- `Assets/_Project/Net/IMatchResolver.cs` / `LocalMatchResolver.cs`: landed (Integrator), frozen, default
+  everywhere. `RoundPlayback.ResolveAndArm()` calls through it via `Init`'s `matchResolver` param.
+- `Assets/_Project/Net/RelayMatchResolver.cs` + `Relay/LogiCard.Relay/**` (new net8.0 console project, repo
+  root, sibling to `Assets/`): landed (worker, `feat/phase2-relay-slice`). Networked `IMatchResolver` over raw
+  TCP (4-byte length-prefixed JSON envelopes, `RelayProtocol.cs`), talking to a minimal standalone relay that
+  pairs exactly two connections and runs the real shared `GhostResolver` once as authority. Reviewed in depth
+  before merge — see `DRAFT_HANDOFF.md` for the two specific correctness checks done (CardData/Modifier
+  dead-path verification, connection-order independence via `GhostResolver`'s internal `PawnId` sort).
+- **Dormant, not wired live:** `LocalMatchResolver` stays the default everywhere; nothing in `GameBootstrap`/
+  `AppFlowController`'s Find Match flow picks `RelayMatchResolver` yet. That's a separate, still-open next
+  step, not part of this contract.
+- Re-verified independently post-merge on `master`: EditMode 110/110, PlayMode 32/32, standalone xUnit 2/2
+  (`dotnet test Relay/LogiCard.Relay.sln`).
 
 ### `ProgramHud`'s HUD-dock layout constants ↔ `GameBootstrap.ConfigureCamera()`'s camera viewport rect (Phase 1, closed 2026-08-09)
 
