@@ -309,11 +309,14 @@ namespace LogiCard.Boot
             // docs/contracts/CURRENT.md's frozen note on this coupling.
             cam.rect = new Rect(0f, 0f, 1f - ProgramHud.HudDockWidth, 1f - ProgramHud.TopStripHeight);
             cam.orthographic = true;
-            // Was 3.6f for the old 4x4 board; scaled proportionally to the new [0,8]x[0,10] board's
-            // largest extent (4 -> 10 units, C45). First-pass estimate, not derived from the tilt/rect
-            // math — needs an Editor eyeball check to confirm the whole Yard/Hall/Vault footprint frames
-            // without the HUD's thumb-zone/top-strip cropping it; tune ±20% if not.
-            cam.orthographicSize = 9.0f;
+            // Was 9.0f, a blind proportional-scale estimate never actually verified in the Editor (see
+            // DRAFT_HANDOFF.md's long-standing "needs an eyeball check" flag on this line). A human
+            // screenshot (2026-08-09) showed it badly over-zoomed — the board occupied only ~43% of the
+            // board region's height, with the dark void apron (BoardView.PlaceVoidDressing) dominating
+            // the frame above and below as what read like solid black bars, not a margin. Recalibrated
+            // from that measurement (9.0 * 43/77, targeting ~75-80% board coverage) to 5.0f — still an
+            // estimate pending another human look, not a final tuned value.
+            cam.orthographicSize = 5.0f;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.07f, 0.07f, 0.09f);
 

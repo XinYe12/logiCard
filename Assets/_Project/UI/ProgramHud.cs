@@ -1324,6 +1324,11 @@ namespace LogiCard.UI
 
             Text text = CreateText(rt, "Label", label, size, TextAnchor.MiddleCenter, fg);
             Stretch(text.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            // Button cells in the landscape dock are narrow (up to 5 per row). CreateText defaults to
+            // Overflow (never wraps/clips), which bleeds a too-long label sideways into the next button
+            // instead of degrading gracefully — wrap onto a second line here instead.
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
 
             var button = go.GetComponent<Button>();
             button.onClick.AddListener(onClick);
