@@ -1,5 +1,40 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-09 (continued) — Phase 2 transport decision locked (C52); first slice in flight
+
+**`C52` (`PRODUCT_MEMORY.md`): custom lightweight resolve-relay backend, server-authoritative host-integrity.**
+Presented four bundled options (Fusion 2 server-hosted / NGO+Relay / custom resolve-relay / Steam P2P+
+replay-audit) to the user with a recommendation and reasoning grounded in this project's actual shape — the
+Program→Lock→Resolve→Playback loop is episodic, not continuous real-time state, so Fusion/NGO/Mirror's
+tick-sync machinery is the wrong tool for this game, and `GhostResolver` is already pure engine-free C#
+(verified zero `UnityEngine` references anywhere in `Sim/` or `Net/GhostResolver.cs`), making a small trusted
+relay cheap to run. User confirmed the recommendation. `NETWORKING_DESIGN.md` and `RISKS.md` (R1/R6) updated
+to reflect the lock; `NETWORKING_DESIGN.md`'s OPEN summary now shows items 1-2 (transport, host-integrity)
+resolved, items 2b/3-6 (wire protocol, hosting target, ranked/casual, reconnect policy, cost estimate,
+anti-cheat depth) still open and out of scope for the first slice.
+
+**Traced the exact seam and landed it myself** (Boot/-owned, high-risk — RISKS.md's R1/R6 are the two
+highest-scored risks in the project, didn't want to hand this in blind to a cold-start worker):
+`RoundPlayback.ResolveAndArm()` (`Assets/_Project/Boot/RoundPlayback.cs:112-140`) built `GhostInput` from every
+locally-registered pawn and resolved synchronously in-process — confirmed this is exactly the "same-process
+dual-GhostInput stand-in" the doc already flagged. Introduced `IMatchResolver` (coroutine-shaped, matching this
+project's existing coroutine idiom rather than `Task`-based async — nothing in the codebase used `Task`
+anywhere, checked first) and `LocalMatchResolver` (wraps today's exact behavior, stays the default via `Init`'s
+new optional `matchResolver` param). Hit and fixed a real gotcha along the way: a bare `yield return` on a
+nested `IEnumerator` does **not** drain synchronously in Unity even when the inner enumerator never yields —
+first attempt broke 8 `RoundPlaybackPlayModeTests` cases expecting synchronous `Tape` population; fixed by
+manually pumping the inner enumerator (`while (resolve.MoveNext()) yield return resolve.Current;`), which
+restored full synchronicity for the local case with zero test changes needed. Documented the gotcha in
+`NETWORKING_DESIGN.md` so nobody rediscovers it. Verified: EditMode 108/108, PlayMode 32/32.
+
+**Phase 2 first slice (the actual `RelayMatchResolver` + relay process) kicked off as a worker slice** —
+`feat/phase2-relay-slice` worktree, brief at `PHASE2_RELAY_SLICE_AGENT_BRIEF.md`: a minimal standalone relay
+process (new `Relay/` tree, sibling to `Assets/`, referencing the actual shared `Sim`/`Net` source files, not
+a copy) pairing exactly two connections and running `GhostResolver` once as the authority, plus a new
+`RelayMatchResolver.cs` client-side implementation of the now-frozen `IMatchResolver` interface. Deliberately
+scoped to *proving the architecture* — two real processes, real transport, matching tapes — not production
+matchmaking/hosting/reconnect handling, all still OPEN. Frozen in `docs/contracts/CURRENT.md`.
+
 ## 2026-08-09 — Board merge confirmed green; worktree cleanup; Phase 1 shipped and merged
 
 **Board merge (`d81ffeb`) is now fully verified.** Ran EditMode + PlayMode batchmode directly on `master`

@@ -1,20 +1,40 @@
 # Cross-Dept Contracts — Current Wave
 
-**Wave:** none active as of this reset (2026-08-09). Phase 1 (Landscape Desktop UI) shipped and merged — see
-git history (`771db57`, merge commit, `GameBootstrap.cs` wiring commit) if you need the old signature for
-reference.
+**Wave:** Phase 2, first slice — `feat/phase2-relay-slice`, started 2026-08-09. Building `RelayMatchResolver`
++ a minimal standalone resolve-relay process against the frozen `IMatchResolver` contract below.
 **Updated:** 2026-08-09 by Integrator.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
 
-*(none yet — next wave, likely a Phase 2 networking foundation once the human locks transport +
-host-integrity, or a Phase 5 art-bar slice, gets its own frozen contract here once briefed.)*
+### `IMatchResolver` (landed on `master`, `Assets/_Project/Net/IMatchResolver.cs`)
+
+```csharp
+public interface IMatchResolver
+{
+    IEnumerator ResolveAsync(IReadOnlyList<GhostInput> inputs, Action<ReplayTape> onResolved);
+}
+```
+
+- **Owner (interface + default impl):** Integrator — `IMatchResolver.cs` and `LocalMatchResolver.cs` are
+  landed and frozen; nobody edits them this wave.
+- **Owner (consumer):** Integrator — `RoundPlayback.ResolveAndArm()` already calls through this via
+  `Init`'s `IMatchResolver matchResolver = null` param (defaults to `LocalMatchResolver`). Not touched by
+  this wave's worker.
+- **Owner (new implementation):** Core (`feat/phase2-relay-slice`) — builds `RelayMatchResolver` against this
+  interface as-is, plus the standalone relay process it talks to.
+- **Design pointer:** `docs/NETWORKING_DESIGN.md`'s "Phase 2, first slice" section — includes a coroutine-
+  nesting gotcha worth reading before implementing `ResolveAsync`.
+- **Merge status:** not yet landed — worktree just spun up, worker not yet reported back.
 
 ## Ownership reminders this wave
 
-*(populate once a wave starts.)*
+- `Assets/_Project/Net/RelayMatchResolver.cs` (new) + `Relay/**` (new, repo-root): Core only, this wave.
+- `Assets/_Project/Boot/GameBootstrap.cs`, `RoundPlayback.cs`: stay Core/Integrator-owned — the seam is
+  already wired, the worker builds against it, doesn't edit it.
+- `Assets/_Project/Net/IMatchResolver.cs`, `LocalMatchResolver.cs`, `GhostResolver.cs`: frozen, landed.
+- Everything else (`Sim/` gameplay logic, `Board/*View.cs`, docs): untouched by this wave.
 
 ## Closed contracts (reference)
 
