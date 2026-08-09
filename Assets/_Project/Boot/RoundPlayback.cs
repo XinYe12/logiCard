@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using LogiCard.Audio;
 using LogiCard.Board;
@@ -39,7 +40,7 @@ namespace LogiCard.Boot
         private TimeResourceClockDriver _clock;
         private RoundPhaseController _phase;
         private IFoleyPlayer _foley;
-        private GhostResolver _resolver;
+        private IMatchResolver _matchResolver;
         private ReplayTape _tape;
         private int _eventCursor;
         private float _lastAppliedSeconds;
@@ -53,13 +54,23 @@ namespace LogiCard.Boot
 
         public bool AnyoneDead => _anyoneDead;
 
-        public void Init(BoardView board, TimeResourceClockDriver clock, RoundPhaseController phase, IFoleyPlayer foley = null)
+        /// <summary>
+        /// <paramref name="matchResolver"/> defaults to a same-process <see cref="LocalMatchResolver"/>
+        /// (today's behavior, unchanged) when null. A networked <see cref="IMatchResolver"/> (C52's
+        /// resolve-relay) can be injected here once one exists, with no other change to this class.
+        /// </summary>
+        public void Init(
+            BoardView board,
+            TimeResourceClockDriver clock,
+            RoundPhaseController phase,
+            IFoleyPlayer foley = null,
+            IMatchResolver matchResolver = null)
         {
             _board = board;
             _clock = clock;
             _phase = phase;
             _foley = foley;
-            _resolver = new GhostResolver(board.Model);
+            _matchResolver = matchResolver ?? new LocalMatchResolver(new GhostResolver(board.Model));
 
             _clock.TimeChanged += ApplyTime;
             _phase.PhaseChanged += OnPhaseChanged;
@@ -109,8 +120,18 @@ namespace LogiCard.Boot
             return 0;
         }
 
-        /// <summary>Lock In: freeze every program into one tape and arm playback from second zero.</summary>
+        /// <summary>
+        /// Lock In: freeze every program into one tape and arm playback from second zero. Runs the
+        /// resolve through <see cref="_matchResolver"/> via <see cref="ResolveAndArmRoutine"/> — with
+        /// the default <see cref="LocalMatchResolver"/> this completes synchronously within this same
+        /// call (it never yields before resolving), so callers observe no behavior change.
+        /// </summary>
         public void ResolveAndArm()
+        {
+            StartCoroutine(ResolveAndArmRoutine());
+        }
+
+        private IEnumerator ResolveAndArmRoutine()
         {
             _inputs.Clear();
             for (int i = 0; i < _pawns.Count; i++)
@@ -119,7 +140,20 @@ namespace LogiCard.Boot
                 _inputs.Add(new GhostInput(pawn.PawnId, pawn.CurrentPosition, pawn.BuildPayload(), pawn.Wounds));
             }
 
-            _tape = _resolver.Resolve(_inputs);
+            // A bare `yield return someEnumerator` does NOT drain it synchronously in Unity — it defers
+            // to the next scheduler pump even when the inner enumerator never itself yields. Pumping it
+            // manually here preserves LocalMatchResolver's "completes within this call" guarantee (its
+            // MoveNext() returns false on the very first call, so this loop body never runs, and this
+            // whole routine finishes inside the single StartCoroutine() call above); a resolver that
+            // does yield a real wait still propagates it correctly to the outer coroutine.
+            ReplayTape resolved = null;
+            IEnumerator resolve = _matchResolver.ResolveAsync(_inputs, tape => resolved = tape);
+            while (resolve.MoveNext())
+            {
+                yield return resolve.Current;
+            }
+
+            _tape = resolved;
             _eventCursor = 0;
             _lastAppliedSeconds = 0f;
             _anyoneDead = _tape.AnyoneDead();
