@@ -11,8 +11,10 @@
 
 # Asset meta noise / IDE
 *.csproj
+!Relay/**/*.csproj
 *.unityproj
 *.sln
+!Relay/**/*.sln
 *.suo
 *.tmp
 *.user
@@ -41,6 +43,8 @@ Desktop.ini
 *.exe
 *.dll
 !Assets/**/*.dll
+Relay/**/bin/
+Relay/**/obj/
 
 # Addressables / Burst / local caches
 ServerData/
