@@ -51,8 +51,13 @@ namespace LogiCard.UI
         private string _selectedArchetype = "Scout";
         private bool _inMatch;
 
-        /// <summary>Raised when Lobby Local Play / Find Match completes and the match HUD should show.</summary>
-        public event Action EnteredMatch;
+        /// <summary>
+        /// Raised when Lobby Local Play / Find Match completes and the match HUD should show. The
+        /// <c>bool</c> is <c>true</c> for Find Match (networked, C52's resolve relay) and <c>false</c>
+        /// for Local Play (same-process, unchanged) — <c>GameBootstrap</c> uses it to pick
+        /// <c>RoundPlayback</c>'s <c>IMatchResolver</c> for this match.
+        /// </summary>
+        public event Action<bool> EnteredMatch;
 
         /// <summary>Raised from Match End → Rematch (back to Lobby).</summary>
         public event Action RematchRequested;
@@ -91,7 +96,7 @@ namespace LogiCard.UI
             StopAllCoroutines();
             _inMatch = true;
             Show(Screen.None);
-            EnteredMatch?.Invoke();
+            EnteredMatch?.Invoke(false);
         }
 
         public void ShowBoot()
@@ -223,10 +228,12 @@ namespace LogiCard.UI
                 () => StartCoroutine(FindMatchStub()));
             Stretch(find.GetComponent<RectTransform>(), new Vector2(0.18f, 0.28f), new Vector2(0.48f, 0.42f));
 
-            Button local = CreateButton(rt, "LocalPlayButton", "LOCAL PLAY", PanelMid, Ink, 32, EnterMatch);
+            Button local = CreateButton(rt, "LocalPlayButton", "LOCAL PLAY", PanelMid, Ink, 32, () => EnterMatch(viaRelay: false));
             Stretch(local.GetComponent<RectTransform>(), new Vector2(0.52f, 0.28f), new Vector2(0.82f, 0.42f));
 
-            Text note = CreateText(rt, "Note", "Find Match is a stub (Phase 2 networking). Local stays for testing.", 20,
+            Text note = CreateText(rt, "Note",
+                "Find Match connects to a resolve relay on 127.0.0.1:7777 — start one manually for now " +
+                "(real matchmaking is still open, C52). Local stays same-process for testing.", 20,
                 TextAnchor.MiddleCenter, Ink);
             Stretch(note.rectTransform, new Vector2(0.1f, 0.12f), new Vector2(0.9f, 0.24f));
             return screen;
@@ -281,6 +288,12 @@ namespace LogiCard.UI
             return screen;
         }
 
+        /// <summary>
+        /// Queue/session handshake is still a stub (real matchmaking is OPEN, C52) — this only mimics
+        /// the wait for pacing. The actual network connection happens later, at this match's first Lock
+        /// In (<see cref="RoundPlayback.ResolveAndArm"/> via the relay <c>IMatchResolver</c> GameBootstrap
+        /// wires in below), not here.
+        /// </summary>
         private IEnumerator FindMatchStub()
         {
             if (_lobbyStatus != null)
@@ -291,17 +304,17 @@ namespace LogiCard.UI
             yield return new WaitForSeconds(FindMatchStubSeconds);
             if (_lobbyStatus != null)
             {
-                _lobbyStatus.text = "Matched (stub). Entering match.";
+                _lobbyStatus.text = "Matched. Entering match.";
             }
 
-            EnterMatch();
+            EnterMatch(viaRelay: true);
         }
 
-        private void EnterMatch()
+        private void EnterMatch(bool viaRelay)
         {
             _inMatch = true;
             Show(Screen.None);
-            EnteredMatch?.Invoke();
+            EnteredMatch?.Invoke(viaRelay);
         }
 
         private void SelectArchetype(string archetype)

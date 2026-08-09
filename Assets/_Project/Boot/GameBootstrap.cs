@@ -106,6 +106,15 @@ namespace LogiCard.Boot
             hud.NextRoundRequested += OnNextRoundRequested;
             _playback.OutcomeReported += hud.ShowOutcome;
 
+            // Find Match -> C52's resolve relay; Local Play -> same-process (unchanged). Board layout
+            // must match Relay/LogiCard.Relay/DemoArenaBoard.CreateDemo() for a two-Unity smoke test to
+            // resolve identically. Host/port not yet configurable from the Lobby (real matchmaking is
+            // still OPEN, NETWORKING_DESIGN.md) - both instances default to the same localhost port.
+            hud.AppFlow.EnteredMatch += viaRelay => _playback.SetMatchResolver(
+                viaRelay
+                    ? (IMatchResolver)new RelayMatchResolver()
+                    : new LocalMatchResolver(new GhostResolver(_board.Model)));
+
             Debug.Log($"[logiCard] Slice up: continuous arena [{_board.Model.MinX},{_board.Model.MaxX}]×" +
                       $"[{_board.Model.MinY},{_board.Model.MaxY}], match pool {matchPoolSeconds:0}s TR, " +
                       $"min round {minRoundSeconds:0}s.");

@@ -196,7 +196,7 @@ namespace LogiCard.UI
             _appFlow?.BypassToMatch();
         }
 
-        private void OnAppFlowEnteredMatch()
+        private void OnAppFlowEnteredMatch(bool viaRelay)
         {
             SetMatchChromeVisible(true);
         }

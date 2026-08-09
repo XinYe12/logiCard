@@ -121,6 +121,17 @@ namespace LogiCard.Boot
         }
 
         /// <summary>
+        /// Swaps the resolver used by the next <see cref="ResolveAndArm"/> — e.g. <c>GameBootstrap</c>
+        /// wires this to <see cref="AppFlowController.EnteredMatch"/> so Local Play keeps
+        /// <see cref="LocalMatchResolver"/> and Find Match switches to a networked resolver. Safe to
+        /// call any time before the next Lock In; never mid-resolve.
+        /// </summary>
+        public void SetMatchResolver(IMatchResolver resolver)
+        {
+            _matchResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        }
+
+        /// <summary>
         /// Lock In: freeze every program into one tape and arm playback from second zero. Runs the
         /// resolve through <see cref="_matchResolver"/> via <see cref="ResolveAndArmRoutine"/> — with
         /// the default <see cref="LocalMatchResolver"/> this completes synchronously within this same
@@ -146,10 +157,37 @@ namespace LogiCard.Boot
             // MoveNext() returns false on the very first call, so this loop body never runs, and this
             // whole routine finishes inside the single StartCoroutine() call above); a resolver that
             // does yield a real wait still propagates it correctly to the outer coroutine.
+            //
+            // MoveNext() is called inside its own try/catch (not wrapping the yield return — C# forbids
+            // yield inside a try with a catch clause) so a networked resolver's connection failure
+            // reports through OutcomeReported instead of an unhandled exception freezing the round.
             ReplayTape resolved = null;
             IEnumerator resolve = _matchResolver.ResolveAsync(_inputs, tape => resolved = tape);
-            while (resolve.MoveNext())
+            while (true)
             {
+                bool moved = false;
+                Exception failure = null;
+                try
+                {
+                    moved = resolve.MoveNext();
+                }
+                catch (Exception ex)
+                {
+                    failure = ex;
+                }
+
+                if (failure != null)
+                {
+                    Debug.LogError($"[logiCard] Match resolve failed: {failure}");
+                    OutcomeReported?.Invoke($"Connection failed — {failure.Message}");
+                    yield break;
+                }
+
+                if (!moved)
+                {
+                    break;
+                }
+
                 yield return resolve.Current;
             }
 
