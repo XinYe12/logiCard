@@ -1,20 +1,32 @@
 # Cross-Dept Contracts — Current Wave
 
-**Wave:** none active as of this reset (2026-08-09). Phase 2 first slice (resolve relay) shipped and merged —
-see git history (`47f4534`, `685f542`, merge commit) if you need the old signatures for reference.
+**Wave:** Look-and-feel + UI, started 2026-08-09. Core-gameplay/networking work explicitly paused by the
+human until this wave lands — see `SCHEDULE.md`'s Cadence section. Two parallel worktrees:
+`feat/env-lookfeel-overhaul` (environment/art, C53) and `feat/ui-component-system` (UI redesign).
 **Updated:** 2026-08-09 by Integrator.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
 
-*(none yet — next wave gets its own frozen contract here once briefed. Candidates per `SCHEDULE.md`: wiring
-`RelayMatchResolver` into the live Find Match flow, a Phase 5 art-bar slice, or Phase 2's remaining OPEN items
-once a human is ready to spend time on them — see `NETWORKING_DESIGN.md`'s OPEN summary.)*
+### Camera viewport-rect ↔ `ProgramHud`'s dock-width constants (carried over from Phase 1, still live)
+
+- **Owner (definition):** UI worker (`feat/ui-component-system`) — if the layout pass changes
+  `HudDockWidth`/`TopStripHeight` or the dock's shape/edge, that must be reported back explicitly.
+- **Owner (consumer, wiring):** Integrator — `GameBootstrap.cs`'s `cam.rect = new Rect(0f, 0f, 1f -
+  ProgramHud.HudDockWidth, 1f - ProgramHud.TopStripHeight)` gets rewired at merge time if the shape changes.
+- **Also touches:** the env worker owns `orthographicSize`/`BuildLighting`/`BuildDioramaVolume` in the same
+  file's `ConfigureCamera` — a different part of the same method, no line-level overlap, but both workers'
+  changes land in `GameBootstrap.cs` only via the Integrator, never directly.
+- **Merge status:** not yet landed — both worktrees just spun up.
 
 ## Ownership reminders this wave
 
-*(populate once a wave starts.)*
+- `Assets/_Project/Board/**`, `PrimitiveMaterialFactory.cs`, `Assets/_Project/Art/**`: environment worker only.
+- `Assets/_Project/UI/**`: UI worker only.
+- `Assets/_Project/Boot/GameBootstrap.cs`: Integrator-only edit target; both workers may need something
+  wired into it (camera rect, lighting tuning) but neither edits it directly.
+- `Sim/`, `Net/`, `Timeline/`, `GhostResolver`: untouched by this wave — core gameplay is paused.
 
 ## Closed contracts (reference)
 

@@ -1,5 +1,52 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-09 (continued) — Core gameplay paused; look-and-feel + UI wave kicked off
+
+**Human call, read this before touching `Sim/`/`Net/`/`Timeline/`/anything gameplay:** a live playtest today
+found real problems (button labels bleeding into each other — fixed; a badly mis-tuned camera showing large
+black voids — recalibrated, still an estimate; general lighting/art quality not close to the bar this product
+needs). The user's decision: **stop advancing core gameplay/networking (Phase 2 and beyond) and put full
+focus on look-and-feel and UI** until both are in a good place. Phase 2's already-landed work stays merged,
+just not extended further right now.
+
+**Art direction broadened (`PRODUCT_MEMORY.md` C53).** The user supplied a locked visual reference
+(`image.png`, repo root + `screenshots/image.png` — now kept in sync, they'd drifted apart) — a richly
+detailed floating city-block diorama chunk (real architecture, cars, pedestrians, wet streets) on a
+natural terrain-edge base, in a dark void, with a contained stormy sky + clouds + rain hovering directly above
+the chunk (not an infinite horizon). This supersedes the "Digital Claymation / Link's Awakening toy-chibi"
+framing (`VISION.md`, `ART_DIRECTION.md`, both updated with supersession notes per this project's established
+convention — history kept, not deleted). Usefully, the board's existing structural shape (bounded chunk,
+physical edge, dark void, solid-color camera clear) already matches the reference — this is a fidelity/detail/
+weather upgrade, not a rebuild. Explicitly left OPEN: whether the *live in-match* camera should match the
+reference's hero-shot fidelity exactly, or a readability-preserving version of it (`ART_DIRECTION.md` already
+flags a standing tension between richness and tactical readability) — first checkpoint of the env worktree's
+work resolves this.
+
+**Two worktrees spun, both worker slots in use:**
+- `feat/env-lookfeel-overhaul` (`logiCard-env-lookfeel`): sky/weather + lighting mood pass first (**hard
+  checkpoint — waits for a human screenshot before continuing**, this project has already had one blind art
+  attempt rejected on sight, `377029f`), then environment detail (likely needs sourced/imported CC0 assets —
+  hand-rolled primitives can't hit this fidelity), door models, and a Scout/Juggernaut character rework (the
+  current chibi Quaternius import was picked for the now-superseded toy look, likely needs replacing not
+  polishing). Brief: `ENV_LOOKFEEL_AGENT_BRIEF.md` at the worktree root.
+- `feat/ui-component-system` (`logiCard-ui-components`): extracts a shared UI factory (found real debt —
+  `ProgramHud.cs`/`AppFlowController.cs` each duplicate their own `CreateButton`/`CreateText`/`CreatePanel`
+  and have already started silently diverging), a real layout/readability pass (today's wrap/camera fixes were
+  first aid, not a redesign), a new dialog/modal component, a generalized selection component, and the missing
+  `UI_FLOW.md`-spec'd Adrenaline button. Brief: `UI_COMPONENT_SYSTEM_AGENT_BRIEF.md` at the worktree root.
+
+One live coupling carried over from Phase 1: `GameBootstrap.ConfigureCamera()`'s camera viewport rect depends
+on `ProgramHud`'s dock-width constants (UI worker's territory) while its `orthographicSize`/lighting live in
+the same method (env worker's territory) — neither worker edits `GameBootstrap.cs` directly, Integrator wires
+both at merge time. Frozen in `docs/contracts/CURRENT.md`.
+
+`SCHEDULE.md`'s Phase 2 row marked **paused** (not abandoned); Phase 5 marked **active, top priority**. The UI
+effort doesn't get its own phase number — tracked as a wave like any other, per the Cadence section.
+
+Also fixed this session, uncommitted-verification caveat: the camera-zoom and button-wrap fixes from the live
+playtest landed on `master` but **batchmode hasn't re-verified them yet** — the Editor was open on this exact
+path during the live playtest, so batchmode would have collided. Verify once the Editor is free.
+
 ## 2026-08-09 (continued) — RelayMatchResolver wired into Find Match
 
 `RelayMatchResolver` is no longer dormant — `Assets/_Project/Boot/GameBootstrap.cs` now subscribes to
