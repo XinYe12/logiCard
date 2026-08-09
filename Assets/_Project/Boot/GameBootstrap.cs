@@ -295,7 +295,10 @@ namespace LogiCard.Boot
                 cam = camGo.GetComponent<Camera>();
             }
 
-            cam.rect = new Rect(0f, ProgramHud.ThumbZoneHeight, 1f, 1f - ProgramHud.ThumbZoneHeight - ProgramHud.TopStripHeight);
+            // Landscape desktop (C48): board region is full height minus the top strip, full width
+            // minus the right-edge HUD dock — see ProgramHud's HudDock*/TopStripHeight constants and
+            // docs/contracts/CURRENT.md's frozen note on this coupling.
+            cam.rect = new Rect(0f, 0f, 1f - ProgramHud.HudDockWidth, 1f - ProgramHud.TopStripHeight);
             cam.orthographic = true;
             // Was 3.6f for the old 4x4 board; scaled proportionally to the new [0,8]x[0,10] board's
             // largest extent (4 -> 10 units, C45). First-pass estimate, not derived from the tilt/rect

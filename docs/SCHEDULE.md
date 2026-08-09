@@ -28,15 +28,15 @@ Must have to ship:
 
 ## Phase table
 
-| Phase | Theme | Exit criteria (what must be true to start the next phase) |
-|-------|-------|-------------------------------------------------------------|
-| **Phase 0** | Pivot Lock (docs) | This docs rewrite fully landed: `PRODUCT_MEMORY.md` C46–C51 confirmed, `SCOPE`/`RISKS`/`GDD`/`CORE_LOOP` updated, `MONETIZATION`/`NETWORKING_DESIGN`/`AI_FALLBACK_BOT` exist (even with OPEN numerics). No code work starts before this gate — same "docs before code" discipline as the original pre-implementation gate. |
-| **Phase 1** | Landscape Desktop UI | `UI_FLOW.md`'s new layout implemented; playable mouse+keyboard only; PlayMode tests updated/green against landscape geometry. |
-| **Phase 2** | Real Networking Foundation | `NETWORKING_DESIGN.md`'s transport/topology decided and its first slice built — a real, two-process, real-transport tape-synced match replacing the same-process `GhostResolver` stand-in; host-integrity question has an explicit answer. |
-| **Phase 3** | Matchmaking Fallback Bot | `AI_FALLBACK_BOT.md`'s bot substitutes in behind the same interfaces Phase 2 built, invisibly, meeting its defined difficulty/behavior bounds. |
-| **Phase 4** | Monetization Foundation | `MONETIZATION.md`'s economy model implemented at skeleton depth — at least one earned and one purchasable cosmetic wired through Steam's IAP sandbox; no-pay-to-win guardrails enforced in code, not just docs. |
-| **Phase 5** | Commercial Art Bar | `ART_DIRECTION.md`'s raised bar met for the shipped roster — placeholder Quaternius meshes replaced/substantially reworked; a cold observer calls it "a real game," not "a prototype." |
-| **Phase 6** | Steam Certification & Ship | Steamworks integration complete, store page live, cert/review passed, `SHIP_README_DRAFT.md`/`CAPTURE_CHECKLIST.md` produced for the real product. |
+| Phase | Theme | Exit criteria (what must be true to start the next phase) | Status |
+|-------|-------|-------------------------------------------------------------|--------|
+| **Phase 0** | Pivot Lock (docs) | This docs rewrite fully landed: `PRODUCT_MEMORY.md` C46–C51 confirmed, `SCOPE`/`RISKS`/`GDD`/`CORE_LOOP` updated, `MONETIZATION`/`NETWORKING_DESIGN`/`AI_FALLBACK_BOT` exist (even with OPEN numerics). No code work starts before this gate — same "docs before code" discipline as the original pre-implementation gate. | **Done** (2026-08-08) |
+| **Phase 1** | Landscape Desktop UI | `UI_FLOW.md`'s new layout implemented; playable mouse+keyboard only; PlayMode tests updated/green against landscape geometry. | **Mechanical bar met** (2026-08-09, `feat/phase1-landscape-ui` merged) — `ProgramHud`/`AppFlowController` landscape rework + click-through Boot→Match End shell, EditMode 108/108 + PlayMode 32/32 on `master` post-merge. Still wants a human Editor look (dock overlap, readability at real window size) before calling the *visual* bar done — same gate this project has used for every prior presentation change. |
+| **Phase 2** | Real Networking Foundation | `NETWORKING_DESIGN.md`'s transport/topology decided and its first slice built — a real, two-process, real-transport tape-synced match replacing the same-process `GhostResolver` stand-in; host-integrity question has an explicit answer. | Not started — blocked on a human transport + host-integrity decision, not picked unilaterally. |
+| **Phase 3** | Matchmaking Fallback Bot | `AI_FALLBACK_BOT.md`'s bot substitutes in behind the same interfaces Phase 2 built, invisibly, meeting its defined difficulty/behavior bounds. | Not started (depends on Phase 2). |
+| **Phase 4** | Monetization Foundation | `MONETIZATION.md`'s economy model implemented at skeleton depth — at least one earned and one purchasable cosmetic wired through Steam's IAP sandbox; no-pay-to-win guardrails enforced in code, not just docs. | Not started. |
+| **Phase 5** | Commercial Art Bar | `ART_DIRECTION.md`'s raised bar met for the shipped roster — placeholder Quaternius meshes replaced/substantially reworked; a cold observer calls it "a real game," not "a prototype." | Not started as its own slice — Scout/Juggernaut import already in flight (see `DRAFT_HANDOFF.md`), pending its own human Editor look. |
+| **Phase 6** | Steam Certification & Ship | Steamworks integration complete, store page live, cert/review passed, `SHIP_README_DRAFT.md`/`CAPTURE_CHECKLIST.md` produced for the real product. | Not started. |
 
 Phases 1, 2, and 5 have no hard interdependency and can run as parallel worker slices per `PARALLEL_OPS.md`.
 Phase 3 depends on Phase 2's interfaces. Phase 4 and 6 depend on Steam integration groundwork that can start

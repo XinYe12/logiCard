@@ -1,6 +1,6 @@
 # Draft Handoff — 2026-08-07
 
-## 2026-08-09 — Board merge confirmed green; worktree cleanup; Phase 1 kickoff
+## 2026-08-09 — Board merge confirmed green; worktree cleanup; Phase 1 shipped and merged
 
 **Board merge (`d81ffeb`) is now fully verified.** Ran EditMode + PlayMode batchmode directly on `master`
 (Editor happened to be closed on this exact path) — **EditMode 107/107, PlayMode 29/29, no failures.** This
@@ -22,22 +22,41 @@ whoever next has a free moment to inspect and clear them.
 `docs/departments/INDEX.md`'s Capacity note was stale (still called the two board branches "queued but not
 started" after they'd already merged) — corrected.
 
-**Phase 1 (Landscape Desktop UI) kicked off.** `feat/phase1-landscape-ui` worktree spun (base `master`
-`4837954`), brief written (`PHASE1_LANDSCAPE_UI_AGENT_BRIEF.md` at the worktree root): rework
-`Assets/_Project/UI/ProgramHud.cs` off its current portrait/mobile scaffold (`referenceResolution =
-(1080,1920)`, bottom "thumb zone") to `UI_FLOW.md`'s landscape desktop layout (board dominant, side/bottom-
-margin HUD dock), plus minimal stub screens for the rest of `UI_FLOW.md`'s screen map that don't exist yet
-(Title, Character Select, Lobby, Waiting, Reveal, Round Result, Match End) — flow-clickable, not polished
-(that's Phase 5). One real cross-file coupling flagged and handled explicitly: `GameBootstrap.ConfigureCamera()`
-reads `ProgramHud.ThumbZoneHeight`/`TopStripHeight` to carve the camera viewport rect — worker keeps new
-layout constants public/documented, Integrator wires the actual `GameBootstrap.cs` edit at merge time (kept
-out of the worker's boundary since `Boot/` is Core-owned). Frozen in `docs/contracts/CURRENT.md`. Not
-started: Phase 2 (networking) — blocked on the user locking a transport choice + host-integrity approach per
-`NETWORKING_DESIGN.md`, not picked unilaterally.
+**Phase 1 (Landscape Desktop UI): shipped and merged (`771db57` → merge commit on `master`, 2026-08-09).**
+Worker reworked `Assets/_Project/UI/ProgramHud.cs` off its old portrait/mobile scaffold (`referenceResolution
+= (1080,1920)`, bottom "thumb zone") to `UI_FLOW.md`'s landscape layout: `1920x1080` canvas, board dominant,
+new **right-edge** HUD dock (`HudDockWidth = 0.30f`) — the doc allowed side-or-bottom, worker chose side
+since the existing vertical control stack fits a 16:9 side margin better than a short bottom band. Added
+`AppFlowController.cs`: a functional (not polished — Phase 5's job) click-through Boot → Character Select →
+Lobby → Waiting/Reveal → Round Result → Match End shell, wired so Lock In now plays a real Waiting→Reveal
+beat instead of a flat 0.8s wait. `SliceSceneFixture` calls the new `Hud.BypassAppFlowForTests()` so every
+pre-existing match test still starts straight in Program phase, undisturbed.
 
-**Still pending, human-only, not blocking Phase 1:** an Editor look at the board-edge-dressing visual tuning
-(lip thickness, apron margin, clutter scale) and the newly-committed Scout/Juggernaut pawn art, neither
-reviewed in-Editor yet (see the 2026-08-08 entries below for detail).
+Reviewed against the brief before merging: boundary respected (only `Assets/_Project/UI/**` + tests touched,
+no `Sim/`/`Net/`/`Board/*View.cs`/`GhostResolver`/`GameBootstrap.cs`/docs). One harmless nit found and not
+worth sending back — `ProgramHud.LockInRoutine()`'s dead `_appFlow == null` branch double-calls
+`SwitchPhase(RoundPhase.Reveal)`; `_appFlow` is always non-null after `Init()` so this never actually fires.
+
+**Integrator wired the one deliberate coupling** the brief called out:
+`GameBootstrap.ConfigureCamera()` (`Assets/_Project/Boot/GameBootstrap.cs:~298`) now reads
+`cam.rect = new Rect(0f, 0f, 1f - ProgramHud.HudDockWidth, 1f - ProgramHud.TopStripHeight)` instead of the old
+bottom-band formula. `ProgramHud.ThumbZoneHeight` stays as a compile-compat alias (`= HudDockHeight = 0`),
+still asserted on by `ProgramHudLayoutTests`/`AppFlowPlayModeTests` — harmless dead weight now that the real
+wiring is in, safe to delete in a later pass if anyone wants the tidy-up, not blocking anything.
+
+**Post-merge batchmode on `master`: EditMode 108/108, PlayMode 32/32.** Contract closed out in
+`docs/contracts/CURRENT.md`; `docs/SCHEDULE.md`'s Phase 1 row marked "mechanical bar met." **Still wants a
+human Editor look** (dock overlap/readability at real window size, does the click-through flow feel right) —
+same visual-confirmation gate this project has used for every prior presentation change; not done yet, not
+blocking anything else.
+
+Not started: Phase 2 (networking) — blocked on the user locking a transport choice + host-integrity approach
+per `NETWORKING_DESIGN.md`, not picked unilaterally.
+
+**Still pending, human-only, not blocking anything:** an Editor look at three things, none reviewed in-Editor
+yet — the board-edge-dressing visual tuning (lip thickness, apron margin, clutter scale), the newly-committed
+Scout/Juggernaut pawn art (see the 2026-08-08 entries below for detail on both), and now the new landscape
+HUD/app-flow shell from this session.
 
 ## 2026-08-08 — Full scope pivot: 14-day portfolio demo → F2P PvP Steam ship (C46–C51)
 
