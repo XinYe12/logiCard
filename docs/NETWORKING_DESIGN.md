@@ -167,13 +167,27 @@ Traced the real integration point (2026-08-09), so a worker doesn't have to redi
   already needs to become async either way (a real network round-trip takes real time) — `ProgramHud`'s
   `LockInRoutine()` (`Assets/_Project/UI/ProgramHud.cs`, Phase 1's addition) is already a coroutine, so
   awaiting an async resolve there is a small, natural change, not a rearchitecture.
-- **Two implementations, both behind that one interface:**
-  1. `LocalMatchResolver` — wraps *today's exact behavior* (same-process `GhostResolver.Resolve`, wrapped to
-     return an already-completed `Task`). **Stays the default** for local hotseat, every existing PlayMode/
+- **`IMatchResolver` seam: landed (2026-08-09).** `Assets/_Project/Net/IMatchResolver.cs` — coroutine-shaped
+  (`IEnumerator ResolveAsync(IReadOnlyList<GhostInput> inputs, Action<ReplayTape> onResolved)`), matching this
+  project's existing coroutine idiom rather than introducing `Task`-based async. `RoundPlayback.ResolveAndArm()`
+  now runs through it via a coroutine (`Init`'s new `IMatchResolver matchResolver = null` param). **Frozen —
+  a `RelayMatchResolver` worker builds against this interface as-is, does not need to touch `RoundPlayback.cs`
+  or `GameBootstrap.cs` again.**
+  - **Gotcha already hit and fixed, worth knowing before writing a resolver:** a bare `yield return
+    someInnerEnumerator` inside a Unity coroutine does **not** drain it synchronously, even when the inner
+    enumerator never itself yields — it defers to the next scheduler pump regardless. `RoundPlayback` pumps
+    the inner enumerator manually (`while (resolve.MoveNext()) yield return resolve.Current;`) specifically so
+    `LocalMatchResolver` keeps completing within the same call (proven — first attempt without the manual pump
+    broke 8 `RoundPlaybackPlayModeTests` cases expecting synchronous `Tape` population). A `RelayMatchResolver`
+    doesn't need this trick itself — it's expected to actually yield real waits while network I/O is in
+    flight — but be aware of it if writing any other coroutine-nesting code near this seam.
+  1. `LocalMatchResolver` — wraps *today's exact behavior* (same-process `GhostResolver.Resolve`, invoked
+     synchronously inside `ResolveAsync`). **Stays the default** for local hotseat, every existing PlayMode/
      EditMode test, and the matchmaking-fallback bot (Phase 3) — none of that should need to know a relay
-     exists.
-  2. `RelayMatchResolver` — sends this client's own `GhostInput` to the relay over the network, awaits the
-     combined `ReplayTape` back. New code, new (small) relay-side project.
+     exists. Landed.
+  2. `RelayMatchResolver` — **not yet built.** Sends this client's own `GhostInput` to the relay over the
+     network, awaits the combined `ReplayTape` back via the same `ResolveAsync` shape, yielding real waits
+     while the network round-trip is in flight. New code, new (small) relay-side project.
 - **First-slice scope (proves the architecture, not the product):** a minimal standalone relay process — a
   plain console app referencing the same `Sim`/`Net` code — that accepts exactly two connections, pairs them
   into one match, waits for both `GhostInput`s, runs `GhostResolver.Resolve` once, returns the identical
