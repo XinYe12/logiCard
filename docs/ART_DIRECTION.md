@@ -5,19 +5,36 @@
 **Depends on:** [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md) (D9), [SCOPE.md](SCOPE.md), [GDD.md](GDD.md)  
 **Canonical path:** `docs/ART_DIRECTION.md` (also referenced as `D10_Art_Direction.md`)
 
-**Core Theme:** "The Desk-Lamp Diorama"
+**Core Theme:** "The Desk-Lamp Diorama" *(broadened 2026-08-09 — see the Moodboard section below and
+`PRODUCT_MEMORY.md` C53. The desk-lamp-in-a-dark-room lighting mood and toy-chibi fidelity are superseded; the
+bounded-floating-chunk-in-a-void structure is not.)*
 
-The visual goal is to make the player feel like they are standing over a meticulously crafted **physical tabletop miniature set**. Tactical SWAT-raid seriousness is contrasted with the tactile, handmade charm of **digital clay**.
+The visual goal is to make the player feel like they are standing over a meticulously crafted **physical tabletop miniature set**, now pushed toward real detail and weather rather than a toy/chibi read (**C53**). Tactical SWAT-raid seriousness is contrasted with the tactile, handmade charm of **digital clay** — this contrast is being reworked toward more grounded materials; see the Moodboard section for the current target.
 
 **Commercial ship bar:** The bar below is the **required commercial-ship floor**, not a demo floor with optional stretch goals. Full SSS, thumbprint maps, bespoke character rigs, and cinematic DoF move from “optional if time allows” into **in scope for Phase 5 (Commercial Art Bar, see `docs/SCHEDULE.md`)** — not cut-first items.
 
 ---
 
-## Moodboard — tilt-shift miniature scale
+## Moodboard — floating diorama chunk with weather (updated 2026-08-09, C53)
 
-Hero reference (local): [`../image.png`](../image.png) · also `screenshots/image.png`
+Hero reference (local): [`../image.png`](../image.png) · also `screenshots/image.png` (both kept in sync — see
+below if they ever diverge again)
 
-High-angle tilt-shift townscape: shallow DoF band, toy-like buildings and cars, “commander over a model” read. This is the **scale and camera language** for the diorama board — not a literal European city art requirement.
+**Replaces the prior toy-townscape reference at this same path** (superseded, not separately archived — the
+old reference was a simpler high-angle tilt-shift toy townscape; this one sets a materially higher bar). The
+current reference: a richly detailed floating city-block chunk — real architectural detail (lit windows,
+signage, awnings), cars/buses/pedestrians with umbrellas, a river with a small bridge and rail line, dense
+vegetation — sitting on a natural terrain-edge base (grass → rock → dirt cross-section, framed by a wood
+strip) that floats in a dark void below. A dramatic stormy sky with heavy cloud cover and visible rain sits
+**directly above the chunk, contained to it** — not an infinite horizon.
+
+**What this sets as the target vs. what stays unchanged (`PRODUCT_MEMORY.md` C53):** the board's structural
+shape — a bounded chunk, physical edge, floating in dark void, camera solid-color clear flags — already
+matches this reference; that part is validated, not changed. What moves is fidelity (toy-chibi → detailed/
+grounded) and the addition of a real sky/cloud/weather system contained above the board. This is the
+**scale and camera language plus the weather/detail bar** for the diorama board going forward — translate its
+mood and material richness onto this game's actual indoor Yard/Hall/Vault layout, not a literal outdoor city
+requirement.
 
 ---
 
@@ -42,7 +59,7 @@ Ship fails presentation acceptance if any of these are missing:
 
 ---
 
-## 1. Visual Pillars (Digital Claymation)
+## 1. Visual Pillars (Digital Claymation) *(superseded in direction by C53, kept as historical baseline — see Moodboard above)*
 
 Achieve “physical” feel via lighting, shaders, and camera more than ultra-high-poly meshes. **Characters are an approved exception** to the clay/SSS framing below — they use imported CC0 meshes (Quaternius) with URP/Lit + pushed smoothness for a glossy-toy read (*Link's Awakening* 2019), not clay-tint/SSS. Board materials and dynamic props keep the clay language unchanged; see `PAWN_ART_REWORK_PLAN.md`.
 

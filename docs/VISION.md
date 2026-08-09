@@ -33,7 +33,16 @@ players. Detail, guardrails, and open economy numerics: [MONETIZATION.md](MONETI
 
 ## Art Direction
 
-A tactile, tilt-shift **claymation/diorama** style heavily inspired by the *Link's Awakening* Switch remake. The map feels like a physical miniature dollhouse on a table, and characters look like tangible tabletop plastic/clay miniatures. This communicates that this is a **board-driven tactical game** while staying readable and striking.
+*[Superseded by **C53**, 2026-08-09 — the toy/chibi framing below no longer binds; see `ART_DIRECTION.md`'s
+"Digital Claymation" section for the current target. Kept here as historical record of the original demo-era
+direction, not deleted.]*
+
+~~A tactile, tilt-shift **claymation/diorama** style heavily inspired by the *Link's Awakening* Switch remake. The map feels like a physical miniature dollhouse on a table, and characters look like tangible tabletop plastic/clay miniatures. This communicates that this is a **board-driven tactical game** while staying readable and striking.~~
+
+**Current direction (C53):** the board stays a bounded, physically-edged chunk floating in a dark void — that
+structural shape is unchanged — but the fidelity target moves from toy-chibi to a richly detailed, grounded
+look (real architecture/material language, a contained sky/cloud/weather system directly above the board, not
+an infinite horizon), against a locked visual reference. Detail: `PRODUCT_MEMORY.md` C53, `ART_DIRECTION.md`.
 
 *(Demo uses primitives — see Scope. Final clay shaders are Later.)*
 
