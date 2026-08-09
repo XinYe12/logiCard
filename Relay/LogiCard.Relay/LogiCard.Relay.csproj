@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!--
+      net8.0: current .NET LTS at authoring time (SDK 8.0.x on this machine). Long support window,
+      built-in System.Text.Json + async sockets, no Unity runtime needed. net9 would work too but
+      LTS is the safer default for a headless service we may leave running between Editor sessions.
+    -->
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <RootNamespace>LogiCard.Relay</RootNamespace>
+    <AssemblyName>LogiCard.Relay</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Shared sim + resolve sources — real files, not copies (C52 drift rule). -->
+  <ItemGroup>
+    <Compile Include="..\..\Assets\_Project\Sim\**\*.cs" Link="Shared\sim\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Assets\_Project\Net\GhostResolver.cs" Link="Shared\Net\GhostResolver.cs" />
+    <Compile Include="..\..\Assets\_Project\Net\TimelinePayload.cs" Link="Shared\Net\TimelinePayload.cs" />
+    <Compile Include="..\..\Assets\_Project\Net\ActionNode.cs" Link="Shared\Net\ActionNode.cs" />
+    <Compile Include="..\..\Assets\_Project\Net\ActionVerb.cs" Link="Shared\Net\ActionVerb.cs" />
+    <Compile Include="..\..\Assets\_Project\Net\ReplayTape.cs" Link="Shared\Net\ReplayTape.cs" />
+    <Compile Include="..\..\Assets\_Project\Net\TapeEvent.cs" Link="Shared\Net\TapeEvent.cs" />
+    <Compile Include="..\..\Assets\_Project\Net\RelayProtocol.cs" Link="Shared\Net\RelayProtocol.cs" />
+  </ItemGroup>
+</Project>
