@@ -1,5 +1,44 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-09 — Board merge confirmed green; worktree cleanup; Phase 1 kickoff
+
+**Board merge (`d81ffeb`) is now fully verified.** Ran EditMode + PlayMode batchmode directly on `master`
+(Editor happened to be closed on this exact path) — **EditMode 107/107, PlayMode 29/29, no failures.** This
+was the one explicit open item carried over from the 2026-08-08 save note. Closing it out.
+
+**Worktree cleanup:** `logiCard-board-edge-dressing`, `logiCard-playmode-board-rewrite`, and
+`logiCard-verify-board-merge` were fully de-registered from git (`git worktree remove` / `prune` — branches
+`feat/board-edge-dressing` and `feat/playmode-board-rewrite` stay intact, both merged). `-verify-board-merge`'s
+directory deleted cleanly; the other two directories on disk **would not delete** ("used by another process" —
+OneDrive.Sync.Service was running; consistent with this project's known pattern of a background sync/index
+process locking `Library`/worktree files, see the Baidu NetDisk note from an earlier session). Git no longer
+tracks them as worktrees either way, so this is inert disk cruft, not a risk — safe to delete by hand later
+(close OneDrive first) or leave. **Also found four older orphaned worktree directories on disk** — not in
+`git worktree list`, so already fully de-registered from a past session's cleanup that hit the same lock issue:
+`logiCard-pawn-art-step8`, `logiCard-pawn-docs`, `logiCard-pivot-gameplay-art-ui`, `logiCard-pivot-new-docs`.
+Not touched this session (out of today's scope, not verified empty of anything valuable) — flagging for
+whoever next has a free moment to inspect and clear them.
+
+`docs/departments/INDEX.md`'s Capacity note was stale (still called the two board branches "queued but not
+started" after they'd already merged) — corrected.
+
+**Phase 1 (Landscape Desktop UI) kicked off.** `feat/phase1-landscape-ui` worktree spun (base `master`
+`4837954`), brief written (`PHASE1_LANDSCAPE_UI_AGENT_BRIEF.md` at the worktree root): rework
+`Assets/_Project/UI/ProgramHud.cs` off its current portrait/mobile scaffold (`referenceResolution =
+(1080,1920)`, bottom "thumb zone") to `UI_FLOW.md`'s landscape desktop layout (board dominant, side/bottom-
+margin HUD dock), plus minimal stub screens for the rest of `UI_FLOW.md`'s screen map that don't exist yet
+(Title, Character Select, Lobby, Waiting, Reveal, Round Result, Match End) — flow-clickable, not polished
+(that's Phase 5). One real cross-file coupling flagged and handled explicitly: `GameBootstrap.ConfigureCamera()`
+reads `ProgramHud.ThumbZoneHeight`/`TopStripHeight` to carve the camera viewport rect — worker keeps new
+layout constants public/documented, Integrator wires the actual `GameBootstrap.cs` edit at merge time (kept
+out of the worker's boundary since `Boot/` is Core-owned). Frozen in `docs/contracts/CURRENT.md`. Not
+started: Phase 2 (networking) — blocked on the user locking a transport choice + host-integrity approach per
+`NETWORKING_DESIGN.md`, not picked unilaterally.
+
+**Still pending, human-only, not blocking Phase 1:** an Editor look at the board-edge-dressing visual tuning
+(lip thickness, apron margin, clutter scale) and the newly-committed Scout/Juggernaut pawn art, neither
+reviewed in-Editor yet (see the 2026-08-08 entries below for detail).
+
 ## 2026-08-08 — Full scope pivot: 14-day portfolio demo → F2P PvP Steam ship (C46–C51)
 
 **Read this section first — it supersedes the framing (not the facts) of everything below it.** The user
