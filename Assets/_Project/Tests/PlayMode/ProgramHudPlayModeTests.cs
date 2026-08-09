@@ -196,6 +196,54 @@ namespace LogiCard.Tests.PlayMode
         }
 
         /// <summary>
+        /// UI_FLOW §7 gap closed this wave: Adrenaline is a Playback-only primary, 1/match, gated to
+        /// an active booked segment. Resolve effect is deferred — this only covers the control.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AdrenalineAppearsInPlaybackAndSpendsOncePerMatch()
+        {
+            AttackerInput.Mode = ActionVerb.Move;
+            AttackerInput.TryTapPoint(SafeMoveDestination);
+            AttackerInput.TryCommitDraftPath();
+
+            Button lockIn = FindByName<Button>("LockInButton");
+            Assert.That(lockIn, Is.Not.Null);
+            Assert.That(lockIn.gameObject.activeInHierarchy, Is.True, "Lock In should show during Program.");
+
+            Button adrenalineHidden = FindByName<Button>("AdrenalineButton");
+            Assert.That(adrenalineHidden, Is.Not.Null, "HUD must build an AdrenalineButton.");
+            Assert.That(adrenalineHidden.gameObject.activeInHierarchy, Is.False,
+                "Adrenaline must stay hidden outside Playback.");
+
+            lockIn.onClick.Invoke();
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (Phase.Phase != RoundPhase.Execute && Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+            }
+
+            Assert.That(Phase.Phase, Is.EqualTo(RoundPhase.Execute));
+            Button adrenaline = FindByName<Button>("AdrenalineButton");
+            Assert.That(adrenaline.gameObject.activeInHierarchy, Is.True);
+            Assert.That(lockIn.gameObject.activeInHierarchy, Is.False,
+                "Lock In yields the primary slot to Adrenaline during Playback.");
+
+            Clock.SetSeconds(0f);
+            yield return null;
+            Assert.That(adrenaline.interactable, Is.True,
+                "At t=0 inside a booked Move segment, Adrenaline should be spendable.");
+
+            bool raised = false;
+            Hud.AdrenalineUsed += () => raised = true;
+            adrenaline.onClick.Invoke();
+            Assert.That(raised, Is.True);
+            Assert.That(adrenaline.interactable, Is.False, "1/match — second press must not re-arm.");
+
+            Text label = adrenaline.GetComponentInChildren<Text>();
+            Assert.That(label.text, Does.Contain("USED"));
+        }
+
+        /// <summary>
         /// BUG FOUND 2026-08-07 (playtest): the end screen showed a stale "Rn · SIDE PICKS" top
         /// strip and the word "MATCH OVER" twice (headline + dead button) once the match actually
         /// ended.

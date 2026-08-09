@@ -72,7 +72,7 @@ namespace LogiCard.Tests.PlayMode
         [Test]
         public void LandscapeDockConstantsExposeRightEdgeGeometry()
         {
-            Assert.That(ProgramHud.HudDockWidth, Is.GreaterThan(0f));
+            Assert.That(ProgramHud.HudDockWidth, Is.EqualTo(0.34f));
             Assert.That(ProgramHud.HudDockHeight, Is.EqualTo(0f),
                 "Dock is a right margin; bottom-band height must stay 0 for Integrator camera wiring.");
             Assert.That(ProgramHud.ThumbZoneHeight, Is.EqualTo(ProgramHud.HudDockHeight));
@@ -81,5 +81,29 @@ namespace LogiCard.Tests.PlayMode
                 "Board region must remain the majority of the frame.");
         }
 
+        [UnityTest]
+        public IEnumerator MatchEndQuitOpensConfirmDialogBeforeLeaving()
+        {
+            AppFlowController flow = Hud.AppFlow;
+            flow.ShowMatchEnd("MATCH OVER");
+            Assert.That(flow.Current, Is.EqualTo(AppFlowController.Screen.MatchEnd));
+
+            Button quit = FindByName<Button>("QuitToTitleButton");
+            Assert.That(quit, Is.Not.Null);
+            quit.onClick.Invoke();
+            yield return null;
+
+            Assert.That(FindByName<Transform>("ModalDialog"), Is.Not.Null, "Quit should open ModalDialog.");
+            Assert.That(flow.Current, Is.EqualTo(AppFlowController.Screen.MatchEnd),
+                "Quit must not leave Match End until the dialog is confirmed.");
+
+            Button confirm = FindByName<Button>("ModalPrimary");
+            Assert.That(confirm, Is.Not.Null);
+            confirm.onClick.Invoke();
+            yield return null;
+
+            Assert.That(flow.Current, Is.EqualTo(AppFlowController.Screen.Boot));
+            Assert.That(FindByName<Transform>("ModalDialog"), Is.Null);
+        }
     }
 }
