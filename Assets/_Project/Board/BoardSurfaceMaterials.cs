@@ -33,30 +33,30 @@ namespace LogiCard.Board
         // sell wetness instead of needing to stay low specifically to hide the lack of a reflection).
         public static Material YardFloor => _yard ??= BuildWetSurface(
             "asphalt_diff", "asphalt_nor", "asphalt_rough",
-            fallback: new Color(0.18f, 0.19f, 0.22f),
+            fallback: new Color(0.28f, 0.22f, 0.18f),
             wetSmoothnessBoost: 0.42f, // was 0.55
-            tint: new Color(0.55f, 0.60f, 0.68f),
+            tint: new Color(0.75f, 0.57f, 0.45f),
             tile: 2.2f);
 
         public static Material HallFloor => _hall ??= BuildWetSurface(
             "concrete_diff", "concrete_nor", "concrete_rough",
-            fallback: new Color(0.42f, 0.40f, 0.38f),
+            fallback: new Color(0.45f, 0.40f, 0.34f),
             wetSmoothnessBoost: 0.34f, // was 0.28
-            tint: new Color(0.78f, 0.74f, 0.68f),
+            tint: new Color(0.88f, 0.72f, 0.58f),
             tile: 1.8f);
 
         public static Material VaultFloor => _vault ??= BuildWetSurface(
             "concrete_diff", "concrete_nor", "concrete_rough",
-            fallback: new Color(0.28f, 0.30f, 0.34f),
+            fallback: new Color(0.26f, 0.30f, 0.34f),
             wetSmoothnessBoost: 0.46f, // was 0.62
-            tint: new Color(0.45f, 0.50f, 0.58f),
+            tint: new Color(0.45f, 0.58f, 0.78f),
             tile: 2.4f);
 
         public static Material FlankFloor => _flank ??= BuildWetSurface(
             "asphalt_diff", "asphalt_nor", "asphalt_rough",
-            fallback: new Color(0.22f, 0.20f, 0.18f),
+            fallback: new Color(0.26f, 0.22f, 0.18f),
             wetSmoothnessBoost: 0.30f, // was 0.35
-            tint: new Color(0.48f, 0.44f, 0.40f),
+            tint: new Color(0.52f, 0.48f, 0.42f),
             tile: 2.0f);
 
         public static Material BrickWall => _wall ??= BuildWetSurface(
