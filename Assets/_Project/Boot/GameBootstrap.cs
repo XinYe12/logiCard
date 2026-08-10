@@ -305,10 +305,11 @@ namespace LogiCard.Boot
                 cam = camGo.GetComponent<Camera>();
             }
 
-            // Landscape desktop (C48): board region is full height minus the top strip, full width
-            // minus the right-edge HUD dock — see ProgramHud's HudDock*/TopStripHeight constants and
-            // docs/contracts/CURRENT.md's frozen note on this coupling.
-            cam.rect = new Rect(0f, 0f, 1f - ProgramHud.HudDockWidth, 1f - ProgramHud.TopStripHeight);
+            // Landscape desktop (C48): board region is full width, from the top of the bottom HUD dock
+            // to the bottom of the top strip (dock moved off the right edge to a bottom band,
+            // 2026-08-10 — general vertical alignment) — see ProgramHud's HudDockHeight/TopStripHeight
+            // constants and docs/contracts/CURRENT.md's frozen note on this coupling.
+            cam.rect = new Rect(0f, ProgramHud.HudDockHeight, 1f, 1f - ProgramHud.HudDockHeight - ProgramHud.TopStripHeight);
             cam.orthographic = true;
             // Was 9.0f, a blind proportional-scale estimate never actually verified in the Editor (see
             // DRAFT_HANDOFF.md's long-standing "needs an eyeball check" flag on this line). A human

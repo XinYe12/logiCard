@@ -70,14 +70,12 @@ namespace LogiCard.Tests.PlayMode
         }
 
         [Test]
-        public void LandscapeDockConstantsExposeRightEdgeGeometry()
+        public void LandscapeDockConstantsExposeBottomBandGeometry()
         {
-            Assert.That(ProgramHud.HudDockWidth, Is.EqualTo(0.34f));
-            Assert.That(ProgramHud.HudDockHeight, Is.EqualTo(0f),
-                "Dock is a right margin; bottom-band height must stay 0 for Integrator camera wiring.");
-            Assert.That(ProgramHud.ThumbZoneHeight, Is.EqualTo(ProgramHud.HudDockHeight));
+            Assert.That(ProgramHud.HudDockHeight, Is.EqualTo(0.34f),
+                "Dock moved to a bottom band (2026-08-10) — this is the real dock extent now.");
             Assert.That(ProgramHud.TopStripHeight, Is.GreaterThan(0f));
-            Assert.That(ProgramHud.HudDockWidth + ProgramHud.TopStripHeight, Is.LessThan(1f),
+            Assert.That(ProgramHud.HudDockHeight + ProgramHud.TopStripHeight, Is.LessThan(1f),
                 "Board region must remain the majority of the frame.");
         }
 

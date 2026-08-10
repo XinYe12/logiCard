@@ -25,33 +25,20 @@ namespace LogiCard.UI
         public const float TopStripHeight = 0.08f;
 
         /// <summary>
-        /// Fraction of frame width for the right-edge HUD dock. Widened from 0.30 → 0.34 in the
-        /// readability pass so stance/verb cells aren't five-across cramped; Integrator must rewire
-        /// <c>GameBootstrap.ConfigureCamera</c> if this constant moves again.
+        /// Fraction of frame height for the bottom HUD dock (moved from a right-edge margin to a
+        /// bottom band, 2026-08-10 — general vertical alignment: board dominant, controls anchored to
+        /// the bottom edge, full width). Integrator must rewire <c>GameBootstrap.ConfigureCamera</c>'s
+        /// <c>cam.rect</c> if this constant moves again.
         /// </summary>
-        public const float HudDockWidth = 0.34f;
-
-        /// <summary>
-        /// Bottom-band dock height. Zero — the dock is a <b>right</b> margin, not a bottom band.
-        /// Kept so layout math and docs can name both axes explicitly.
-        /// </summary>
-        public const float HudDockHeight = 0f;
-
-        /// <summary>
-        /// Compile-compat alias for GameBootstrap's camera rect until the Integrator rewires it
-        /// for the right-edge dock. Equals <see cref="HudDockHeight"/> (0). Not the dock extent —
-        /// use <see cref="HudDockWidth"/> for the real dock size.
-        /// </summary>
-        public const float ThumbZoneHeight = HudDockHeight;
+        public const float HudDockHeight = 0.34f;
 
         private const float Pad = UiStyle.Pad;
         private const float Gap = UiStyle.Gap;
         private const float RowGap = UiStyle.RowGap;
-        private const float VerbRowHeight = 68f;
-        private const float StanceRowHeight = 60f;
-        private const float DebugRowHeight = 48f;
-        private const float ActionRowHeight = 76f;
-        private const float TransportButtonWidth = 110f;
+        private const float VerbRowHeight = 56f;
+        private const float StanceRowHeight = 50f;
+        private const float DebugRowHeight = 40f;
+        private const float ActionRowHeight = 64f;
 
         private static readonly float[] TimeCardPresets = { 30f, 60f, 120f };
 
@@ -342,19 +329,37 @@ namespace LogiCard.UI
         }
 
         /// <summary>
-        /// Right-edge HUD dock (C48). Holds Allot / Aftermath / Program controls — not a bottom
-        /// thumb-reach band. GameObject name is HudDock so hierarchy dumps match the new layout.
+        /// Bottom-band HUD dock (C48, 2026-08-10 — moved off the right edge for a general vertical
+        /// alignment: board dominant above, controls anchored full-width along the bottom). Holds
+        /// Allot / Aftermath / Program controls. GameObject name stays HudDock across the move.
         /// </summary>
         private void BuildHudDock(RectTransform root)
         {
             RectTransform dock = _ui.CreatePanel(root, "HudDock", PanelDark,
-                new Vector2(1f - HudDockWidth, 0f), new Vector2(1f, 1f - TopStripHeight));
+                new Vector2(0f, 0f), new Vector2(1f, HudDockHeight));
 
             BuildAllotPanel(dock);
             BuildAftermathPanel(dock);
             BuildProgramControls(dock);
         }
 
+        /// <summary>Creates a full-height column occupying a horizontal fraction range of <paramref name="parent"/>.</summary>
+        private static RectTransform CreateColumn(RectTransform parent, string name, float xMin, float xMax)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(parent, false);
+            UiFactory.Stretch(rt, new Vector2(xMin, 0f), new Vector2(xMax, 1f), Vector2.zero, Vector2.zero);
+            return rt;
+        }
+
+        /// <summary>
+        /// Three columns across the full-width bottom dock: verb/stance controls (left), queue
+        /// readout (middle), primary Lock In/Adrenaline + transport (right). Each column is narrower
+        /// than the old tall right-edge dock but the row-building helpers below (<see cref="BuildVerbRow"/>,
+        /// <see cref="BuildStanceRow"/>) already lay out relative to whatever zone they're given, so
+        /// they work unchanged against a column instead of the full dock width.
+        /// </summary>
         private void BuildProgramControls(RectTransform zone)
         {
             _programControls = new GameObject("ProgramControls", typeof(RectTransform));
@@ -362,26 +367,30 @@ namespace LogiCard.UI
             rt.SetParent(zone, false);
             UiFactory.Stretch(rt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
+            RectTransform controlsCol = CreateColumn(rt, "ControlsColumn", 0f, 0.38f);
+            RectTransform queueCol = CreateColumn(rt, "QueueColumn", 0.38f, 0.70f);
+            RectTransform actionCol = CreateColumn(rt, "ActionColumn", 0.70f, 1f);
+
             float cursor = -Pad;
 
             // AR scrubber: cool cyan/white on a dark track — deliberate contrast vs clay board (ART_DIRECTION §4).
-            _scrubLabel = _ui.CreateText(rt, "ScrubLabel", "Time Resource  0.0s / 0.0s", 26, TextAnchor.MiddleLeft, ArFill);
-            UiFactory.PlaceRow(_scrubLabel.rectTransform, ref cursor, 36f, 8f);
+            _scrubLabel = _ui.CreateText(controlsCol, "ScrubLabel", "Time Resource  0.0s / 0.0s", 24, TextAnchor.MiddleLeft, ArFill);
+            UiFactory.PlaceRow(_scrubLabel.rectTransform, ref cursor, 30f, 6f);
 
-            _scrubber = _ui.CreateSlider(rt, "Scrubber", ArTrack, ArFill, ArHandle);
-            UiFactory.PlaceRow(_scrubber.GetComponent<RectTransform>(), ref cursor, 40f, RowGap);
+            _scrubber = _ui.CreateSlider(controlsCol, "Scrubber", ArTrack, ArFill, ArHandle);
+            UiFactory.PlaceRow(_scrubber.GetComponent<RectTransform>(), ref cursor, 34f, RowGap);
             _scrubber.onValueChanged.AddListener(OnScrubberMoved);
 
-            BuildVerbRow(rt, ref cursor);
-            BuildStanceRow(rt, ref cursor);
+            BuildVerbRow(controlsCol, ref cursor);
+            BuildStanceRow(controlsCol, ref cursor);
 
             if (_showPhaseDebugControls)
             {
-                BuildPhaseDebugRow(rt, ref cursor);
+                BuildPhaseDebugRow(controlsCol, ref cursor);
             }
 
-            BuildActionRow(rt);
-            BuildQueuePanel(rt, cursor);
+            BuildQueuePanel(queueCol);
+            BuildActionRow(actionCol);
         }
 
         private void BuildAllotPanel(RectTransform zone)
@@ -541,38 +550,36 @@ namespace LogiCard.UI
             cursor -= DebugRowHeight + RowGap;
         }
 
+        /// <summary>
+        /// Action column (right-hand third of the bottom dock): Lock In (Program) / Adrenaline
+        /// (Playback) as a full-column-width primary on top, transport trio (Play/Rewind/Undo) as an
+        /// equal three-way split row below it — a vertical stack now that this lives in a narrow
+        /// column rather than spanning the full former right-edge dock width (C48 dock + UI_FLOW §7).
+        /// </summary>
         private void BuildActionRow(RectTransform zone)
         {
-            // Transport trio on the bottom row; Lock In (Program) / Adrenaline (Playback) share the
-            // full-width primary slot above it (C48 dock + UI_FLOW §7).
-            float transportBottom = Pad;
-            float transportTop = Pad + ActionRowHeight;
-            float primaryBottom = transportTop + Gap;
-            float primaryTop = primaryBottom + ActionRowHeight;
+            float cursor = -Pad;
 
-            _lockInButton = _ui.CreateButton(zone, "LockInButton", "LOCK IN", Accent, UiStyle.InkDark, 34, OnLockInPressed);
-            UiFactory.Anchor(_lockInButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(1f, 0f),
-                new Vector2(Pad, primaryBottom), new Vector2(-Pad, primaryTop));
+            _lockInButton = _ui.CreateButton(zone, "LockInButton", "LOCK IN", Accent, UiStyle.InkDark, 30, OnLockInPressed);
+            UiFactory.PlaceRow(_lockInButton.GetComponent<RectTransform>(), ref cursor, ActionRowHeight, RowGap);
 
-            _adrenalineButton = _ui.CreateButton(zone, "AdrenalineButton", "ADRENALINE", Accent, UiStyle.InkDark, 34,
+            float adrenalineCursor = -Pad;
+            _adrenalineButton = _ui.CreateButton(zone, "AdrenalineButton", "ADRENALINE", Accent, UiStyle.InkDark, 26,
                 OnAdrenalinePressed);
-            UiFactory.Anchor(_adrenalineButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(1f, 0f),
-                new Vector2(Pad, primaryBottom), new Vector2(-Pad, primaryTop));
+            UiFactory.PlaceRow(_adrenalineButton.GetComponent<RectTransform>(), ref adrenalineCursor, ActionRowHeight, RowGap);
             _adrenalineButtonLabel = _adrenalineButton.GetComponentInChildren<Text>();
             _adrenalineButton.gameObject.SetActive(false);
 
-            _playButton = _ui.CreateButton(zone, "PlayButton", "Play", PanelMid, Ink, 24, OnPlayPressed);
-            UiFactory.PlaceActionCell(_playButton.GetComponent<RectTransform>(), Pad, Pad + TransportButtonWidth, transportBottom, transportTop);
+            _playButton = _ui.CreateButton(zone, "PlayButton", "Play", PanelMid, Ink, 22, OnPlayPressed);
+            UiFactory.PlaceSplitCell(_playButton.GetComponent<RectTransform>(), cursor, ActionRowHeight, 0, 3);
             _playButtonLabel = _playButton.GetComponentInChildren<Text>();
 
-            float rewindLeft = Pad + TransportButtonWidth + Gap;
-            Button rewind = _ui.CreateButton(zone, "RewindButton", "Rewind", PanelMid, Ink, 24, () => _clock.Rewind());
-            UiFactory.PlaceActionCell(rewind.GetComponent<RectTransform>(), rewindLeft, rewindLeft + TransportButtonWidth, transportBottom, transportTop);
+            Button rewind = _ui.CreateButton(zone, "RewindButton", "Rewind", PanelMid, Ink, 22, () => _clock.Rewind());
+            UiFactory.PlaceSplitCell(rewind.GetComponent<RectTransform>(), cursor, ActionRowHeight, 1, 3);
 
             // UNDO must stay mode-agnostic (playtest 2026-08-07).
-            float undoLeft = rewindLeft + TransportButtonWidth + Gap;
-            _undoWaypointButton = _ui.CreateButton(zone, "UndoWaypointButton", "UNDO", PanelMid, Ink, 24, OnUndoPressed);
-            UiFactory.PlaceActionCell(_undoWaypointButton.GetComponent<RectTransform>(), undoLeft, -Pad, transportBottom, transportTop);
+            _undoWaypointButton = _ui.CreateButton(zone, "UndoWaypointButton", "UNDO", PanelMid, Ink, 22, OnUndoPressed);
+            UiFactory.PlaceSplitCell(_undoWaypointButton.GetComponent<RectTransform>(), cursor, ActionRowHeight, 2, 3);
         }
 
         private void OnUndoPressed()
@@ -587,29 +594,30 @@ namespace LogiCard.UI
         }
 
         /// <summary>
-        /// The queue readout fills whatever height is left between the rows above and the action
-        /// block below (Lock In + transport), so it absorbs resolution differences instead of clipping.
+        /// The queue readout now owns its own dock column (middle third), so it just fills that
+        /// column with padding instead of sharing a zone with the action buttons underneath it.
         /// </summary>
-        private void BuildQueuePanel(RectTransform zone, float topOffset)
+        private void BuildQueuePanel(RectTransform zone)
         {
-            float actionBlockHeight = ActionRowHeight + Gap + ActionRowHeight;
             RectTransform panel = _ui.CreatePanel(zone, "QueuePanel", PanelSunken, Vector2.zero, Vector2.one);
-            panel.offsetMin = new Vector2(Pad, Pad + actionBlockHeight + RowGap);
-            panel.offsetMax = new Vector2(-Pad, topOffset);
+            panel.offsetMin = new Vector2(Gap, Pad);
+            panel.offsetMax = new Vector2(-Gap, -Pad);
 
-            _queueText = _ui.CreateText(panel, "QueueReadout", "Used 0.0 / 0.0s", 22, TextAnchor.UpperLeft, Ink);
-            UiFactory.Stretch(_queueText.rectTransform, Vector2.zero, Vector2.one, new Vector2(16f, 16f), new Vector2(-16f, -16f));
-            _queueText.lineSpacing = 1.25f;
+            _queueText = _ui.CreateText(panel, "QueueReadout", "Used 0.0 / 0.0s", 20, TextAnchor.UpperLeft, Ink);
+            UiFactory.Stretch(_queueText.rectTransform, Vector2.zero, Vector2.one, new Vector2(14f, 10f), new Vector2(-14f, -10f));
+            _queueText.lineSpacing = 1.2f;
         }
 
         /// <summary>
-        /// Wound/reject text in the board region (left of the dock, under the top strip).
+        /// Wound/reject text in the board region, full width, sitting just above the bottom dock
+        /// (was constrained to avoid a right-edge dock horizontally — now the dock is a bottom band,
+        /// so the banner spans full width and sits above it vertically instead).
         /// </summary>
         private void BuildOutcomeBanner(RectTransform root)
         {
             _outcomeLabel = _ui.CreateText(root, "OutcomeBanner", string.Empty, 32, TextAnchor.MiddleCenter, Accent);
             UiFactory.Stretch(_outcomeLabel.rectTransform,
-                new Vector2(0f, 0.08f), new Vector2(1f - HudDockWidth, 0.20f),
+                new Vector2(0f, HudDockHeight + 0.02f), new Vector2(1f, HudDockHeight + 0.14f),
                 new Vector2(Pad, 0f), new Vector2(-Pad, 0f));
         }
 
