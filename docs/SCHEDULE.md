@@ -52,6 +52,17 @@ alongside Phase 5's art push, tracked via `contracts/CURRENT.md`/`departments/IN
 rather than added as a new phase row. Core gameplay resumes once both this UI work and Phase 5's checkpointed
 first pass are in a good place.
 
+**Map roster (2026-08-10, `PRODUCT_MEMORY.md` C57):** same pattern as the UI work above — doesn't map to
+its own phase number, tracked as its own wave. The human asked for logiCard's map roster to grow from one
+hardcoded map to three, each with real interactive terrain (vents/breaches usable by both sides), and
+explicitly lifted the core-gameplay-paused rule **for map/terrain Sim-layer work only** (Net/Timeline/other
+Sim work stays paused). Landed and wired same day: two new `Door` kinds (Vent/Breach, zero new Sim types),
+`MapId`/`MapLayout` groundwork, Freight Yard retrofitted with one of each, two new maps (Rail Platform,
+Vault Complex) built in parallel by two workers and merged by the Integrator, shared dispatch
+(`BuildBoard(MapId)`/`MapDefinitions.ForId`/map-aware `BuildPawns()`) wired so all three are selectable.
+No map-select UI yet — `ActiveMap` stays a constant defaulted to `FreightYard`, explicit follow-up. Same
+standing caveat as Phase 5's row above: batchmode-verified, **not yet visually confirmed** by a human.
+
 ---
 
 ## Cadence

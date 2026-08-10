@@ -1,26 +1,28 @@
 # Departments — Active Index
 
-**Updated:** 2026-08-10 — three-map roster kicked off (human decision, next `PRODUCT_MEMORY.md` C-row).
-`Vent`/`Breach` door kinds landed, `MapId`/`MapLayout` groundwork landed, Freight Yard retrofitted with
-one of each — all Integrator-direct on `master`. Both worker slots back in use building the two new maps
-(Rail Platform, Vault Complex) in parallel. This lifts the core-gameplay-paused rule for map/terrain work
-specifically — Sim-layer `ArenaBoard`/`GameBootstrap` edits are in-bounds for this wave; Net/Timeline/other
-Sim work stays paused.
+**Updated:** 2026-08-10 — three-map roster landed and wired. `Vent`/`Breach` door kinds, `MapId`/`MapLayout`
+groundwork, Freight Yard retrofit, and both new maps (Rail Platform, Vault Complex) are all merged to
+`master`. Integrator has resolved the two workers' merge conflicts and wired the shared dispatch
+(`BuildBoard(MapId)`, `MapDefinitions.ForId`, map-aware `BuildPawns()`) so all three maps are selectable
+via the `ActiveMap` constant (still defaulted to `FreightYard` — no map-select UI exists yet, out of
+scope per the approved plan). Batchmode verification of the fully-wired state in progress. Both worker
+slots now closed — 0 of 2 in use. This wave's lifted core-gameplay-paused rule (map/terrain work only)
+stays in effect until PRODUCT_MEMORY C57 is recorded closing it out.
 **Ops constitution:** [`../PARALLEL_OPS.md`](../PARALLEL_OPS.md) · human-side playbook: [`../DIRECTING_AGENTS.md`](../DIRECTING_AGENTS.md)
 **Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md)
 **Human rollup:** [`../DRAFT_HANDOFF.md`](../DRAFT_HANDOFF.md)
 
 ## Capacity
 
-Integrator + up to **2** coding workers — **2 of 2 in use.** Check `git worktree list` and
+Integrator + up to **2** coding workers — **0 of 2 in use.** Check `git worktree list` and
 `DRAFT_HANDOFF.md`'s top section before assuming this table is current.
 
 ## Active agents / worktrees
 
-| Dept | Branch | Status file | Notes |
-|------|--------|--------------|-------|
-| Level design (map #2) | `feat/map-rail-platform` | `logiCard-env-lookfeel` worktree (directory name stale) | Long-sightline map: two platforms + a corridor, one Vent, one Breach. Self-contained new methods only — doesn't touch the shared `MapId`/dispatch switches. Brief: `MAP_RAIL_PLATFORM_AGENT_BRIEF.md` at the worktree root. |
-| Level design (map #3) | `feat/map-vault-complex` | `logiCard-ui-dock-polish` worktree (directory name stale) | Dense maze map: 4-5 small rooms, 3-4 doors, one Vent, one Breach. Self-contained new methods only — doesn't touch the shared `MapId`/dispatch switches. Brief: `MAP_VAULT_COMPLEX_AGENT_BRIEF.md` at the worktree root. |
+None. Both map-design slots closed out — `feat/map-rail-platform` and `feat/map-vault-complex` are
+merged into `master` (commits `6c384d2`, `59b9a4e`). Their worktrees (`logiCard-env-lookfeel`,
+`logiCard-ui-dock-polish` — directory names predate this wave) still exist on disk with each worker's
+now-obsolete brief files and stray untracked artifacts; pending cleanup, not yet removed.
 
 ## Ownership matrix (write locks)
 
@@ -28,10 +30,8 @@ Wave-specific rows on top of the evergreen ones below:
 
 | Path / concern | Owner now |
 |----------------|-----------|
-| `Assets/_Project/Art/Characters/**`, `Assets/_Project/Board/**` (non-map-dispatch), `Assets/_Project/Art/URP/**`, `Assets/_Project/Rendering/**`, `PrimitiveMaterialFactory.cs`, `Assets/_Project/Art/Environment/**` | Open, no worker assigned this pass |
-| New self-contained methods in `GameBootstrap.cs`/`MapDefinitions.cs` (per-map geometry/AI, not the shared dispatch switches) | Level design (`feat/map-rail-platform`, `feat/map-vault-complex`) — no file overlap, each adds differently-named methods only |
-| `Assets/_Project/UI/**` | Closed out — `feat/ui-dock-polish` merged, open for the next assignment |
-| `GameBootstrap.BuildBoard(MapId)`'s switch, `BuildPawns()`, `BuildDefenderPayload()`, `MapDefinitions.ForId`'s switch, `Assets/_Project/Board/BoardCameraRig.cs` | Integrator-only edit target — the shared map-dispatch wiring point, deliberately not delegated to avoid a two-worker collision |
+| `Assets/_Project/Art/Characters/**`, `Assets/_Project/Board/**`, `Assets/_Project/Art/URP/**`, `Assets/_Project/Rendering/**`, `PrimitiveMaterialFactory.cs`, `Assets/_Project/Art/Environment/**`, `Assets/_Project/UI/**` | Open, no worker assigned this pass |
+| `GameBootstrap.BuildBoard(MapId)`'s switch, `BuildPawns()`, `BuildDefenderPayload()`, `MapDefinitions.ForId`'s switch, `Assets/_Project/Board/BoardCameraRig.cs` | Integrator-only edit target — the shared map-dispatch wiring point; wired 2026-08-10, stays Integrator-only for future map additions |
 | `Boot/`, `Net/`, `Timeline/`, `Sim/` (fixes) | Core — paused this wave, not touched unless something breaks |
 | `docs/DRAFT_HANDOFF.md`, `docs/SCHEDULE.md` ticks, `docs/contracts/CURRENT.md`, `docs/PRODUCT_MEMORY.md` | Core / Integrator |
 | `docs/departments/<dept>/STATUS.md` | That dept only |

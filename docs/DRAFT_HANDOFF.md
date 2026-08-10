@@ -1,5 +1,44 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 14) — three-map roster landed and wired; both worker slots closed
+
+**Both new maps merged and the shared dispatch wired** — the three-map roster from "continued 13" below
+is now complete and selectable (not just present as dead code):
+
+- `feat/map-vault-complex` merged clean (`6c384d2`); a missing `MapDefinitions.cs.meta` (my own
+  oversight when that file was first created, caught by the Vault Complex worker as an aside) fixed
+  separately (`d291db8`).
+- `feat/map-rail-platform` merged with real textual conflicts against the already-merged Vault Complex
+  branch (`59b9a4e`) — both branches added new methods immediately after the same insertion points in
+  `GameBootstrap.cs` and `MapDefinitions.cs`. Resolved by keeping every method from both branches intact
+  (no logical conflict, just proximity); same commit also carries the dispatch wiring below.
+- **`GameBootstrap.BuildBoard(MapId)`'s switch, `MapDefinitions.ForId`'s switch, and `BuildPawns()`** —
+  the shared dispatch points deliberately reserved for the Integrator, per-map-collision-avoidance —
+  now route all three `MapId` values to their real geometry/layout/spawn points instead of throwing
+  `NotImplementedException`. `BuildPawns()` picks attacker/defender spawn points and the correct scripted
+  defender-payload method per map (Rail Platform: attacker `(4,0)`, defender `(4,11)` →
+  `BuildRailPlatformDefenderPayload`; Vault Complex: attacker `(2,0)`, defender `(6,8)` →
+  `BuildVaultComplexDefenderPayload`) — numerics chosen to match each map's own defender-AI approach
+  vectors, same offset-from-door pattern Freight Yard already used.
+- `ActiveMap` stays a constant, still defaulted to `FreightYard` — no map-select UI exists, explicit
+  follow-up per the approved plan, not attempted here.
+- Recorded as `PRODUCT_MEMORY.md` **C57**.
+- Both map-worker slots now closed (`docs/departments/INDEX.md`: 0 of 2 in use). The two worktrees
+  (`logiCard-env-lookfeel`, `logiCard-ui-dock-polish`) still exist on disk with stray untracked brief
+  files/`TestResults/` from each worker's session — pending cleanup, not yet removed.
+- Batchmode verification of the fully-wired combined state via a disposable `logiCard-verify-maps`
+  worktree — **in progress as this entry is written**; result to be logged once it finishes.
+
+**Cloud fix correction** — the "continued 13" entry below and the "Awaiting human review" section
+originally pointed at `af5d2b1` as the cloud-transparency fix. That commit used the wrong shader keyword
+(`_ALPHABLEND_ON`, which doesn't exist on `Universal Render Pipeline/Particles/Unlit`) — caught by a
+follow-up human screenshot ("the cloud and weather definitely have not changed") showing clouds still
+rendering as broken jagged black shapes. Corrected in `7944b61`, this time verified directly against the
+shader source in `Library/PackageCache` before committing (`_SURFACE_TYPE_TRANSPARENT`, same keyword the
+glass fix uses). Batchmode-verified (EditMode 124/124, PlayMode 37/37) but — like everything in the
+"Awaiting human review" section below — not yet visually confirmed. Item 2 in that section now reflects
+this correction.
+
 ## 2026-08-10 (continued 13) — three-map roster kicked off: Vent/Breach primitives, Freight Yard retrofit, two new maps in flight
 
 **Human decision, recorded in full in `PRODUCT_MEMORY.md` (next C-row once landed):** logiCard grows
@@ -48,8 +87,9 @@ build further on top of the assumption that they look right, and do not re-touch
 
 1. **Reflection probes** (`80049df`) — does the wet floor (Yard/Vault) show a visible sheen/highlight
    now, or does the `clearFlags` fix still read as unchanged?
-2. **Clouds** (`af5d2b1`, `be119b8`) — do they read as soft cloud puffs, or is there a leftover
-   artifact (hard edges, seams between billboards, wrong tint)?
+2. **Clouds** (`be119b8`, corrected transparency fix `7944b61` — supersedes the first, wrong attempt
+   `af5d2b1`) — do they read as soft cloud puffs, or is there a leftover artifact (hard edges, seams
+   between billboards, wrong tint)?
 3. **Window glass** (`5720d31`) — is it actually see-through, and does the warm glow behind it
    (Hall/Vault windows) read as a lit-window effect, or is it too subtle/too strong/off?
 4. **Scout's re-outfit** (`d5ee45e`, Adventurer→Worker) — does the vest/high-vis read as "facility
