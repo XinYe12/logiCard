@@ -230,8 +230,27 @@ namespace LogiCard.Boot
                 DoorState.Closed,
                 displayName: "Door #1"));
 
-            model.RegisterWall(new Segment(new PlanarPosition(2f, 4f), new PlanarPosition(2f, 7f)));
-            model.RegisterWall(new Segment(new PlanarPosition(6f, 4f), new PlanarPosition(6f, 7f)));
+            // West wall split around a Vent (narrow grate bypass from the west flank straight into
+            // Hall, past the frontal chokepoint) — same interact/resolve pipeline as a door, just
+            // narrower (0.4 vs. a normal door's 0.5) and re-skinned in BoardView. Both sides can open
+            // and close it repeatedly, unlike a Breach.
+            model.RegisterWall(new Segment(new PlanarPosition(2f, 4f), new PlanarPosition(2f, 5.3f)));
+            model.RegisterWall(new Segment(new PlanarPosition(2f, 5.7f), new PlanarPosition(2f, 7f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(2f, 5.3f), new PlanarPosition(2f, 5.7f)),
+                DoorState.Closed,
+                displayName: "Vent Cover",
+                kind: DoorKind.Vent));
+
+            // East wall split around a Breach (permanent flank route once someone pays to open it —
+            // the UI never offers Close again for this one, see ProgramHud.RefreshDoorPrompt).
+            model.RegisterWall(new Segment(new PlanarPosition(6f, 4f), new PlanarPosition(6f, 4.6f)));
+            model.RegisterWall(new Segment(new PlanarPosition(6f, 5.0f), new PlanarPosition(6f, 7f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(6f, 4.6f), new PlanarPosition(6f, 5.0f)),
+                DoorState.Closed,
+                displayName: "Cracked Wall",
+                kind: DoorKind.Breach));
 
             model.RegisterWall(new Segment(new PlanarPosition(2f, 7f), new PlanarPosition(3.75f, 7f)));
             model.RegisterWall(new Segment(new PlanarPosition(4.25f, 7f), new PlanarPosition(6f, 7f)));
