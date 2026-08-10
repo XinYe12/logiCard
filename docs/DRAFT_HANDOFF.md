@@ -1,5 +1,32 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 3) — env checkpoint 2 merged; two decisions now waiting on the human
+
+**`feat/env-lookfeel-overhaul` checkpoint 2 merged** (`3feccca`, 3 worker commits). Real, visible change:
+room-zoned wet-dusk board surfaces via real CC0 Poly Haven PBR textures (asphalt Yard, concrete Hall,
+polished Vault, brick walls, wood-framed terrain edge) through a new `BoardSurfaceMaterials.cs`, plus
+warm point-light practicals at Hall/Vault/Yard window dressing. Merged clean, no conflicts — the
+`BoardCameraRig.cs`/tests branch-divergence artifact flagged earlier resolved correctly (3-way merge
+recognized it as "added only on master," kept it, camera rotation is untouched). Worker-reported
+EditMode 113/113, PlayMode 34/34 on their branch; not independently re-run on master post-merge (Editor
+still open/live at merge time) — self-reviewed `BoardSurfaceMaterials.cs`, the `GameBootstrap.cs` merge
+result, and confirmed the `LogiCard.Board` asmdef reference survived instead.
+
+**Doors are still tinted boxes** — checkpoint 3 (door/prop meshes) is blocked on a human pack choice
+between two proposed CC0 candidates (documented in `Assets/_Project/Art/Environment/THIRD_PARTY.md`):
+Quaternius "Ultimate House Interior Pack" (worker's recommendation — same author pipeline as the
+existing pawn import tooling) vs. KayKit "Dungeon Remastered" (stronger modular wall kit, weaker genre
+match — fantasy-dungeon read vs. this project's SWAT-facility brief).
+
+**Second open question from the worker, also needs a human call, not a unilateral one:** should the
+live in-match camera match the reference image's hero-shot fidelity/mood exactly, or a
+readability-preserving version tuned back for actual play legibility? Worker built toward richer
+wet-dusk detail without resolving this trade-off themselves — asked the human directly instead of
+guessing, correctly per this project's escalation norms.
+
+**`orthographicSize` still at 5.0**, untouched since the dock move — worker flagged it as needing a
+framing check once the human sees a real screenshot, not retuned blind.
+
 ## 2026-08-10 (continued 2) — Honest progress check; ui-dock-polish merged; URP audit
 
 **Human asked directly whether the project is actually on track aesthetically** ("i literally did not
