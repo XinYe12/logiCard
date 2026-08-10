@@ -39,6 +39,10 @@ flowchart TD
 
 - Pick **Scout** or **Juggernaut** (attrs readable: Speed / Agility / Strength one-liners).  
 - Confirm → Lobby.
+- **Animation reference (not yet implemented):** [`UI_CHARACTER_SELECT_ANIMATION_REF.md`](UI_CHARACTER_SELECT_ANIMATION_REF.md)
+  — a pasted React/Tailwind carousel spec marked as the target *motion feel* for this screen (crossfade
+  role rotation: center/flank/back). Reference for the animation language only, not a literal build task
+  or a stack we're adopting.
 
 ---
 
