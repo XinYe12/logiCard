@@ -968,6 +968,14 @@ namespace LogiCard.UI
             bool closed = stateLabel == "CLOSED";
             _openDoorButton.GetComponent<Image>().color = closed ? Accent : PanelMid;
             _closeDoorButton.GetComponent<Image>().color = closed ? PanelMid : Accent;
+
+            // Breach doors are a one-way permanent shortcut (DoorKind.Breach) — once Open, Close is
+            // never a legal option again in the UI (the resolver itself doesn't enforce this; nothing
+            // ever queues a Close for one because the prompt never offers it). While still Closed,
+            // Open is offered normally — the player has to be able to breach it in the first place.
+            bool hideClose = pending.Kind == DoorKind.Breach && !closed;
+            _closeDoorButton.gameObject.SetActive(!hideClose);
+
             _doorPromptRoot.SetActive(true);
         }
 

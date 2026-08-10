@@ -446,7 +446,45 @@ namespace LogiCard.Board
                 originalColors = CaptureRendererColors(renderers);
             }
 
+            // Vent/Breach reuse the exact same leaf geometry and open/closed state-tint pipeline
+            // (ApplyDoorVisualState) as a Standard door — only the *base* color they blend against
+            // differs, so the kind reads clearly even under the green/red state tint. No new mesh
+            // assets needed for this pass; geometry itself differs too since a vent/breach segment is
+            // authored narrower at the call site in GameBootstrap, same leaf-scaling code as any door.
+            originalColors = KindTintOverride(door.Kind, originalColors);
+
             return new DoorVisual(door, root, hinge.transform, leaf, renderers, originalColors);
+        }
+
+        private static readonly Color VentBaseTint = new Color(0.55f, 0.58f, 0.62f);
+        private static readonly Color BreachBaseTint = new Color(0.42f, 0.32f, 0.24f);
+
+        private static Color[][] KindTintOverride(DoorKind kind, Color[][] captured)
+        {
+            Color tint;
+            switch (kind)
+            {
+                case DoorKind.Vent:
+                    tint = VentBaseTint;
+                    break;
+                case DoorKind.Breach:
+                    tint = BreachBaseTint;
+                    break;
+                default:
+                    return captured;
+            }
+
+            var overridden = new Color[captured.Length][];
+            for (int i = 0; i < captured.Length; i++)
+            {
+                overridden[i] = new Color[captured[i].Length];
+                for (int m = 0; m < captured[i].Length; m++)
+                {
+                    overridden[i][m] = tint;
+                }
+            }
+
+            return overridden;
         }
 
         private static Color[][] CaptureRendererColors(MeshRenderer[] renderers)
