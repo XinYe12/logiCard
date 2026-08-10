@@ -5,24 +5,22 @@ using UnityEngine;
 namespace LogiCard.Board
 {
     /// <summary>
-    /// Scene view for <see cref="ArenaBoard"/> (C35/C39 Phase 4): one ground plane plus thin boxes
-    /// for wall/door segments, plus physical board-edge lip and dark void dressing
-    /// (ART_DIRECTION Board pillar). Sim owns geometry truth; this only draws and converts coordinates.
+    /// Scene view for <see cref="ArenaBoard"/> (C35/C39 Phase 4 + C53 detail pass): room-zoned
+    /// floors, brick walls, terrain-edge strata, and prop dressing. Sim owns geometry truth; this
+    /// only draws and converts coordinates. Wall/door <em>positions</em> stay gameplay-owned.
     /// </summary>
     public sealed class BoardView : MonoBehaviour
     {
         public float WorldScale = 1f;
         public float FloorSpacing = 2.5f;
         public float WallHeight = 0.85f;
-        public float SegmentThickness = 0.12f;
+        public float SegmentThickness = 0.14f;
 
-        // Keep these far from wall brown (GameBootstrap ~0.42/0.38/0.34) — playtest 2026-08-07:
-        // Closed used a near-wall rust and read as "door never changes color."
+        // Keep these far from wall brick — playtest 2026-08-07: Closed used a near-wall rust and
+        // read as "door never changes color." Checkpoint 3 replaces these boxes with real door meshes.
         private static readonly Color DoorOpenColor = new Color(0.35f, 0.82f, 0.42f);
         private static readonly Color DoorClosedColor = new Color(0.82f, 0.22f, 0.18f);
 
-        // Void apron + clutter — near camera clear-color (GameBootstrap ~0.07/0.07/0.09) so the
-        // board reads as a lit stage in a dark room, not a plane floating in empty black.
         private static readonly Color VoidApronColor = new Color(0.05f, 0.045f, 0.055f);
         private static readonly Color VoidClutterColor = new Color(0.11f, 0.09f, 0.08f);
 
@@ -37,7 +35,7 @@ namespace LogiCard.Board
                 (_model.MinX + _model.MaxX) * 0.5f,
                 (_model.MinY + _model.MaxY) * 0.5f));
 
-        public void Build(ArenaBoard model, Color groundColor, Color wallColor)
+        public void Build(ArenaBoard model)
         {
             _model = model;
             _doorVisuals.Clear();
@@ -47,38 +45,34 @@ namespace LogiCard.Board
                 DestroyImmediate(transform.GetChild(i).gameObject);
             }
 
-            float width = model.MaxX - model.MinX;
-            float depth = model.MaxY - model.MinY;
-            float centerX = (model.MinX + model.MaxX) * 0.5f;
-            float centerY = (model.MinY + model.MaxY) * 0.5f;
-
-            var ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            ground.name = "GroundPlane";
-            ground.transform.SetParent(transform, false);
-            ground.transform.localPosition = LocalFromPlanar(new PlanarPosition(centerX, centerY))
-                                            + new Vector3(0f, -0.05f, 0f);
-            ground.transform.localScale = new Vector3(width * WorldScale, 0.1f, depth * WorldScale);
-            ground.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(groundColor);
-
-            // ART_DIRECTION Board pillar: physical edge + dark void beyond the playable face.
-            PlaceBoardEdge(model, groundColor);
+            PlaceRoomFloors(model);
+            PlaceTerrainEdge(model);
             PlaceVoidDressing(model);
-
-            // Day 9: painted/etched unit grid on the board face (ART_DIRECTION Demo art floor).
             PlacePaintedGrid(model);
+            PlaceRoomDressing(model);
 
             for (int i = 0; i < model.Walls.Count; i++)
             {
-                PlaceSegmentBox($"Wall_{i}", model.Walls[i], wallColor, WallHeight);
+                PlaceSegmentBox($"Wall_{i}", model.Walls[i], BoardSurfaceMaterials.BrickWall, WallHeight);
             }
 
             for (int i = 0; i < model.Doors.Count; i++)
             {
                 Door door = model.Doors[i];
                 Color color = model.GetDoorState(door) == DoorState.Open ? DoorOpenColor : DoorClosedColor;
-                GameObject box = PlaceSegmentBox($"Door_{i}", door.Segment, color, WallHeight * 0.92f);
+                GameObject box = PlaceSegmentBox(
+                    $"Door_{i}",
+                    door.Segment,
+                    PrimitiveMaterialFactory.Tinted(color),
+                    WallHeight * 0.92f);
                 _doorVisuals.Add(new DoorVisual(door, box.GetComponent<MeshRenderer>()));
             }
+        }
+
+        /// <summary>Back-compat overload — colors ignored; C53 surfaces own the palette.</summary>
+        public void Build(ArenaBoard model, Color groundColor, Color wallColor)
+        {
+            Build(model);
         }
 
         /// <summary>
@@ -129,78 +123,237 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Raised lip around the ground plane perimeter so the board reads as a physical plywood/
-        /// plastic base rather than a plane that stops in space. Bounds come from the model —
-        /// never a hardcoded board size.
+        /// C45 room zones as distinct wet-dusk surfaces (Yard asphalt / Hall concrete / Vault polish /
+        /// flank approach lanes). Bounds match GameBootstrap.BuildBoard — presentation only.
         /// </summary>
-        private void PlaceBoardEdge(ArenaBoard model, Color groundColor)
+        private void PlaceRoomFloors(ArenaBoard model)
         {
-            var edgeRoot = new GameObject("BoardEdge");
+            var floors = new GameObject("RoomFloors");
+            floors.transform.SetParent(transform, false);
+
+            // Yard — open south approach (y below 4).
+            PlaceFloorSlab(floors.transform, "YardFloor", 0f, 0f, 8f, 4f, BoardSurfaceMaterials.YardFloor);
+            // Hall — walled kill-box (x in [2,6], y in [4,7]).
+            PlaceFloorSlab(floors.transform, "HallFloor", 2f, 4f, 6f, 7f, BoardSurfaceMaterials.HallFloor);
+            // Vault — north objective room (y above 7).
+            PlaceFloorSlab(floors.transform, "VaultFloor", 0f, 7f, 8f, 10f, BoardSurfaceMaterials.VaultFloor);
+            // Unguarded flanks beside Hall.
+            PlaceFloorSlab(floors.transform, "FlankWest", 0f, 4f, 2f, 7f, BoardSurfaceMaterials.FlankFloor);
+            PlaceFloorSlab(floors.transform, "FlankEast", 6f, 4f, 8f, 7f, BoardSurfaceMaterials.FlankFloor);
+
+            // Keep a thin structural slab under everything so raycasts always hit even if a zone
+            // seam has a hairline gap (BoardInputController taps the ground collider).
+            float width = model.MaxX - model.MinX;
+            float depth = model.MaxY - model.MinY;
+            float centerX = (model.MinX + model.MaxX) * 0.5f;
+            float centerY = (model.MinY + model.MaxY) * 0.5f;
+            var underlay = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            underlay.name = "GroundUnderlay";
+            underlay.transform.SetParent(floors.transform, false);
+            underlay.transform.localPosition = LocalFromPlanar(new PlanarPosition(centerX, centerY))
+                                               + new Vector3(0f, -0.06f, 0f);
+            underlay.transform.localScale = new Vector3(width * WorldScale, 0.08f, depth * WorldScale);
+            underlay.GetComponent<MeshRenderer>().sharedMaterial = BoardSurfaceMaterials.StrataDirt;
+        }
+
+        private void PlaceFloorSlab(
+            Transform parent,
+            string name,
+            float minX,
+            float minY,
+            float maxX,
+            float maxY,
+            Material material)
+        {
+            float width = maxX - minX;
+            float depth = maxY - minY;
+            float centerX = (minX + maxX) * 0.5f;
+            float centerY = (minY + maxY) * 0.5f;
+
+            var slab = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            slab.name = name;
+            slab.transform.SetParent(parent, false);
+            slab.transform.localPosition = LocalFromPlanar(new PlanarPosition(centerX, centerY))
+                                           + new Vector3(0f, -0.05f, 0f);
+            slab.transform.localScale = new Vector3(width * WorldScale, 0.1f, depth * WorldScale);
+            slab.GetComponent<MeshRenderer>().sharedMaterial = material;
+            // Zone slabs are visual only — underlay keeps a single clickable collider.
+            StripCollider(slab);
+        }
+
+        /// <summary>
+        /// Reference-style chunk edge: wood frame + dirt/rock/grass strata cross-section, replacing
+        /// the old flat plywood lip. Still a bounded floating chunk — not an infinite terrain.
+        /// </summary>
+        private void PlaceTerrainEdge(ArenaBoard model)
+        {
+            var edgeRoot = new GameObject("TerrainEdge");
             edgeRoot.transform.SetParent(transform, false);
-
-            // Darker than the playable face — plywood edge / bevel strip.
-            Color lipColor = new Color(
-                groundColor.r * 0.55f,
-                groundColor.g * 0.48f,
-                groundColor.b * 0.42f,
-                1f);
-
-            const float lipThickness = 0.14f;
-            // Ground top is at local y=0; lip rises slightly above so the edge catches key light.
-            const float lipHeight = 0.16f;
-            const float lipCenterY = 0.02f;
 
             float width = model.MaxX - model.MinX;
             float depth = model.MaxY - model.MinY;
             float centerX = (model.MinX + model.MaxX) * 0.5f;
             float centerY = (model.MinY + model.MaxY) * 0.5f;
 
-            // Long edges span full width (corners covered); short edges span depth only.
-            PlaceEdgeLip(
-                edgeRoot.transform,
-                "Edge_MinY",
+            const float frameThickness = 0.18f;
+            const float frameHeight = 0.55f;
+            // Frame sits mostly below the playable face so the strata read from the side.
+            const float frameCenterY = -0.22f;
+
+            PlaceEdgeBand(
+                edgeRoot.transform, "Frame_MinY",
                 new PlanarPosition(centerX, model.MinY),
-                new Vector3((width + lipThickness) * WorldScale, lipHeight, lipThickness * WorldScale),
-                lipCenterY,
-                lipColor);
-            PlaceEdgeLip(
-                edgeRoot.transform,
-                "Edge_MaxY",
+                new Vector3((width + frameThickness) * WorldScale, frameHeight, frameThickness * WorldScale),
+                frameCenterY, BoardSurfaceMaterials.WoodEdge);
+            PlaceEdgeBand(
+                edgeRoot.transform, "Frame_MaxY",
                 new PlanarPosition(centerX, model.MaxY),
-                new Vector3((width + lipThickness) * WorldScale, lipHeight, lipThickness * WorldScale),
-                lipCenterY,
-                lipColor);
-            PlaceEdgeLip(
-                edgeRoot.transform,
-                "Edge_MinX",
+                new Vector3((width + frameThickness) * WorldScale, frameHeight, frameThickness * WorldScale),
+                frameCenterY, BoardSurfaceMaterials.WoodEdge);
+            PlaceEdgeBand(
+                edgeRoot.transform, "Frame_MinX",
                 new PlanarPosition(model.MinX, centerY),
-                new Vector3(lipThickness * WorldScale, lipHeight, depth * WorldScale),
-                lipCenterY,
-                lipColor);
-            PlaceEdgeLip(
-                edgeRoot.transform,
-                "Edge_MaxX",
+                new Vector3(frameThickness * WorldScale, frameHeight, depth * WorldScale),
+                frameCenterY, BoardSurfaceMaterials.WoodEdge);
+            PlaceEdgeBand(
+                edgeRoot.transform, "Frame_MaxX",
                 new PlanarPosition(model.MaxX, centerY),
-                new Vector3(lipThickness * WorldScale, lipHeight, depth * WorldScale),
-                lipCenterY,
-                lipColor);
+                new Vector3(frameThickness * WorldScale, frameHeight, depth * WorldScale),
+                frameCenterY, BoardSurfaceMaterials.WoodEdge);
+
+            // Inset strata rings — grass near the top lip, rock mid, dirt deep — matching the
+            // reference's natural terrain-edge cross-section inside the wood strip.
+            PlaceStrataRing(edgeRoot.transform, model, "Grass", 0.02f, 0.08f, 0.12f, BoardSurfaceMaterials.StrataGrass);
+            PlaceStrataRing(edgeRoot.transform, model, "Rock", -0.12f, 0.18f, 0.10f, BoardSurfaceMaterials.StrataRock);
+            PlaceStrataRing(edgeRoot.transform, model, "Dirt", -0.30f, 0.22f, 0.08f, BoardSurfaceMaterials.StrataDirt);
         }
 
-        private void PlaceEdgeLip(
+        private void PlaceStrataRing(
+            Transform parent,
+            ArenaBoard model,
+            string label,
+            float centerY,
+            float height,
+            float thickness,
+            Material material)
+        {
+            float width = model.MaxX - model.MinX;
+            float depth = model.MaxY - model.MinY;
+            float centerX = (model.MinX + model.MaxX) * 0.5f;
+            float centerYPlanar = (model.MinY + model.MaxY) * 0.5f;
+
+            PlaceEdgeBand(
+                parent, $"Strata_{label}_MinY",
+                new PlanarPosition(centerX, model.MinY),
+                new Vector3(width * WorldScale, height, thickness * WorldScale),
+                centerY, material);
+            PlaceEdgeBand(
+                parent, $"Strata_{label}_MaxY",
+                new PlanarPosition(centerX, model.MaxY),
+                new Vector3(width * WorldScale, height, thickness * WorldScale),
+                centerY, material);
+            PlaceEdgeBand(
+                parent, $"Strata_{label}_MinX",
+                new PlanarPosition(model.MinX, centerYPlanar),
+                new Vector3(thickness * WorldScale, height, depth * WorldScale),
+                centerY, material);
+            PlaceEdgeBand(
+                parent, $"Strata_{label}_MaxX",
+                new PlanarPosition(model.MaxX, centerYPlanar),
+                new Vector3(thickness * WorldScale, height, depth * WorldScale),
+                centerY, material);
+        }
+
+        private void PlaceEdgeBand(
             Transform parent,
             string name,
             PlanarPosition planarCenter,
             Vector3 localScale,
             float localY,
-            Color color)
+            Material material)
         {
-            var lip = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            lip.name = name;
-            lip.transform.SetParent(parent, false);
-            lip.transform.localPosition = LocalFromPlanar(planarCenter) + new Vector3(0f, localY, 0f);
-            lip.transform.localScale = localScale;
-            lip.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
-            StripCollider(lip);
+            var band = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            band.name = name;
+            band.transform.SetParent(parent, false);
+            band.transform.localPosition = LocalFromPlanar(planarCenter) + new Vector3(0f, localY, 0f);
+            band.transform.localScale = localScale;
+            band.GetComponent<MeshRenderer>().sharedMaterial = material;
+            StripCollider(band);
+        }
+
+        /// <summary>
+        /// Presentation-only room props + warm window panes (emissive). Placed clear of door
+        /// corridors and spawn lanes so they never read as blockers (C40 — no pawn collision anyway;
+        /// these also strip colliders so taps pass through to the ground underlay).
+        /// </summary>
+        private void PlaceRoomDressing(ArenaBoard model)
+        {
+            var root = new GameObject("RoomDressing");
+            root.transform.SetParent(transform, false);
+
+            // Yard — wet approach clutter at the edges, leave the (4,*) spine clear for attacker.
+            PlaceProp(root.transform, "Yard_CrateStack_W", new PlanarPosition(0.7f, 1.2f),
+                new Vector3(0.55f, 0.45f, 0.55f), 0.22f, 12f, BoardSurfaceMaterials.PropCrate);
+            PlaceProp(root.transform, "Yard_CrateStack_E", new PlanarPosition(7.3f, 1.4f),
+                new Vector3(0.6f, 0.5f, 0.5f), 0.25f, -18f, BoardSurfaceMaterials.PropCrate);
+            PlaceProp(root.transform, "Yard_Barrel_W", new PlanarPosition(1.1f, 2.8f),
+                new Vector3(0.35f, 0.55f, 0.35f), 0.28f, 0f, BoardSurfaceMaterials.PropMetal);
+            PlaceProp(root.transform, "Yard_Barrel_E", new PlanarPosition(6.9f, 2.6f),
+                new Vector3(0.35f, 0.55f, 0.35f), 0.28f, 0f, BoardSurfaceMaterials.PropMetal);
+
+            // Hall — cover + warm practical window panes on the side walls (reference's lit windows).
+            PlaceProp(root.transform, "Hall_Cover_SW", new PlanarPosition(2.55f, 4.55f),
+                new Vector3(0.7f, 0.35f, 0.45f), 0.18f, 8f, BoardSurfaceMaterials.PropCrate);
+            PlaceProp(root.transform, "Hall_Cover_NE", new PlanarPosition(5.45f, 6.4f),
+                new Vector3(0.65f, 0.38f, 0.5f), 0.19f, -22f, BoardSurfaceMaterials.PropCrate);
+            PlaceWindowPane(root.transform, "Hall_Window_W", new PlanarPosition(2.05f, 5.5f),
+                new Vector3(0.04f, 0.45f, 0.7f), 0.55f);
+            PlaceWindowPane(root.transform, "Hall_Window_E", new PlanarPosition(5.95f, 5.5f),
+                new Vector3(0.04f, 0.45f, 0.7f), 0.55f);
+
+            // Vault — shelving / crate depth dressing north of Door #2.
+            PlaceProp(root.transform, "Vault_Shelf_W", new PlanarPosition(1.2f, 8.8f),
+                new Vector3(1.1f, 0.7f, 0.35f), 0.35f, 0f, BoardSurfaceMaterials.PropCrate);
+            PlaceProp(root.transform, "Vault_Shelf_E", new PlanarPosition(6.8f, 8.8f),
+                new Vector3(1.1f, 0.7f, 0.35f), 0.35f, 0f, BoardSurfaceMaterials.PropCrate);
+            PlaceProp(root.transform, "Vault_Crate", new PlanarPosition(4.0f, 9.3f),
+                new Vector3(0.7f, 0.4f, 0.55f), 0.2f, 15f, BoardSurfaceMaterials.PropMetal);
+            PlaceWindowPane(root.transform, "Vault_Window_N", new PlanarPosition(4f, 9.85f),
+                new Vector3(1.2f, 0.4f, 0.04f), 0.55f);
+
+            // Silence unused-parameter warning if layout constants ever diverge from model bounds —
+            // dressing is authored to the C45 Yard/Hall/Vault numbers, not derived from Min/Max.
+            _ = model;
+        }
+
+        private void PlaceProp(
+            Transform parent,
+            string name,
+            PlanarPosition planar,
+            Vector3 scale,
+            float localY,
+            float yawDegrees,
+            Material material)
+        {
+            var prop = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            prop.name = name;
+            prop.transform.SetParent(parent, false);
+            prop.transform.localPosition = LocalFromPlanar(planar) + new Vector3(0f, localY, 0f);
+            prop.transform.localScale = scale * WorldScale;
+            prop.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            prop.GetComponent<MeshRenderer>().sharedMaterial = material;
+            StripCollider(prop);
+        }
+
+        private void PlaceWindowPane(Transform parent, string name, PlanarPosition planar, Vector3 scale, float localY)
+        {
+            var pane = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            pane.name = name;
+            pane.transform.SetParent(parent, false);
+            pane.transform.localPosition = LocalFromPlanar(planar) + new Vector3(0f, localY, 0f);
+            pane.transform.localScale = scale * WorldScale;
+            pane.GetComponent<MeshRenderer>().sharedMaterial = BoardSurfaceMaterials.WarmGlass;
+            StripCollider(pane);
         }
 
         /// <summary>
@@ -218,13 +371,12 @@ namespace LogiCard.Board
             float centerX = (model.MinX + model.MaxX) * 0.5f;
             float centerY = (model.MinY + model.MaxY) * 0.5f;
 
-            // Apron extends past every edge; sits below the ground slab so only the outer ring shows.
             const float apronMargin = 2.75f;
             var apron = GameObject.CreatePrimitive(PrimitiveType.Cube);
             apron.name = "VoidApron";
             apron.transform.SetParent(voidRoot.transform, false);
             apron.transform.localPosition = LocalFromPlanar(new PlanarPosition(centerX, centerY))
-                                            + new Vector3(0f, -0.22f, 0f);
+                                            + new Vector3(0f, -0.55f, 0f);
             apron.transform.localScale = new Vector3(
                 (width + (apronMargin * 2f)) * WorldScale,
                 0.06f,
@@ -232,7 +384,6 @@ namespace LogiCard.Board
             apron.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(VoidApronColor);
             StripCollider(apron);
 
-            // Sparse workbench clutter — offsets from model bounds, not a fixed board size.
             PlaceVoidClutter(
                 voidRoot.transform,
                 "Clutter_Block",
@@ -302,9 +453,11 @@ namespace LogiCard.Board
             var gridRoot = new GameObject("PaintedGrid");
             gridRoot.transform.SetParent(transform, false);
 
-            Color lineColor = new Color(0.42f, 0.32f, 0.22f, 0.85f);
+            // Cooler etched lines so they sit into wet asphalt/concrete rather than reading as
+            // warm clay paint on plywood.
+            Color lineColor = new Color(0.12f, 0.14f, 0.18f, 0.7f);
             const float lineY = 0.02f;
-            const float thickness = 0.035f;
+            const float thickness = 0.03f;
 
             int x0 = Mathf.CeilToInt(model.MinX);
             int x1 = Mathf.FloorToInt(model.MaxX);
@@ -369,7 +522,7 @@ namespace LogiCard.Board
             }
         }
 
-        private GameObject PlaceSegmentBox(string name, Segment segment, Color color, float height)
+        private GameObject PlaceSegmentBox(string name, Segment segment, Material material, float height)
         {
             float dx = segment.B.X - segment.A.X;
             float dy = segment.B.Y - segment.A.Y;
@@ -385,17 +538,10 @@ namespace LogiCard.Board
             box.transform.SetParent(transform, false);
             box.transform.localPosition = LocalFromPlanar(mid) + new Vector3(0f, height * 0.5f, 0f);
             box.transform.localScale = new Vector3(length * WorldScale, height, SegmentThickness * WorldScale);
-            // Box's long axis (scale.x) is local +X, which Quaternion.Euler(0,yaw,0) sends to
-            // (cos(yaw), 0, -sin(yaw)) in local space — so aligning it to (dx, dy) needs
-            // atan2(-dy, dx), not atan2(dx, dy) (that formula is for aligning local +Z instead).
-            // BUG FOUND 2026-08-06 (playtest): every wall/door box rendered rotated 90° from its
-            // real Segment position, e.g. a wall spanning x in [0, 1.75] at fixed y rendered as a
-            // bar spanning y instead of x.
             float yaw = Mathf.Atan2(-dy, dx) * Mathf.Rad2Deg;
             box.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
-            box.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
+            box.GetComponent<MeshRenderer>().sharedMaterial = material;
 
-            // Walls/doors should not steal board taps — only the ground plane is clickable.
             Collider col = box.GetComponent<Collider>();
             if (col != null)
             {

@@ -194,7 +194,8 @@ namespace LogiCard.Boot
                 displayName: "Door #2"));
 
             _board = boardGo.AddComponent<BoardView>();
-            _board.Build(model, new Color(0.72f, 0.55f, 0.38f), new Color(0.42f, 0.38f, 0.34f));
+            // C53: room-zoned wet-dusk surfaces + terrain edge — palette owned by BoardSurfaceMaterials.
+            _board.Build(model);
         }
 
         private void BuildPawns()
@@ -362,21 +363,41 @@ namespace LogiCard.Boot
             key.shadowStrength = 0.55f;
             key.transform.rotation = Quaternion.Euler(50f, -25f, 0f);
 
-            // Warm practical fill — stand-in for the reference's window/streetlamp bounce until
-            // real interior props land in checkpoint 2. Keeps silhouettes from going pure cool-grey.
+            // Warm practical fill — bounce from interior windows/lamps (reinforced by point lights below).
             var fillGo = new GameObject("Warm Practical Fill");
             fillGo.transform.SetParent(transform, false);
             var fill = fillGo.AddComponent<Light>();
             fill.type = LightType.Directional;
             fill.color = new Color(0.92f, 0.72f, 0.48f);
-            fill.intensity = 0.28f;
+            fill.intensity = 0.22f;
             fill.shadows = LightShadows.None;
             fill.transform.rotation = Quaternion.Euler(28f, 145f, 0f);
+
+            // Localized warm practicals at Hall/Vault window dressing — reference's lit-window language
+            // translated indoors. Point lights (not more directionals) so wet floors catch glints.
+            PlacePracticalPoint("Hall Practical W", new PlanarPosition(2.2f, 5.5f), 0.7f, 3.2f, 1.1f);
+            PlacePracticalPoint("Hall Practical E", new PlanarPosition(5.8f, 5.5f), 0.7f, 3.2f, 1.1f);
+            PlacePracticalPoint("Vault Practical", new PlanarPosition(4f, 9.4f), 0.7f, 4.0f, 1.35f);
+            PlacePracticalPoint("Yard Spill", new PlanarPosition(4f, 2.2f), 0.55f, 3.5f, 0.55f);
 
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.09f, 0.11f, 0.15f);
 
             BuildDioramaVolume();
+        }
+
+        private void PlacePracticalPoint(string name, PlanarPosition planar, float height, float range, float intensity)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            go.transform.position = _board.WorldFromPlanar(planar) + new Vector3(0f, height, 0f);
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = new Color(1f, 0.72f, 0.42f);
+            light.intensity = intensity;
+            light.range = range;
+            light.shadows = LightShadows.Soft;
+            light.shadowStrength = 0.35f;
         }
 
         /// <summary>
