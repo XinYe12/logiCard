@@ -1,5 +1,28 @@
 # Draft Handoff — 2026-08-07
 
+## ⚠️ Awaiting human review — parked, not forgotten
+
+Five visual changes landed during the 2026-08-10 autonomous push and have **never been confirmed by
+anyone with eyes on the running game** — code is correct by direct inspection of serialized state,
+batchmode is green, but "runs correctly" and "looks right" are different claims, and this session has
+already had three cases where they diverged. Per the human's explicit instruction, these stay
+**unmonitored** until they come back to review — do not assume any of them are visually done, do not
+build further on top of the assumption that they look right, and do not re-touch them speculatively.
+
+1. **Reflection probes** (`80049df`) — does the wet floor (Yard/Vault) show a visible sheen/highlight
+   now, or does the `clearFlags` fix still read as unchanged?
+2. **Clouds** (`af5d2b1`, `be119b8`) — do they read as soft cloud puffs, or is there a leftover
+   artifact (hard edges, seams between billboards, wrong tint)?
+3. **Window glass** (`5720d31`) — is it actually see-through, and does the warm glow behind it
+   (Hall/Vault windows) read as a lit-window effect, or is it too subtle/too strong/off?
+4. **Scout's re-outfit** (`d5ee45e`, Adventurer→Worker) — does the vest/high-vis read as "facility
+   worker," or does it look odd in a way code review couldn't catch?
+5. **The whole checkpoint 2/3 arc** — real board materials, real door meshes, room dressing — never
+   confirmed as "looks right" by anyone this entire arc, only ever seen through screenshots.
+
+**Reminder mechanism:** this section stays at the top of this file until the human explicitly clears
+it. `docs/SCHEDULE.md`'s Phase 5 row points here too.
+
 ## 2026-08-10 (continued 12) — decision: not pushing character material fidelity blind
 
 **Considered and deliberately declined**, logging the reasoning per the human's "notify me of decisions"
