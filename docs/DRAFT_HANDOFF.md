@@ -1,5 +1,31 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 8) — reflection root-cause found and fixed; cloud rework in flight
+
+**Human caught the reflection retune not actually working** from a real screenshot ("i dont think the
+reflections has any changes... i can't see this is getting better with my own eyes") and asked directly
+whether it's good enough to move on — correctly not accepting a green test run as proof.
+
+**Root-caused directly on the main tree, not delegated** (`80049df`): `BoardReflectionProbes.cs`'s
+`ReflectionProbe` components never had `clearFlags`/`backgroundColor` set. Unity's default is
+`CameraClearFlags.Skybox`, and this project deliberately has no skybox configured (`ART_DIRECTION.md`
+wants a bounded dark void, not an open horizon) — so every probe was rendering a mismatched/undefined
+environment instead of the actual dark void the main camera shows (`cam.backgroundColor =
+(0.035, 0.04, 0.055)`, set in `GameBootstrap.ConfigureCamera`). Fixed by setting `clearFlags =
+SolidColor` and matching that exact background color on each probe. Batchmode could never have caught
+this — it only proves the probe builds and runs without throwing, not what it actually captures.
+Deliberately did **not** also re-touch `wetSmoothnessBoost` in the same commit — one variable at a time,
+so the next screenshot can actually tell us whether this was the real fix instead of stacking another
+blind guess on top. **Re-verified via a disposable detached worktree** (`logiCard-verify-refprobe`,
+created and removed same session): EditMode 124/124, PlayMode 37/37.
+
+**Second, parallel track: real cloud/weather models.** The human separately flagged the placeholder tinted
+sphere clouds as the more obviously fake element in the same screenshot — `BoardWeatherPocket.cs`'s
+`PlaceCloudBank` has been explicitly marked `TEMPORARY interim` since Day 8/checkpoint 1 and never
+replaced. Worker spun (`feat/real-cloud-models`) to source real CC0 cloud textures/assets (billboard/
+particle-based, since URP has no orthographic-compatible volumetric cloud support) and replace the sphere
+puffs, leaving rain untouched (human confirmed rain already reads fine).
+
 ## 2026-08-10 (continued 7) — reflection probes + Scout re-outfit both merged
 
 **`feat/wet-surface-reflections` merged** (`a531e90`, real subagent this time — see the continued 6 entry
