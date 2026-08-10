@@ -262,6 +262,99 @@ namespace LogiCard.Boot
             return model;
         }
 
+        /// <summary>
+        /// Vault Complex (map #3): dense, close-quarters, maze-like — the opposite emphasis from
+        /// Freight Yard's single Yard->Hall->Vault line. Five small rooms tiled edge-to-edge across
+        /// [0,8]x[0,9] in a real 2x3 lattice, not a straight progression: Entry (attacker spawn,
+        /// south) branches into two rooms — Courtyard (east) and WestMid (west). Only the
+        /// Courtyard->EastMid->Vault chain is a Standard-door route to the objective; WestMid is a
+        /// dead end via Standard doors alone. That asymmetry is deliberate: the "safe-looking" west
+        /// branch only pays off once the Vent or Breach below gets used, so route choice is a real
+        /// decision, not just Freight Yard's "guarded middle vs. safe flank" restated. Four Standard
+        /// doors (#1-#4) keep every room reachable from Entry without either shortcut (verified by
+        /// hand: Entry -> WestMid via #1, Entry -> Courtyard via #2 -> EastMid via #3 -> Vault via
+        /// #4 — a BFS from Entry over just the Standard-kind doors reaches all five rooms). Rooms are
+        /// small on purpose (max 4x3) — short sightlines favor Snap Shot and the Scout's agility over
+        /// Hold Angle, which needs a real lane to lock onto; nothing here comes close to Freight
+        /// Yard's open 8x4 Yard.
+        ///
+        /// Shortcuts (both reuse the standard Door pipeline, just a different `kind:`):
+        /// - Vent (WestMid&lt;-&gt;EastMid, on the shared x=4 wall, y:[4.3,4.7]): skips both Entry and
+        ///   Courtyard — the "official" route between those two rooms is 3 Standard-door hops away, so
+        ///   this is a genuine shortcut, not just another route of the same length. Repeatably
+        ///   openable, same as Freight Yard's Vent.
+        /// - Breach (WestMid&lt;-&gt;Vault, on the shared y=6 wall, x:[1.8,2.2]): WestMid and Vault have
+        ///   no Standard-door route between them at all (the only connection is the long way around
+        ///   through Entry, Courtyard, and EastMid) — opening this permanently turns the "dead end"
+        ///   west branch into a second, much shorter route straight into the objective room, reshaping
+        ///   the maze's usable shape once someone pays to open it.
+        ///
+        /// Gives the Scout/Juggernaut Sprint-speed asymmetry (1s vs 2s per tile, same presets as
+        /// Freight Yard) its own version of C45's tactical lever here: the Vent/Breach detours are
+        /// worth more real-time savings to whichever pawn is slower per tile, so the Juggernaut has
+        /// more incentive to route through WestMid for them than the Scout, who can often just outrun
+        /// the long way around.
+        /// </summary>
+        private static ArenaBoard BuildVaultComplexGeometry()
+        {
+            var model = new ArenaBoard(0f, 0f, 8f, 9f, new[] { Floor.Ground });
+
+            // Entry | WestMid (y=3, x:[0,4]) — Door #1.
+            model.RegisterWall(new Segment(new PlanarPosition(0f, 3f), new PlanarPosition(1.75f, 3f)));
+            model.RegisterWall(new Segment(new PlanarPosition(2.25f, 3f), new PlanarPosition(4f, 3f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(1.75f, 3f), new PlanarPosition(2.25f, 3f)),
+                DoorState.Closed,
+                displayName: "Door #1"));
+
+            // Entry | Courtyard (x=4, y:[0,3]) — Door #2.
+            model.RegisterWall(new Segment(new PlanarPosition(4f, 0f), new PlanarPosition(4f, 1.25f)));
+            model.RegisterWall(new Segment(new PlanarPosition(4f, 1.75f), new PlanarPosition(4f, 3f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(4f, 1.25f), new PlanarPosition(4f, 1.75f)),
+                DoorState.Closed,
+                displayName: "Door #2"));
+
+            // Courtyard | EastMid (y=3, x:[4,8]) — Door #3.
+            model.RegisterWall(new Segment(new PlanarPosition(4f, 3f), new PlanarPosition(5.75f, 3f)));
+            model.RegisterWall(new Segment(new PlanarPosition(6.25f, 3f), new PlanarPosition(8f, 3f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(5.75f, 3f), new PlanarPosition(6.25f, 3f)),
+                DoorState.Closed,
+                displayName: "Door #3"));
+
+            // EastMid | Vault (y=6, x:[4,8]) — Door #4, the objective's "front door."
+            model.RegisterWall(new Segment(new PlanarPosition(4f, 6f), new PlanarPosition(5.75f, 6f)));
+            model.RegisterWall(new Segment(new PlanarPosition(6.25f, 6f), new PlanarPosition(8f, 6f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(5.75f, 6f), new PlanarPosition(6.25f, 6f)),
+                DoorState.Closed,
+                displayName: "Door #4"));
+
+            // WestMid | EastMid (x=4, y:[3,6]) — Vent, a narrower repeatable grate shortcut that
+            // skips Entry and Courtyard entirely.
+            model.RegisterWall(new Segment(new PlanarPosition(4f, 3f), new PlanarPosition(4f, 4.3f)));
+            model.RegisterWall(new Segment(new PlanarPosition(4f, 4.7f), new PlanarPosition(4f, 6f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(4f, 4.3f), new PlanarPosition(4f, 4.7f)),
+                DoorState.Closed,
+                displayName: "Vent Cover",
+                kind: DoorKind.Vent));
+
+            // WestMid | Vault (y=6, x:[0,4]) — Breach, a permanent second route into the objective
+            // once someone pays to open it (the UI never offers Close again for this one, see
+            // ProgramHud.RefreshDoorPrompt).
+            model.RegisterWall(new Segment(new PlanarPosition(0f, 6f), new PlanarPosition(1.8f, 6f)));
+            model.RegisterWall(new Segment(new PlanarPosition(2.2f, 6f), new PlanarPosition(4f, 6f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(1.8f, 6f), new PlanarPosition(2.2f, 6f)),
+                DoorState.Closed,
+                displayName: "Cracked Wall",
+                kind: DoorKind.Breach));
+
+            return model;
+        }
+
         private void BuildPawns()
         {
             // Column-aligned with Hall's spine (C45 multi-room layout) — attacker starts at the south
@@ -307,6 +400,34 @@ namespace LogiCard.Boot
             TryScriptDoor(program, DoorAction.Open);
             TryScriptShoot(program, new PlanarPosition(4f, 3f));
             TryScriptMove(program, new PlanarPosition(4f, 4.3f));
+
+            return program.Build();
+        }
+
+        /// <summary>
+        /// Scripted Vault Complex defender, same shape as <see cref="BuildDefenderPayload"/>: rebuilt
+        /// each Lock In from its carried point and the round allotment. Guards Door #4 (EastMid ->
+        /// Vault), the objective's "front door" and the only Standard-door approach into Vault —
+        /// mirrors Freight Yard's discipline of only ever touching the one door that gates the
+        /// "official" route; the Vent (WestMid&lt;-&gt;EastMid) and Breach (WestMid&lt;-&gt;Vault)
+        /// shortcuts stay player-discoverable, this AI never interacts with either.
+        /// </summary>
+        private LogiCard.Net.TimelinePayload BuildVaultComplexDefenderPayload()
+        {
+            PlanarPosition start = _playback.PositionOf(DefenderPawnId);
+            float budget = _matchClock.RoundAllotment;
+            var program = new PawnProgram(start, DefenderSecondsPerTile, budget, StanceType.Walk, _board.Model);
+
+            // Approach Door #4 from inside Vault (north side), step into InteractRadius, open it,
+            // Snap south through the gap (x=6, aligned with the door's [5.75,6.25] opening) onto an
+            // EastMid ambush point, then edge back. Door #4 is always the nearer door from this
+            // approach (0.35 units vs. the Breach's ~4.0 from the opposite side of Vault), so
+            // TryGetNearestDoor(..., float.MaxValue) inside TryScriptDoor still resolves it correctly.
+            TryScriptMove(program, new PlanarPosition(6f, 6.6f));
+            TryScriptMove(program, new PlanarPosition(6f, 6.35f));
+            TryScriptDoor(program, DoorAction.Open);
+            TryScriptShoot(program, new PlanarPosition(6f, 4f));
+            TryScriptMove(program, new PlanarPosition(6f, 6.6f));
 
             return program.Build();
         }

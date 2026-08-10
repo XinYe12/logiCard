@@ -103,6 +103,25 @@ namespace LogiCard.Board
             });
         }
 
+        /// <summary>
+        /// Vault Complex (map #3) room rectangles — see <c>GameBootstrap.BuildVaultComplexGeometry()</c>
+        /// for the wall/door numerics and full tactical rationale. Five small rooms tiled across
+        /// [0,8]x[0,9] in a real 2x3 lattice: Entry (attacker spawn) branches into Courtyard (east,
+        /// the "official" route to Vault via EastMid) and WestMid (west, a Standard-door dead end that
+        /// only pays off once the Vent/Breach on that side are used).
+        /// </summary>
+        public static MapLayout VaultComplex()
+        {
+            return new MapLayout(MapId.VaultComplex, new[]
+            {
+                new MapRoom("Entry", 0f, 0f, 4f, 3f, MapSurfaceRole.Yard),
+                new MapRoom("Courtyard", 4f, 0f, 8f, 3f, MapSurfaceRole.Flank),
+                new MapRoom("WestMid", 0f, 3f, 4f, 6f, MapSurfaceRole.Hall),
+                new MapRoom("EastMid", 4f, 3f, 8f, 6f, MapSurfaceRole.Flank),
+                new MapRoom("Vault", 0f, 6f, 8f, 9f, MapSurfaceRole.Vault),
+            });
+        }
+
         public static MapLayout ForId(MapId id)
         {
             switch (id)
