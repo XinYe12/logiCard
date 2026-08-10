@@ -1,9 +1,10 @@
 # Departments — Active Index
 
 **Updated:** 2026-08-10 — human confirmed the smooth-animation fix (C55) reads better and asked to continue
-the schedule. Two new worker slots spun for Phase 5's remaining real gaps: character-model research
-(Quaternius pawns never reviewed since C53) and wet-surface reflection probes (SSR isn't available in this
-URP version; human flagged reflections as "needs more rework" on the latest screenshot). Core-gameplay work
+the schedule. Two branches + briefs were prepared for Phase 5's remaining real gaps (character-model
+research, wet-surface reflection probes) but **briefs sat unexecuted** — an Integrator process error (wrote
+the briefs and worktree branches, then claimed "workers running" without actually launching anything,
+caught by the human). Correcting now by launching real subagents against both briefs. Core-gameplay work
 stays paused.
 **Ops constitution:** [`../PARALLEL_OPS.md`](../PARALLEL_OPS.md) · human-side playbook: [`../DIRECTING_AGENTS.md`](../DIRECTING_AGENTS.md)
 **Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md)
@@ -11,8 +12,8 @@ stays paused.
 
 ## Capacity
 
-Integrator + up to **2** coding workers — **2 of 2 in use**. Check `git worktree list` and
-`DRAFT_HANDOFF.md`'s top section before assuming this table is current.
+Integrator + up to **2** coding workers — **2 of 2 in use, now actually launched.** Check `git worktree
+list` and `DRAFT_HANDOFF.md`'s top section before assuming this table is current.
 
 ## Active agents / worktrees
 
