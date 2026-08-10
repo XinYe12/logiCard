@@ -28,6 +28,15 @@ namespace LogiCard.Board
         private const int CubemapResolution = 128;
         private const float BlendDistance = 1.0f;
 
+        // Must match GameBootstrap.ConfigureCamera's cam.backgroundColor exactly — a ReflectionProbe
+        // defaults to CameraClearFlags.Skybox with no skybox configured (this project deliberately has
+        // none; ART_DIRECTION calls for a bounded dark void, not an open horizon), which left every
+        // probe rendering a mismatched/undefined environment instead of the actual dark void the main
+        // camera shows. That's almost certainly why the reflection retune read as invisible on a real
+        // screenshot (2026-08-10) despite batchmode passing — nothing was verifying the probe's own
+        // clear color, only that it built and ran without throwing.
+        private static readonly Color VoidBackgroundColor = new Color(0.035f, 0.04f, 0.055f);
+
         /// <summary>
         /// Build (or rebuild) one probe per room over <paramref name="board"/>. Safe to call once
         /// from bootstrap after the board + lighting exist; destroys prior children first.
@@ -80,6 +89,8 @@ namespace LogiCard.Board
             probe.resolution = CubemapResolution;
             probe.hdr = true;
             probe.boxProjection = true;
+            probe.clearFlags = ReflectionProbeClearFlags.SolidColor;
+            probe.backgroundColor = VoidBackgroundColor;
             probe.intensity = 1f;
             probe.blendDistance = BlendDistance;
             probe.nearClipPlane = 0.05f;
