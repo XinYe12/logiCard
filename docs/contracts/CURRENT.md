@@ -1,18 +1,30 @@
 # Cross-Dept Contracts — Current Wave
 
 **Wave:** Look-and-feel + UI, started 2026-08-09. Core-gameplay/networking work explicitly paused by the
-human until this wave lands — see `SCHEDULE.md`'s Cadence section. **UI side landed and merged 2026-08-09**
-(`feat/ui-component-system`). **Environment side still in flight** (`feat/env-lookfeel-overhaul`) — checkpoint
-1 (sky/weather/lighting) done, waiting on a human screenshot + the hero-shot-vs-readability call before
-checkpoint 2 starts. One worker slot open again.
-**Updated:** 2026-08-09 by Integrator.
+human until this wave lands — see `SCHEDULE.md`'s Cadence section. **UI side landed and merged twice**
+(`feat/ui-component-system`, then a same-session dock move from right-edge to bottom band). **Environment
+side: checkpoint 1 merged 2026-08-09; checkpoint 2 (asset packs/door models/character rework) started
+2026-08-10** on human go-ahead ("still bad, continue with the implementation") without an explicit
+hero-shot-vs-readability answer — proceeding on the assumption that more richness is wanted, flagged as an
+inference, not confirmed.
+**Updated:** 2026-08-10 by Integrator.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
 
-*(the camera-rect ↔ dock-width contract closed below — no new frozen contract needed until checkpoint 2 or a
-new worker slice starts.)*
+### Camera viewport-rect, bottom-band shape (closed 2026-08-10)
+
+- Dock moved from a right-edge margin (`HudDockWidth`) to a bottom band (`HudDockHeight = 0.34f`) — direct
+  playtest feedback ("put the control at the bottom... vertical alignment generally"), not a worker decision.
+- `GameBootstrap.cs`: `cam.rect = new Rect(0f, ProgramHud.HudDockHeight, 1f, 1f - ProgramHud.HudDockHeight -
+  ProgramHud.TopStripHeight)` — board region is full width now, from the top of the dock to the bottom of the
+  top strip.
+- **Flagged, not yet resolved:** the board's visible aspect ratio changed meaningfully with this move (was
+  narrower-than-tall, now wider-than-tall) — `orthographicSize` (5.0) was tuned against the old shape and
+  likely needs retuning. Env worker's checkpoint 2 brief has permission to retune it if the framing looks off.
+- Verification pending — Editor was open on the main tree (live playtest) both times batchmode was attempted
+  after this change; self-reviewed carefully in its place, not yet independently confirmed.
 
 ## Ownership reminders this wave
 

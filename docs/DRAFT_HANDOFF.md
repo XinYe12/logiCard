@@ -1,5 +1,48 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 — Dock moved to bottom band; environment checkpoint 2 started
+
+**Direct playtest feedback, two points:** (1) "cannot stand" the right-edge dock, wanted it at the bottom for
+general vertical alignment; (2) "look-and-feel still bad, continue with the implementation to make it good."
+
+**Dock moved right-edge → bottom band**, done directly on `master` (not delegated — small enough to execute
+with confidence given deep familiarity with `ProgramHud.cs` from two prior review passes this session, and
+the change was mechanically well-specified even though it required more than an anchor flip). Real content
+re-flow, not just a coordinate change: `BuildProgramControls` now splits the dock into three columns
+(controls/queue/actions) instead of one tall vertical stack; `BuildActionRow` rebuilt as a vertical stack
+inside the narrow action column (was a horizontal row with fixed-width transport buttons); `BuildQueuePanel`
+simplified now that it owns a full column; `BuildOutcomeBanner` repositioned above the dock instead of left of
+it. `HudDockWidth` is gone, replaced by `HudDockHeight = 0.34f`. `GameBootstrap.cs`'s camera rect (the one
+Integrator-owned coupling) rewired to match — board region is now full width, top-of-dock to bottom-of-strip.
+Two tests that directly asserted the old right-edge geometry updated to match the new shape.
+
+**Could not batchmode-verify before committing** — the Editor was open on the main tree (live playtest) both
+times this was attempted. Self-reviewed the diff carefully in its place (signature matches, no orphaned
+constant references, consistent structure) given the compiler wasn't available to catch mistakes immediately.
+Should be re-verified once the Editor is free, though since it's already open live, a direct look is just as
+good.
+
+**Flagged, not resolved:** the board's visible aspect ratio changed meaningfully with this move (previously
+narrower-than-tall since the right dock ate width; now wider-than-tall since the bottom dock eats height
+instead, on an already-wide 16:9 screen). `orthographicSize` (5.0, last tuned against the old shape) likely
+needs another pass — noted in the env worktree's brief as something that worker has permission to retune if
+the framing looks off during checkpoint 2.
+
+**Environment checkpoint 1 merged, checkpoint 2 started.** Checkpoint 1 (weather pocket + wet-dusk lighting)
+was already reviewed and verified in an earlier session turn — merging it now made sense specifically because
+the human is asking for visible progress; leaving it sitting unmerged achieves nothing. `feat/env-lookfeel-
+overhaul` fast-forwarded onto current `master` (picks up the dock move + UI factory), then briefed to proceed
+straight to checkpoint 2 (environment/prop asset pack sourcing, door models, character rework) — the original
+brief's "stop and wait for a screenshot" gate on checkpoint 2 is explicitly superseded by "continue the
+implementation." No hero-shot-vs-readability answer was given this round; proceeding on the inference that
+"still bad" means more richness is wanted, not less — stated as an inference in the brief, not treated as
+confirmed, and the question is still being surfaced for a real answer.
+
+**Also fixed:** a new playtest screenshot had overwritten `image.png`, which `ART_DIRECTION.md` points to as
+the locked moodboard reference — restored it from `screenshots/image.png` (kept in sync) and saved the
+playtest screenshot separately at `screenshots/playtest-2026-08-10-allot-dock-complaint.png` so nothing was
+lost.
+
 ## 2026-08-09 (continued) — UI worktree merged; environment worktree waiting on a human look
 
 **`feat/ui-component-system` shipped and merged** (worker commit `7bd252f` → merge commit on `master`).
