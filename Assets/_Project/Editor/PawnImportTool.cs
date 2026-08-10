@@ -18,7 +18,7 @@ namespace LogiCard.EditorTools
         [MenuItem("Tools/LogiCard/Import Scout")]
         public static void ImportScoutBatch()
         {
-            ImportArchetype("Assets/_Project/Art/Characters/Resources/Scout/Adventurer.fbx", "Resources/Scout", "Scout", smoothness: 0.6f);
+            ImportArchetype("Assets/_Project/Art/Characters/Resources/Scout/Worker.fbx", "Resources/Scout", "Scout", smoothness: 0.6f);
         }
 
         [MenuItem("Tools/LogiCard/Import Juggernaut")]

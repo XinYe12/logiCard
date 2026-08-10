@@ -186,3 +186,73 @@ real art-direction conversation (toy sheen vs. realism), not just an asset swap 
 happen before any import. (C) is listed for completeness but needs outfit work either way and doesn't
 obviously outperform (A) unless someone commits to sourcing clothing for it too. None of these three is
 imported; all await the human's call per the brief.
+
+---
+
+## 2026-08-10 — Scout re-outfit: Adventurer → Worker (option A applied, C56)
+
+Human decision (`PRODUCT_MEMORY.md` C56): apply option A above — re-outfit Scout within the already-owned
+CC0 Quaternius "Ultimate Modular Men" pack rather than adopt a new pack. This entry records what changed.
+
+- **What changed:** `PawnImportTool.ImportScoutBatch()` now points at
+  `Assets/_Project/Art/Characters/Resources/Scout/Worker.fbx` instead of `Adventurer.fbx`; `Scout.prefab`
+  was rebuilt from it via the unchanged `ImportArchetype` pipeline (same 60°-angle normal smoothing, same
+  `smoothness: 0.6f`, same output path `Resources/Scout`, same archetype name `Scout`). No pipeline code
+  changed — this was a source-asset swap only, per the brief's explicit scope.
+- **Which outfit and why:** picked `Worker` over the other two candidates named in the brief
+  (`Casual`/`Casual_2`, `Casual_Hoodie`). Inspected each candidate FBX's part names before choosing:
+  `Worker` is `Worker_Body`/`Worker_Feet`/`Worker_Head`/`Worker_Legs` plus two extra parts,
+  `Worker_Vest`/`Worker_Yellow` (a high-vis work vest) — reads as utility/maintenance-operator attire, i.e.
+  someone with a working role inside a facility, not off-duty wear. `Casual_Hoodie` (explicitly a hoodie)
+  and `Casual_2` (plain T-shirt/pants) both read as leisurewear, which the brief explicitly said to avoid.
+  Note the pack's actual file set (verified against the live Google Drive distribution, see below) is
+  `Casual_2`/`Casual_Hoodie`, not a plain `Casual` — the un-suffixed `Casual` named in the original catalog
+  list above and in the brief does not exist as a separate file in the pack; `Casual_2` was evaluated in its
+  place.
+- **Source:** quaternius.com's official distribution — the site's own "Ultimate Modular Men" pack page
+  (`https://quaternius.com/packs/ultimatemodularcharacters.html`) links a public Google Drive folder as its
+  only download path; `Worker.fbx` was pulled from that folder's `Individual Characters/FBX/` subfolder.
+  The poly.pizza mirror named as an alternative source in the brief returned an HTTP 403 (Cloudflare bot
+  challenge) this session and was not reachable — not used. Same author, same pack, same CC0 1.0 Universal
+  license already recorded above; no new provenance/licensing work needed.
+- **File size note (not a defect, flagged for awareness):** `Worker.fbx` is ~8.1MB versus `Adventurer.fbx`'s
+  582KB. Inspecting both files' FBX AnimStack counts explains why: `Adventurer.fbx` (already in this repo,
+  presumably from the poly.pizza mirror per the brief) carries only 1 AnimStack, essentially a static
+  bind-pose export; `Worker.fbx`, pulled from quaternius.com's `Individual Characters/FBX` folder, carries
+  the pack's full 26 baked animation clips, same as `Juggernaut/Swat.fbx` (also 8.1MB, 26 AnimStacks,
+  already in this repo from the same official source). `PawnView` never uses an `Animator` (C55) and
+  `PawnImportTool` only extracts meshes/materials into a static prefab, so the extra animation data is
+  inert — it costs import time and repo size, not correctness. Consistent with `Swat.fbx`'s existing
+  precedent rather than a new problem; not addressed further (repo-size cleanup is out of this brief's
+  scope, same discipline as leaving `Scout_Body.mat` orphaned above).
+- **Team-color tint hook:** verified, no code change needed. `PawnView.TintedPartNameMarker` matches any
+  renderer whose name contains `"Body"` (case-insensitive). `Worker.fbx`'s six part nodes are
+  `Worker_Body`, `Worker_Feet`, `Worker_Head`, `Worker_Legs`, `Worker_Vest`, `Worker_Yellow` — `Worker_Body`
+  matches the same way `Adventurer_Body` did, and only that one part. `PawnView.cs` was not touched.
+- **Materials:** `PawnImportTool.ImportArchetype`'s manual Standard→URP/Lit shader-swap loop reported
+  "re-hooked 0 material(s)" in this run's log — inspecting the resulting `.mat` files shows this is *not*
+  a failure: in this Unity 6000.5.5f1 project (URP active), the model importer already assigns extracted
+  materials directly to `Universal Render Pipeline/Lit` with `_BaseColor` populated from the FBX during
+  `SaveAndReimport()`, before the tool's loop runs — so the loop's `material.shader == urpLit` guard skips
+  every material as a no-op, both the reused per-part materials (`Skin.mat`, `Black.mat`, etc., shared by
+  name with the old Adventurer materials) and the two new ones this import created (`Worker_Vest.mat`,
+  `Worker_Yellow.mat`, plus `LightBrown.mat`/`Moustache.mat` extracted alongside). All four confirmed on
+  `Universal Render Pipeline/Lit` (shader guid `933532a4fcc9baf4fa0491de14d08ed7`, same as every other
+  archetype material including `Juggernaut/Materials/Swat.mat`) with sensible per-part `_BaseColor` values
+  already set. One side effect worth flagging: every material's `_Smoothness` sits at URP/Lit's default
+  `0.5`, not the `0.6f` `ImportScoutBatch` passes — because the tool's smoothness-set line lives inside the
+  same skipped loop. This is a **pre-existing** condition, not introduced by this swap: the reassessment
+  section above already found the *previous* Adventurer-era materials sitting at `0.5` despite the same
+  `0.6f` parameter, for the same reason. Not fixed here — the brief scoped this pass to the source-asset
+  swap only, not a pipeline/fidelity fix.
+- **`Adventurer.fbx`:** left in place, not deleted, per the brief. A repo-wide grep for `Adventurer` found
+  only `PawnImportTool.cs` (now repointed to `Worker.fbx`) referencing it — no other file uses it after this
+  change, but deleting it is repo-hygiene work outside this brief's scope.
+- **Verification performed:** Unity 6000.5.5f1 batchmode from this worktree
+  (`D:\projects\Game\logiCard-env-lookfeel`) — `-executeMethod LogiCard.EditorTools.PawnImportTool.ImportScoutBatch`
+  rebuilt `Scout.prefab` cleanly (confirmed `Scout.prefab`'s `PrefabInstance.m_SourcePrefab` guid now matches
+  `Worker.fbx.meta`'s guid). EditMode suite: 124/124 passed. PlayMode suite: 37/37 passed. **Not verified:**
+  how this actually looks in the Editor/game view — this agent has no screenshot/Editor-interactive access
+  this session, same limitation the reassessment above notes. A human sighted pass is still needed to
+  confirm the Worker outfit actually reads as "plainclothes/civilian-operator" against the SWAT-facility
+  board rather than something else unanticipated from asset inspection alone.
