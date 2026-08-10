@@ -103,13 +103,13 @@ namespace LogiCard.Art.Editor
 
             var color = VolumeProfileFactory.CreateVolumeComponent<ColorAdjustments>(profile, overrides: true, saveAsset: false);
             color.postExposure.overrideState = true;
-            color.postExposure.value = -0.10f;
+            color.postExposure.value = 0.08f;
             color.contrast.overrideState = true;
             color.contrast.value = 12f;
             color.colorFilter.overrideState = true;
-            color.colorFilter.value = new Color(0.84f, 0.90f, 1f);
+            color.colorFilter.value = new Color(0.95f, 0.92f, 0.88f);
             color.saturation.overrideState = true;
-            color.saturation.value = -4f;
+            color.saturation.value = 18f;
 
             var bloom = VolumeProfileFactory.CreateVolumeComponent<Bloom>(profile, overrides: true, saveAsset: false);
             bloom.threshold.overrideState = true;

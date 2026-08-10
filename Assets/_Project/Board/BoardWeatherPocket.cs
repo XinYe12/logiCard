@@ -56,7 +56,7 @@ namespace LogiCard.Board
         /// factors is what keeps the "contained pocket, not looming over the board" framing correct
         /// (`docs/ART_DIRECTION.md` Moodboard) regardless of what draws inside each puff volume.
         /// </summary>
-        private const float InterimCloudScale = 0.55f;
+        private const float InterimCloudScale = 0.65f;
         private const float InterimCloudHeightBoost = 2.1f;
 
         /// <summary>
@@ -70,9 +70,9 @@ namespace LogiCard.Board
         /// <summary>Particle count scales with each puff's footprint (world-unit width * depth), clamped
         /// so tiny fringe puffs still read as a cluster and the wide ceiling shelf doesn't spawn a huge
         /// batch of overlapping billboards.</summary>
-        private const float CloudParticleDensity = 1.0f;
-        private const int CloudParticlesMin = 8;
-        private const int CloudParticlesMax = 22;
+        private const float CloudParticleDensity = 1.4f;
+        private const int CloudParticlesMin = 12;
+        private const int CloudParticlesMax = 30;
 
         /// <summary>Not a real "infinite" lifetime (Unity has none) — long enough that a burst-spawned,
         /// non-moving puff cluster never visibly expires during a play session.</summary>
@@ -146,7 +146,7 @@ namespace LogiCard.Board
                 CloudParticlesMax);
             // Overlap factor > 1 so neighboring billboards blend into one mass rather than sitting as
             // visibly separate discs across the puff's footprint.
-            float baseSize = Mathf.Sqrt(footprint / count) * 1.35f;
+            float baseSize = Mathf.Sqrt(footprint / count) * 1.5f;
 
             var main = ps.main;
             main.loop = false;
@@ -154,11 +154,11 @@ namespace LogiCard.Board
             main.duration = 1f;
             main.startLifetime = new ParticleSystem.MinMaxCurve(CloudParticleLifetimeSeconds);
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.75f, baseSize * 1.35f);
+            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.90f, baseSize * 1.50f);
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f * Mathf.Deg2Rad);
             main.startColor = new ParticleSystem.MinMaxGradient(
-                new Color(tint.r * 0.85f, tint.g * 0.85f, tint.b * 0.85f, 0.85f),
-                new Color(Mathf.Min(1f, tint.r * 1.15f), Mathf.Min(1f, tint.g * 1.15f), Mathf.Min(1f, tint.b * 1.15f), 0.98f));
+                new Color(tint.r * 0.92f, tint.g * 0.92f, tint.b * 0.92f, 0.92f),
+                new Color(Mathf.Min(1f, tint.r * 1.08f), Mathf.Min(1f, tint.g * 1.08f), Mathf.Min(1f, tint.b * 1.08f), 0.99f));
             main.maxParticles = Mathf.Max(count, 4);
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
             main.gravityModifier = 0f;
@@ -309,6 +309,13 @@ namespace LogiCard.Board
                 {
                     _cloudMaterial.SetTexture("_BaseMap", atlas);
                 }
+            }
+
+            var cloudTint = new Color(1f, 0.96f, 0.88f, 1f);
+            _cloudMaterial.color = cloudTint;
+            if (_cloudMaterial.HasProperty("_BaseColor"))
+            {
+                _cloudMaterial.SetColor("_BaseColor", cloudTint);
             }
 
             ConfigureAlphaBlend(_cloudMaterial);
