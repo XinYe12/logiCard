@@ -59,13 +59,9 @@ namespace LogiCard.Board
             for (int i = 0; i < model.Doors.Count; i++)
             {
                 Door door = model.Doors[i];
-                Color color = model.GetDoorState(door) == DoorState.Open ? DoorOpenColor : DoorClosedColor;
-                GameObject box = PlaceSegmentBox(
-                    $"Door_{i}",
-                    door.Segment,
-                    PrimitiveMaterialFactory.Tinted(color),
-                    WallHeight * 0.92f);
-                _doorVisuals.Add(new DoorVisual(door, box.GetComponent<MeshRenderer>()));
+                DoorVisual visual = PlaceDoorMesh($"Door_{i}", door);
+                ApplyDoorVisualState(visual, model.GetDoorState(door));
+                _doorVisuals.Add(visual);
             }
         }
 
@@ -90,7 +86,7 @@ namespace LogiCard.Board
             for (int i = 0; i < _doorVisuals.Count; i++)
             {
                 DoorVisual visual = _doorVisuals[i];
-                if (visual.Renderer == null)
+                if (visual.Root == null)
                 {
                     continue;
                 }
@@ -98,8 +94,7 @@ namespace LogiCard.Board
                 DoorState state = overrideStates != null && overrideStates.TryGetValue(visual.Door, out DoorState preview)
                     ? preview
                     : _model.GetDoorState(visual.Door);
-                Color color = state == DoorState.Open ? DoorOpenColor : DoorClosedColor;
-                visual.Renderer.sharedMaterial = PrimitiveMaterialFactory.Tinted(color);
+                ApplyDoorVisualState(visual, state);
             }
         }
 
@@ -282,7 +277,7 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Presentation-only room props + warm window panes (emissive). Placed clear of door
+        /// Presentation-only Quaternius interior dressing + warm glass panes. Placed clear of door
         /// corridors and spawn lanes so they never read as blockers (C40 — no pawn collision anyway;
         /// these also strip colliders so taps pass through to the ground underlay).
         /// </summary>
@@ -291,39 +286,74 @@ namespace LogiCard.Board
             var root = new GameObject("RoomDressing");
             root.transform.SetParent(transform, false);
 
-            // Yard — wet approach clutter at the edges, leave the (4,*) spine clear for attacker.
-            PlaceProp(root.transform, "Yard_CrateStack_W", new PlanarPosition(0.7f, 1.2f),
-                new Vector3(0.55f, 0.45f, 0.55f), 0.22f, 12f, BoardSurfaceMaterials.PropCrate);
-            PlaceProp(root.transform, "Yard_CrateStack_E", new PlanarPosition(7.3f, 1.4f),
-                new Vector3(0.6f, 0.5f, 0.5f), 0.25f, -18f, BoardSurfaceMaterials.PropCrate);
-            PlaceProp(root.transform, "Yard_Barrel_W", new PlanarPosition(1.1f, 2.8f),
-                new Vector3(0.35f, 0.55f, 0.35f), 0.28f, 0f, BoardSurfaceMaterials.PropMetal);
-            PlaceProp(root.transform, "Yard_Barrel_E", new PlanarPosition(6.9f, 2.6f),
-                new Vector3(0.35f, 0.55f, 0.35f), 0.28f, 0f, BoardSurfaceMaterials.PropMetal);
+            // Yard — approach clutter at the edges, leave the (4,*) spine clear for attacker.
+            PlaceInteriorProp(root.transform, "Yard_Cabinet_W", "Cabinet", new PlanarPosition(0.7f, 1.2f),
+                0.55f, 12f);
+            PlaceInteriorProp(root.transform, "Yard_Cabinet_E", "Cabinet", new PlanarPosition(7.3f, 1.4f),
+                0.55f, -18f);
+            PlaceInteriorProp(root.transform, "Yard_Chair_W", "Chair", new PlanarPosition(1.1f, 2.8f),
+                0.45f, 40f);
+            PlaceInteriorProp(root.transform, "Yard_Table_E", "Table", new PlanarPosition(6.9f, 2.6f),
+                0.5f, 0f);
 
-            // Hall — cover + warm practical window panes on the side walls (reference's lit windows).
-            PlaceProp(root.transform, "Hall_Cover_SW", new PlanarPosition(2.55f, 4.55f),
-                new Vector3(0.7f, 0.35f, 0.45f), 0.18f, 8f, BoardSurfaceMaterials.PropCrate);
-            PlaceProp(root.transform, "Hall_Cover_NE", new PlanarPosition(5.45f, 6.4f),
-                new Vector3(0.65f, 0.38f, 0.5f), 0.19f, -22f, BoardSurfaceMaterials.PropCrate);
-            PlaceWindowPane(root.transform, "Hall_Window_W", new PlanarPosition(2.05f, 5.5f),
-                new Vector3(0.04f, 0.45f, 0.7f), 0.55f);
-            PlaceWindowPane(root.transform, "Hall_Window_E", new PlanarPosition(5.95f, 5.5f),
-                new Vector3(0.04f, 0.45f, 0.7f), 0.55f);
+            // Hall — cover furniture + window frames on the side walls.
+            PlaceInteriorProp(root.transform, "Hall_Cover_SW", "Cabinet", new PlanarPosition(2.55f, 4.55f),
+                0.5f, 8f);
+            PlaceInteriorProp(root.transform, "Hall_Cover_NE", "Shelf", new PlanarPosition(5.45f, 6.4f),
+                0.55f, -22f);
+            PlaceInteriorProp(root.transform, "Hall_Window_W", "WindowSmall", new PlanarPosition(2.08f, 5.5f),
+                0.7f, 90f, yLift: 0.35f);
+            PlaceInteriorProp(root.transform, "Hall_Window_E", "WindowSmall", new PlanarPosition(5.92f, 5.5f),
+                0.7f, 90f, yLift: 0.35f);
+            PlaceInteriorProp(root.transform, "Hall_Light", "LightCeiling", new PlanarPosition(4f, 5.5f),
+                0.45f, 0f, yLift: WallHeight * 0.92f);
+            // Keep warm emissive panes behind the window frames for the lit-window read.
+            PlaceWindowPane(root.transform, "Hall_Glow_W", new PlanarPosition(2.05f, 5.5f),
+                new Vector3(0.03f, 0.4f, 0.55f), 0.55f);
+            PlaceWindowPane(root.transform, "Hall_Glow_E", new PlanarPosition(5.95f, 5.5f),
+                new Vector3(0.03f, 0.4f, 0.55f), 0.55f);
 
-            // Vault — shelving / crate depth dressing north of Door #2.
-            PlaceProp(root.transform, "Vault_Shelf_W", new PlanarPosition(1.2f, 8.8f),
-                new Vector3(1.1f, 0.7f, 0.35f), 0.35f, 0f, BoardSurfaceMaterials.PropCrate);
-            PlaceProp(root.transform, "Vault_Shelf_E", new PlanarPosition(6.8f, 8.8f),
-                new Vector3(1.1f, 0.7f, 0.35f), 0.35f, 0f, BoardSurfaceMaterials.PropCrate);
-            PlaceProp(root.transform, "Vault_Crate", new PlanarPosition(4.0f, 9.3f),
-                new Vector3(0.7f, 0.4f, 0.55f), 0.2f, 15f, BoardSurfaceMaterials.PropMetal);
-            PlaceWindowPane(root.transform, "Vault_Window_N", new PlanarPosition(4f, 9.85f),
-                new Vector3(1.2f, 0.4f, 0.04f), 0.55f);
+            // Vault — shelving / depth dressing north of Door #2.
+            PlaceInteriorProp(root.transform, "Vault_Bookshelf_W", "Bookshelf", new PlanarPosition(1.2f, 8.8f),
+                0.85f, 0f);
+            PlaceInteriorProp(root.transform, "Vault_Shelf_E", "ShelfLarge", new PlanarPosition(6.8f, 8.8f),
+                0.85f, 180f);
+            PlaceInteriorProp(root.transform, "Vault_Cabinet", "Cabinet", new PlanarPosition(4.0f, 9.3f),
+                0.55f, 15f);
+            PlaceInteriorProp(root.transform, "Vault_Window_N", "WindowLarge", new PlanarPosition(4f, 9.88f),
+                0.9f, 0f, yLift: 0.35f);
+            PlaceInteriorProp(root.transform, "Vault_Light", "LightCeilingAlt", new PlanarPosition(4f, 8.5f),
+                0.45f, 0f, yLift: WallHeight * 0.92f);
+            PlaceWindowPane(root.transform, "Vault_Glow_N", new PlanarPosition(4f, 9.85f),
+                new Vector3(1.0f, 0.35f, 0.03f), 0.55f);
 
-            // Silence unused-parameter warning if layout constants ever diverge from model bounds —
-            // dressing is authored to the C45 Yard/Hall/Vault numbers, not derived from Min/Max.
             _ = model;
+        }
+
+        private void PlaceInteriorProp(
+            Transform parent,
+            string name,
+            string resourceName,
+            PlanarPosition planar,
+            float uniformScale,
+            float yawDegrees,
+            float yLift = 0f)
+        {
+            GameObject prefab = Resources.Load<GameObject>("Interior/" + resourceName);
+            if (prefab == null)
+            {
+                // Prefabs not imported yet — keep a muted cube so the scene still builds in tests.
+                PlaceProp(parent, name, planar, new Vector3(uniformScale, uniformScale, uniformScale),
+                    Mathf.Max(0.15f, yLift), yawDegrees, BoardSurfaceMaterials.PropCrate);
+                return;
+            }
+
+            GameObject prop = Object.Instantiate(prefab, parent, false);
+            prop.name = name;
+            prop.transform.localPosition = LocalFromPlanar(planar) + new Vector3(0f, yLift, 0f);
+            prop.transform.localScale = Vector3.one * (uniformScale * WorldScale);
+            prop.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            StripCollidersRecursive(prop);
         }
 
         private void PlaceProp(
@@ -354,6 +384,151 @@ namespace LogiCard.Board
             pane.transform.localScale = scale * WorldScale;
             pane.GetComponent<MeshRenderer>().sharedMaterial = BoardSurfaceMaterials.WarmGlass;
             StripCollider(pane);
+        }
+
+        /// <summary>
+        /// Quaternius door mesh fitted to the wall-segment gap. Open/closed still uses the standing
+        /// green/red state tint (playtest 2026-08-07) plus a hinge swing so the leaf clears the gap.
+        /// </summary>
+        private DoorVisual PlaceDoorMesh(string name, Door door)
+        {
+            Segment segment = door.Segment;
+            float dx = segment.B.X - segment.A.X;
+            float dy = segment.B.Y - segment.A.Y;
+            float length = Mathf.Sqrt((dx * dx) + (dy * dy));
+            if (length < 1e-4f)
+            {
+                length = SegmentThickness;
+            }
+
+            float height = WallHeight * 0.92f;
+            PlanarPosition mid = PlanarPosition.Lerp(segment.A, segment.B, 0.5f);
+            float yaw = Mathf.Atan2(-dy, dx) * Mathf.Rad2Deg;
+
+            var root = new GameObject(name);
+            root.transform.SetParent(transform, false);
+            root.transform.localPosition = LocalFromPlanar(mid);
+            root.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+
+            // Hinge at the segment's A-end (−X in root space after yaw alignment).
+            var hinge = new GameObject("Hinge");
+            hinge.transform.SetParent(root.transform, false);
+            hinge.transform.localPosition = new Vector3(-length * 0.5f * WorldScale, 0f, 0f);
+
+            GameObject prefab = Resources.Load<GameObject>("Interior/Door");
+            Transform leaf;
+            MeshRenderer[] renderers;
+            Color[][] originalColors;
+            if (prefab != null)
+            {
+                GameObject leafGo = Object.Instantiate(prefab, hinge.transform, false);
+                leafGo.name = "Leaf";
+                // Prefab is unit width/height with pivot at bottom-center — shift so the hinge edge
+                // sits on the hinge origin (left edge = −0.5 before scale).
+                leafGo.transform.localPosition = new Vector3(length * 0.5f * WorldScale, 0f, 0f);
+                leafGo.transform.localScale = new Vector3(length * WorldScale, height, 1f);
+                leaf = leafGo.transform;
+                renderers = leafGo.GetComponentsInChildren<MeshRenderer>();
+                originalColors = CaptureRendererColors(renderers);
+                StripCollidersRecursive(leafGo);
+            }
+            else
+            {
+                // Fallback tinted box if import hasn't run — same footprint as the old placeholder.
+                GameObject box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                box.name = "LeafFallback";
+                box.transform.SetParent(hinge.transform, false);
+                box.transform.localPosition = new Vector3(length * 0.5f * WorldScale, height * 0.5f, 0f);
+                box.transform.localScale = new Vector3(length * WorldScale, height, SegmentThickness * WorldScale);
+                StripCollider(box);
+                leaf = box.transform;
+                renderers = new[] { box.GetComponent<MeshRenderer>() };
+                originalColors = CaptureRendererColors(renderers);
+            }
+
+            return new DoorVisual(door, root, hinge.transform, leaf, renderers, originalColors);
+        }
+
+        private static Color[][] CaptureRendererColors(MeshRenderer[] renderers)
+        {
+            var colors = new Color[renderers.Length][];
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Material[] shared = renderers[i].sharedMaterials;
+                colors[i] = new Color[shared.Length];
+                for (int m = 0; m < shared.Length; m++)
+                {
+                    Material mat = shared[m];
+                    colors[i][m] = mat != null && mat.HasProperty("_BaseColor")
+                        ? mat.GetColor("_BaseColor")
+                        : (mat != null ? mat.color : Color.white);
+                }
+            }
+
+            return colors;
+        }
+
+        private static void ApplyDoorVisualState(DoorVisual visual, DoorState state)
+        {
+            bool open = state == DoorState.Open;
+            Color tint = open ? DoorOpenColor : DoorClosedColor;
+
+            // Swing the leaf open (~95°) so the gap reads clear; closed sits in the wall line.
+            if (visual.Hinge != null)
+            {
+                visual.Hinge.localRotation = Quaternion.Euler(0f, open ? -95f : 0f, 0f);
+            }
+
+            if (visual.Renderers == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < visual.Renderers.Length; i++)
+            {
+                MeshRenderer renderer = visual.Renderers[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                // Instance materials so open/closed tint doesn't mutate the shared prefab mats.
+                Material[] mats = renderer.materials;
+                Color[] originals = visual.OriginalColors != null && i < visual.OriginalColors.Length
+                    ? visual.OriginalColors[i]
+                    : null;
+
+                for (int m = 0; m < mats.Length; m++)
+                {
+                    Material mat = mats[m];
+                    if (mat == null)
+                    {
+                        continue;
+                    }
+
+                    Color baseColor = originals != null && m < originals.Length ? originals[m] : Color.white;
+                    // Keep some albedo so wood still reads; lean hard into the state color.
+                    Color mixed = Color.Lerp(baseColor, tint, 0.72f);
+                    mixed.a = 1f;
+                    if (mat.HasProperty("_BaseColor"))
+                    {
+                        mat.SetColor("_BaseColor", mixed);
+                    }
+
+                    mat.color = mixed;
+                }
+
+                renderer.materials = mats;
+            }
+        }
+
+        private static void StripCollidersRecursive(GameObject go)
+        {
+            Collider[] cols = go.GetComponentsInChildren<Collider>();
+            for (int i = 0; i < cols.Length; i++)
+            {
+                Object.Destroy(cols[i]);
+            }
         }
 
         /// <summary>
@@ -555,12 +730,30 @@ namespace LogiCard.Board
         {
             public Door Door { get; }
 
-            public MeshRenderer Renderer { get; }
+            public GameObject Root { get; }
 
-            public DoorVisual(Door door, MeshRenderer renderer)
+            public Transform Hinge { get; }
+
+            public Transform Leaf { get; }
+
+            public MeshRenderer[] Renderers { get; }
+
+            public Color[][] OriginalColors { get; }
+
+            public DoorVisual(
+                Door door,
+                GameObject root,
+                Transform hinge,
+                Transform leaf,
+                MeshRenderer[] renderers,
+                Color[][] originalColors)
             {
                 Door = door;
-                Renderer = renderer;
+                Root = root;
+                Hinge = hinge;
+                Leaf = leaf;
+                Renderers = renderers;
+                OriginalColors = originalColors;
             }
         }
     }
