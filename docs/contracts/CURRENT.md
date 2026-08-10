@@ -1,31 +1,34 @@
 # Cross-Dept Contracts — Current Wave
 
 **Wave:** Look-and-feel + UI, started 2026-08-09. Core-gameplay/networking work explicitly paused by the
-human until this wave lands — see `SCHEDULE.md`'s Cadence section. **UI side landed and merged twice**
-(`feat/ui-component-system`, then a same-session dock move right-edge → bottom band); **`feat/ui-dock-polish`**
-now spun for a readability pass on that new layout, never verified since it landed. **Environment side:**
-checkpoint 1 merged 2026-08-09; checkpoint 2 (asset packs/door models/character rework) in flight since
-2026-08-10 on an inferred "more richness" direction, not explicitly confirmed. **Integrator also landed, in
-the main tree directly:** camera rotation (`BoardCameraRig`, smooth right-drag, superseding an earlier
-discrete-step version per direct feedback) and an interim cloud-size fix.
+human until this wave lands — see `SCHEDULE.md`'s Cadence section. **UI side landed and merged three times**
+(`feat/ui-component-system`, a same-session dock move right-edge → bottom band, then `feat/ui-dock-polish`'s
+ultrawide-overflow fix + dialog tightening) — `Assets/_Project/UI/**` is closed out again, no worker
+assigned. **Environment side:** checkpoint 1 merged 2026-08-09; checkpoint 2 (Poly Haven PBR board-surface
+textures landed, mesh-pack choice still pending human decision) in flight since 2026-08-10, **not yet merged
+to master**. **Integrator also landed, in the main tree directly:** camera rotation (`BoardCameraRig`, smooth
+right-drag) and an interim cloud-size fix. **URP render pipeline audited 2026-08-10 (in response to a direct
+human ask about progress): no post-processing Volume Profile, no renderer features, MSAA off — real gap,
+not yet addressed, see DRAFT_HANDOFF for the full finding.**
 **Updated:** 2026-08-10 by Integrator.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
 
-### `HudDockHeight` ↔ camera viewport-rect + `BoardCameraRig`, live coupling
+_(none currently open — `Assets/_Project/UI/**` closed out, next slice not yet assigned)_
 
-- **Owner (definition):** UI worker (`feat/ui-dock-polish`) — may propose changing `ProgramHud.HudDockHeight`
-  itself if the readability pass finds the dock genuinely needs to be taller/shorter, but must flag it in
-  their report-back rather than changing it silently (their brief says so explicitly).
-- **Owner (consumer, wiring):** Integrator — `GameBootstrap.cs`'s `cam.rect` reads the constant symbolically,
-  so a value change alone doesn't need a rewrite, but Integrator re-verifies the framing either way before
-  merging.
-- **Also touches:** `BoardCameraRig` (new, Integrator-owned, `Assets/_Project/Board/BoardCameraRig.cs`) reads
-  `_board.CenterWorld` and applies yaw independent of `HudDockHeight` — no direct coupling, but both affect
-  what's visible on screen simultaneously, worth knowing if either worker is confused by unexpected framing.
-- **Merge status:** not yet landed — worktree just spun up.
+## Closed contracts (reference)
+
+### `HudDockHeight` ↔ column layout, ultrawide overflow fix (closed 2026-08-10)
+
+- Worker kept `HudDockHeight = 0.34f` unchanged — didn't need to touch the camera-rect coupling, just the
+  controls-column row budget inside it. Added `ProgramHud.ControlsColumnContentHeight` and
+  `DockHeightInUiUnits(width, height)` as an explicit, EditMode-tested invariant so a future retune can't
+  silently overflow the dock again the same way.
+- `BoardCameraRig` unaffected — worker's brief explicitly excluded `GameBootstrap.cs`/`BoardCameraRig.cs`.
+- Merged `d2624c2` (worker commit `a0d823b`). Worker-reported EditMode 124/124, PlayMode 37/37; not yet
+  independently re-run by Integrator (Editor was live at merge time) — see `DRAFT_HANDOFF.md`.
 
 ### Camera viewport-rect, bottom-band shape (closed 2026-08-10)
 

@@ -1,5 +1,62 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 2) — Honest progress check; ui-dock-polish merged; URP audit
+
+**Human asked directly whether the project is actually on track aesthetically** ("i literally did not
+see too much changes happened... I think the problem right now is with the rendering pipeline and
+models"). Answered honestly rather than reassuringly. Two real findings:
+
+1. **Env worktree checkpoint 2 had already landed real work I hadn't reported.** I'd previously told
+   the human the env worktree had "zero new commits" — wrong, it had 2 (`6e01892`, `537633f`): Poly
+   Haven CC0 PBR textures (asphalt/brick/concrete/wood, real photo-scanned material, not procedural)
+   wired into board surfaces via a new `BoardSurfaceMaterials.cs`. Corrected the record with the human.
+   **Not yet merged to master** — this is real progress the human hasn't been able to see yet, a
+   process gap (should surface/merge checkpoints faster) not a "nothing is happening" problem.
+2. **Render pipeline audit** (`Assets/_Project/Art/URP/LogiCardURP.asset` +
+   `LogiCardURP_Renderer.asset`, both read this session): essentially stock/default, barely configured.
+   `m_MSAA: 1` (off), `m_VolumeProfile: {fileID: 0}` (**no global post-processing volume exists at
+   all** — no bloom, no color grading, no tonemapping, no vignette), `m_RendererFeatures: []` (no
+   SSAO, no screen-space reflections), single shadow cascade, hard shadows only, only the main light
+   casts shadows. **The human's hypothesis is partly right but for a different reason than expected:**
+   URP itself can get much closer to the reference image, this is unconfigured setup work that hasn't
+   been done, not a ceiling the pipeline imposes.
+
+**Combined verdict given to the human:** two roughly-equal-weight gaps, both still open — (a) the
+render pipeline has no post-processing/AO/reflections/soft-shadows configured, and (b) most on-screen
+models (doors, characters, clouds) are still primitive placeholders; only board-surface textures have
+gone real so far. Distance to goal is genuinely "not close yet," and that's an honest read of where
+things stand, not a discouraging one — the two gaps are independently fixable and neither is blocked.
+
+**`feat/ui-dock-polish` merged** (`d2624c2`, worker commit `a0d823b`). Real bug: `CanvasMatchWidthOrHeight
+= 0.4` means the dock's UI-unit height shrinks on wide windows, and the old row-height stack (Verb 56 /
+Stance 50 / Action 64, Pad 20, RowGap 12 ≈ 326 UI units) overflowed past the dock's actual budget at
+2560×1080 (~306 UI units), clipping the stance row and SET PATH. Retuned to ~282 UI units with an
+explicit `ControlsColumnContentHeight` vs. `DockHeightInUiUnits()` invariant an EditMode test now locks,
+so this class of overflow can't silently regress again. Also fixed Adrenaline's disabled tint (was
+`AccentDim`, read as a broken Lock In; now `PanelMid` + faded ink for gated/spent), widened Character
+Select's grid/detail gap, and re-centered the Quit modal so it doesn't stretch into a band on ultrawide.
+Worker reported EditMode 124/124, PlayMode 37/37 clean.
+
+**Merge note — worker touched Integrator-owned docs despite the brief saying not to.** The worktree's
+single commit was based on the stale `3d92e03` (before camera rotation and several doc updates landed
+on master) and rewrote `DRAFT_HANDOFF.md`/`contracts/CURRENT.md`/`departments/INDEX.md` against that old
+state. Git's 3-way merge correctly resolved all three files back to master's current content with zero
+diff — nothing was lost — but flagging the pattern: a worktree that runs long without syncing will
+increasingly diverge on anything it touches outside its lane, doc or code.
+
+**Batchmode not independently re-run this merge** — Editor was open (live session) at merge time, same
+recurring constraint this whole session. Self-reviewed the `ProgramHud.cs`/`AppFlowController.cs`/
+`ModalDialog.cs`/`SelectionGrid.cs`/`UiStyle.cs` diff directly instead; changes are constants/layout-math
+only, no logic restructuring, consistent with what the worker's report described. Still wants both a
+batchmode confirmation and a human Editor look once the Editor is free.
+
+**Next up:** merge env checkpoint 2 (Poly Haven materials) with care around the `BoardCameraRig.cs`
+branch-divergence artifact (shows as deleted in their diff — fork-timing artifact, not intentional);
+stand up a real post-processing Volume Profile + renderer features (bloom, color grade, SSAO, MSAA) as
+a self-contained next slice; get the human's mesh-pack decision (Quaternius Ultimate House Interior vs.
+KayKit Dungeon Remastered) unstuck; get the Chadderbox cloud pack or pick a fallback; get an actual
+human/Editor look at current character models (never reviewed since the C53 pivot).
+
 ## 2026-08-10 (continued) — Compiler error fixed; smooth camera rotation; second worker spun
 
 **Compiler error found and fixed without batchmode.** User reported "still compiler error" after the first
