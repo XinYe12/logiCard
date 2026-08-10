@@ -1,5 +1,35 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 11) — orthographicSize resolved analytically, no change needed
+
+**Standing open item since checkpoint 3** (`orthographicSize = 5.0`, last human-verified 2026-08-09
+against the pre-door-mesh board): worked this out by projection math instead of waiting for a screenshot,
+since none is available for 2 hours.
+
+**Math:** `BoardCameraRig`'s orthographic camera has fixed pitch `52°` (`Quaternion.Euler(52,0,0)`), so its
+local "up" vector is `(0, cos52°, sin52°) ≈ (0, 0.616, 0.788)` and "right" stays exactly `(1,0,0)` (pure
+X-axis rotation never touches the right vector). The board (`ArenaBoard(0,0,8,10)`) lies flat in the world
+XZ plane. For an orthographic camera, a world displacement's on-screen extent is its dot product with the
+camera's right/up axes — no perspective falloff, so `DistanceFromCenter` (14 units) doesn't factor in at
+all, only `orthographicSize` and the viewport's aspect ratio do.
+
+- **Vertical (board depth, 10 units along world Z → camera's "up"):** `10 × 0.788 ≈ 7.88` world units of
+  screen-vertical extent, against a visible vertical range of `2 × orthographicSize = 10`. That's **≈79%
+  vertical coverage** — matching the `orthographicSize = 5.0` recalibration's own documented target
+  (75–80%, set 2026-08-09 from a real screenshot) almost exactly. Confirms the vertical tuning is correct,
+  and this part of the calculation is **aspect-ratio-independent**, so it holds regardless of window shape.
+- **Horizontal (board width, 8 units along world X → camera's "right," zero cross-talk with Z):** screen
+  fraction = `8 / (2 × orthographicSize × aspect) = 0.8 / aspect`. This only *shrinks* as the viewport gets
+  wider — on any landscape or square window (`aspect ≥ 1`, which `C48`'s landscape-desktop mandate
+  guarantees), the board's width can occupy **at most 80%** of the viewport and less on any wider window,
+  so it cannot be cut off. (A near-square capture in one of today's screenshots made the board look tight
+  against the frame edges — that's consistent with a narrow capture/crop, not evidence of an actual
+  framing bug, given the math above.)
+
+**Conclusion: `orthographicSize = 5.0` is correctly calibrated — no change made.** This resolves the
+standing "needs another look" flag with actual math rather than another guess; still worth a human glance
+next time the Editor's open, but there's no numeric reason to touch it.
+
 ## 2026-08-10 (continued 10) — human stepped away for 2h, Integrator pushing autonomously
 
 **Human explicit instruction:** "keep pushing the schedule till i come back notify me of decisions, but
