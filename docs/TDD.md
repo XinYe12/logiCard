@@ -87,7 +87,8 @@ Digital build uses **continuous `ExecuteTime` (Time Resource seconds)** in `Time
 
 * Clients read timestamps only.
 * **No root motion** — script moves transforms; clips play in place.
-* Stop-motion feel: clips baked ~**12 fps** while game renders **60 fps**, or Animator update manipulated for stepped playback.
+* Smooth per-frame interpolation (**C55**, 2026-08-10) — supersedes the earlier stepped ~12fps stop-motion
+  approach; `PawnView` now samples its path every frame instead of throttling pose updates.
 
 ---
 

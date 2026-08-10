@@ -49,7 +49,7 @@ Ship fails presentation acceptance if any of these are missing:
 | **Materials** | Clay-tint / matte polymer look with **subtle** procedural noise (no stock shiny PBR chrome) | True SSS, thumbprint normals |
 | **Paths** | Thin, slightly wobbly hand-drawn **ink line** on the board surface — FragPunk/界外狂潮-style "线稿涂鸦" (decision 2026-08-07, supersedes the earlier yarn/chalk direction); not fat spray, not a glitchy HUD line, not neon | Waypoint ink dots in the same stroke language |
 | **Time Card / HUD** | Cardstock Time Card in the HUD dock; Lock In feels like a physical switch; **AR scrubber** stays clean/high-contrast vs clay board | Soft card shadow on the diorama |
-| **Characters** | Distinct toy-figurine silhouettes (*Legend of Zelda: Link's Awakening* 2019 remake reference) — Scout vs Juggernaut readable via imported CC0 Quaternius meshes; **stepped 8–12 fps** motion in Playback. *Note:* current Quaternius imports (see `docs/PAWN_ART_REWORK_PLAN.md` — do not edit that in-progress plan here) are fine for the current build but likely too generic/undifferentiated for a paid, distinctly-branded product; replacement or heavy rework is a Phase 5 candidate, not immediate work. | Bespoke modeled clay characters, facial detail |
+| **Characters** | Distinct silhouettes — Scout vs Juggernaut readable via imported CC0 Quaternius meshes; **smooth per-frame interpolation** in Playback (**C55**, supersedes the earlier stepped 8–12fps pillar). *Note:* current Quaternius imports (see `docs/PAWN_ART_REWORK_PLAN.md` — do not edit that in-progress plan here) are fine for the current build but likely too generic/undifferentiated for a paid, distinctly-branded product; replacement or heavy rework is a Phase 5 candidate, not immediate work. | Bespoke modeled clay characters, facial detail |
 | **VFX** | **Physical** muzzle-flash mesh (~2 frames); persistent **clay wound splat** on hit | Cotton Flashbang smoke (when that card is in scope) |
 | **Audio** | Tactile foley: clay-on-board footsteps; cap-gun / heavy-stapler shot; paper Time Card; Lock In switch snap | Full mix / music bed |
 
@@ -73,15 +73,36 @@ Achieve “physical” feel via lighting, shaders, and camera more than ultra-hi
 
 ---
 
-## 2. Animation (Stop-Motion Feel)
+## 2. Animation
+
+* **Smooth interpolation (2026-08-10, C55 — supersedes the stepped 8–12fps pillar below):** Character
+  movement now samples its `ScheduledPath` every frame and blends normally, matching the render
+  framerate of everything else in the scene (camera, rain, lighting). The stepped/stop-motion look
+  worked against flat-shaded clay primitives, but once C53/C54 pushed materials, lighting, and door
+  models toward photorealism, the contrast made per-frame pose holds read as a framerate bug rather
+  than a deliberate stylistic choice — a direct human call after noticing it in a playtest screenshot,
+  not a performance fix. `PawnView.ApplyTime` no longer throttles; see `Assets/_Project/Board/PawnView.cs`.
+* **No root motion (unchanged):** Host / ReplayTape moves transforms mathematically; animation plays in
+  place (**C23**).
+* **Exaggerated anticipation (unchanged):** Door kicks, shotgun blasts need big readable anticipation
+  from top-down.
+
+**Playback Duration (C27):** Cinema length is tunable and may compress **Time Resource**; unchanged by
+the animation-smoothness decision above.
+
+<details>
+<summary>Superseded: original "Stop-Motion Feel" pillar (2026-08-07–2026-08-10)</summary>
 
 Smooth 60fps character motion kills the illusion.
 
-* **Stepped interpolation:** Character clips baked ~**8–12 fps** (on twos/threes). Pose snaps, not blends. **Required for ship.**
+* **Stepped interpolation:** Character clips baked ~**8–12 fps** (on twos/threes). Pose snaps, not blends.
 * **No root motion:** Host / ReplayTape moves transforms mathematically; animation plays in place (**C23**).
 * **Exaggerated anticipation:** Door kicks, shotgun blasts need big readable anticipation from top-down.
 
-**Playback Duration (C27):** Cinema length is tunable and may compress **Time Resource**; stepped animation still reads if anticipation is clear.
+This pillar was written when the board was flat-shaded clay primitives and paired with the toy-chibi
+character framing C53 later superseded. It is no longer the current direction — kept here for history,
+not as guidance.
+</details>
 
 ---
 
@@ -129,7 +150,7 @@ Soundscape sells miniature tactile scale.
 | Do | Don’t |
 |----|--------|
 | Diorama base + void outside board | Infinite open-world horizon |
-| Stepped clay motion | Buttery mocap loops with root motion |
+| Smooth per-frame interpolation (C55), transforms driven mathematically | Root motion / engine-driven animation transforms (**C23**, still forbidden) |
 | Physicalized VFX (mesh pops, clay splats) | Glow trails, soft particle fog |
 | Sketchy ink-line paths (线稿涂鸦) | Generic cyber grid lines, fat spray, glitchy HUD lines |
 | Compress Playback Duration when needed | Force long Time Resource = long wall-clock walk |

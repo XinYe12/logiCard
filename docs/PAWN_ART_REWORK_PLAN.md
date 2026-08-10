@@ -67,9 +67,10 @@ something to assume.
    loop, don't lock the number in blind.
 
 5. **No animation wiring.** Leave any imported rig/animation clips unused. `RoundPlayback`/`PawnView.ApplyTime`
-   already moves the pawn's root transform directly on the stepped 8–12fps cadence — `ART_DIRECTION.md`
-   explicitly requires "no root motion." Use the mesh as a static (or single fixed pose) visual; don't wire
-   an `Animator` unless asked later.
+   already moves the pawn's root transform directly, now on a smooth per-frame cadence (**C55**,
+   2026-08-10 — supersedes the stepped 8–12fps cadence this line originally described) — `ART_DIRECTION.md`
+   still explicitly requires "no root motion" regardless of interpolation smoothness. Use the mesh as a
+   static (or single fixed pose) visual; don't wire an `Animator` unless asked later.
 
 6. **`GameBootstrap.cs`**: no changes expected — `SpawnPawn(..., PawnBuild build)` call sites for
    Scout/Juggernaut stay as-is; only `PawnView`'s internals change.
