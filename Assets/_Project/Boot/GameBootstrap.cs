@@ -45,6 +45,7 @@ namespace LogiCard.Boot
         private RoundPlayback _playback;
         private MatchClock _matchClock;
         private IFoleyPlayer _foley;
+        private BoardCameraRig _cameraRig;
         private const float DefenderSecondsPerTile = 2f;
 
         public MatchClock MatchClock => _matchClock;
@@ -52,6 +53,8 @@ namespace LogiCard.Boot
         public RoundPlayback Playback => _playback;
 
         public BoardInputController AttackerInput => _attackerInput;
+
+        public BoardCameraRig CameraRig => _cameraRig;
 
         /// <summary>
         /// Test/authoring helper: play a Time Card and enter Program without going through the HUD.
@@ -106,6 +109,13 @@ namespace LogiCard.Boot
             hud.TimeCardPlayed += OnTimeCardPlayed;
             hud.NextRoundRequested += OnNextRoundRequested;
             _playback.OutcomeReported += hud.ShowOutcome;
+
+            // Camera rotation (C48/C53 playtest ask): HUD owns the button, GameBootstrap owns the
+            // camera. After a rotation, the door prompt's cached world-to-screen projection
+            // (docs/UI_BOARD_ANCHORED_COMPONENTS.md — "recompute only on selection change") is stale,
+            // so re-run it through the same refresh path a selection change already uses.
+            hud.CameraRotateRequested += direction => _cameraRig.Step(direction);
+            _cameraRig.Rotated += hud.RefreshBoardAnchoredUI;
 
             // Find Match -> C52's resolve relay; Local Play -> same-process (unchanged). Board layout
             // must match Relay/LogiCard.Relay/DemoArenaBoard.CreateDemo() for a two-Unity smoke test to
@@ -324,9 +334,15 @@ namespace LogiCard.Boot
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.035f, 0.04f, 0.055f);
 
-            var rotation = Quaternion.Euler(52f, 0f, 0f);
-            cam.transform.rotation = rotation;
-            cam.transform.position = _board.CenterWorld - (rotation * Vector3.forward * 14f);
+            // Pitch/distance/position are BoardCameraRig's job now (yaw rotation, C48) — it owns the
+            // same Euler(52,0,0)-from-center-minus-forward*14 shape this used to set directly.
+            _cameraRig = cam.GetComponent<BoardCameraRig>();
+            if (_cameraRig == null)
+            {
+                _cameraRig = cam.gameObject.AddComponent<BoardCameraRig>();
+            }
+
+            _cameraRig.Init(cam, _board.CenterWorld);
 
             // Post-processing is off by default per camera (URP) even when the pipeline supports it;
             // without this the diorama Volume below has nothing to render through (playtest 2026-08-07:

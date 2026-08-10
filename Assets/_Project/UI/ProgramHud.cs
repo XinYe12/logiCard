@@ -143,6 +143,14 @@ namespace LogiCard.UI
         /// </summary>
         public event Action AdrenalineUsed;
 
+        /// <summary>
+        /// Raised when the player clicks the top-strip rotate button. Direction is always +1 today
+        /// (single cycling button) — the parameter exists so a future left/right pair doesn't need a
+        /// new event. GameBootstrap owns the actual camera (<c>BoardCameraRig</c>); the HUD deliberately
+        /// knows nothing about it, same separation as <see cref="LockedIn"/> and the resolver.
+        /// </summary>
+        public event Action<int> CameraRotateRequested;
+
         public void Init(
             TimeResourceClockDriver clock,
             RoundPhaseController phase,
@@ -319,13 +327,21 @@ namespace LogiCard.UI
                 new Vector2(0f, 1f - TopStripHeight), new Vector2(1f, 1f));
 
             _phaseLabel = _ui.CreateText(strip, "PhaseLabel", "ALLOT", 32, TextAnchor.MiddleLeft, Accent);
-            UiFactory.Stretch(_phaseLabel.rectTransform, new Vector2(0f, 0.45f), new Vector2(0.45f, 1f), new Vector2(24f, 0f), Vector2.zero);
+            UiFactory.Stretch(_phaseLabel.rectTransform, new Vector2(0f, 0.45f), new Vector2(0.32f, 1f), new Vector2(24f, 0f), Vector2.zero);
 
             _matchLabel = _ui.CreateText(strip, "MatchLabel", "MATCH", 22, TextAnchor.MiddleLeft, Ink);
-            UiFactory.Stretch(_matchLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0.7f, 0.55f), new Vector2(24f, 0f), Vector2.zero);
+            UiFactory.Stretch(_matchLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0.32f, 0.55f), new Vector2(24f, 0f), Vector2.zero);
+
+            // Camera rotate (C48/C53 playtest ask) — a view control, not a phase-specific action, so
+            // it lives in the always-visible top strip rather than the phase-gated dock. Single button
+            // cycling one direction through BoardCameraRig's fixed 45° steps; simpler than a left/
+            // right pair and still reaches every available angle.
+            Button rotateButton = _ui.CreateButton(strip, "CameraRotateButton", "ROTATE VIEW ⟳", PanelMid, Ink, 20,
+                () => CameraRotateRequested?.Invoke(1));
+            UiFactory.Stretch(rotateButton.GetComponent<RectTransform>(), new Vector2(0.36f, 0.18f), new Vector2(0.58f, 0.82f));
 
             _programTimerLabel = _ui.CreateText(strip, "ProgramTimer", "real-world", 24, TextAnchor.MiddleRight, Ink);
-            UiFactory.Stretch(_programTimerLabel.rectTransform, new Vector2(0.55f, 0f), new Vector2(1f, 1f), Vector2.zero, new Vector2(-24f, 0f));
+            UiFactory.Stretch(_programTimerLabel.rectTransform, new Vector2(0.68f, 0f), new Vector2(1f, 1f), Vector2.zero, new Vector2(-24f, 0f));
         }
 
         /// <summary>
@@ -751,6 +767,19 @@ namespace LogiCard.UI
             _moveModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.Move ? Accent : PanelMid;
             _shootModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.Shoot ? Accent : PanelMid;
             _doorModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.Door ? Accent : PanelMid;
+        }
+
+        /// <summary>
+        /// GameBootstrap calls this after <c>BoardCameraRig.Rotated</c> fires — the door prompt's
+        /// world-to-screen projection was computed against the pre-rotation camera and is now stale
+        /// (docs/UI_BOARD_ANCHORED_COMPONENTS.md: "recompute only when the underlying selection
+        /// changes" assumed a static camera; rotation is a second case that invalidates it). Reuses
+        /// the exact same refresh path a selection/mode change already drives — no new logic, just a
+        /// new trigger for the existing one.
+        /// </summary>
+        public void RefreshBoardAnchoredUI()
+        {
+            RefreshVerbContextControls(_input != null ? _input.Program : null);
         }
 
         private void RefreshVerbContextControls(PawnProgram program)
