@@ -22,31 +22,40 @@ namespace LogiCard.Board
         private static Material _propMetal;
         private static Material _warmGlass;
 
+        // wetSmoothnessBoost retuned 2026-08-10 (feat/wet-surface-reflections) now that BoardReflectionProbes
+        // gives these floors a real reflection source (three room-scoped Reflection Probes, blending +
+        // box projection on). The old values were tuned against *no* reflection input at all — high
+        // smoothness with nothing to reflect just reads as flat/plasticky sheen, so they leaned high to
+        // fake a glint from direct lights alone. With real (if modest — 128-res, realtime-refresh-once)
+        // probe content now driving the reflection, Yard/Vault came down off their highest settings
+        // (avoids the small board's low-res cubemap reading as an obvious low-fidelity mirror at full
+        // gloss) while Hall/Flank came up slightly (they can now afford a bit more sheen to actually
+        // sell wetness instead of needing to stay low specifically to hide the lack of a reflection).
         public static Material YardFloor => _yard ??= BuildWetSurface(
             "asphalt_diff", "asphalt_nor", "asphalt_rough",
             fallback: new Color(0.18f, 0.19f, 0.22f),
-            wetSmoothnessBoost: 0.55f,
+            wetSmoothnessBoost: 0.42f, // was 0.55
             tint: new Color(0.55f, 0.60f, 0.68f),
             tile: 2.2f);
 
         public static Material HallFloor => _hall ??= BuildWetSurface(
             "concrete_diff", "concrete_nor", "concrete_rough",
             fallback: new Color(0.42f, 0.40f, 0.38f),
-            wetSmoothnessBoost: 0.28f,
+            wetSmoothnessBoost: 0.34f, // was 0.28
             tint: new Color(0.78f, 0.74f, 0.68f),
             tile: 1.8f);
 
         public static Material VaultFloor => _vault ??= BuildWetSurface(
             "concrete_diff", "concrete_nor", "concrete_rough",
             fallback: new Color(0.28f, 0.30f, 0.34f),
-            wetSmoothnessBoost: 0.62f,
+            wetSmoothnessBoost: 0.46f, // was 0.62
             tint: new Color(0.45f, 0.50f, 0.58f),
             tile: 2.4f);
 
         public static Material FlankFloor => _flank ??= BuildWetSurface(
             "asphalt_diff", "asphalt_nor", "asphalt_rough",
             fallback: new Color(0.22f, 0.20f, 0.18f),
-            wetSmoothnessBoost: 0.35f,
+            wetSmoothnessBoost: 0.30f, // was 0.35
             tint: new Color(0.48f, 0.44f, 0.40f),
             tile: 2.0f);
 

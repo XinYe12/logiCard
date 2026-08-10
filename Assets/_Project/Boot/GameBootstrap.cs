@@ -102,6 +102,10 @@ namespace LogiCard.Boot
             ConfigureCamera();
             BuildLighting();
             BuildWeatherPocket();
+            // Wet-surface reflection follow-up (feat/wet-surface-reflections) — scoped, single-call
+            // addition mirroring BuildWeatherPocket immediately above; all the actual work lives in
+            // BoardReflectionProbes, not here.
+            BuildReflectionProbes();
 
             var hud = new GameObject("ProgramHud").AddComponent<ProgramHud>();
             hud.transform.SetParent(transform, false);
@@ -427,6 +431,18 @@ namespace LogiCard.Boot
             var weatherGo = new GameObject("WeatherPocket");
             weatherGo.transform.SetParent(transform, false);
             weatherGo.AddComponent<BoardWeatherPocket>().Build(_board);
+        }
+
+        /// <summary>
+        /// One Reflection Probe per room (Yard/Hall/Vault) so the wet-dusk floors in
+        /// <see cref="BoardSurfaceMaterials"/> have a real reflection source instead of bare
+        /// smoothness. See <see cref="LogiCard.Board.BoardReflectionProbes"/> for placement details.
+        /// </summary>
+        private void BuildReflectionProbes()
+        {
+            var probesGo = new GameObject("ReflectionProbes");
+            probesGo.transform.SetParent(transform, false);
+            probesGo.AddComponent<BoardReflectionProbes>().Build(_board);
         }
 
         /// <summary>
