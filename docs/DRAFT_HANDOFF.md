@@ -1,5 +1,26 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 6) — character-model research landed; awaiting human pack decision
+
+**`feat/character-model-rework` merged** (research-only, no code) — the Integrator's own genuinely-spawned
+subagent (correcting last turn's error of claiming workers were running without launching anything)
+reassessed the current Quaternius pawns against the now-realistic board. Findings appended to
+`Assets/_Project/Art/Characters/THIRD_PARTY.md`, done via asset/code inspection (no Editor/screenshot
+access), explicitly flagged as a hypothesis needing a sighted verification pass, not a confirmed visual
+call. Headline finding: **Scout's imported "Adventurer" outfit is a genre clash**, not just a fidelity gap
+— picked for the old toy-chibi target, it reads as fantasy-RPG against the SWAT-facility board language.
+Juggernaut's "Swat" outfit doesn't have this problem. Secondary: every per-part material has no albedo
+texture (flat solid color), which read fine against the old toy-figurine target but reads generic next to
+the new Poly Haven PBR surfaces and real door meshes.
+
+**Three candidates proposed, none imported, human decision needed** (same discipline as the door-mesh
+pick): (A) re-outfit Scout within the already-owned CC0 Quaternius pack (cheapest, fixes the genre clash
+only, zero new license risk); (B) Mixamo rigged humans (real proportions/textures, but not CC0 — Adobe's
+own terms, and a real art-direction swing away from the "glossy toy sheen" pillar toward photoreal, a
+human call not an asset swap); (C) Quaternius "Universal Base Characters" (same license family, more
+grounded base mesh, but a bare-body pack needing separate outfit sourcing). Full writeup with ruled-out
+packs (Kenney, KayKit, Synty, marketplace SWAT singles) in `THIRD_PARTY.md`.
+
 ## 2026-08-10 (continued 5) — stepped pawn animation dropped for smooth interpolation (C55)
 
 **Human noticed something real from a playtest screenshot** (`screenshots/image copy 2.png` — reflection

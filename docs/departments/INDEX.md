@@ -19,7 +19,7 @@ list` and `DRAFT_HANDOFF.md`'s top section before assuming this table is current
 
 | Dept | Branch | Status file | Notes |
 |------|--------|--------------|-------|
-| Presentation (characters) | `feat/character-model-rework` | `logiCard-env-lookfeel` worktree | Propose-then-execute: assess current Scout/Juggernaut pawns against the now-realistic board, research 2-3 CC0 replacement pack candidates, do not import blind. Brief: `CHARACTER_MODEL_REWORK_AGENT_BRIEF.md` at the worktree root. |
+| ~~Presentation (characters)~~ | ~~`feat/character-model-rework`~~ | merged | **Done, Stage 1 (research) merged.** 3 candidates proposed in `Art/Characters/THIRD_PARTY.md`, none imported — awaiting human pack decision. Worktree still checked out, free for a new assignment once one exists. |
 | Rendering | `feat/wet-surface-reflections` | `logiCard-ui-dock-polish` worktree (directory name stale) | Reflection probes for wet board surfaces (SSR unavailable in this URP version); retune `BoardSurfaceMaterials`' wetness once real reflection exists. Brief: `WET_SURFACE_REFLECTIONS_AGENT_BRIEF.md` at the worktree root. |
 
 ## Ownership matrix (write locks)
