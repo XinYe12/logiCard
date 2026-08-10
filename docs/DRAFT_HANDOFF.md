@@ -1,5 +1,61 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 15) — vibrancy recolor pass + map-select UI merged (C58/C59)
+
+Human pushed back hard on the look ("big changes... Link's Awakening... vibrant... do not be so
+tedious") and asked for two parallel jobs, explicitly delegated to worker worktrees since they were
+running low on usage themselves. **Note on process:** I initially launched both as Agent tool calls
+myself before realizing the human specifically wanted paste-ready commands to run in *their own*
+separate agent sessions instead — stopped both immediately, gave them the handoff blocks, and they ran
+the work themselves. What follows is my review/verify/merge of what came back.
+
+**`feat/vibrancy-pass` (C58)** — post-processing grade warmed (`saturation -4→18`, cool `colorFilter`
+→ warm-neutral, `postExposure -0.10→0.08`), board surface tints retinted warmer/more saturated,
+clouds denser (`1.0→1.4x` density, `8-22→12-30` particles) and warm-tinted. Clean — no fixes needed.
+**Real gap, flagged not hidden:** the "cartoon/clay-art" cloud *style* ask only partially landed —
+density/warmth are real, but it's still the same realistic Kenney smoke-photo texture, not a style
+swap. That needs new art or a shader treatment, logged as a follow-up. Batchmode: EditMode 124/124,
+PlayMode 37/37. Merged clean, `5b73960`.
+
+**`feat/map-continuation` (C59)** — floor grid-line lattice deleted (`BoardView.PlacePaintedGrid`,
+cosmetic clutter), a real map-select screen added (Character Select → Map Select → Lobby, reusing
+`SelectionGrid`, plain not elaborate per the human's "don't be tedious" ask), local-only (no network
+sync — Net stays paused). Also restyled `ModalDialog` (rounded card, divider, pill buttons) toward a
+human-supplied reference screenshot. **This one needed real Integrator fixes before merge** — the
+worker's own batchmode claims weren't run/reported, and disposable-worktree verification caught:
+1. **Compile error** — `BuildPawns()`'s switch still referenced the old `ActiveMap` constant name
+   after it was renamed to a field; one-line fix.
+2. **37/37 PlayMode failures** — `GameBootstrap.Awake()` now defers board/pawn build until the app
+   flow reaches the match (correct, needed for real map choice), but `SliceSceneFixture`'s test setup
+   asserted those objects existed *before* calling the bypass that actually builds them. Reordered the
+   fixture. A second test (`BootThroughLobbyLocalPlayReachesMatchHud`) still expected Character Select
+   to lead straight to Lobby — updated for the new Map Select step in between.
+3. **A real bug, not just a test artifact** — `UiStyle.RoundSprite` used
+   `Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd")`. That path is an Editor-only extra
+   resource; the runtime API silently fails on it (logs an assert, returns null) in batchmode tests
+   **and in an actual Player build** — this would have shipped broken. Replaced with a small
+   procedurally-generated 9-sliced rounded sprite, cached after first build, works identically
+   everywhere. Also wired the primary/secondary dialog buttons to the new rounded-sprite/color tokens
+   — `UiStyle.PrimaryButton`/`SecondaryButton` had been declared but never actually used by
+   `ModalDialog.Show()`, so the buttons stayed square/amber despite the card getting rounded.
+
+   Batchmode after fixes: EditMode 124/124, PlayMode 37/37. Merged, `cdb16cf` (fixes) + `5e9b148`
+   (merge commit). Final combined pass with C58 also merged: EditMode 124/124, PlayMode 37/37 —
+   `logiCard-verify-final` disposable worktree, removed after.
+
+**Two more empty worktree-directory leftovers** (`logiCard-vibrancy-pass`, `logiCard-map-continuation`)
+join the same pending-cleanup backlog as the two from the map-roster wave — deregistered from git
+cleanly, on-disk directories wouldn't delete (`Device or resource busy`, same transient OneDrive/Search
+Indexer lock class as before). Harmless, safe to delete by hand whenever the lock clears.
+
+**Character-movement vibrancy is explicitly deferred, not forgotten** — the human's own framing
+("let's focus on color for now") scoped it out of this round. Next natural ask if/when they come back
+to this.
+
+**Standing caveat, unchanged:** both jobs are presentation/UI — batchmode green confirms "wired and not
+regressing," not "looks right" or "looks vibrant enough." Neither has been visually confirmed by a
+human yet.
+
 ## 2026-08-10 (continued 14) — three-map roster landed and wired; both worker slots closed
 
 **Both new maps merged and the shared dispatch wired** — the three-map roster from "continued 13" below

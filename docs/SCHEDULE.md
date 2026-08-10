@@ -60,8 +60,20 @@ Sim work stays paused). Landed and wired same day: two new `Door` kinds (Vent/Br
 `MapId`/`MapLayout` groundwork, Freight Yard retrofitted with one of each, two new maps (Rail Platform,
 Vault Complex) built in parallel by two workers and merged by the Integrator, shared dispatch
 (`BuildBoard(MapId)`/`MapDefinitions.ForId`/map-aware `BuildPawns()`) wired so all three are selectable.
-No map-select UI yet — `ActiveMap` stays a constant defaulted to `FreightYard`, explicit follow-up. Same
-standing caveat as Phase 5's row above: batchmode-verified, **not yet visually confirmed** by a human.
+
+**Vibrancy pass + map-select UI (2026-08-10, `PRODUCT_MEMORY.md` C58/C59):** two more parallel waves,
+same day. The human pushed back on the desaturated look ("big changes... Link's Awakening... vibrant")
+and asked for a recolor-only pass (C58: post-processing grade + surface tints warmed/saturated, clouds
+denser — cloud *style* only partially landed, still real-texture not cartoon, flagged as a follow-up)
+plus closed C57's own deferred item (C59: floor grid-line clutter deleted, a real local-only map-select
+screen built between Character Select and Lobby so `ActiveMap` is no longer a hardcoded constant, plus
+a `ModalDialog` restyle toward a human-supplied reference). Both delegated to parallel worker worktrees;
+the map-continuation one needed real Integrator fixes before merge (a compile error, two PlayMode
+regressions from deferring `GameBootstrap`'s board-build until match start, and a bug — wrong builtin-
+resource API — that would have broken in a shipped Player build, not just tests). Combined final state:
+EditMode 124/124, PlayMode 37/37. Character-movement vibrancy stays explicitly deferred, not forgotten.
+Same standing caveat as Phase 5's row above: batchmode-verified, **not yet visually confirmed** by a
+human.
 
 ---
 

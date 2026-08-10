@@ -1,7 +1,7 @@
 # D12: UI / UX Flow — Landscape Desktop (Steam)
 
 **Doc ID:** D12  
-**Status:** Updated 2026-08-08 — landscape desktop-first (**C48**); matchmaking lobby (**C51** / **C49**)  
+**Status:** Updated 2026-08-10 — landscape desktop-first (**C48**); matchmaking lobby (**C51** / **C49**); Map Select step added (**C59**)  
 **Depends on:** [GDD.md](GDD.md), [TDD.md](TDD.md), [ART_DIRECTION.md](ART_DIRECTION.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md)  
 **Platforms:** Windows (mouse + keyboard, landscape desktop) primary; Steam first; portrait/mobile deferred to a future, separate consideration (**C48**).
 
@@ -15,7 +15,8 @@ Glossary (**C27**): **Time Resource** = budget scrubber; **Playback Duration** =
 flowchart TD
   boot[Boot_Title]
   boot --> charSelect[Character_Select]
-  charSelect --> lobby[Lobby_FindMatch]
+  charSelect --> mapSelect[Map_Select]
+  mapSelect --> lobby[Lobby_FindMatch]
   lobby --> program[Program_Phase]
   program --> waiting[Waiting_Simulating]
   waiting --> reveal[Reveal_Flash]
@@ -38,12 +39,25 @@ flowchart TD
 ## 2. Character Select
 
 - Pick **Scout** or **Juggernaut** (attrs readable: Speed / Agility / Strength one-liners).  
-- Confirm → Lobby.
+- Confirm → Map Select.
 - **Animation reference (not yet implemented):** [`UI_CHARACTER_SELECT_ANIMATION_REF.md`](UI_CHARACTER_SELECT_ANIMATION_REF.md)
   — a pasted React/Tailwind carousel spec marked as the target *motion feel* for this screen (crossfade
   role rotation: center/flank/back), now also covers a GSAP-based 3D depth-stack alternative (ReactBits
   DepthCarousel). Reference for the animation language only, not a literal build task or a stack we're
   adopting.
+
+---
+
+## 2b. Map Select (added 2026-08-10, `PRODUCT_MEMORY.md` C59)
+
+- Pick **Freight Yard**, **Rail Platform**, or **Vault Complex** — three-card grid, same simplicity level
+  as Character Select (reuses `SelectionGrid`), not the elaborate carousel references saved for Character
+  Select above.
+- Confirm → Lobby.
+- **Local-only** — the choice just picks which `MapId` this client's own `GameBootstrap.BuildBoard()`
+  call uses. No network sync of the pick (Net/Timeline work stays paused under the standing
+  core-gameplay-pause rule; only map/terrain Sim-layer work is currently unpaused, per **C57**).
+- Closes the map-select follow-up **C57** explicitly deferred when the three-map roster first landed.
 
 ---
 
