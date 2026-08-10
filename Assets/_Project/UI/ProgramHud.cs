@@ -14,7 +14,7 @@ namespace LogiCard.UI
 {
     /// <summary>
     /// Landscape desktop Program HUD (C48 / UI_FLOW.md). Slim full-width top status strip,
-    /// board dominant in the remaining center (camera viewport), and a right-edge HUD dock
+    /// board dominant in the remaining center (camera viewport), and a bottom-band HUD dock
     /// holding Time Resource scrubber, stance/shoot selectors, and Lock In.
     /// Owns Allot (Time Card) and Aftermath panels for the match loop (C33), plus the
     /// minimal pre-match AppFlow shell (Boot → Character Select → Lobby).
@@ -35,10 +35,46 @@ namespace LogiCard.UI
         private const float Pad = UiStyle.Pad;
         private const float Gap = UiStyle.Gap;
         private const float RowGap = UiStyle.RowGap;
-        private const float VerbRowHeight = 56f;
-        private const float StanceRowHeight = 50f;
-        private const float DebugRowHeight = 40f;
-        private const float ActionRowHeight = 64f;
+
+        // Compacted 2026-08-10 for the shorter bottom dock + ultrawide CanvasScaler shrink:
+        // prior tall-dock values (Verb 56 / Stance 50 / Action 64, Pad 20, RowGap 12) summed past
+        // the dock's UI-unit height at 2560×1080. Keep ControlsColumnContentHeight under
+        // DockHeightInUiUnits(ultrawide) — EditMode locks that.
+        private const float VerbRowHeight = 48f;
+        private const float StanceRowHeight = 44f;
+        private const float DebugRowHeight = 36f;
+        private const float ActionRowHeight = 56f;
+        private const float ScrubLabelHeight = 26f;
+        private const float ScrubLabelGap = 4f;
+        private const float ScrubberHeight = 28f;
+        private const float ContextLabelHeight = 40f;
+        private const float ContextLabelGap = 4f;
+        private const float StanceInnerGap = 4f;
+
+        /// <summary>
+        /// UI-unit height consumed by the Program controls column (scrub + verbs + stance/context).
+        /// Must stay ≤ <see cref="DockHeightInUiUnits"/> at the ultrawide reference size.
+        /// </summary>
+        public static float ControlsColumnContentHeight =>
+            Pad
+            + ScrubLabelHeight + ScrubLabelGap
+            + ScrubberHeight + RowGap
+            + VerbRowHeight + RowGap
+            + ContextLabelHeight + ContextLabelGap
+            + StanceRowHeight + StanceInnerGap
+            + StanceRowHeight + RowGap;
+
+        /// <summary>
+        /// Dock's height in CanvasScaler UI units for a given window — the quantity row budgets
+        /// must fit, not the raw pixel band.
+        /// </summary>
+        public static float DockHeightInUiUnits(float screenWidth, float screenHeight)
+        {
+            float widthScale = screenWidth / UiStyle.ReferenceResolution.x;
+            float heightScale = screenHeight / UiStyle.ReferenceResolution.y;
+            float scaleFactor = Mathf.Lerp(widthScale, heightScale, UiStyle.CanvasMatchWidthOrHeight);
+            return (screenHeight * HudDockHeight) / scaleFactor;
+        }
 
         private static readonly float[] TimeCardPresets = { 30f, 60f, 120f };
 
@@ -381,11 +417,12 @@ namespace LogiCard.UI
             float cursor = -Pad;
 
             // AR scrubber: cool cyan/white on a dark track — deliberate contrast vs clay board (ART_DIRECTION §4).
-            _scrubLabel = _ui.CreateText(controlsCol, "ScrubLabel", "Time Resource  0.0s / 0.0s", 24, TextAnchor.MiddleLeft, ArFill);
-            UiFactory.PlaceRow(_scrubLabel.rectTransform, ref cursor, 30f, 6f);
+            _scrubLabel = _ui.CreateText(controlsCol, "ScrubLabel", "Time Resource  0.0s / 0.0s", 22, TextAnchor.MiddleLeft, ArFill,
+                UiTextOverflow.SingleLine);
+            UiFactory.PlaceRow(_scrubLabel.rectTransform, ref cursor, ScrubLabelHeight, ScrubLabelGap);
 
             _scrubber = _ui.CreateSlider(controlsCol, "Scrubber", ArTrack, ArFill, ArHandle);
-            UiFactory.PlaceRow(_scrubber.GetComponent<RectTransform>(), ref cursor, 34f, RowGap);
+            UiFactory.PlaceRow(_scrubber.GetComponent<RectTransform>(), ref cursor, ScrubberHeight, RowGap);
             _scrubber.onValueChanged.AddListener(OnScrubberMoved);
 
             BuildVerbRow(controlsCol, ref cursor);
@@ -417,30 +454,32 @@ namespace LogiCard.UI
             card.offsetMax = new Vector2(-Pad, -Pad);
 
             float cursor = -Pad;
-            _allotChooserLabel = _ui.CreateText(card, "ChooserLabel", "ATTACKER PLAYS TIME CARD", 28, TextAnchor.MiddleLeft, CardstockInk);
-            UiFactory.PlaceRow(_allotChooserLabel.rectTransform, ref cursor, 40f, RowGap);
+            _allotChooserLabel = _ui.CreateText(card, "ChooserLabel", "ATTACKER PLAYS TIME CARD", 26, TextAnchor.MiddleLeft, CardstockInk,
+                UiTextOverflow.SingleLine);
+            UiFactory.PlaceRow(_allotChooserLabel.rectTransform, ref cursor, 36f, RowGap);
 
             for (int i = 0; i < TimeCardPresets.Length; i++)
             {
                 float preset = TimeCardPresets[i];
-                Button presetButton = _ui.CreateButton(card, $"TimeCard_{preset:0}", $"{preset:0}s", CardstockPaperDeep, CardstockInk, 26,
+                Button presetButton = _ui.CreateButton(card, $"TimeCard_{preset:0}", $"{preset:0}s", CardstockPaperDeep, CardstockInk, 24,
                     () => ConfirmTimeCard(preset));
                 UiFactory.PlaceSplitCell(presetButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, i, TimeCardPresets.Length + 1);
             }
 
-            Button allIn = _ui.CreateButton(card, "TimeCard_AllIn", "ALL IN", CardstockConfirm, CardstockPaper, 26,
+            Button allIn = _ui.CreateButton(card, "TimeCard_AllIn", "ALL IN", CardstockConfirm, CardstockPaper, 24,
                 () => ConfirmTimeCard(_matchClock != null ? _matchClock.RemainingSeconds : 0f));
             UiFactory.PlaceSplitCell(allIn.GetComponent<RectTransform>(), cursor, VerbRowHeight, TimeCardPresets.Length, TimeCardPresets.Length + 1);
             cursor -= VerbRowHeight + RowGap;
 
-            _allotSliderLabel = _ui.CreateText(card, "AllotSliderLabel", "Custom  60s", 24, TextAnchor.MiddleLeft, CardstockInk);
-            UiFactory.PlaceRow(_allotSliderLabel.rectTransform, ref cursor, 36f, 8f);
+            _allotSliderLabel = _ui.CreateText(card, "AllotSliderLabel", "Custom  60s", 22, TextAnchor.MiddleLeft, CardstockInk,
+                UiTextOverflow.SingleLine);
+            UiFactory.PlaceRow(_allotSliderLabel.rectTransform, ref cursor, 32f, 6f);
 
             _allotSlider = _ui.CreateSlider(card, "AllotSlider", CardstockPaperDeep, CardstockConfirm, CardstockInk);
-            UiFactory.PlaceRow(_allotSlider.GetComponent<RectTransform>(), ref cursor, 44f, RowGap);
+            UiFactory.PlaceRow(_allotSlider.GetComponent<RectTransform>(), ref cursor, 40f, RowGap);
             _allotSlider.onValueChanged.AddListener(OnAllotSliderMoved);
 
-            Button confirm = _ui.CreateButton(card, "ConfirmTimeCard", "PLAY TIME CARD", CardstockConfirm, CardstockPaper, 30,
+            Button confirm = _ui.CreateButton(card, "ConfirmTimeCard", "PLAY TIME CARD", CardstockConfirm, CardstockPaper, 28,
                 () => ConfirmTimeCard(_pendingAllotment));
             UiFactory.PlaceRow(confirm.GetComponent<RectTransform>(), ref cursor, ActionRowHeight, 0f);
         }
@@ -453,25 +492,25 @@ namespace LogiCard.UI
             UiFactory.Stretch(rt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             float cursor = -Pad;
-            _aftermathLabel = _ui.CreateText(rt, "AftermathLabel", "ROUND COMPLETE", 32, TextAnchor.MiddleCenter, Accent);
-            UiFactory.PlaceRow(_aftermathLabel.rectTransform, ref cursor, 96f, RowGap);
+            _aftermathLabel = _ui.CreateText(rt, "AftermathLabel", "ROUND COMPLETE", 30, TextAnchor.MiddleCenter, Accent);
+            UiFactory.PlaceRow(_aftermathLabel.rectTransform, ref cursor, 72f, RowGap);
 
-            _nextRoundButton = _ui.CreateButton(rt, "NextRoundButton", "NEXT ROUND", Accent, UiStyle.InkDark, 30,
+            _nextRoundButton = _ui.CreateButton(rt, "NextRoundButton", "NEXT ROUND", Accent, UiStyle.InkDark, 28,
                 () => NextRoundRequested?.Invoke());
             UiFactory.PlaceRow(_nextRoundButton.GetComponent<RectTransform>(), ref cursor, ActionRowHeight, 0f);
             _nextRoundButtonLabel = _nextRoundButton.GetComponentInChildren<Text>();
         }
 
-        /// <summary>MOVE / SHOOT / DOOR split the dock width into three equal mouse targets (C48).</summary>
+        /// <summary>MOVE / SHOOT / DOOR split the controls column into three equal mouse targets (C48).</summary>
         private void BuildVerbRow(RectTransform zone, ref float cursor)
         {
-            _moveModeButton = _ui.CreateButton(zone, "Mode_Move", "MOVE", PanelMid, Ink, 26, () => SetMode(ActionVerb.Move));
+            _moveModeButton = _ui.CreateButton(zone, "Mode_Move", "MOVE", PanelMid, Ink, 24, () => SetMode(ActionVerb.Move));
             UiFactory.PlaceSplitCell(_moveModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 0, 3);
 
-            _shootModeButton = _ui.CreateButton(zone, "Mode_Shoot", "SHOOT", PanelMid, Ink, 26, () => SetMode(ActionVerb.Shoot));
+            _shootModeButton = _ui.CreateButton(zone, "Mode_Shoot", "SHOOT", PanelMid, Ink, 24, () => SetMode(ActionVerb.Shoot));
             UiFactory.PlaceSplitCell(_shootModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 1, 3);
 
-            _doorModeButton = _ui.CreateButton(zone, "Mode_Door", "DOOR", PanelMid, Ink, 26, () => SetMode(ActionVerb.Door));
+            _doorModeButton = _ui.CreateButton(zone, "Mode_Door", "DOOR", PanelMid, Ink, 24, () => SetMode(ActionVerb.Door));
             UiFactory.PlaceSplitCell(_doorModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 2, 3);
 
             cursor -= VerbRowHeight + RowGap;
@@ -493,24 +532,24 @@ namespace LogiCard.UI
             UiFactory.Stretch(moveRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             float moveCursor = rowTop;
-            _stanceLabel = _ui.CreateText(moveRt, "StanceLabel", "STANCE  Walk", 20, TextAnchor.MiddleLeft, Ink);
-            UiFactory.PlaceRow(_stanceLabel.rectTransform, ref moveCursor, 32f, 6f);
+            _stanceLabel = _ui.CreateText(moveRt, "StanceLabel", "STANCE  Walk", 18, TextAnchor.MiddleLeft, Ink);
+            UiFactory.PlaceRow(_stanceLabel.rectTransform, ref moveCursor, ContextLabelHeight, ContextLabelGap);
 
             // Three equal stance cells (was a broken 5/4-column mix that cramped SET PATH).
-            _sprintButton = _ui.CreateButton(moveRt, "Stance_Sprint", "SPRINT", PanelMid, Ink, 22,
+            _sprintButton = _ui.CreateButton(moveRt, "Stance_Sprint", "SPRINT", PanelMid, Ink, 20,
                 () => SetStanceBand(StanceType.Sprint));
             UiFactory.PlaceSplitCell(_sprintButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 0, 3);
 
-            _walkButton = _ui.CreateButton(moveRt, "Stance_Walk", "WALK", PanelMid, Ink, 22,
+            _walkButton = _ui.CreateButton(moveRt, "Stance_Walk", "WALK", PanelMid, Ink, 20,
                 () => SetStanceBand(StanceType.Walk));
             UiFactory.PlaceSplitCell(_walkButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 1, 3);
 
-            _crawlButton = _ui.CreateButton(moveRt, "Stance_Crawl", "CRAWL", PanelMid, Ink, 22,
+            _crawlButton = _ui.CreateButton(moveRt, "Stance_Crawl", "CRAWL", PanelMid, Ink, 20,
                 () => SetStanceBand(StanceType.Crawl));
             UiFactory.PlaceSplitCell(_crawlButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 2, 3);
-            moveCursor -= StanceRowHeight + 6f;
+            moveCursor -= StanceRowHeight + StanceInnerGap;
 
-            _setPathButton = _ui.CreateButton(moveRt, "SetPathButton", "SET PATH", Accent, UiStyle.InkDark, 24,
+            _setPathButton = _ui.CreateButton(moveRt, "SetPathButton", "SET PATH", Accent, UiStyle.InkDark, 22,
                 () => _input.TryCommitDraftPath());
             UiFactory.PlaceRow(_setPathButton.GetComponent<RectTransform>(), ref moveCursor, StanceRowHeight, 0f);
 
@@ -520,14 +559,14 @@ namespace LogiCard.UI
             UiFactory.Stretch(shootRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             float shootCursor = rowTop;
-            _shootModeLabel = _ui.CreateText(shootRt, "ShootModeLabel", "SHOOT  Snap · 2s — free-aim (click the board)", 22, TextAnchor.MiddleLeft, Ink);
-            UiFactory.PlaceRow(_shootModeLabel.rectTransform, ref shootCursor, 32f, 6f);
+            _shootModeLabel = _ui.CreateText(shootRt, "ShootModeLabel", "SNAP  2s — free-aim on the board", 18, TextAnchor.MiddleLeft, Ink);
+            UiFactory.PlaceRow(_shootModeLabel.rectTransform, ref shootCursor, ContextLabelHeight, ContextLabelGap);
 
-            _snapButton = _ui.CreateButton(shootRt, "Shoot_Snap", "SNAP  2s", PanelMid, Ink, 24,
+            _snapButton = _ui.CreateButton(shootRt, "Shoot_Snap", "SNAP  2s", PanelMid, Ink, 22,
                 () => SetShootMode(ShootMode.SnapShot));
             UiFactory.PlaceSplitCell(_snapButton.GetComponent<RectTransform>(), shootCursor, StanceRowHeight, 0, 2);
 
-            _holdButton = _ui.CreateButton(shootRt, "Shoot_Hold", "HOLD  3s", PanelMid, Ink, 24,
+            _holdButton = _ui.CreateButton(shootRt, "Shoot_Hold", "HOLD  3s", PanelMid, Ink, 22,
                 () => SetShootMode(ShootMode.HoldAngle));
             UiFactory.PlaceSplitCell(_holdButton.GetComponent<RectTransform>(), shootCursor, StanceRowHeight, 1, 2);
 
@@ -539,11 +578,14 @@ namespace LogiCard.UI
             float doorCursor = rowTop;
             // OPEN/CLOSE spawn as a board-anchored prompt (BuildDoorPrompt/RefreshDoorPrompt) —
             // not a fixed row in the dock disconnected from the door itself.
-            _doorModeLabel = _ui.CreateText(doorRt, "DoorModeLabel", "DOOR — click near a door to select it", 22, TextAnchor.MiddleLeft, Ink);
-            UiFactory.PlaceRow(_doorModeLabel.rectTransform, ref doorCursor, 32f, 6f);
+            _doorModeLabel = _ui.CreateText(doorRt, "DoorModeLabel", "DOOR — click near a door to select it", 18, TextAnchor.MiddleLeft, Ink);
+            UiFactory.PlaceRow(_doorModeLabel.rectTransform, ref doorCursor, ContextLabelHeight, ContextLabelGap);
 
-            // Move uses two control rows (stances + SET PATH); Shoot/Door share the taller envelope.
-            cursor = rowTop - 32f - 6f - StanceRowHeight - 6f - StanceRowHeight - RowGap;
+            // Move uses two control rows (stances + SET PATH); Shoot/Door share that taller envelope.
+            cursor = rowTop
+                - ContextLabelHeight - ContextLabelGap
+                - StanceRowHeight - StanceInnerGap
+                - StanceRowHeight - RowGap;
             RefreshVerbContextControls(_input != null ? _input.Program : null);
         }
 
@@ -567,25 +609,27 @@ namespace LogiCard.UI
         {
             float cursor = -Pad;
 
-            _lockInButton = _ui.CreateButton(zone, "LockInButton", "LOCK IN", Accent, UiStyle.InkDark, 30, OnLockInPressed);
+            // Lock In + Adrenaline share this exact rect; phase toggles SetActive so the swap reads
+            // as one primary slot changing role, not a second button appearing elsewhere.
+            _lockInButton = _ui.CreateButton(zone, "LockInButton", "LOCK IN", Accent, UiStyle.InkDark, 28, OnLockInPressed);
             UiFactory.PlaceRow(_lockInButton.GetComponent<RectTransform>(), ref cursor, ActionRowHeight, RowGap);
 
             float adrenalineCursor = -Pad;
-            _adrenalineButton = _ui.CreateButton(zone, "AdrenalineButton", "ADRENALINE", Accent, UiStyle.InkDark, 26,
+            _adrenalineButton = _ui.CreateButton(zone, "AdrenalineButton", "ADRENALINE", Accent, UiStyle.InkDark, 24,
                 OnAdrenalinePressed);
             UiFactory.PlaceRow(_adrenalineButton.GetComponent<RectTransform>(), ref adrenalineCursor, ActionRowHeight, RowGap);
             _adrenalineButtonLabel = _adrenalineButton.GetComponentInChildren<Text>();
             _adrenalineButton.gameObject.SetActive(false);
 
-            _playButton = _ui.CreateButton(zone, "PlayButton", "Play", PanelMid, Ink, 22, OnPlayPressed);
+            _playButton = _ui.CreateButton(zone, "PlayButton", "Play", PanelMid, Ink, 20, OnPlayPressed);
             UiFactory.PlaceSplitCell(_playButton.GetComponent<RectTransform>(), cursor, ActionRowHeight, 0, 3);
             _playButtonLabel = _playButton.GetComponentInChildren<Text>();
 
-            Button rewind = _ui.CreateButton(zone, "RewindButton", "Rewind", PanelMid, Ink, 22, () => _clock.Rewind());
+            Button rewind = _ui.CreateButton(zone, "RewindButton", "Rewind", PanelMid, Ink, 20, () => _clock.Rewind());
             UiFactory.PlaceSplitCell(rewind.GetComponent<RectTransform>(), cursor, ActionRowHeight, 1, 3);
 
             // UNDO must stay mode-agnostic (playtest 2026-08-07).
-            _undoWaypointButton = _ui.CreateButton(zone, "UndoWaypointButton", "UNDO", PanelMid, Ink, 22, OnUndoPressed);
+            _undoWaypointButton = _ui.CreateButton(zone, "UndoWaypointButton", "UNDO", PanelMid, Ink, 20, OnUndoPressed);
             UiFactory.PlaceSplitCell(_undoWaypointButton.GetComponent<RectTransform>(), cursor, ActionRowHeight, 2, 3);
         }
 
@@ -610,9 +654,9 @@ namespace LogiCard.UI
             panel.offsetMin = new Vector2(Gap, Pad);
             panel.offsetMax = new Vector2(-Gap, -Pad);
 
-            _queueText = _ui.CreateText(panel, "QueueReadout", "Used 0.0 / 0.0s", 20, TextAnchor.UpperLeft, Ink);
-            UiFactory.Stretch(_queueText.rectTransform, Vector2.zero, Vector2.one, new Vector2(14f, 10f), new Vector2(-14f, -10f));
-            _queueText.lineSpacing = 1.2f;
+            _queueText = _ui.CreateText(panel, "QueueReadout", "Used 0.0 / 0.0s", 18, TextAnchor.UpperLeft, Ink);
+            UiFactory.Stretch(_queueText.rectTransform, Vector2.zero, Vector2.one, new Vector2(12f, 8f), new Vector2(-12f, -8f));
+            _queueText.lineSpacing = 1.15f;
         }
 
         /// <summary>
@@ -822,9 +866,10 @@ namespace LogiCard.UI
 
             ShootMode mode = _input.PreferredShootMode;
             float cost = ShootCost.SecondsFor(mode);
+            // Keep copy short — the context label is only ContextLabelHeight tall in a narrow column.
             _shootModeLabel.text = mode == ShootMode.HoldAngle
-                ? $"HOLD ANGLE  {cost:0}s — covers the aim lane; lethal; hits Sprint"
-                : $"SNAP SHOT  {cost:0}s — aimed point only; wounds; misses Sprint";
+                ? $"HOLD  {cost:0}s — aim lane; lethal; hits Sprint"
+                : $"SNAP  {cost:0}s — aim point; wounds; misses Sprint";
 
             if (_snapButton != null)
             {
@@ -856,7 +901,7 @@ namespace LogiCard.UI
             string targetName = pending?.DisplayName ?? "DOOR";
 
             _doorModeLabel.text = stateLabel != null
-                ? $"{targetName} selected · {stateLabel} — board prompt books Open/Close for this round"
+                ? $"{targetName} · {stateLabel} — use board prompt to book Open/Close"
                 : "DOOR — click near a door to select it";
 
             RefreshDoorPrompt(pending, targetName, stateLabel, cost);
@@ -938,8 +983,8 @@ namespace LogiCard.UI
             float cost = StanceAllotment.CostForTiles(distance, program.BaseSecondsPerTile, stance);
 
             _stanceLabel.text = program.HasDraft
-                ? $"PATH {program.DraftDistance:0.0}m · {StanceMath.Label(stance)} · {cost:0.0}s — SET PATH to book"
-                : $"STANCE  {StanceMath.Label(stance)} · {cost:0.0}s / m — click the board to build a path";
+                ? $"PATH {program.DraftDistance:0.0}m · {StanceMath.Label(stance)} · {cost:0.0}s — SET PATH"
+                : $"STANCE  {StanceMath.Label(stance)} · {cost:0.0}s/m — tap board to path";
 
             if (_sprintButton != null)
             {
@@ -1264,7 +1309,13 @@ namespace LogiCard.UI
                 && _phase.Phase == RoundPhase.Execute
                 && HasActivePlaybackSegment();
             _adrenalineButton.interactable = canUse;
-            _adrenalineButton.GetComponent<Image>().color = canUse ? Accent : UiStyle.AccentDim;
+            // Accent (ready) vs PanelMid (gated/spent) — AccentDim was too close to Accent at a glance
+            // and read as a broken Lock In tint rather than a disabled primary.
+            _adrenalineButton.GetComponent<Image>().color = canUse ? Accent : PanelMid;
+            if (_adrenalineButtonLabel != null)
+            {
+                _adrenalineButtonLabel.color = canUse ? UiStyle.InkDark : new Color(Ink.r, Ink.g, Ink.b, 0.55f);
+            }
         }
 
         private void OnScrubberMoved(float value)
