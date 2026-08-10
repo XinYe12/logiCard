@@ -1,5 +1,42 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 13) — three-map roster kicked off: Vent/Breach primitives, Freight Yard retrofit, two new maps in flight
+
+**Human decision, recorded in full in `PRODUCT_MEMORY.md` (next C-row once landed):** logiCard grows
+from one hardcoded map to a roster of three. "Complexity" clarified explicitly — not a difficulty ramp
+between maps, but each map having genuine interactive terrain (vents and similar) both sides can use.
+Design **and** implement now (lifts the core-gameplay-paused rule specifically for map/terrain work,
+not networking/other Sim work); maps stay hand-authored, no shared data-driven format.
+
+**Two new `Door` kinds, zero new Sim types** (`f95b19a`): `DoorKind.Vent` (repeatable narrow shortcut,
+same interact/resolve/UI pipeline as any door, just a distinct base tint) and `DoorKind.Breach`
+(one-way permanent shortcut — starts Closed, UI never offers Close again once Open). Both reuse
+`PawnProgram`/`GhostResolver`/`RoundPlayback`/`ProgramHud` entirely unchanged.
+
+**`MapId`/`MapLayout` groundwork** (`8038748`): new `MapDefinitions.cs` centralizes room-rectangle data
+that was previously triplicated (and already flagged as a manual-sync risk) across `GameBootstrap`'s
+walls, `BoardView.PlaceRoomFloors`, and `BoardReflectionProbes`' own constants. `GameBootstrap.BuildBoard`
+now dispatches on `MapId` (still defaults to `FreightYard`, no map-select UI yet — explicit follow-up,
+not attempted). As a side effect, the two flank corridors now get their own reflection probe too (never
+had one before — a real improvement, not just a refactor).
+
+**Freight Yard retrofitted** (`3d1c0e2`): one Vent (west wall, bypasses the frontal Door #1 chokepoint)
+and one Breach (east wall, permanent flank route once paid for). Checked carefully that both stay well
+clear of every position the scripted defender AI or existing tests use to resolve "the nearest door" —
+confirmed via real batchmode (not just reasoning) that `RoundPlaybackPlayModeTests` and the door-
+disambiguation `ProgramHudPlayModeTests` all still pass: EditMode 124/124, PlayMode 37/37.
+
+**Two new maps now building in parallel** (`feat/map-rail-platform`, `feat/map-vault-complex`): Rail
+Platform (long sightlines, two platforms + a corridor, rewards Hold Angle/Juggernaut) and Vault Complex
+(dense maze of small rooms, rewards Snap Shot/Scout agility). Both workers deliver self-contained new
+methods only (`BuildXxxGeometry()`, `MapDefinitions.Xxx()`, `BuildXxxDefenderPayload()`) — explicitly
+told not to touch the shared `MapId`/dispatch switches, which the Integrator wires once both land, to
+avoid a two-worker collision on the same dispatch point.
+
+**Nothing about the new maps is visually confirmed** — same standing caveat as everything else in this
+session's presentation/level work, now doubly true since this is geometry nobody (human or agent) has
+ever seen rendered. Batchmode passing confirms compile + no regression, not "plays right."
+
 ## ⚠️ Awaiting human review — parked, not forgotten
 
 Five visual changes landed during the 2026-08-10 autonomous push and have **never been confirmed by
