@@ -47,6 +47,9 @@ namespace LogiCard.Boot
         private MatchClock _matchClock;
         private IFoleyPlayer _foley;
         private BoardCameraRig _cameraRig;
+        private ProgramHud _programHud;
+        private MapId _activeMap = MapId.FreightYard;
+        private bool _matchSceneBuilt;
         private const float DefenderSecondsPerTile = 2f;
 
         public MatchClock MatchClock => _matchClock;
@@ -97,44 +100,22 @@ namespace LogiCard.Boot
             _foley = gameObject.AddComponent<FoleyPlayer>();
             gameObject.AddComponent<PhotoModeController>();
 
-            BuildBoard();
-            BuildPawns();
-            ConfigureCamera();
-            BuildLighting();
-            BuildWeatherPocket();
-            // Wet-surface reflection follow-up (feat/wet-surface-reflections) — scoped, single-call
-            // addition mirroring BuildWeatherPocket immediately above; all the actual work lives in
-            // BoardReflectionProbes, not here.
-            BuildReflectionProbes();
-
-            var hud = new GameObject("ProgramHud").AddComponent<ProgramHud>();
-            hud.transform.SetParent(transform, false);
-            hud.Init(_clock, _phase, _attackerInput, _matchClock, showPhaseDebugControls, _foley);
-
-            hud.LockedIn += _playback.ResolveAndArm;
-            hud.TimeCardPlayed += OnTimeCardPlayed;
-            hud.NextRoundRequested += OnNextRoundRequested;
-            _playback.OutcomeReported += hud.ShowOutcome;
-
-            // Camera rotation (C48/C53 playtest ask) is direct right-mouse-drag on BoardCameraRig
-            // itself now — no HUD button/event to wire. After any rotation, the door prompt's cached
-            // world-to-screen projection (docs/UI_BOARD_ANCHORED_COMPONENTS.md — "recompute only on
-            // selection change") is stale, so re-run it through the same refresh path a selection
-            // change already uses.
-            _cameraRig.Rotated += hud.RefreshBoardAnchoredUI;
+            _programHud = new GameObject("ProgramHud").AddComponent<ProgramHud>();
+            _programHud.transform.SetParent(transform, false);
+            _programHud.Init(_clock, _phase, null, _matchClock, showPhaseDebugControls, _foley);
+            _programHud.AppFlow.MapSelected += OnMapSelected;
+            _programHud.AppFlow.EnteredMatch += viaRelay =>
+            {
+                EnsureMatchSceneBuilt();
+                _playback.SetMatchResolver(viaRelay
+                    ? (IMatchResolver)new RelayMatchResolver()
+                    : new LocalMatchResolver(new GhostResolver(_board.Model)));
+            };
 
             // Find Match -> C52's resolve relay; Local Play -> same-process (unchanged). Board layout
             // must match Relay/LogiCard.Relay/DemoArenaBoard.CreateDemo() for a two-Unity smoke test to
             // resolve identically. Host/port not yet configurable from the Lobby (real matchmaking is
             // still OPEN, NETWORKING_DESIGN.md) - both instances default to the same localhost port.
-            hud.AppFlow.EnteredMatch += viaRelay => _playback.SetMatchResolver(
-                viaRelay
-                    ? (IMatchResolver)new RelayMatchResolver()
-                    : new LocalMatchResolver(new GhostResolver(_board.Model)));
-
-            Debug.Log($"[logiCard] Slice up: continuous arena [{_board.Model.MinX},{_board.Model.MaxX}]×" +
-                      $"[{_board.Model.MinY},{_board.Model.MaxY}], match pool {matchPoolSeconds:0}s TR, " +
-                      $"min round {minRoundSeconds:0}s.");
         }
 
         private void OnTimeCardPlayed(float seconds)
@@ -176,13 +157,38 @@ namespace LogiCard.Boot
             Debug.Log($"[logiCard] Round {_matchClock.RoundIndex}: {_matchClock.CurrentChooser} picks the Time Card.");
         }
 
-        // No map-select UI yet (docs/DRAFT_HANDOFF.md's map-roster plan flags this as an explicit
-        // follow-up, not attempted here) — one constant default until that exists.
-        private const MapId ActiveMap = MapId.FreightYard;
+        private void OnMapSelected(MapId mapId)
+        {
+            _activeMap = mapId;
+        }
+
+        private void EnsureMatchSceneBuilt()
+        {
+            if (_matchSceneBuilt)
+            {
+                return;
+            }
+
+            BuildBoard(_activeMap);
+            BuildPawns();
+            ConfigureCamera();
+            BuildLighting();
+            BuildWeatherPocket();
+            BuildReflectionProbes();
+
+            _programHud.RegisterInput(_attackerInput);
+            _programHud.LockedIn += _playback.ResolveAndArm;
+            _programHud.TimeCardPlayed += OnTimeCardPlayed;
+            _programHud.NextRoundRequested += OnNextRoundRequested;
+            _playback.OutcomeReported += _programHud.ShowOutcome;
+
+            _cameraRig.Rotated += _programHud.RefreshBoardAnchoredUI;
+            _matchSceneBuilt = true;
+        }
 
         private void BuildBoard()
         {
-            BuildBoard(ActiveMap);
+            BuildBoard(_activeMap);
         }
 
         private void BuildBoard(MapId mapId)
