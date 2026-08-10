@@ -323,6 +323,17 @@ namespace LogiCard.Board
         /// rectangle — the transparent padding read as solid black instead of disappearing (confirmed
         /// via a human screenshot, 2026-08-10: "black rectangular blocks," not soft clouds). Mirrors
         /// what URP's ShaderGUI sets when a human picks "Transparent" + "Alpha" in the Inspector.
+        ///
+        /// SECOND BUG, found from a follow-up screenshot after the first attempt still looked broken:
+        /// this originally set <c>_ALPHABLEND_ON</c>, which does not exist as a keyword on
+        /// "Universal Render Pipeline/Particles/Unlit" — confirmed directly against the shader source
+        /// in Library/PackageCache (com.unity.render-pipelines.universal@17.5.0's
+        /// Shaders/Particles/ParticlesUnlit.shader): its surface-type keyword is
+        /// <c>_SURFACE_TYPE_TRANSPARENT</c>, exactly the same one URP Lit uses (see
+        /// InteriorPackImportTool.FixGlassTransparency, which hit and fixed the identical mistake on a
+        /// *different* shader first). The numeric Blend/ZWrite properties were already correct and
+        /// drove some real GPU state change, which is presumably why this read as "still broken" rather
+        /// than "identical to before," but the fragment shader's own surface-type branch never flipped.
         /// </summary>
         private static void ConfigureAlphaBlend(Material material)
         {
@@ -353,8 +364,9 @@ namespace LogiCard.Board
             }
 
             material.DisableKeyword("_ALPHATEST_ON");
-            material.EnableKeyword("_ALPHABLEND_ON");
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.DisableKeyword("_ALPHAMODULATE_ON");
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
         }
 
