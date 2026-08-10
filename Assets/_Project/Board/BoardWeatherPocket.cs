@@ -43,40 +43,54 @@ namespace LogiCard.Board
             PlaceRain(width, depth);
         }
 
+        /// <summary>
+        /// TEMPORARY interim sizing (2026-08-10) — these primitive-sphere puffs are being replaced by
+        /// real cloud mesh assets (see ENV_LOOKFEEL_AGENT_BRIEF.md); not worth precision-tuning
+        /// geometry that's on its way out. The original sizing was tuned before the HUD dock's
+        /// right-edge -> bottom-band move changed the camera's effective zoom/aspect (orthographicSize
+        /// 9.0 -> 5.0 plus a much wider board-region aspect); a ~9-10 unit-wide sphere sitting only
+        /// ~3 units above a 10-unit-deep board, viewed through a camera that's now effectively much
+        /// closer, loomed over the entire board (confirmed via a human screenshot — playtest
+        /// 2026-08-10). Shrunk ~45% and pushed further back/up as an immediate unblock, not a final
+        /// pass — proper sizing happens once real assets land.
+        /// </summary>
+        private const float InterimCloudScale = 0.55f;
+        private const float InterimCloudHeightBoost = 2.1f;
+
         private void PlaceCloudBank(float width, float depth)
         {
             var root = new GameObject("CloudBank");
             root.transform.SetParent(transform, false);
 
             // Dense ceiling layer — the solid cloud shelf the reference sits right above the chunk.
-            PlaceCloudPuff(root.transform, "Ceiling", new Vector3(0f, 3.6f, 0f),
-                new Vector3(width * 1.15f, 0.85f, depth * 1.1f),
+            PlaceCloudPuff(root.transform, "Ceiling", new Vector3(0f, 3.6f * InterimCloudHeightBoost, 0f),
+                new Vector3(width * 1.15f, 0.85f, depth * 1.1f) * InterimCloudScale,
                 new Color(0.22f, 0.24f, 0.30f, 1f));
 
             // Mid puffs — break the silhouette so it reads as volume, not one flat slab.
-            PlaceCloudPuff(root.transform, "Puff_NW", new Vector3(-width * 0.28f, 3.15f, depth * 0.22f),
-                new Vector3(width * 0.55f, 0.7f, depth * 0.42f),
+            PlaceCloudPuff(root.transform, "Puff_NW", new Vector3(-width * 0.28f, 3.15f * InterimCloudHeightBoost, depth * 0.22f),
+                new Vector3(width * 0.55f, 0.7f, depth * 0.42f) * InterimCloudScale,
                 new Color(0.28f, 0.30f, 0.36f, 1f));
-            PlaceCloudPuff(root.transform, "Puff_SE", new Vector3(width * 0.30f, 3.25f, -depth * 0.20f),
-                new Vector3(width * 0.50f, 0.65f, depth * 0.45f),
+            PlaceCloudPuff(root.transform, "Puff_SE", new Vector3(width * 0.30f, 3.25f * InterimCloudHeightBoost, -depth * 0.20f),
+                new Vector3(width * 0.50f, 0.65f, depth * 0.45f) * InterimCloudScale,
                 new Color(0.26f, 0.28f, 0.34f, 1f));
-            PlaceCloudPuff(root.transform, "Puff_NE", new Vector3(width * 0.22f, 3.55f, depth * 0.28f),
-                new Vector3(width * 0.48f, 0.55f, depth * 0.38f),
+            PlaceCloudPuff(root.transform, "Puff_NE", new Vector3(width * 0.22f, 3.55f * InterimCloudHeightBoost, depth * 0.28f),
+                new Vector3(width * 0.48f, 0.55f, depth * 0.38f) * InterimCloudScale,
                 new Color(0.20f, 0.22f, 0.28f, 1f));
-            PlaceCloudPuff(root.transform, "Puff_SW", new Vector3(-width * 0.18f, 3.05f, -depth * 0.26f),
-                new Vector3(width * 0.42f, 0.5f, depth * 0.36f),
+            PlaceCloudPuff(root.transform, "Puff_SW", new Vector3(-width * 0.18f, 3.05f * InterimCloudHeightBoost, -depth * 0.26f),
+                new Vector3(width * 0.42f, 0.5f, depth * 0.36f) * InterimCloudScale,
                 new Color(0.30f, 0.32f, 0.38f, 1f));
-            PlaceCloudPuff(root.transform, "Puff_Center", new Vector3(0.1f * width, 3.4f, 0.05f * depth),
-                new Vector3(width * 0.62f, 0.75f, depth * 0.55f),
+            PlaceCloudPuff(root.transform, "Puff_Center", new Vector3(0.1f * width, 3.4f * InterimCloudHeightBoost, 0.05f * depth),
+                new Vector3(width * 0.62f, 0.75f, depth * 0.55f) * InterimCloudScale,
                 new Color(0.24f, 0.26f, 0.32f, 1f));
 
             // Lower fringe — slightly warmer/lighter so the pocket catches a hint of ground bounce
             // (the reference's under-lit cloud bellies) without needing streetlamps yet.
-            PlaceCloudPuff(root.transform, "Fringe_A", new Vector3(-width * 0.35f, 2.7f, 0.05f * depth),
-                new Vector3(width * 0.40f, 0.35f, depth * 0.30f),
+            PlaceCloudPuff(root.transform, "Fringe_A", new Vector3(-width * 0.35f, 2.7f * InterimCloudHeightBoost, 0.05f * depth),
+                new Vector3(width * 0.40f, 0.35f, depth * 0.30f) * InterimCloudScale,
                 new Color(0.34f, 0.32f, 0.30f, 1f));
-            PlaceCloudPuff(root.transform, "Fringe_B", new Vector3(width * 0.32f, 2.75f, depth * 0.10f),
-                new Vector3(width * 0.38f, 0.32f, depth * 0.28f),
+            PlaceCloudPuff(root.transform, "Fringe_B", new Vector3(width * 0.32f, 2.75f * InterimCloudHeightBoost, depth * 0.10f),
+                new Vector3(width * 0.38f, 0.32f, depth * 0.28f) * InterimCloudScale,
                 new Color(0.32f, 0.30f, 0.28f, 1f));
         }
 
@@ -100,8 +114,9 @@ namespace LogiCard.Board
         {
             var rainGo = new GameObject("Rain");
             rainGo.transform.SetParent(transform, false);
-            // Emit just under the cloud shelf so streaks read as falling out of the pocket.
-            rainGo.transform.localPosition = new Vector3(0f, 2.85f, 0f);
+            // Emit just under the cloud shelf so streaks read as falling out of the pocket. Boosted
+            // by the same interim factor as the clouds so the gap between them stays proportional.
+            rainGo.transform.localPosition = new Vector3(0f, 2.85f * InterimCloudHeightBoost, 0f);
 
             var ps = rainGo.AddComponent<ParticleSystem>();
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
