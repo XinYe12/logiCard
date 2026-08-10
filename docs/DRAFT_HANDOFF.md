@@ -1,5 +1,41 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 7) — reflection probes + Scout re-outfit both merged
+
+**`feat/wet-surface-reflections` merged** (`a531e90`, real subagent this time — see the continued 6 entry
+below for the earlier process error and its correction). SSR confirmed infeasible in this URP version
+(17.5.0), so the wet Yard/Hall/Vault floors get their reflection source from real Reflection Probes
+instead: new `BoardReflectionProbes.cs` places one probe per room (mirrors `BoardWeatherPocket`'s
+`Build(BoardView)` pattern), using `ReflectionProbeMode.Realtime` + `RefreshMode.OnAwake` as a
+baked-equivalent substitute since the board is built procedurally at runtime with no persistent editor
+scene to classic-bake against. `LogiCardURP.asset`'s `m_ReflectionProbeBlending`/`m_ReflectionProbeBoxProjection`
+flipped on via a new re-runnable `ReflectionProbeBootstrap.cs` (same pattern as the earlier URP
+post-processing tool). `BoardSurfaceMaterials`' `wetSmoothnessBoost` retuned now that there's a real
+reflection source (Yard 0.55→0.42, Hall 0.28→0.34, Vault 0.62→0.46, Flank 0.35→0.30) — the old values were
+tuned blind against zero reflection input. `GameBootstrap.cs` got one small, scoped addition
+(`BuildReflectionProbes()`, mirrors `BuildWeatherPocket()`'s call shape exactly).
+
+**`feat/scout-reoutfit` merged** (`d5ee45e`), resolving **C56**. Scout's source FBX swapped from
+`Adventurer` to `Worker` within the same already-owned CC0 Quaternius pack — one-line change in
+`PawnImportTool.ImportScoutBatch`, existing pipeline untouched. `Worker`'s extra vest/high-vis parts read
+as utility/work attire rather than fantasy-adventurer or off-duty leisurewear (the other two candidates in
+the pack, `Casual_2`/`Casual_Hoodie`, were rejected for the latter reason). Team-color tint hook still
+works unchanged (`Worker_Body` matches the same `"Body"` substring `Adventurer_Body` did).
+
+**Both merges reviewed in depth before merging, not just taken on the reports:** read the actual diffs,
+confirmed `GameBootstrap.cs`'s addition in the reflection PR was as narrow as claimed (one method call +
+one new method, mirroring existing code shape), confirmed the Scout re-outfit's `PawnImportTool.cs` change
+was exactly the one line claimed. Both merged clean, no conflicts, no overlap between the two branches.
+
+**Re-verified via a disposable detached worktree** (`logiCard-verify-merge`, created and removed same
+session) since the Editor was still locked on the main tree — real batchmode on the combined merge, not
+self-review alone: **EditMode 124/124, PlayMode 37/37, both green.**
+
+**Still needs a human sighted pass** — neither agent had Editor/screenshot access, both said so plainly.
+Worth checking together: does the reflection read right (or too-obviously-low-res), does Worker's outfit
+actually look like a plainclothes operator at play distance, and the standing `orthographicSize` question
+from checkpoint 3.
+
 ## 2026-08-10 (continued 6) — character-model research landed; awaiting human pack decision
 
 **`feat/character-model-rework` merged** (research-only, no code) — the Integrator's own genuinely-spawned

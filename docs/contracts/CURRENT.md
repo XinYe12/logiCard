@@ -10,10 +10,13 @@ door/prop meshes replacing tinted boxes, per C54). **Rendering: URP post-process
 Volume Profile, SSAO, MSAA, soft shadows all landed 2026-08-10, plus a C54 photo-mode stretch goal
 (`PhotoModeController`, `F9`). **Integrator also landed, in the main tree directly:** camera rotation
 (`BoardCameraRig`, smooth right-drag), an interim cloud-size fix, and dropping stepped stop-motion pawn
-animation for smooth interpolation (**C55**, human-confirmed as an improvement). **Now in flight:**
-character-model research (`feat/character-model-rework`) and wet-surface reflection probes
-(`feat/wet-surface-reflections`) — both worker slots in use again. **Still open:** human screenshot
-sign-off on checkpoints 2/3, `orthographicSize` retune check.
+animation for smooth interpolation (**C55**, human-confirmed as an improvement). **Character-model
+research** landed real findings (genre-clash outfit, flat materials); human picked the minimal fix
+(**C56**), landed as **Scout re-outfitted Adventurer→Worker** within the existing CC0 pack. **Wet-surface
+reflections** landed real Reflection Probes (SSR unavailable in this URP version) plus a
+`wetSmoothnessBoost` retune. Both worker slots open again. **Still open:** human sighted pass on
+reflections + Scout's new outfit (neither agent had Editor/screenshot access), `orthographicSize` retune
+check carried from checkpoint 3.
 **Updated:** 2026-08-10 by Integrator.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
