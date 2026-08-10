@@ -1,16 +1,9 @@
 # Third-party assets — Environment
 
 Provenance record for external environment/prop assets sourced or evaluated for the C53
-environment detail pass (`ENV_LOOKFEEL_AGENT_BRIEF.md` checkpoint 2). Same discipline as
-`Assets/_Project/Art/Characters/THIRD_PARTY.md`: pack name, source URL, license, date.
-CC0 needs no attribution, but portfolio-ship provenance must stay traceable.
-
-## Open pack choice (human decide before deeper mesh import)
-
-Checkpoint 2 applies Poly Haven **textures** now (material/detail language on the existing
-Yard/Hall/Vault layout). Two **mesh** pack candidates are proposed below — **do not treat either
-as locked** until the human picks one (or rejects both). Checkpoint 3 (door models) should reuse
-whichever mesh pack is chosen.
+environment detail pass. Same discipline as `Assets/_Project/Art/Characters/THIRD_PARTY.md`:
+pack name, source URL, license, date. CC0 needs no attribution, but portfolio-ship provenance
+must stay traceable.
 
 ---
 
@@ -33,38 +26,47 @@ whichever mesh pack is chosen.
 
 ---
 
-## Candidate A — Quaternius "Ultimate House Interior Pack" — PROPOSED (not imported)
+## Quaternius "Ultimate House Interior Pack" — SELECTED, imported (2026-08-10)
 
-- **Author / source:** Quaternius via poly.pizza
-  https://poly.pizza/bundle/Ultimate-House-Interior-Pack-2SXnFbwFzm
-  (also listed on quaternius.com as Ultimate House Interior Pack)
-- **License:** CC0 / Public Domain (per poly.pizza listing)
+- **Author / source:** Quaternius
+  - Official: https://quaternius.com/packs/ultimatehomeinterior.html
+  - poly.pizza: https://poly.pizza/bundle/Ultimate-House-Interior-Pack-2SXnFbwFzm
+  - Downloaded via OpenGameArt mirror (same pack, June 2020 zip):
+    https://opengameart.org/content/lowpoly-house-interior-pack
+    (`ultimate_house_interior_pack_-_june_2020.zip`)
+- **License:** CC0 / Public Domain (per Quaternius / poly.pizza / OpenGameArt listings)
 - **Date evaluated:** 2026-08-10
-- **Why it fits:** 80+ indoor models — doors, windows, furniture, ceiling lights — maps directly
-  onto Yard/Hall/Vault dressing and feeds checkpoint 3 door replacement. Same author pipeline as
-  the existing character pack (`PawnImportTool` / FBX → URP Lit).
-- **Caveat:** low-poly stylized (same family as Modular Men), not photogrammetry. Still a large
-  fidelity jump over tinted cubes; materials can be pushed wet-dusk via URP Lit + Poly Haven
-  overlays where needed.
-- **Not imported yet.** Awaiting human pack choice.
+- **Date imported:** 2026-08-10 (checkpoint 3 — human selected this pack over KayKit)
+- **Status:** Curated FBX subset imported under `Interior/Source/`; URP/Lit prefabs baked by
+  `InteriorPackImportTool` into `Resources/Interior/` for runtime `BoardView` loading.
+- **In use (runtime prefab → source FBX):**
+  | Prefab | Source |
+  |---|---|
+  | `Door` / `DoorAlt` / `DoorDouble` | `Door_1` / `Door_2` / `Door_Double` |
+  | `WindowSmall` / `WindowLarge` | `Window_Small1` / `Window_Large1` |
+  | `LightCeiling` / `LightCeilingAlt` / `LightDesk` | `Light_CeilingSingle` / `Light_Ceiling1` / `Light_Desk` |
+  | `Shelf` / `ShelfLarge` / `Bookshelf` | `Shelf_1` / `Shelf_Large` / `Bookshelf` |
+  | `Cabinet` / `Table` / `Chair` | `Kitchen_Cabinet1` / `Table_RoundSmall` / `Chair_1` |
+- **Import tooling:** `Assets/_Project/Art/Editor/InteriorPackImportTool.cs` (batchmode
+  `-executeMethod LogiCard.Art.Editor.InteriorPackImportTool.Run` or menu
+  **Tools → LogiCard → Import Interior Pack Prefabs**). Mirrors `PawnImportTool` FBX → URP Lit.
+- **Not imported:** Blends/OBJ/full 120+ catalog — only the curated subset above (repo size).
 
 ---
 
-## Candidate B — KayKit "Dungeon Remastered" — PROPOSED alternate (not imported)
+## KayKit "Dungeon Remastered" — REJECTED (human chose Quaternius)
 
 - **Author / source:** Kay Lousberg / KayKit
   https://kaylousberg.com/game-assets/dungeon-remastered
-  (GitHub mirror: https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0)
 - **License:** CC0 1.0 Universal
 - **Date evaluated:** 2026-08-10
-- **Why it fits:** 200+ modular walls/floors/doors/props, FBX/GLTF, designed for kitbash interiors.
-- **Caveat:** fantasy-dungeon read (stone, banners, chests) — further from a modern SWAT-facility
-  Yard/Hall/Vault than Quaternius House Interior. Stronger modular wall kit, weaker genre match.
-- **Not imported yet.** Awaiting human pack choice.
+- **Status:** Proposed as checkpoint-2 alternate; human selected Quaternius House Interior
+  (C54 / checkpoint 3). Not imported. Fantasy-dungeon read was the weaker genre match for
+  Yard/Hall/Vault.
 
 ---
 
-## Rejected / not pursued this pass
+## Rejected / not pursued
 
 - **Kenney Building Kit / Furniture Kit** — CC0, modular, but deliberately toy/blocky; fights the
   C53 grounded-detail pivot the same way Kenney Blocky Characters lost to Quaternius for pawns.
