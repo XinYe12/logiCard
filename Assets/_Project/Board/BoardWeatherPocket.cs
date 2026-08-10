@@ -311,7 +311,51 @@ namespace LogiCard.Board
                 }
             }
 
+            ConfigureAlphaBlend(_cloudMaterial);
             return _cloudMaterial;
+        }
+
+        /// <summary>
+        /// A URP Lit/Unlit/Particle material created via <c>new Material(shader)</c> defaults to
+        /// **Opaque** surface type — it does not infer transparency from the texture's alpha channel
+        /// on its own. Without this, <see cref="CloudMaterial"/>'s atlas (real alpha-cutout cloud
+        /// puffs on transparent padding) rendered every particle as a hard-edged, fully opaque
+        /// rectangle — the transparent padding read as solid black instead of disappearing (confirmed
+        /// via a human screenshot, 2026-08-10: "black rectangular blocks," not soft clouds). Mirrors
+        /// what URP's ShaderGUI sets when a human picks "Transparent" + "Alpha" in the Inspector.
+        /// </summary>
+        private static void ConfigureAlphaBlend(Material material)
+        {
+            material.SetOverrideTag("RenderType", "Transparent");
+            if (material.HasProperty("_Surface"))
+            {
+                material.SetFloat("_Surface", 1f); // 1 = Transparent
+            }
+
+            if (material.HasProperty("_Blend"))
+            {
+                material.SetFloat("_Blend", 0f); // 0 = Alpha
+            }
+
+            if (material.HasProperty("_SrcBlend"))
+            {
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            }
+
+            if (material.HasProperty("_DstBlend"))
+            {
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            }
+
+            if (material.HasProperty("_ZWrite"))
+            {
+                material.SetInt("_ZWrite", 0);
+            }
+
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
         }
 
         private static Material RainMaterial()
