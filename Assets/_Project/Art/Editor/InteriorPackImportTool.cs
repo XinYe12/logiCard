@@ -21,6 +21,7 @@ namespace LogiCard.Art.Editor
     {
         private const string SourceFolder = "Assets/_Project/Art/Environment/Interior/Source";
         private const string PrefabFolder = "Assets/_Project/Art/Environment/Resources/Interior";
+        private const string GlassMaterialPath = SourceFolder + "/Materials/Glass.mat";
 
         private static readonly (string fbx, string prefabName, bool normalizeDoor)[] Catalog =
         {
@@ -102,6 +103,94 @@ namespace LogiCard.Art.Editor
 
             AssetDatabase.SaveAssets();
             Debug.Log($"[InteriorPackImportTool] Built {built} prefab(s) (menu).");
+        }
+
+        [MenuItem("Tools/LogiCard/Fix Interior Glass Transparency")]
+        public static void FixGlassTransparencyFromMenu()
+        {
+            FixGlassTransparency();
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>Run: -executeMethod LogiCard.Art.Editor.InteriorPackImportTool.RunGlassFix</summary>
+        public static void RunGlassFix()
+        {
+            try
+            {
+                FixGlassTransparency();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError("[InteriorPackImportTool] Glass fix failed: " + ex);
+                EditorApplication.Exit(1);
+            }
+        }
+
+        /// <summary>
+        /// The generic per-FBX material loop in <see cref="ImportOne"/> re-hooks every extracted
+        /// material onto URP/Lit uniformly (color/smoothness/metallic only) — it has no notion of
+        /// "this one should be see-through." <c>Glass.mat</c> (used by <c>WindowSmall</c>/
+        /// <c>WindowLarge</c>) landed fully Opaque as a result, silently blocking the warm emissive
+        /// glow pane <c>BoardView</c> places just behind each window frame — checkpoint 3's "lit
+        /// window" dressing was invisible. Confirmed via a human screenshot review, 2026-08-10. Same
+        /// fix shape as <c>BoardWeatherPocket.ConfigureAlphaBlend</c>.
+        /// </summary>
+        private static void FixGlassTransparency()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(GlassMaterialPath);
+            if (material == null)
+            {
+                Debug.LogWarning($"[InteriorPackImportTool] No material at {GlassMaterialPath} to fix.");
+                return;
+            }
+
+            material.SetOverrideTag("RenderType", "Transparent");
+            if (material.HasProperty("_Surface"))
+            {
+                material.SetFloat("_Surface", 1f); // 1 = Transparent
+            }
+
+            if (material.HasProperty("_Blend"))
+            {
+                material.SetFloat("_Blend", 0f); // 0 = Alpha
+            }
+
+            if (material.HasProperty("_SrcBlend"))
+            {
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            }
+
+            if (material.HasProperty("_DstBlend"))
+            {
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            }
+
+            if (material.HasProperty("_ZWrite"))
+            {
+                material.SetInt("_ZWrite", 0);
+            }
+
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
+            // Real glass should also actually let some light through, not just stop occluding
+            // what's behind it — the extracted color's alpha is whatever the source FBX authored
+            // (often a fully opaque "colored panel" look); push it down so it reads as translucent.
+            Color color = material.HasProperty("_BaseColor") ? material.GetColor("_BaseColor") : material.color;
+            color.a = Mathf.Min(color.a, 0.35f);
+            material.color = color;
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", color);
+            }
+
+            EditorUtility.SetDirty(material);
+            Debug.Log($"[InteriorPackImportTool] Fixed transparency on {GlassMaterialPath}.");
         }
 
         private static bool ImportOne(string fbxPath, string prefabName, bool normalizeDoor)
