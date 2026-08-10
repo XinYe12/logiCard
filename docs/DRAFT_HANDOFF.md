@@ -1,5 +1,63 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-11 — save draft: Synty POLYGON packs landed (raw import), integration scoped for next session
+
+Session pausing here per the human — everything below is committed on `master` locally (not pushed this
+time; push on request next session, same as always).
+
+**Three Synty POLYGON packs imported and merged.** Human pointed at a local folder
+(`D:\XinyeData\projects\assets`) containing a large collection of pre-downloaded Unity asset packs and
+asked to use them directly. Found and imported (batchmode `-importPackage`, verified EditMode 124/124
+before merge): `Assets/PolygonHeist/`, `Assets/PolygonOffice/`, `Assets/PolygonCity/` — exactly the three
+packs `docs/ART_PACK_RESEARCH.md` recommended. **This is a raw import only — none of it is wired into the
+game yet.** `BoardView`/`BoardSurfaceMaterials`/`PawnImportTool`/`Resources/Interior/`/`BoardWeatherPocket`
+still reference the old Quaternius/Poly Haven/Kenney assets.
+
+**Licensing flag — read before doing anything else with these files.** The source folder's packaging
+(sequentially numbered `.rar` archives bundled as an "80-pack collection," Taobao reseller link inside
+one archive) strongly indicates these are not individually-licensed Asset Store purchases. Flagged
+directly to the human, who made an informed, explicit call: **use now to prototype/iterate, buy real
+licenses (Unity Asset Store, same publisher account as the `OfficeEssentialsPack` already purchased
+legitimately) before any public release or Steam upload.** This is a real ship-blocking TODO — do not
+let it get lost by the time shipping is actually being discussed. Whoever picks up ship-readiness work
+should check this section first.
+
+**What's actually left to wire (scoped, not started) — read this before diving in tomorrow:**
+
+1. **Characters (Scout/Juggernaut) — more involved than a simple FBX swap.** `PawnImportTool.cs`
+   currently takes one FBX with per-part materials and no textures, builds a static prefab at
+   `Resources/Scout/Scout.prefab` or `Resources/Juggernaut/Juggernaut.prefab`, and `PawnView.cs`'s
+   `TryBuildImported` auto-scales it to `TargetVisualHeight` and tints whichever renderer's name contains
+   `"Body"` with the team color via a `MaterialPropertyBlock`. **Heist's character prefabs
+   (`Assets/PolygonHeist/Prefab/Characters/Character_Male_SWAT_01.prefab` for Juggernaut,
+   `Character_Male_Overall_01.prefab` for Scout) don't fit this model directly** — inspected the prefab
+   hierarchy and it's a shared modular rig: one skeleton with *every* outfit/character variant nested as
+   child renderers in the same file (all confirmed present: SWAT, FBI, Overall, Shirt, SuitVest, in both
+   Male/Female, all inside `Character_Male_SWAT_01.prefab`'s own hierarchy). No renderer is literally
+   named `"Body"`. Two real options for next session: (a) write a small Editor script that isolates just
+   the wanted outfit's renderers (disable/strip the rest) before saving as the archetype prefab, or
+   (b) extend `PawnView`'s tint-marker logic to match a broader/different naming convention for this
+   pack. Also confirmed the materials are still on Unity's built-in **Standard** shader (not URP/Lit) —
+   `PawnImportTool`'s existing URP-conversion logic (read `_Color`, swap shader, set `_BaseColor`) is
+   reusable, just needs to run against the prefab's material dependencies instead of an FBX path.
+2. **Interior props (`Resources/Interior/*.prefab`, 14 resource names: Cabinet/Chair/Table/Shelf/
+   ShelfLarge/Bookshelf/LightCeiling/LightCeilingAlt/LightDesk/WindowSmall/WindowLarge/Door/DoorAlt/
+   DoorDouble) — not started, catalog is large.** `PolygonOffice` alone is ~4800 files across deeply
+   nested category folders (`Prefabs/Props/Desk Props/`, `Kitchen Props/`, `Misc/`, `Roof Props/`, etc.)
+   — didn't find obvious single-match prefabs for basic furniture (chair/table/cabinet/shelf) in a first
+   pass; needs a proper targeted search next session, not a rushed guess. Doors specifically carry extra
+   risk — this session's earlier glass-transparency bug hunt (the `_SURFACE_TYPE_TRANSPARENT` vs
+   `_ALPHABLEND_ON` saga) was about exactly this kind of prop, so budget real verification time for
+   whatever replaces `WindowSmall`/`WindowLarge`/glass materials, don't assume it'll just work.
+3. **Board floor materials (`BoardSurfaceMaterials.cs`)** and **weather/clouds (`BoardWeatherPocket.cs`)**
+   — not started at all this session; `PolygonCity` has its own cloud/rain FX prefabs
+   (`Assets/PolygonCity/FX/FX_Rain.prefab`, materials under `Materials/FX_Materials/Cloud_Mat.mat` etc.)
+   worth checking as a real cartoon-cloud-style replacement for the Kenney smoke atlas, per the still-open
+   "cartoon/clay-art clouds" gap from C58.
+
+**Move-click bug** — still unresolved from before, see the "continued 15" entry below for the full
+investigation. Unchanged since then; still needs the human to reproduce with console open.
+
 ## 2026-08-10 (continued 16) — save draft: click-bug investigation, art pack research, first real asset landed
 
 Session pausing here — human is switching to another machine. Everything below is committed and pushed
