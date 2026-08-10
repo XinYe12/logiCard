@@ -110,11 +110,11 @@ namespace LogiCard.Boot
             hud.NextRoundRequested += OnNextRoundRequested;
             _playback.OutcomeReported += hud.ShowOutcome;
 
-            // Camera rotation (C48/C53 playtest ask): HUD owns the button, GameBootstrap owns the
-            // camera. After a rotation, the door prompt's cached world-to-screen projection
-            // (docs/UI_BOARD_ANCHORED_COMPONENTS.md — "recompute only on selection change") is stale,
-            // so re-run it through the same refresh path a selection change already uses.
-            hud.CameraRotateRequested += direction => _cameraRig.Step(direction);
+            // Camera rotation (C48/C53 playtest ask) is direct right-mouse-drag on BoardCameraRig
+            // itself now — no HUD button/event to wire. After any rotation, the door prompt's cached
+            // world-to-screen projection (docs/UI_BOARD_ANCHORED_COMPONENTS.md — "recompute only on
+            // selection change") is stale, so re-run it through the same refresh path a selection
+            // change already uses.
             _cameraRig.Rotated += hud.RefreshBoardAnchoredUI;
 
             // Find Match -> C52's resolve relay; Local Play -> same-process (unchanged). Board layout

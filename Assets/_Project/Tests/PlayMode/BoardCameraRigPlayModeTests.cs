@@ -1,11 +1,13 @@
 using LogiCard.Board;
 using NUnit.Framework;
-using UnityEngine.UI;
 
 namespace LogiCard.Tests.PlayMode
 {
     /// <summary>
-    /// End-to-end wiring: HUD button -> GameBootstrap -> BoardCameraRig -> door-prompt refresh hook.
+    /// End-to-end wiring: GameBootstrap builds a real BoardCameraRig on the scripted camera and
+    /// connects its Rotated event to the door-prompt refresh hook. Actual mouse-drag input isn't
+    /// simulated here (that's BoardCameraRig.Update, not testable without an input-simulation layer
+    /// this project doesn't have) - these tests drive the same RotateBy primitive Update calls.
     /// </summary>
     [TestFixture]
     public sealed class BoardCameraRigPlayModeTests : SliceSceneFixture
@@ -17,27 +19,24 @@ namespace LogiCard.Tests.PlayMode
         }
 
         [Test]
-        public void RotateButtonExistsAndStepsTheRig()
+        public void RotatingChangesYaw()
         {
             BoardCameraRig rig = Bootstrap.CameraRig;
             float before = rig.YawDegrees;
 
-            Button rotateButton = FindByName<Button>("CameraRotateButton");
-            Assert.That(rotateButton, Is.Not.Null, "Top strip has no CameraRotateButton.");
+            rig.RotateBy(22f);
 
-            rotateButton.onClick.Invoke();
-
-            Assert.That(rig.YawDegrees, Is.EqualTo(before + BoardCameraRig.StepDegrees).Within(0.001f));
+            Assert.That(rig.YawDegrees, Is.EqualTo(before + 22f).Within(0.001f));
         }
 
         [Test]
         public void RotatingDoesNotThrowWithNoDoorSelected()
         {
-            // RefreshBoardAnchoredUI runs on every rotation regardless of mode/selection - the common
-            // case (not currently in Door mode with a pending door) must be a safe no-op, not a
-            // null-reference off the missing selection.
-            Button rotateButton = FindByName<Button>("CameraRotateButton");
-            Assert.That(() => rotateButton.onClick.Invoke(), Throws.Nothing);
+            // Rotated fires RefreshBoardAnchoredUI on every call - the common case (not currently in
+            // Door mode with a pending door) must be a safe no-op, not a null-reference off the
+            // missing selection.
+            BoardCameraRig rig = Bootstrap.CameraRig;
+            Assert.That(() => rig.RotateBy(10f), Throws.Nothing);
         }
     }
 }

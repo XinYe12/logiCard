@@ -143,14 +143,6 @@ namespace LogiCard.UI
         /// </summary>
         public event Action AdrenalineUsed;
 
-        /// <summary>
-        /// Raised when the player clicks the top-strip rotate button. Direction is always +1 today
-        /// (single cycling button) — the parameter exists so a future left/right pair doesn't need a
-        /// new event. GameBootstrap owns the actual camera (<c>BoardCameraRig</c>); the HUD deliberately
-        /// knows nothing about it, same separation as <see cref="LockedIn"/> and the resolver.
-        /// </summary>
-        public event Action<int> CameraRotateRequested;
-
         public void Init(
             TimeResourceClockDriver clock,
             RoundPhaseController phase,
@@ -332,13 +324,12 @@ namespace LogiCard.UI
             _matchLabel = _ui.CreateText(strip, "MatchLabel", "MATCH", 22, TextAnchor.MiddleLeft, Ink);
             UiFactory.Stretch(_matchLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0.32f, 0.55f), new Vector2(24f, 0f), Vector2.zero);
 
-            // Camera rotate (C48/C53 playtest ask) — a view control, not a phase-specific action, so
-            // it lives in the always-visible top strip rather than the phase-gated dock. Single button
-            // cycling one direction through BoardCameraRig's fixed 45° steps; simpler than a left/
-            // right pair and still reaches every available angle.
-            Button rotateButton = _ui.CreateButton(strip, "CameraRotateButton", "ROTATE VIEW ⟳", PanelMid, Ink, 20,
-                () => CameraRotateRequested?.Invoke(1));
-            UiFactory.Stretch(rotateButton.GetComponent<RectTransform>(), new Vector2(0.36f, 0.18f), new Vector2(0.58f, 0.82f));
+            // Camera rotation itself is direct right-mouse-drag on BoardCameraRig (2026-08-10 — smooth,
+            // not a discrete-step button; see BoardCameraRig's own doc comment). Right-drag isn't a
+            // self-discoverable gesture, so a small non-interactive hint replaces what used to be a
+            // button here — no event, no click target, just a label.
+            Text rotateHint = _ui.CreateText(strip, "CameraRotateHint", "RIGHT-DRAG TO ROTATE VIEW", 16, TextAnchor.MiddleCenter, Ink);
+            UiFactory.Stretch(rotateHint.rectTransform, new Vector2(0.34f, 0.25f), new Vector2(0.60f, 0.75f));
 
             _programTimerLabel = _ui.CreateText(strip, "ProgramTimer", "real-world", 24, TextAnchor.MiddleRight, Ink);
             UiFactory.Stretch(_programTimerLabel.rectTransform, new Vector2(0.68f, 0f), new Vector2(1f, 1f), Vector2.zero, new Vector2(-24f, 0f));
