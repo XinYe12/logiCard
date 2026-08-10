@@ -1,15 +1,7 @@
 {
-    "name": "LogiCard.Boot",
-    "rootNamespace": "LogiCard.Boot",
+    "name": "LogiCard.Rendering",
+    "rootNamespace": "LogiCard.Rendering",
     "references": [
-        "LogiCard.Sim",
-        "LogiCard.Net",
-        "LogiCard.Timeline",
-        "LogiCard.Board",
-        "LogiCard.UI",
-        "LogiCard.Audio",
-        "LogiCard.Rendering",
-        "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Core.Runtime"
     ],
     "includePlatforms": [],
