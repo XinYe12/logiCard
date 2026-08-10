@@ -19,7 +19,7 @@ list` and `DRAFT_HANDOFF.md`'s top section before assuming this table is current
 
 | Dept | Branch | Status file | Notes |
 |------|--------|--------------|-------|
-| ~~Presentation (characters)~~ | ~~`feat/character-model-rework`~~ | merged | **Done, Stage 1 (research) merged.** 3 candidates proposed in `Art/Characters/THIRD_PARTY.md`, none imported — awaiting human pack decision. Worktree still checked out, free for a new assignment once one exists. |
+| Presentation (characters) | `feat/scout-reoutfit` | `logiCard-env-lookfeel` worktree | Human picked C56 (re-outfit within the existing CC0 pack). Swap Scout's Adventurer.fbx for a plainclothes outfit already in the same pack via the existing PawnImportTool, no new pack import. Brief: `SCOUT_REOUTFIT_AGENT_BRIEF.md` at the worktree root. |
 | Rendering | `feat/wet-surface-reflections` | `logiCard-ui-dock-polish` worktree (directory name stale) | Reflection probes for wet board surfaces (SSR unavailable in this URP version); retune `BoardSurfaceMaterials`' wetness once real reflection exists. Brief: `WET_SURFACE_REFLECTIONS_AGENT_BRIEF.md` at the worktree root. |
 
 ## Ownership matrix (write locks)
