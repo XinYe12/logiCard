@@ -58,3 +58,6 @@ AssetStoreTools/
 
 # Local agent scratch (not product)
 .day1-guids.json
+
+_tmp_*/
+_tmp_*/**
