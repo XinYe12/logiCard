@@ -27,7 +27,15 @@ is now complete and selectable (not just present as dead code):
   (`logiCard-env-lookfeel`, `logiCard-ui-dock-polish`) still exist on disk with stray untracked brief
   files/`TestResults/` from each worker's session — pending cleanup, not yet removed.
 - Batchmode verification of the fully-wired combined state via a disposable `logiCard-verify-maps`
-  worktree — **in progress as this entry is written**; result to be logged once it finishes.
+  worktree at merge commit `59b9a4e`: **EditMode 124/124, PlayMode 37/37, all green.** (First attempt's
+  `-runTests` was combined with an explicit `-quit` flag and exited 0 with no results file at all —
+  `-quit` races Unity's own post-test-run quit and can cut off the test runner before it starts; dropped
+  `-quit` and reran clean. Worth remembering for next time this pattern comes up.) Worktree removed after.
+  Both now-finished map-worker worktrees (`logiCard-env-lookfeel`, `logiCard-ui-dock-polish`) deregistered
+  from `git worktree` cleanly; their on-disk directories are down to empty shells but wouldn't `rmdir` —
+  "Device or resource busy," likely OneDrive sync or Windows Search Indexer holding a transient handle
+  (same class of issue as the documented Baidu NetDisk/`Library/Bee` lock, different process). Not a git
+  or project-state problem — harmless empty leftovers, safe to delete by hand whenever the lock clears.
 
 **Cloud fix correction** — the "continued 13" entry below and the "Awaiting human review" section
 originally pointed at `af5d2b1` as the cloud-transparency fix. That commit used the wrong shader keyword
