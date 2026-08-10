@@ -22,7 +22,7 @@ namespace LogiCard.UI
 
         private readonly Font _font;
 
-        public RectTransform CreatePanel(RectTransform parent, string name, Color color, Vector2 anchorMin, Vector2 anchorMax)
+        public RectTransform CreatePanel(RectTransform parent, string name, Color color, Vector2 anchorMin, Vector2 anchorMax, Sprite sprite = null, Image.Type imageType = Image.Type.Simple)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image));
             var rt = go.GetComponent<RectTransform>();
@@ -31,7 +31,15 @@ namespace LogiCard.UI
             rt.anchorMax = anchorMax;
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
-            go.GetComponent<Image>().color = color;
+
+            var image = go.GetComponent<Image>();
+            image.color = color;
+            if (sprite != null)
+            {
+                image.sprite = sprite;
+                image.type = imageType;
+            }
+
             return rt;
         }
 
@@ -65,17 +73,27 @@ namespace LogiCard.UI
             Color bg,
             Color fg,
             int size,
-            UnityAction onClick)
+            UnityAction onClick,
+            Sprite sprite = null,
+            Image.Type imageType = Image.Type.Simple)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
             var rt = go.GetComponent<RectTransform>();
             rt.SetParent(parent, false);
-            go.GetComponent<Image>().color = bg;
+
+            var image = go.GetComponent<Image>();
+            image.color = bg;
+            if (sprite != null)
+            {
+                image.sprite = sprite;
+                image.type = imageType;
+            }
 
             Text text = CreateText(rt, "Label", label, size, TextAnchor.MiddleCenter, fg, UiTextOverflow.Button);
             Stretch(text.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             var button = go.GetComponent<Button>();
+            button.targetGraphic = image;
             if (onClick != null)
             {
                 button.onClick.AddListener(onClick);

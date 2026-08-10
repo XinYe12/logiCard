@@ -17,6 +17,11 @@ namespace LogiCard.UI
         public static readonly Color PanelSunken = new Color(0.06f, 0.06f, 0.08f, 1f);
         public static readonly Color Accent = new Color(0.98f, 0.72f, 0.25f, 1f);
         public static readonly Color AccentDim = new Color(0.35f, 0.30f, 0.20f, 1f);
+        public static readonly Color Card = new Color(0.11f, 0.11f, 0.14f, 0.98f);
+        public static readonly Color PrimaryButton = new Color(0.97f, 0.96f, 0.94f, 1f);
+        public static readonly Color PrimaryButtonText = new Color(0.1f, 0.09f, 0.07f, 1f);
+        public static readonly Color SecondaryButton = new Color(0.16f, 0.16f, 0.20f, 1f);
+        public static Sprite RoundSprite => Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
         public static readonly Color ModalDimmer = new Color(0.02f, 0.02f, 0.03f, 0.72f);
 
         /// <summary>Landscape reference for <see cref="CanvasScaler"/> (C48 / 16:9).</summary>
