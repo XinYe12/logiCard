@@ -44,18 +44,39 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// TEMPORARY interim sizing (2026-08-10) — these primitive-sphere puffs are being replaced by
-        /// real cloud mesh assets (see ENV_LOOKFEEL_AGENT_BRIEF.md); not worth precision-tuning
-        /// geometry that's on its way out. The original sizing was tuned before the HUD dock's
-        /// right-edge -> bottom-band move changed the camera's effective zoom/aspect (orthographicSize
-        /// 9.0 -> 5.0 plus a much wider board-region aspect); a ~9-10 unit-wide sphere sitting only
-        /// ~3 units above a 10-unit-deep board, viewed through a camera that's now effectively much
-        /// closer, loomed over the entire board (confirmed via a human screenshot — playtest
-        /// 2026-08-10). Shrunk ~45% and pushed further back/up as an immediate unblock, not a final
-        /// pass — proper sizing happens once real assets land.
+        /// Cloud scale/height correction, tuned 2026-08-09 and carried forward unchanged into the
+        /// real cloud-particle rework (2026-08-10, see <see cref="PlaceCloudPuff"/>). The sizing was
+        /// tuned after the HUD dock's right-edge -> bottom-band move changed the camera's effective
+        /// zoom/aspect (orthographicSize 9.0 -> 5.0 plus a much wider board-region aspect); a ~9-10
+        /// unit-wide puff sitting only ~3 units above a 10-unit-deep board, viewed through a camera
+        /// that's now effectively much closer, loomed over the entire board (confirmed via a human
+        /// screenshot — playtest 2026-08-10). Shrunk ~45% and pushed further back/up. This correction
+        /// is orthogonal to the rendering technique (primitive spheres before, textured particle
+        /// billboards now) — both consume the same puff bounding boxes below, so keeping these
+        /// factors is what keeps the "contained pocket, not looming over the board" framing correct
+        /// (`docs/ART_DIRECTION.md` Moodboard) regardless of what draws inside each puff volume.
         /// </summary>
         private const float InterimCloudScale = 0.55f;
         private const float InterimCloudHeightBoost = 2.1f;
+
+        /// <summary>
+        /// Cloud sprite atlas: 4x2 grid of Kenney "Smoke Particles" (CC0) puff silhouettes, composed
+        /// into one texture so <see cref="ParticleSystem.TextureSheetAnimationModule"/> can hand each
+        /// particle a random frame — see <c>Assets/_Project/Art/Environment/THIRD_PARTY.md</c>.
+        /// </summary>
+        private const int CloudAtlasColumns = 4;
+        private const int CloudAtlasRows = 2;
+
+        /// <summary>Particle count scales with each puff's footprint (world-unit width * depth), clamped
+        /// so tiny fringe puffs still read as a cluster and the wide ceiling shelf doesn't spawn a huge
+        /// batch of overlapping billboards.</summary>
+        private const float CloudParticleDensity = 1.0f;
+        private const int CloudParticlesMin = 8;
+        private const int CloudParticlesMax = 22;
+
+        /// <summary>Not a real "infinite" lifetime (Unity has none) — long enough that a burst-spawned,
+        /// non-moving puff cluster never visibly expires during a play session.</summary>
+        private const float CloudParticleLifetimeSeconds = 9999f;
 
         private void PlaceCloudBank(float width, float depth)
         {
@@ -94,6 +115,16 @@ namespace LogiCard.Board
                 new Color(0.32f, 0.30f, 0.28f, 1f));
         }
 
+        /// <summary>
+        /// Builds one "puff" as a burst-spawned, non-moving cluster of textured billboard particles
+        /// instead of a single tinted sphere primitive. Several depth-sorted, randomly-framed cloud
+        /// sprites overlapping within the puff's bounding box read as a soft volumetric mass — the
+        /// wispy alpha silhouette from the source texture (see <c>THIRD_PARTY.md</c>) does the work a
+        /// hard-edged sphere outline never could. <paramref name="localPosition"/>/<paramref
+        /// name="localScale"/> reuse the exact placement/sizing the sphere puffs used, so the overall
+        /// cloud-bank layout and the <see cref="InterimCloudScale"/>/<see
+        /// cref="InterimCloudHeightBoost"/> framing correction are unaffected by this swap.
+        /// </summary>
         private static void PlaceCloudPuff(
             Transform parent,
             string name,
@@ -101,13 +132,77 @@ namespace LogiCard.Board
             Vector3 localScale,
             Color tint)
         {
-            var puff = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            puff.name = name;
+            var puff = new GameObject(name);
             puff.transform.SetParent(parent, false);
             puff.transform.localPosition = localPosition;
-            puff.transform.localScale = localScale;
-            puff.GetComponent<MeshRenderer>().sharedMaterial = CloudMaterial(tint);
-            StripCollider(puff);
+
+            var ps = puff.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            float footprint = Mathf.Max(0.01f, localScale.x * localScale.z);
+            int count = Mathf.Clamp(
+                Mathf.RoundToInt(footprint * CloudParticleDensity),
+                CloudParticlesMin,
+                CloudParticlesMax);
+            // Overlap factor > 1 so neighboring billboards blend into one mass rather than sitting as
+            // visibly separate discs across the puff's footprint.
+            float baseSize = Mathf.Sqrt(footprint / count) * 1.35f;
+
+            var main = ps.main;
+            main.loop = false;
+            main.playOnAwake = true;
+            main.duration = 1f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(CloudParticleLifetimeSeconds);
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.75f, baseSize * 1.35f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f * Mathf.Deg2Rad);
+            main.startColor = new ParticleSystem.MinMaxGradient(
+                new Color(tint.r * 0.85f, tint.g * 0.85f, tint.b * 0.85f, 0.85f),
+                new Color(Mathf.Min(1f, tint.r * 1.15f), Mathf.Min(1f, tint.g * 1.15f), Mathf.Min(1f, tint.b * 1.15f), 0.98f));
+            main.maxParticles = Mathf.Max(count, 4);
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.gravityModifier = 0f;
+            main.scalingMode = ParticleSystemScalingMode.Local;
+
+            var emission = ps.emission;
+            emission.enabled = true;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)count) });
+
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            // Explicit full-volume fill (default box "emit from" can otherwise be shell-only) — puffs
+            // should scatter particles throughout the bounding box, not just its outer surface.
+            shape.boxThickness = Vector3.one;
+            shape.scale = new Vector3(
+                Mathf.Max(localScale.x, 0.05f),
+                Mathf.Max(localScale.y, 0.05f),
+                Mathf.Max(localScale.z, 0.05f));
+            shape.position = Vector3.zero;
+            shape.rotation = Vector3.zero;
+
+            // Each particle keeps a fixed random frame from the cloud atlas (see
+            // Resources/Weather/CloudAtlas.png) for its whole lifetime — frameOverTime stays at a flat
+            // 0 so it never animates/flipbooks, it's purely per-particle shape variety at spawn.
+            var tsa = ps.textureSheetAnimation;
+            tsa.enabled = true;
+            tsa.mode = ParticleSystemAnimationMode.Grid;
+            tsa.numTilesX = CloudAtlasColumns;
+            tsa.numTilesY = CloudAtlasRows;
+            tsa.animation = ParticleSystemAnimationType.WholeSheet;
+            tsa.frameOverTime = new ParticleSystem.MinMaxCurve(0f);
+            tsa.startFrame = new ParticleSystem.MinMaxCurve(0f, CloudAtlasColumns * CloudAtlasRows - 1);
+            tsa.cycleCount = 1;
+
+            var renderer = puff.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sortMode = ParticleSystemSortMode.Distance;
+            renderer.sharedMaterial = CloudMaterial();
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            ps.Play(true);
         }
 
         private void PlaceRain(float width, float depth)
@@ -187,47 +282,36 @@ namespace LogiCard.Board
             ps.Play(true);
         }
 
-        private static Material CloudMaterial(Color tint)
+        /// <summary>
+        /// Single shared material for every cloud puff's particle billboards — per-puff tinting now
+        /// happens via each particle's start color (see <see cref="PlaceCloudPuff"/>), not a separate
+        /// material instance per puff, since the URP particle-unlit shader multiplies the atlas texture
+        /// by vertex/particle color by default. Same fallback shader chain as <see cref="RainMaterial"/>
+        /// so both stay renderable if URP shader variants aren't stripped-in the same way.
+        /// </summary>
+        private static Material CloudMaterial()
         {
-            // Shared shader template; each puff gets its own tinted instance so under-lit fringes
-            // can run warmer than the storm ceiling without fighting a single shared color.
-            Material mat = new Material(CloudTemplate)
+            if (_cloudMaterial != null)
             {
-                color = tint,
-            };
-            if (mat.HasProperty("_BaseColor"))
-            {
-                mat.SetColor("_BaseColor", tint);
-            }
-
-            if (mat.HasProperty("_Smoothness"))
-            {
-                mat.SetFloat("_Smoothness", 0.08f);
-            }
-
-            if (mat.HasProperty("_Metallic"))
-            {
-                mat.SetFloat("_Metallic", 0f);
-            }
-
-            return mat;
-        }
-
-        private static Material CloudTemplate
-        {
-            get
-            {
-                if (_cloudMaterial != null)
-                {
-                    return _cloudMaterial;
-                }
-
-                var lit = Shader.Find("Universal Render Pipeline/Lit");
-                _cloudMaterial = lit != null
-                    ? new Material(lit)
-                    : new Material(Shader.Find("Sprites/Default") ?? Shader.Find("Standard"));
                 return _cloudMaterial;
             }
+
+            var particles = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                ?? Shader.Find("Particles/Standard Unlit")
+                ?? Shader.Find("Sprites/Default");
+            _cloudMaterial = new Material(particles);
+
+            Texture2D atlas = Resources.Load<Texture2D>("Weather/CloudAtlas");
+            if (atlas != null)
+            {
+                _cloudMaterial.mainTexture = atlas;
+                if (_cloudMaterial.HasProperty("_BaseMap"))
+                {
+                    _cloudMaterial.SetTexture("_BaseMap", atlas);
+                }
+            }
+
+            return _cloudMaterial;
         }
 
         private static Material RainMaterial()
@@ -257,15 +341,6 @@ namespace LogiCard.Board
             }
 
             return _rainMaterial;
-        }
-
-        private static void StripCollider(GameObject go)
-        {
-            Collider col = go.GetComponent<Collider>();
-            if (col != null)
-            {
-                Destroy(col);
-            }
         }
     }
 }
