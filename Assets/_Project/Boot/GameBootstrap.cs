@@ -446,7 +446,7 @@ namespace LogiCard.Boot
             PlanarPosition defenderSpawn;
             System.Func<LogiCard.Net.TimelinePayload> defenderPayloadBuilder;
 
-            switch (ActiveMap)
+            switch (_activeMap)
             {
                 case MapId.RailPlatform:
                     // Approach's south edge (attacker), Objective's interior ~2 units north of

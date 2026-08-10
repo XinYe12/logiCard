@@ -21,8 +21,70 @@ namespace LogiCard.UI
         public static readonly Color PrimaryButton = new Color(0.97f, 0.96f, 0.94f, 1f);
         public static readonly Color PrimaryButtonText = new Color(0.1f, 0.09f, 0.07f, 1f);
         public static readonly Color SecondaryButton = new Color(0.16f, 0.16f, 0.20f, 1f);
-        public static Sprite RoundSprite => Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
         public static readonly Color ModalDimmer = new Color(0.02f, 0.02f, 0.03f, 0.72f);
+
+        private static Sprite _roundSprite;
+        private const int RoundSpriteSize = 32;
+        private const int RoundSpriteRadius = 10;
+
+        /// <summary>
+        /// Procedurally generated 9-sliced rounded-rect sprite, cached after first build. Deliberately
+        /// not <c>Resources.GetBuiltinResource&lt;Sprite&gt;("UI/Skin/UISprite.psd")</c> — that path is
+        /// an Editor-only extra resource (the API that actually finds it is
+        /// <c>UnityEditor.AssetDatabase.GetBuiltinExtraResource</c>), so it silently fails (logs an
+        /// assert, returns null) in both batchmode PlayMode tests and a real Player build. Generating
+        /// our own sprite works identically everywhere.
+        /// </summary>
+        public static Sprite RoundSprite => _roundSprite != null ? _roundSprite : (_roundSprite = BuildRoundSprite());
+
+        private static Sprite BuildRoundSprite()
+        {
+            const int size = RoundSpriteSize;
+            const float radius = RoundSpriteRadius;
+
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "UiStyle_RoundSprite",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+            };
+
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float px = x + 0.5f;
+                    float py = y + 0.5f;
+                    float cx = Mathf.Clamp(px, radius, size - radius);
+                    float cy = Mathf.Clamp(py, radius, size - radius);
+                    bool inCornerBox = (px < radius || px > size - radius) && (py < radius || py > size - radius);
+                    float alpha = 1f;
+                    if (inCornerBox)
+                    {
+                        float dist = Mathf.Sqrt(((px - cx) * (px - cx)) + ((py - cy) * (py - cy)));
+                        alpha = Mathf.Clamp01(radius - dist + 0.5f);
+                    }
+
+                    pixels[(y * size) + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alpha * 255f));
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+
+            float r = radius;
+            var sprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, size, size),
+                new Vector2(0.5f, 0.5f),
+                100f,
+                0,
+                SpriteMeshType.FullRect,
+                new Vector4(r, r, r, r));
+            sprite.name = "UiStyle_RoundSprite";
+            return sprite;
+        }
 
         /// <summary>Landscape reference for <see cref="CanvasScaler"/> (C48 / 16:9).</summary>
         public static readonly Vector2 ReferenceResolution = new Vector2(1920f, 1080f);

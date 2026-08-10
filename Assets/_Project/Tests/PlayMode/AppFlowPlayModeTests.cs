@@ -36,6 +36,11 @@ namespace LogiCard.Tests.PlayMode
 
             Button confirm = FindByName<Button>("ConfirmCharacter");
             confirm.onClick.Invoke();
+            Assert.That(flow.Current, Is.EqualTo(AppFlowController.Screen.MapSelect));
+
+            Button confirmMap = FindByName<Button>("ConfirmMap");
+            Assert.That(confirmMap, Is.Not.Null, "Map Select screen has no ConfirmMap button.");
+            confirmMap.onClick.Invoke();
             Assert.That(flow.Current, Is.EqualTo(AppFlowController.Screen.Lobby));
 
             Button local = FindByName<Button>("LocalPlayButton");

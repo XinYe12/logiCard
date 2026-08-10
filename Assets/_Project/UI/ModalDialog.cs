@@ -78,32 +78,35 @@ namespace LogiCard.UI
             bool hasSecondary = !string.IsNullOrEmpty(secondaryLabel);
             if (hasSecondary)
             {
-                Button secondary = ui.CreateButton(card, "ModalSecondary", secondaryLabel, UiStyle.PanelDark, UiStyle.Ink, 26,
+                Button secondary = ui.CreateButton(card, "ModalSecondary", secondaryLabel, UiStyle.SecondaryButton, UiStyle.Ink, 26,
                     () =>
                     {
                         dialog.Close();
                         onSecondary?.Invoke();
-                    });
+                    },
+                    UiStyle.RoundSprite, Image.Type.Sliced);
                 UiFactory.Stretch(secondary.GetComponent<RectTransform>(),
                     new Vector2(0.08f, 0.10f), new Vector2(0.46f, 0.30f));
 
-                Button primary = ui.CreateButton(card, "ModalPrimary", primaryLabel ?? "OK", UiStyle.Accent, UiStyle.InkDark, 26,
+                Button primary = ui.CreateButton(card, "ModalPrimary", primaryLabel ?? "OK", UiStyle.PrimaryButton, UiStyle.PrimaryButtonText, 26,
                     () =>
                     {
                         dialog.Close();
                         onPrimary?.Invoke();
-                    });
+                    },
+                    UiStyle.RoundSprite, Image.Type.Sliced);
                 UiFactory.Stretch(primary.GetComponent<RectTransform>(),
                     new Vector2(0.54f, 0.10f), new Vector2(0.92f, 0.30f));
             }
             else
             {
-                Button primary = ui.CreateButton(card, "ModalPrimary", primaryLabel ?? "OK", UiStyle.Accent, UiStyle.InkDark, 28,
+                Button primary = ui.CreateButton(card, "ModalPrimary", primaryLabel ?? "OK", UiStyle.PrimaryButton, UiStyle.PrimaryButtonText, 28,
                     () =>
                     {
                         dialog.Close();
                         onPrimary?.Invoke();
-                    });
+                    },
+                    UiStyle.RoundSprite, Image.Type.Sliced);
                 UiFactory.Stretch(primary.GetComponent<RectTransform>(),
                     new Vector2(0.28f, 0.10f), new Vector2(0.72f, 0.30f));
             }

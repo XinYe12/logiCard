@@ -46,28 +46,32 @@ namespace LogiCard.Tests.PlayMode
         {
             Bootstrap = new GameObject("TestBootstrap").AddComponent<GameBootstrap>();
 
-            BoardVisual = Object.FindFirstObjectByType<BoardView>();
             Hud = Object.FindFirstObjectByType<ProgramHud>();
-            AttackerInput = Object.FindFirstObjectByType<BoardInputController>();
             Clock = Bootstrap.GetComponent<TimeResourceClockDriver>();
             Phase = Bootstrap.GetComponent<RoundPhaseController>();
-            AttackerPawn = AttackerInput != null ? AttackerInput.GetComponent<PawnView>() : null;
-            Playback = Bootstrap.GetComponent<RoundPlayback>();
-            DefenderPawn = FindByName<PawnView>("Pawn_Defender");
             MatchClock = Bootstrap.MatchClock;
 
-            Assert.That(BoardVisual, Is.Not.Null, "Bootstrap built no BoardView.");
             Assert.That(Hud, Is.Not.Null, "Bootstrap built no ProgramHud.");
-            Assert.That(AttackerInput, Is.Not.Null, "Bootstrap wired no BoardInputController.");
-            Assert.That(AttackerPawn, Is.Not.Null, "BoardInputController is not on a pawn.");
             Assert.That(Clock, Is.Not.Null, "Bootstrap built no TimeResourceClockDriver.");
             Assert.That(Phase, Is.Not.Null, "Bootstrap built no RoundPhaseController.");
-            Assert.That(Playback, Is.Not.Null, "Bootstrap built no RoundPlayback.");
-            Assert.That(DefenderPawn, Is.Not.Null, "Bootstrap built no defender pawn.");
             Assert.That(MatchClock, Is.Not.Null, "Bootstrap built no MatchClock.");
 
             // Phase 1 landscape shell starts on Boot/Title; match HUD tests skip straight to Program.
+            // The map-select addition (2026-08-10) defers board/pawn/playback building until AppFlow
+            // reaches the match — bypass BEFORE looking those up, or they don't exist yet.
             Hud.BypassAppFlowForTests();
+
+            BoardVisual = Object.FindFirstObjectByType<BoardView>();
+            AttackerInput = Object.FindFirstObjectByType<BoardInputController>();
+            AttackerPawn = AttackerInput != null ? AttackerInput.GetComponent<PawnView>() : null;
+            Playback = Bootstrap.GetComponent<RoundPlayback>();
+            DefenderPawn = FindByName<PawnView>("Pawn_Defender");
+
+            Assert.That(BoardVisual, Is.Not.Null, "Bootstrap built no BoardView.");
+            Assert.That(AttackerInput, Is.Not.Null, "Bootstrap wired no BoardInputController.");
+            Assert.That(AttackerPawn, Is.Not.Null, "BoardInputController is not on a pawn.");
+            Assert.That(Playback, Is.Not.Null, "Bootstrap built no RoundPlayback.");
+            Assert.That(DefenderPawn, Is.Not.Null, "Bootstrap built no defender pawn.");
 
             Assert.That(Bootstrap.BeginRound(DefaultRoundSeconds), Is.True, "Default Time Card failed.");
             Assert.That(Phase.Phase, Is.EqualTo(RoundPhase.Program));
