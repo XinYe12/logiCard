@@ -1,5 +1,50 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 16) — save draft: click-bug investigation, art pack research, first real asset landed
+
+Session pausing here — human is switching to another machine. Everything below is committed and pushed
+to `origin/master` as of this entry.
+
+**Move-click-fails-on-soil-ground bug — investigated, not yet root-caused.** Human reported move-clicks
+failing specifically on the Yard (soil-textured) floor, working fine elsewhere. Chased this hard via
+direct PlayMode diagnostics run in a disposable worktree (not committed, thrown away after): (1)
+raycast-to-planar conversion is correct at every tested Yard/Hall point; (2) re-tested across a full
+camera-rotation sweep (0°-270° plus negative yaw) — still correct everywhere, rotation isn't it; (3)
+direct Yard-interior-to-Yard-interior pathfinding via `TryAddWaypoint` also checked — perfectly direct
+routes, `ratio=1.00` against straight-line distance, no circuitous routing bug. All three of my strongest
+hypotheses are empirically ruled out. Root cause **not found** — most likely candidate left is something
+about the human's actual live window (DPI scaling, real aspect ratio) that batchmode's fixed small test
+resolution can't reproduce. Landed instead (`ec4a141`): `BoardInputController`'s click handling had two
+totally silent failure paths (raycast hits nothing; raycast hits something outside the board) — both now
+log and show a visible "can't do that" toast, and UI-absorbed clicks near the dock log too (debug-only,
+not a toast — that path fires on every normal HUD click). Next occurrence should be actually diagnosable
+from the console instead of a mystery. **Still open, needs the human to reproduce with the console visible
+next time it happens.**
+
+**Art pack research (`docs/ART_PACK_RESEARCH.md`, `PRODUCT_MEMORY.md` pending a decision row once
+purchases land) — merged.** Human said the look is "still a big disappointment" even after C58's recolor
+pass and asked to stop hand-building/tinting primitives, buy real asset packs instead, reference stays
+Link's Awakening. Delegated to a worktree (human ran it themselves via their own separate agent tooling —
+not spawned by me, per their explicit preference this session). Verdict: buy Synty POLYGON Heist + Office
++ City (~$75-100 on sale) + free SIMPLE Sky for clouds — full shopping list, license/commercial-ship
+terms, alternatives considered and rejected (ithappy Cartoon City, Kenney/KayKit, Mixamo), integration
+effort sketch per system. No purchase made by that research pass — human's call.
+
+**First real asset pack received and committed.** Human bought and imported an office prop pack —
+lands as `Assets/nappin/OfficeEssentialsPack/` (287 files, ~32MB: materials, models, prefabs, textures,
+a demo scene). Publisher is "nappin" (nappin.dev), not literally the Synty POLYGON Office Pack the
+research doc recommended — human's own purchasing call, same category (office interior dressing).
+**Received and committed, not yet integrated** — `BoardView`'s `Resources.Load("Interior/…")` calls
+still point at the old Quaternius set; wiring this pack into the actual board (desks/chairs/props
+replacing current `Assets/_Project/Art/Environment/Interior/` dressing) is unstarted follow-up work.
+Also picked up incidental Editor-driven changes from opening/inspecting the new pack: `QualitySettings`
+antialiasing `0→4`, a new Sentis scripting define symbol, and `Glass.mat` shader-keyword/blend-property
+normalization (harmless, Editor auto-correction, not manually touched).
+
+**Next session should start by:** (1) getting the human to reproduce the click bug with console open,
+(2) confirming whether more of the recommended pack list (Heist/City/SIMPLE Sky) also landed or is still
+pending, (3) starting real integration once the human confirms which packs are in hand.
+
 ## 2026-08-10 (continued 15) — vibrancy recolor pass + map-select UI merged (C58/C59)
 
 Human pushed back hard on the look ("big changes... Link's Awakening... vibrant... do not be so
