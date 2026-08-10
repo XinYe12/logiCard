@@ -1,22 +1,26 @@
 # Departments — Active Index
 
-**Updated:** 2026-08-10 — both real subagents finished and merged: reflection probes for wet floors
-(`feat/wet-surface-reflections`, `a531e90`) and Scout's re-outfit (`feat/scout-reoutfit`, `d5ee45e`,
-resolves **C56**). Both worker slots open again. Re-verified on the combined merge via a disposable
-worktree — EditMode 124/124, PlayMode 37/37. Core-gameplay work stays paused. **Still needs a human sighted
-pass** — neither change has been visually confirmed (no Editor/screenshot access in either agent session).
+**Updated:** 2026-08-10 — human reviewed a real screenshot and called out that reflections show no visible
+change and clouds are still the most obviously fake thing on screen. Integrator root-caused the reflection
+issue directly (probe `clearFlags` was never set, so probes rendered a mismatched/undefined environment
+instead of the actual dark-void background — fixed, awaiting fresh screenshot). One worker spun for real
+cloud/weather models (still primitive tinted spheres, explicitly marked temporary since Day 8). Core-
+gameplay work stays paused.
 **Ops constitution:** [`../PARALLEL_OPS.md`](../PARALLEL_OPS.md) · human-side playbook: [`../DIRECTING_AGENTS.md`](../DIRECTING_AGENTS.md)
 **Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md)
 **Human rollup:** [`../DRAFT_HANDOFF.md`](../DRAFT_HANDOFF.md)
 
 ## Capacity
 
-Integrator + up to **2** coding workers — **0 of 2 in use.** Both worktrees merged and closed out. Check
-`git worktree list` and `DRAFT_HANDOFF.md`'s top section before assuming this table is current.
+Integrator + up to **2** coding workers — **1 of 2 in use** (Integrator doing the reflection fix directly
+on the main tree instead of delegating it, per the human's explicit choice). Check `git worktree list` and
+`DRAFT_HANDOFF.md`'s top section before assuming this table is current.
 
 ## Active agents / worktrees
 
-_(none active — both worker slots closed out this pass, worktrees not yet deleted)_
+| Dept | Branch | Status file | Notes |
+|------|--------|--------------|-------|
+| Presentation (weather) | `feat/real-cloud-models` | `logiCard-ui-dock-polish` worktree (directory name stale) | Replace the flat tinted-sphere cloud placeholder with real textured/volumetric-reading clouds. Rain stays untouched. Brief: `REAL_CLOUD_MODELS_AGENT_BRIEF.md` at the worktree root. |
 | Rendering | `feat/wet-surface-reflections` | `logiCard-ui-dock-polish` worktree (directory name stale) | Reflection probes for wet board surfaces (SSR unavailable in this URP version); retune `BoardSurfaceMaterials`' wetness once real reflection exists. Brief: `WET_SURFACE_REFLECTIONS_AGENT_BRIEF.md` at the worktree root. |
 
 ## Ownership matrix (write locks)
