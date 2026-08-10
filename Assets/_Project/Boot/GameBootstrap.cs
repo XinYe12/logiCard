@@ -1,6 +1,7 @@
 using LogiCard.Audio;
 using LogiCard.Board;
 using LogiCard.Net;
+using LogiCard.Rendering;
 using LogiCard.Sim;
 using LogiCard.Timeline;
 using LogiCard.UI;
@@ -94,6 +95,7 @@ namespace LogiCard.Boot
 
             _phase = gameObject.AddComponent<RoundPhaseController>();
             _foley = gameObject.AddComponent<FoleyPlayer>();
+            gameObject.AddComponent<PhotoModeController>();
 
             BuildBoard();
             BuildPawns();
