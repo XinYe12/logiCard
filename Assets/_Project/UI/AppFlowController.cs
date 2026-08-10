@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using LogiCard.Board;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,6 +18,7 @@ namespace LogiCard.UI
             None,
             Boot,
             CharacterSelect,
+            MapSelect,
             Lobby,
             Waiting,
             Reveal,
@@ -33,16 +35,20 @@ namespace LogiCard.UI
         private GameObject _boot;
         private GameObject _characterSelect;
         private GameObject _lobby;
+        private GameObject _mapSelect;
         private GameObject _waiting;
         private GameObject _reveal;
         private GameObject _roundResult;
         private GameObject _matchEnd;
         private Text _characterDetail;
+        private Text _mapDetail;
         private Text _lobbyStatus;
         private Text _roundResultLabel;
         private Text _matchEndLabel;
         private SelectionGrid _characterGrid;
+        private SelectionGrid _mapGrid;
         private string _selectedArchetype = "Scout";
+        private MapId _selectedMapId = MapId.FreightYard;
         private bool _inMatch;
         private ModalDialog _openDialog;
 
@@ -66,6 +72,10 @@ namespace LogiCard.UI
 
         public bool IsInMatch => _inMatch;
 
+        public MapId SelectedMapId => _selectedMapId;
+
+        public event Action<MapId> MapSelected;
+
         public void Init(RectTransform canvasRoot, Font font)
         {
             _ui = new UiFactory(font);
@@ -74,6 +84,7 @@ namespace LogiCard.UI
 
             _boot = BuildBoot();
             _characterSelect = BuildCharacterSelect();
+            _mapSelect = BuildMapSelect();
             _lobby = BuildLobby();
             _waiting = BuildMessageScreen("WaitingScreen", "Simulating…");
             _reveal = BuildMessageScreen("RevealScreen", "REVEAL");
@@ -150,6 +161,7 @@ namespace LogiCard.UI
             Current = screen;
             SetActive(_boot, screen == Screen.Boot);
             SetActive(_characterSelect, screen == Screen.CharacterSelect);
+            SetActive(_mapSelect, screen == Screen.MapSelect);
             SetActive(_lobby, screen == Screen.Lobby);
             SetActive(_waiting, screen == Screen.Waiting);
             SetActive(_reveal, screen == Screen.Reveal);
@@ -208,10 +220,49 @@ namespace LogiCard.UI
             UiFactory.Stretch(_characterDetail.rectTransform, new Vector2(0.12f, 0.30f), new Vector2(0.88f, 0.46f));
 
             Button confirm = _ui.CreateButton(rt, "ConfirmCharacter", "CONFIRM", UiStyle.Accent, UiStyle.InkDark, 32,
-                () => Show(Screen.Lobby));
+                () => Show(Screen.MapSelect));
             UiFactory.Stretch(confirm.GetComponent<RectTransform>(), new Vector2(0.34f, 0.10f), new Vector2(0.66f, 0.24f));
 
             OnCharacterSelectionChanged(_characterGrid.SelectedId);
+            return screen;
+        }
+
+        private GameObject BuildMapSelect()
+        {
+            GameObject screen = CreateScreen("MapSelect");
+            RectTransform rt = screen.GetComponent<RectTransform>();
+
+            Text title = _ui.CreateText(rt, "Title", "MAP SELECT", 44, TextAnchor.MiddleCenter, UiStyle.Accent,
+                UiTextOverflow.SingleLine);
+            UiFactory.Stretch(title.rectTransform, new Vector2(0.1f, 0.84f), new Vector2(0.9f, 0.95f));
+
+            _mapGrid = SelectionGrid.Build(
+                _ui,
+                rt,
+                new[]
+                {
+                    new SelectionOption(MapId.FreightYard.ToString(), "FREIGHT YARD"),
+                    new SelectionOption(MapId.RailPlatform.ToString(), "RAIL PLATFORM"),
+                    new SelectionOption(MapId.VaultComplex.ToString(), "VAULT COMPLEX"),
+                },
+                new Vector2(0.14f, 0.50f),
+                new Vector2(0.86f, 0.78f),
+                columns: 3,
+                fontSize: 28);
+            _mapGrid.SelectionChanged += OnMapSelectionChanged;
+
+            _mapDetail = _ui.CreateText(rt, "MapDetail", string.Empty, 22, TextAnchor.MiddleCenter, UiStyle.Ink);
+            UiFactory.Stretch(_mapDetail.rectTransform, new Vector2(0.12f, 0.30f), new Vector2(0.88f, 0.46f));
+
+            Button confirm = _ui.CreateButton(rt, "ConfirmMap", "CONFIRM", UiStyle.Accent, UiStyle.InkDark, 32,
+                () =>
+                {
+                    MapSelected?.Invoke(_selectedMapId);
+                    Show(Screen.Lobby);
+                });
+            UiFactory.Stretch(confirm.GetComponent<RectTransform>(), new Vector2(0.34f, 0.10f), new Vector2(0.66f, 0.24f));
+
+            OnMapSelectionChanged(_mapGrid.SelectedId);
             return screen;
         }
 
@@ -354,6 +405,28 @@ namespace LogiCard.UI
                     ? "Juggernaut — Speed: slow · Agility: stance/shoot switch costs · Strength: doors faster"
                     : "Scout — Speed: fast · Agility: free stance/shoot switches · Strength: standard doors";
             }
+        }
+
+        private void OnMapSelectionChanged(string mapId)
+        {
+            if (string.IsNullOrEmpty(mapId))
+            {
+                return;
+            }
+
+            if (!Enum.TryParse(mapId, out MapId parsedMap))
+            {
+                return;
+            }
+
+            _selectedMapId = parsedMap;
+            _mapDetail.text = _selectedMapId switch
+            {
+                MapId.RailPlatform => "Rail Platform — narrow corridor, crawlspace flank, and elevated objective.",
+                MapId.VaultComplex => "Vault Complex — split entry, side rooms, and a deep vault objective.",
+                _ => "Freight Yard — open approach, hall chokepoint, and vault objective.",
+            };
+            MapSelected?.Invoke(_selectedMapId);
         }
 
         private GameObject CreateScreen(string name)

@@ -218,12 +218,18 @@ namespace LogiCard.UI
 
             _clock.TimeChanged += OnClockTime;
             _phase.PhaseChanged += OnPhaseChanged;
-            _input.QueueChanged += OnQueueChanged;
-            _input.ActionRejected += OnActionRejected;
+            if (_input != null)
+            {
+                _input.QueueChanged += OnQueueChanged;
+                _input.ActionRejected += OnActionRejected;
+            }
 
             OnPhaseChanged(_phase.Phase);
             OnClockTime(_clock.CurrentSeconds);
-            OnQueueChanged(_input.Program);
+            if (_input != null)
+            {
+                OnQueueChanged(_input.Program);
+            }
             RefreshMatchLabel();
         }
 
@@ -233,6 +239,23 @@ namespace LogiCard.UI
         public void BypassAppFlowForTests()
         {
             _appFlow?.BypassToMatch();
+        }
+
+        public void RegisterInput(BoardInputController input)
+        {
+            if (_input != null)
+            {
+                _input.QueueChanged -= OnQueueChanged;
+                _input.ActionRejected -= OnActionRejected;
+            }
+
+            _input = input;
+            if (_input != null)
+            {
+                _input.QueueChanged += OnQueueChanged;
+                _input.ActionRejected += OnActionRejected;
+                OnQueueChanged(_input.Program);
+            }
         }
 
         private void OnAppFlowEnteredMatch(bool viaRelay)
