@@ -1,5 +1,39 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 5) — stepped pawn animation dropped for smooth interpolation (C55)
+
+**Human noticed something real from a playtest screenshot** (`screenshots/image copy 2.png` — reflection
+progress visible, flagged as still needing more work): character movement stuttered noticeably while
+rain animated smoothly, and asked whether that's a game problem or their computer.
+
+**Diagnosed, not guessed:** `PawnView.ApplyTime` (`Assets/_Project/Board/PawnView.cs:44`, pre-fix) had a
+`StepIntervalSeconds = 1f/10f` real-time throttle on pose updates, added Day 10 (`d60f01d`) to implement
+`ART_DIRECTION.md` §2's "Stop-Motion Feel" pillar (`C29`) — required-for-ship stepped 8–12fps character
+motion, explicitly not a bug. Rain is an unthrottled Shuriken particle system, so the contrast was
+expected, not a sign of dropped frames. Confirmed this has nothing to do with the human's hardware — the
+throttle is deterministic and keyed off `Time.unscaledTime`, same on any machine.
+
+**Given the choice (keep / raise the rate / drop it), the human chose to drop it entirely.** Reasoning
+surfaced to them before they decided: the stop-motion pillar was authored against flat-shaded clay
+primitives and the toy-chibi character framing `C53` already superseded — now that materials/lighting/
+doors have moved toward photorealism, the same held-pose technique reads as a framerate bug rather than a
+deliberate style choice. Recorded as `C55` in `PRODUCT_MEMORY.md`.
+
+**Implemented directly in the main tree** (small, well-understood change, Integrator-owned `Board/`
+territory is otherwise closed out this pass): removed the throttle fields/logic from `PawnView.ApplyTime`
+— it now applies every call, matching the render framerate of everything else in the scene. `C23`'s "no
+root motion" rule is unaffected (still Host/ReplayTape-driven transforms, not an Animator). Removed the
+now-dead `WaitForPawnStepRelease()` PlayMode test helper and its 3 call sites; two tests that existed only
+to wait out the throttle no longer need to be coroutines (`[UnityTest] IEnumerator` → `[Test] void`).
+
+**Actually verified, not just self-reviewed** — Editor was still open/live on the main tree, so spun a
+disposable detached worktree (`logiCard-verify-c55`, created and removed same session) and ran real
+batchmode: **EditMode 124/124, PlayMode 37/37**, both green. Removed the worktree after.
+
+`ART_DIRECTION.md` §2 rewritten (old pillar kept in a collapsed `<details>` block, marked superseded, not
+deleted — this project's established convention); `PRODUCT_MEMORY.md` C29 cross-referenced to the new C55
+row; `TDD.md` §5 and `PAWN_ART_REWORK_PLAN.md`'s stale "stepped 8-12fps" mentions corrected.
+
 ## 2026-08-10 (continued 4) — both worker slots landed: real URP post-processing, real doors
 
 **`feat/urp-post-processing` merged** (`f2d9ca9`, worker commit `17db2bb`). Fixes every gap the URP
