@@ -103,6 +103,24 @@ namespace LogiCard.Board
             });
         }
 
+        /// <summary>
+        /// Rail Platform (map #2, MAP_RAIL_PLATFORM_AGENT_BRIEF.md): Approach (south platform, Yard)
+        /// and Objective (north platform, Vault) joined by a narrow Corridor (Hall). Crawlspace (west)
+        /// carries the Vent bypass; Pocket (east) is the open bulge off Approach that the Breach opens
+        /// into the Corridor from. Not yet wired into <see cref="ForId"/> — see that method's switch.
+        /// </summary>
+        public static MapLayout RailPlatform()
+        {
+            return new MapLayout(MapId.RailPlatform, new[]
+            {
+                new MapRoom("Approach", 0f, 0f, 8f, 4f, MapSurfaceRole.Yard),
+                new MapRoom("Crawlspace", 0f, 4f, 3f, 9f, MapSurfaceRole.Flank),
+                new MapRoom("Corridor", 3f, 4f, 5f, 9f, MapSurfaceRole.Hall),
+                new MapRoom("Pocket", 5f, 4f, 8f, 9f, MapSurfaceRole.Flank),
+                new MapRoom("Objective", 0f, 9f, 8f, 13f, MapSurfaceRole.Vault),
+            });
+        }
+
         public static MapLayout ForId(MapId id)
         {
             switch (id)
