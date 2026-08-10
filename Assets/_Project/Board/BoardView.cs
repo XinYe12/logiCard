@@ -29,15 +29,28 @@ namespace LogiCard.Board
 
         public ArenaBoard Model => _model;
 
+        /// <summary>Current map's room-rectangle data — see <see cref="MapLayout"/>. Set by
+        /// <see cref="Build(ArenaBoard, MapLayout)"/>; other room-bounds-dependent consumers
+        /// (<see cref="BoardReflectionProbes"/>) read this instead of restating their own literals.</summary>
+        public MapLayout Layout { get; private set; }
+
         public Vector3 CenterWorld => _model == null
             ? transform.position
             : WorldFromPlanar(new PlanarPosition(
                 (_model.MinX + _model.MaxX) * 0.5f,
                 (_model.MinY + _model.MaxY) * 0.5f));
 
+        /// <summary>Back-compat overload for every existing test/call site that doesn't care about
+        /// multi-map layout data — defaults to the original map's room rectangles.</summary>
         public void Build(ArenaBoard model)
         {
+            Build(model, MapDefinitions.FreightYard());
+        }
+
+        public void Build(ArenaBoard model, MapLayout layout)
+        {
             _model = model;
+            Layout = layout;
             _doorVisuals.Clear();
 
             for (int i = transform.childCount - 1; i >= 0; i--)
@@ -126,15 +139,30 @@ namespace LogiCard.Board
             var floors = new GameObject("RoomFloors");
             floors.transform.SetParent(transform, false);
 
-            // Yard — open south approach (y below 4).
-            PlaceFloorSlab(floors.transform, "YardFloor", 0f, 0f, 8f, 4f, BoardSurfaceMaterials.YardFloor);
-            // Hall — walled kill-box (x in [2,6], y in [4,7]).
-            PlaceFloorSlab(floors.transform, "HallFloor", 2f, 4f, 6f, 7f, BoardSurfaceMaterials.HallFloor);
-            // Vault — north objective room (y above 7).
-            PlaceFloorSlab(floors.transform, "VaultFloor", 0f, 7f, 8f, 10f, BoardSurfaceMaterials.VaultFloor);
-            // Unguarded flanks beside Hall.
-            PlaceFloorSlab(floors.transform, "FlankWest", 0f, 4f, 2f, 7f, BoardSurfaceMaterials.FlankFloor);
-            PlaceFloorSlab(floors.transform, "FlankEast", 6f, 4f, 8f, 7f, BoardSurfaceMaterials.FlankFloor);
+            // Room rectangles come from Layout (MapDefinitions) now, not restated per-map here —
+            // this used to be the first of three independent copies of the same room bounds
+            // (BoardReflectionProbes and GameBootstrap's wall placement being the other two).
+            IReadOnlyList<MapRoom> rooms = Layout.Rooms;
+            if (rooms != null)
+            {
+                for (int i = 0; i < rooms.Count; i++)
+                {
+                    MapRoom room = rooms[i].ClampTo(model);
+                    if (!room.IsValid)
+                    {
+                        continue;
+                    }
+
+                    PlaceFloorSlab(
+                        floors.transform,
+                        room.Name + "Floor",
+                        room.MinX,
+                        room.MinY,
+                        room.MaxX,
+                        room.MaxY,
+                        SurfaceMaterialFor(room.SurfaceRole));
+                }
+            }
 
             // Keep a thin structural slab under everything so raycasts always hit even if a zone
             // seam has a hairline gap (BoardInputController taps the ground collider).
@@ -149,6 +177,21 @@ namespace LogiCard.Board
                                                + new Vector3(0f, -0.06f, 0f);
             underlay.transform.localScale = new Vector3(width * WorldScale, 0.08f, depth * WorldScale);
             underlay.GetComponent<MeshRenderer>().sharedMaterial = BoardSurfaceMaterials.StrataDirt;
+        }
+
+        private static Material SurfaceMaterialFor(MapSurfaceRole role)
+        {
+            switch (role)
+            {
+                case MapSurfaceRole.Yard:
+                    return BoardSurfaceMaterials.YardFloor;
+                case MapSurfaceRole.Hall:
+                    return BoardSurfaceMaterials.HallFloor;
+                case MapSurfaceRole.Vault:
+                    return BoardSurfaceMaterials.VaultFloor;
+                default:
+                    return BoardSurfaceMaterials.FlankFloor;
+            }
         }
 
         private void PlaceFloorSlab(

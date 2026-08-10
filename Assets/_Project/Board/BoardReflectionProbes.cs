@@ -18,13 +18,6 @@ namespace LogiCard.Board
     /// </summary>
     public sealed class BoardReflectionProbes : MonoBehaviour
     {
-        // Room split mirrors BoardView.PlaceRoomFloors exactly — those bounds are gameplay-authored
-        // in GameBootstrap.BuildBoard's wall placement (walls at y=4/y=7, x=2/x=6), not independently
-        // invented here. Keep these in sync if that layout changes.
-        private static readonly RoomBounds Yard = new RoomBounds(0f, 0f, 8f, 4f);
-        private static readonly RoomBounds Hall = new RoomBounds(2f, 4f, 6f, 7f);
-        private static readonly RoomBounds Vault = new RoomBounds(0f, 7f, 8f, 10f);
-
         private const int CubemapResolution = 128;
         private const float BlendDistance = 1.0f;
 
@@ -38,8 +31,10 @@ namespace LogiCard.Board
         private static readonly Color VoidBackgroundColor = new Color(0.035f, 0.04f, 0.055f);
 
         /// <summary>
-        /// Build (or rebuild) one probe per room over <paramref name="board"/>. Safe to call once
-        /// from bootstrap after the board + lighting exist; destroys prior children first.
+        /// Build (or rebuild) one probe per room in <paramref name="board"/>'s <see cref="MapLayout"/>
+        /// (<see cref="BoardView.Layout"/> — set by whichever map's <c>Build</c> call ran, not
+        /// restated here independently the way this used to hardcode Yard/Hall/Vault). Safe to call
+        /// once from bootstrap after the board + lighting exist; destroys prior children first.
         /// </summary>
         public void Build(BoardView board)
         {
@@ -48,18 +43,20 @@ namespace LogiCard.Board
                 DestroyImmediate(transform.GetChild(i).gameObject);
             }
 
-            if (board == null || board.Model == null)
+            if (board == null || board.Model == null || board.Layout.Rooms == null)
             {
                 return;
             }
 
             ArenaBoard model = board.Model;
-            PlaceRoomProbe(board, "Probe_Yard", Yard.ClampTo(model));
-            PlaceRoomProbe(board, "Probe_Hall", Hall.ClampTo(model));
-            PlaceRoomProbe(board, "Probe_Vault", Vault.ClampTo(model));
+            for (int i = 0; i < board.Layout.Rooms.Count; i++)
+            {
+                MapRoom room = board.Layout.Rooms[i].ClampTo(model);
+                PlaceRoomProbe(board, "Probe_" + room.Name, room);
+            }
         }
 
-        private void PlaceRoomProbe(BoardView board, string name, RoomBounds room)
+        private void PlaceRoomProbe(BoardView board, string name, MapRoom room)
         {
             if (!room.IsValid)
             {
@@ -97,38 +94,6 @@ namespace LogiCard.Board
             probe.farClipPlane = 60f;
             probe.size = new Vector3(width, board.WallHeight * 3.5f, depth);
             probe.center = new Vector3(0f, board.WallHeight * 1.1f, 0f);
-        }
-
-        private readonly struct RoomBounds
-        {
-            public float MinX { get; }
-
-            public float MinY { get; }
-
-            public float MaxX { get; }
-
-            public float MaxY { get; }
-
-            public RoomBounds(float minX, float minY, float maxX, float maxY)
-            {
-                MinX = minX;
-                MinY = minY;
-                MaxX = maxX;
-                MaxY = maxY;
-            }
-
-            public bool IsValid => MaxX > MinX && MaxY > MinY;
-
-            /// <summary>Clamp the authored room rectangle to whatever board is actually built (defensive
-            /// only — the real board always matches these bounds; guards a differently-sized model).</summary>
-            public RoomBounds ClampTo(ArenaBoard model)
-            {
-                float minX = Mathf.Clamp(MinX, model.MinX, model.MaxX);
-                float maxX = Mathf.Clamp(MaxX, model.MinX, model.MaxX);
-                float minY = Mathf.Clamp(MinY, model.MinY, model.MaxY);
-                float maxY = Mathf.Clamp(MaxY, model.MinY, model.MaxY);
-                return new RoomBounds(minX, minY, maxX, maxY);
-            }
         }
     }
 }

@@ -176,20 +176,51 @@ namespace LogiCard.Boot
             Debug.Log($"[logiCard] Round {_matchClock.RoundIndex}: {_matchClock.CurrentChooser} picks the Time Card.");
         }
 
+        // No map-select UI yet (docs/DRAFT_HANDOFF.md's map-roster plan flags this as an explicit
+        // follow-up, not attempted here) — one constant default until that exists.
+        private const MapId ActiveMap = MapId.FreightYard;
+
         private void BuildBoard()
+        {
+            BuildBoard(ActiveMap);
+        }
+
+        private void BuildBoard(MapId mapId)
         {
             var boardGo = new GameObject("Board");
             boardGo.transform.SetParent(transform, false);
+            _board = boardGo.AddComponent<BoardView>();
 
-            // Multi-room layout (C45, 2026-08-08 — supersedes the earlier single-room [0,4]x[0,4] board,
-            // C39 item 7): Yard (open, attacker spawn) -> Hall (walled kill-box, Door #1 frontal / Door #2
-            // rear) -> Vault (open), with unguarded flank corridors on either side of Hall (x<2 / x>6).
-            // Hall's side walls are solid, so a defender holed up inside has zero LoS into either flank —
-            // flanking is safe by construction, not AI restraint. Gives the Scout/Juggernaut Sprint-speed
-            // asymmetry (1s vs 2s per tile) an actual tactical lever: short-but-guarded center vs.
-            // longer-but-safe flank. Both doors start Closed (Phase 6 / CONTINUOUS_PIVOT_PLAN.md); the
-            // scripted defender opens Door #1 before its Snap so AmbushPoint LoS works. Door #2 is a
-            // player-discoverable depth objective the scripted defender never touches.
+            ArenaBoard model;
+            switch (mapId)
+            {
+                case MapId.FreightYard:
+                    model = BuildFreightYardGeometry();
+                    break;
+                default:
+                    // RailPlatform/VaultComplex land in a follow-up checkpoint — fail loudly instead
+                    // of silently falling back to the wrong map's geometry.
+                    throw new System.NotImplementedException(
+                        $"GameBootstrap.BuildBoard({mapId}): this map's geometry isn't authored yet.");
+            }
+
+            // C53: room-zoned wet-dusk surfaces + terrain edge — palette owned by BoardSurfaceMaterials.
+            _board.Build(model, MapDefinitions.ForId(mapId));
+        }
+
+        /// <summary>
+        /// Multi-room layout (C45, 2026-08-08 — supersedes the earlier single-room [0,4]x[0,4] board,
+        /// C39 item 7): Yard (open, attacker spawn) -> Hall (walled kill-box, Door #1 frontal / Door #2
+        /// rear) -> Vault (open), with unguarded flank corridors on either side of Hall (x&lt;2 / x&gt;6).
+        /// Hall's side walls are solid, so a defender holed up inside has zero LoS into either flank —
+        /// flanking is safe by construction, not AI restraint. Gives the Scout/Juggernaut Sprint-speed
+        /// asymmetry (1s vs 2s per tile) an actual tactical lever: short-but-guarded center vs.
+        /// longer-but-safe flank. Both doors start Closed (Phase 6 / CONTINUOUS_PIVOT_PLAN.md); the
+        /// scripted defender opens Door #1 before its Snap so AmbushPoint LoS works. Door #2 is a
+        /// player-discoverable depth objective the scripted defender never touches.
+        /// </summary>
+        private static ArenaBoard BuildFreightYardGeometry()
+        {
             var model = new ArenaBoard(0f, 0f, 8f, 10f, new[] { Floor.Ground });
 
             model.RegisterWall(new Segment(new PlanarPosition(2f, 4f), new PlanarPosition(3.75f, 4f)));
@@ -209,9 +240,7 @@ namespace LogiCard.Boot
                 DoorState.Closed,
                 displayName: "Door #2"));
 
-            _board = boardGo.AddComponent<BoardView>();
-            // C53: room-zoned wet-dusk surfaces + terrain edge — palette owned by BoardSurfaceMaterials.
-            _board.Build(model);
+            return model;
         }
 
         private void BuildPawns()
