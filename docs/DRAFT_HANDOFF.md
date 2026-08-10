@@ -1,5 +1,28 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 12) — decision: not pushing character material fidelity blind
+
+**Considered and deliberately declined**, logging the reasoning per the human's "notify me of decisions"
+instruction rather than just silently skipping it. The character research pass (earlier today) left the
+flat-material/low-poly fidelity gap explicitly open, framed as something to close "if the human wants to"
+— not an auto-continue item the way C56's outfit swap was. Two real considerations against pushing it now:
+
+1. **The source pack ships no textures at all** (confirmed in the research findings) — a real fidelity
+   improvement isn't a wiring fix, it's either sourcing new assets (Mixamo or a base-character pack,
+   options B/C — both explicitly flagged as needing a human art-direction call, not just an asset swap)
+   or inventing new procedural detail from scratch, either way a real design decision.
+2. **This session has already shipped two visually-broken changes that passed every batchmode check**
+   (clouds rendering as solid black rectangles, window glass staying opaque) — both looked fine by every
+   automated signal and were both real, embarrassing misses caught only by an actual human look. Tweaking
+   pawn materials blind, with zero visual feedback available for the next two hours, risks a third instance
+   of exactly that failure mode — and unlike the reflection/cloud/glass fixes (which had objective,
+   inspectable ground truth: a serialized property either says Opaque or Transparent), material "fidelity"
+   is a subjective aesthetic judgment with no code-level ground truth to verify against.
+
+**Decision: hold this open, don't guess.** Redirecting the remaining autonomous window to verifiable work
+(bug-hunting via code/asset inspection, doc/schedule hygiene) instead of speculative visual tuning that
+can't be checked until a human looks at it.
+
 ## 2026-08-10 (continued 11) — orthographicSize resolved analytically, no change needed
 
 **Standing open item since checkpoint 3** (`orthographicSize = 5.0`, last human-verified 2026-08-09
