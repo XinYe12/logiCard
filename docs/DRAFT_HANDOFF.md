@@ -1,5 +1,40 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued) — Compiler error fixed; smooth camera rotation; second worker spun
+
+**Compiler error found and fixed without batchmode.** User reported "still compiler error" after the first
+camera-rotation commit. Editor was locked (open on the main tree) so batchmode wasn't available — read
+`Logs/Editor.log` directly instead (grepped for `error CS`) and found the real cause in seconds: the new
+`BoardCameraRigTests.cs` (EditMode) used `LogiCard.Board` types, but `LogiCard.Tests.EditMode.asmdef` never
+referenced that assembly — no prior EditMode test needed it. Added the reference, confirmed via the same log
+grep that it was the only error (appeared 3x from repeated recompile attempts, single root cause). **Worth
+remembering for next time an Editor is locked and something won't compile:** `Logs/Editor.log` in the project
+root has the real compiler output, no batchmode or session interruption needed.
+
+**Camera rotation rebuilt — smooth, not discrete.** Direct feedback: "camera rotation needs to be smoothly
+rotated, not with button to rotate at a few fixed angle. User cannot rotate the camera to the bottom of the
+map, it has to be on top of the map." `BoardCameraRig.Step(int)` (8 fixed 45° presets) replaced with
+`RotateBy(float)` (any delta, no snapping), driven by right-mouse-drag (`Input.GetMouseButton(1)`, matching
+the legacy Input Manager this project already uses elsewhere — not the new Input System package). Right
+button specifically chosen to not collide with left-click board interactions. Pitch stays exactly fixed at
+52° — this is the actual mechanism satisfying "cannot rotate to the bottom": since yaw only rotates around the
+vertical axis, the camera's height above the board is a fixed function of pitch and distance regardless of
+yaw, so it can never end up underneath. Added a test sweeping a full 360° rotation in 15° increments asserting
+the camera's world-space height never changes, not just spot-checking a couple of angles. The old "ROTATE
+VIEW" button is gone (right-drag replaces its function); a small non-interactive top-strip hint
+("RIGHT-DRAG TO ROTATE VIEW") replaces it since the gesture isn't self-discoverable.
+
+**Second worker spun via `/parallel-development`** (user explicitly asked: "make use of the other
+worktrees"). `feat/ui-dock-polish` — a readability/polish pass on the new bottom-dock 3-column layout, the
+Adrenaline primary-slot swap, Character Select grid, and Quit confirm dialog, none of which have had an actual
+look since landing. No overlap with the active `feat/env-lookfeel-overhaul` worktree (Board/Art territory) or
+the Integrator's own main-tree work (`GameBootstrap.cs`/`BoardCameraRig.cs`). Both worker slots now in use.
+
+**Recurring pattern worth fixing at the source:** `image.png` has now been overwritten by a playtest
+screenshot and restored from `screenshots/image.png` three separate times this session. Each time preserved
+correctly (nothing lost), but flagging again in case there's a workflow change that would avoid it — e.g.
+saving screenshots under any other filename before pasting.
+
 ## 2026-08-10 — Dock moved to bottom band; environment checkpoint 2 started
 
 **Direct playtest feedback, two points:** (1) "cannot stand" the right-edge dock, wanted it at the bottom for

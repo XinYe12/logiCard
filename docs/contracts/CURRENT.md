@@ -2,16 +2,30 @@
 
 **Wave:** Look-and-feel + UI, started 2026-08-09. Core-gameplay/networking work explicitly paused by the
 human until this wave lands — see `SCHEDULE.md`'s Cadence section. **UI side landed and merged twice**
-(`feat/ui-component-system`, then a same-session dock move from right-edge to bottom band). **Environment
-side: checkpoint 1 merged 2026-08-09; checkpoint 2 (asset packs/door models/character rework) started
-2026-08-10** on human go-ahead ("still bad, continue with the implementation") without an explicit
-hero-shot-vs-readability answer — proceeding on the assumption that more richness is wanted, flagged as an
-inference, not confirmed.
+(`feat/ui-component-system`, then a same-session dock move right-edge → bottom band); **`feat/ui-dock-polish`**
+now spun for a readability pass on that new layout, never verified since it landed. **Environment side:**
+checkpoint 1 merged 2026-08-09; checkpoint 2 (asset packs/door models/character rework) in flight since
+2026-08-10 on an inferred "more richness" direction, not explicitly confirmed. **Integrator also landed, in
+the main tree directly:** camera rotation (`BoardCameraRig`, smooth right-drag, superseding an earlier
+discrete-step version per direct feedback) and an interim cloud-size fix.
 **Updated:** 2026-08-10 by Integrator.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
+
+### `HudDockHeight` ↔ camera viewport-rect + `BoardCameraRig`, live coupling
+
+- **Owner (definition):** UI worker (`feat/ui-dock-polish`) — may propose changing `ProgramHud.HudDockHeight`
+  itself if the readability pass finds the dock genuinely needs to be taller/shorter, but must flag it in
+  their report-back rather than changing it silently (their brief says so explicitly).
+- **Owner (consumer, wiring):** Integrator — `GameBootstrap.cs`'s `cam.rect` reads the constant symbolically,
+  so a value change alone doesn't need a rewrite, but Integrator re-verifies the framing either way before
+  merging.
+- **Also touches:** `BoardCameraRig` (new, Integrator-owned, `Assets/_Project/Board/BoardCameraRig.cs`) reads
+  `_board.CenterWorld` and applies yaw independent of `HudDockHeight` — no direct coupling, but both affect
+  what's visible on screen simultaneously, worth knowing if either worker is confused by unexpected framing.
+- **Merge status:** not yet landed — worktree just spun up.
 
 ### Camera viewport-rect, bottom-band shape (closed 2026-08-10)
 
