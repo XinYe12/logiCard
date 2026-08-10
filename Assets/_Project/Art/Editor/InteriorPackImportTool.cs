@@ -147,7 +147,6 @@ namespace LogiCard.Art.Editor
                 return;
             }
 
-            material.SetOverrideTag("RenderType", "Transparent");
             if (material.HasProperty("_Surface"))
             {
                 material.SetFloat("_Surface", 1f); // 1 = Transparent
@@ -173,9 +172,15 @@ namespace LogiCard.Art.Editor
                 material.SetInt("_ZWrite", 0);
             }
 
+            // NOTE: _ALPHABLEND_ON (used by BoardWeatherPocket.ConfigureAlphaBlend) is a *particle*
+            // shader keyword — this material is Universal Render Pipeline/Lit, whose surface-type
+            // keyword is _SURFACE_TYPE_TRANSPARENT. Using the wrong one is silently ineffective
+            // (Unity just files it under the material's own m_InvalidKeywords, no error) — caught by
+            // inspecting the regenerated .mat directly after the first attempt, not assumed correct.
             material.DisableKeyword("_ALPHATEST_ON");
-            material.EnableKeyword("_ALPHABLEND_ON");
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.SetOverrideTag("RenderType", "Transparent");
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
 
             // Real glass should also actually let some light through, not just stop occluding
