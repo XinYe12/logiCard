@@ -197,9 +197,13 @@ namespace LogiCard.Boot
                 case MapId.FreightYard:
                     model = BuildFreightYardGeometry();
                     break;
+                case MapId.RailPlatform:
+                    model = BuildRailPlatformGeometry();
+                    break;
+                case MapId.VaultComplex:
+                    model = BuildVaultComplexGeometry();
+                    break;
                 default:
-                    // RailPlatform/VaultComplex land in a follow-up checkpoint — fail loudly instead
-                    // of silently falling back to the wrong map's geometry.
                     throw new System.NotImplementedException(
                         $"GameBootstrap.BuildBoard({mapId}): this map's geometry isn't authored yet.");
             }
@@ -258,6 +262,80 @@ namespace LogiCard.Boot
                 new Segment(new PlanarPosition(3.75f, 7f), new PlanarPosition(4.25f, 7f)),
                 DoorState.Closed,
                 displayName: "Door #2"));
+
+            return model;
+        }
+
+        /// <summary>
+        /// Rail Platform (map #2, authored per MAP_RAIL_PLATFORM_AGENT_BRIEF.md): long, open
+        /// sightlines — the opposite emphasis from Freight Yard's short-guarded-center /
+        /// long-safe-flank (C45), not a harder or easier version of it. Two open platforms — Approach
+        /// (south, attacker spawn, y 0-4) and Objective (north, defender spawn, y 9-13) — joined by a
+        /// narrow Corridor (x 3-5, y 4-9: 2 units wide, 5 units long, longer than Hall's 3) with its
+        /// own Standard door at each end ("Corridor Door South" / "Corridor Door North") so the
+        /// corridor can be sealed off from either platform independently, unlike Freight Yard's single
+        /// continuous Hall. A narrow Crawlspace runs down the west side (x 0-3, y 4-9), open at both
+        /// platform mouths (y=4, y=9) but gated mid-span by a single Vent grate (y 6.5) — the only
+        /// route connecting the two platforms directly, bypassing the corridor and both its doors
+        /// entirely; the long way around, but skips the guarded middle, rewarding a fast exposed flank
+        /// (the Scout side of the Sprint-speed asymmetry, same lever C45 built for Freight Yard,
+        /// expressed differently here). An open Pocket bulges east off Approach (x 5-8, y 4-9, freely
+        /// reachable from the south platform, dead-ended at the north by a solid wall against
+        /// Objective) with a single Breach on the corridor's east wall (y 6.3-6.7) — a third,
+        /// permanent, one-time-cost route into/out of the corridor once paid for, same mechanic as
+        /// Freight Yard's Breach. The corridor's west wall (x=3) stays fully solid — Crawlspace and
+        /// Corridor are adjacent but never directly connect, since the whole point of the Crawlspace is
+        /// bypassing the corridor, not feeding into it.
+        /// </summary>
+        private static ArenaBoard BuildRailPlatformGeometry()
+        {
+            var model = new ArenaBoard(0f, 0f, 8f, 13f, new[] { Floor.Ground });
+
+            // Corridor's south doorway (Approach <-> Corridor), Standard door centered on the
+            // corridor's x-midline (x=4).
+            model.RegisterWall(new Segment(new PlanarPosition(3f, 4f), new PlanarPosition(3.75f, 4f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(3.75f, 4f), new PlanarPosition(4.25f, 4f)),
+                DoorState.Closed,
+                displayName: "Corridor Door South"));
+            model.RegisterWall(new Segment(new PlanarPosition(4.25f, 4f), new PlanarPosition(5f, 4f)));
+
+            // Corridor's north doorway (Corridor <-> Objective), same shape.
+            model.RegisterWall(new Segment(new PlanarPosition(3f, 9f), new PlanarPosition(3.75f, 9f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(3.75f, 9f), new PlanarPosition(4.25f, 9f)),
+                DoorState.Closed,
+                displayName: "Corridor Door North"));
+            model.RegisterWall(new Segment(new PlanarPosition(4.25f, 9f), new PlanarPosition(5f, 9f)));
+
+            // Pocket's north edge is sealed off from Objective — Pocket only ever reaches the
+            // corridor via the Breach below, never straight through to the objective platform.
+            model.RegisterWall(new Segment(new PlanarPosition(5f, 9f), new PlanarPosition(8f, 9f)));
+
+            // Corridor west wall: fully solid, no Vent/Breach on this side.
+            model.RegisterWall(new Segment(new PlanarPosition(3f, 4f), new PlanarPosition(3f, 9f)));
+
+            // Corridor east wall split around a Breach (permanent third route once paid for, mirrors
+            // Freight Yard's Cracked Wall — the UI never offers Close again for this one, see
+            // ProgramHud.RefreshDoorPrompt).
+            model.RegisterWall(new Segment(new PlanarPosition(5f, 4f), new PlanarPosition(5f, 6.3f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(5f, 6.3f), new PlanarPosition(5f, 6.7f)),
+                DoorState.Closed,
+                displayName: "Cracked Rail Wall",
+                kind: DoorKind.Breach));
+            model.RegisterWall(new Segment(new PlanarPosition(5f, 6.7f), new PlanarPosition(5f, 9f)));
+
+            // Vent grate mid-span in the Crawlspace (x 0-3) — the crawlspace is already open at both
+            // platform mouths (y=4, y=9), so this single gate is the only thing standing between
+            // Approach and Objective along this route.
+            model.RegisterWall(new Segment(new PlanarPosition(0f, 6.5f), new PlanarPosition(1.3f, 6.5f)));
+            model.RegisterDoor(new Door(
+                new Segment(new PlanarPosition(1.3f, 6.5f), new PlanarPosition(1.7f, 6.5f)),
+                DoorState.Closed,
+                displayName: "Vent Grate",
+                kind: DoorKind.Vent));
+            model.RegisterWall(new Segment(new PlanarPosition(1.7f, 6.5f), new PlanarPosition(3f, 6.5f)));
 
             return model;
         }
@@ -357,11 +435,36 @@ namespace LogiCard.Boot
 
         private void BuildPawns()
         {
-            // Column-aligned with Hall's spine (C45 multi-room layout) — attacker starts at the south
-            // edge of the Yard, defender spawns inside Hall near its north wall.
-            var attackerHome = new PlanarPosition(4f, 0f);
             const float attackerSecondsPerTile = 1f;
-            var defenderSpawn = new PlanarPosition(4f, 6f);
+            PlanarPosition attackerHome;
+            PlanarPosition defenderSpawn;
+            System.Func<LogiCard.Net.TimelinePayload> defenderPayloadBuilder;
+
+            switch (ActiveMap)
+            {
+                case MapId.RailPlatform:
+                    // Approach's south edge (attacker), Objective's interior ~2 units north of
+                    // Corridor Door North (defender) — same offset pattern as Freight Yard below.
+                    attackerHome = new PlanarPosition(4f, 0f);
+                    defenderSpawn = new PlanarPosition(4f, 11f);
+                    defenderPayloadBuilder = BuildRailPlatformDefenderPayload;
+                    break;
+                case MapId.VaultComplex:
+                    // Entry's south edge, centered on that room's own [0,4] width (attacker), Vault's
+                    // interior ~1.4 units north of Door #4 (defender).
+                    attackerHome = new PlanarPosition(2f, 0f);
+                    defenderSpawn = new PlanarPosition(6f, 8f);
+                    defenderPayloadBuilder = BuildVaultComplexDefenderPayload;
+                    break;
+                case MapId.FreightYard:
+                default:
+                    // Column-aligned with Hall's spine (C45 multi-room layout) — attacker starts at
+                    // the south edge of the Yard, defender spawns inside Hall near its north wall.
+                    attackerHome = new PlanarPosition(4f, 0f);
+                    defenderSpawn = new PlanarPosition(4f, 6f);
+                    defenderPayloadBuilder = BuildDefenderPayload;
+                    break;
+            }
 
             // Speeds already match the Scout/Juggernaut CharacterData presets (1s vs 2s per tile) —
             // the visual build follows the same archetype so silhouette and movement read together.
@@ -374,7 +477,7 @@ namespace LogiCard.Boot
             _playback = gameObject.AddComponent<RoundPlayback>();
             _playback.Init(_board, _clock, _phase, _foley);
             _playback.Register(AttackerPawnId, attacker, attackerHome, () => _attackerInput.Program.Build());
-            _playback.Register(DefenderPawnId, defender, defenderSpawn, BuildDefenderPayload);
+            _playback.Register(DefenderPawnId, defender, defenderSpawn, defenderPayloadBuilder);
 
             Debug.Log($"[logiCard] Attacker spawn {attackerHome}; defender spawn {defenderSpawn}.");
         }
@@ -428,6 +531,36 @@ namespace LogiCard.Boot
             TryScriptDoor(program, DoorAction.Open);
             TryScriptShoot(program, new PlanarPosition(6f, 4f));
             TryScriptMove(program, new PlanarPosition(6f, 6.6f));
+
+            return program.Build();
+        }
+
+        /// <summary>
+        /// Rail Platform's scripted defender (not wired into <see cref="BuildDefenderPayload"/>'s
+        /// dispatch yet — the Integrator does that at merge time, per
+        /// MAP_RAIL_PLATFORM_AGENT_BRIEF.md). Approaches Corridor Door North from the Objective
+        /// platform, opens it, then Hold Angles straight down the corridor's spine: origin (4, 9.4) to
+        /// aim (4, 4.6) is a ~4.8-unit lane covering nearly the corridor's full 5-unit length — the
+        /// long-sightline ambush this map is built around, the opposite of Freight Yard's short Snap
+        /// through Door #1. Never touches the Vent or the Breach — same "scripted AI leaves the
+        /// player-discoverable depth routes alone" restraint C45 used for Freight Yard's Door #2.
+        /// </summary>
+        private LogiCard.Net.TimelinePayload BuildRailPlatformDefenderPayload()
+        {
+            PlanarPosition start = _playback.PositionOf(DefenderPawnId);
+            float budget = _matchClock.RoundAllotment;
+            var program = new PawnProgram(start, DefenderSecondsPerTile, budget, StanceType.Walk, _board.Model);
+
+            // Approach Corridor Door North from inside Objective (0.4 units from the door segment,
+            // well within InteractRadius 0.7), open it, then Hold Angle down the corridor centerline
+            // without crossing the threshold — the door being Open is what makes the shot's LoS legal.
+            // Corridor Door North is always the nearest door from this approach (0.4 vs. the next
+            // nearest, the Breach, at ~3.07), so TryGetNearestDoor(..., float.MaxValue) inside
+            // TryScriptDoor still resolves it correctly with all four doors on the board.
+            TryScriptMove(program, new PlanarPosition(4f, 9.4f));
+            TryScriptDoor(program, DoorAction.Open);
+            program.SetShootMode(ShootMode.HoldAngle);
+            TryScriptShoot(program, new PlanarPosition(4f, 4.6f));
 
             return program.Build();
         }

@@ -104,6 +104,24 @@ namespace LogiCard.Board
         }
 
         /// <summary>
+        /// Rail Platform (map #2, MAP_RAIL_PLATFORM_AGENT_BRIEF.md): Approach (south platform, Yard)
+        /// and Objective (north platform, Vault) joined by a narrow Corridor (Hall). Crawlspace (west)
+        /// carries the Vent bypass; Pocket (east) is the open bulge off Approach that the Breach opens
+        /// into the Corridor from. Not yet wired into <see cref="ForId"/> — see that method's switch.
+        /// </summary>
+        public static MapLayout RailPlatform()
+        {
+            return new MapLayout(MapId.RailPlatform, new[]
+            {
+                new MapRoom("Approach", 0f, 0f, 8f, 4f, MapSurfaceRole.Yard),
+                new MapRoom("Crawlspace", 0f, 4f, 3f, 9f, MapSurfaceRole.Flank),
+                new MapRoom("Corridor", 3f, 4f, 5f, 9f, MapSurfaceRole.Hall),
+                new MapRoom("Pocket", 5f, 4f, 8f, 9f, MapSurfaceRole.Flank),
+                new MapRoom("Objective", 0f, 9f, 8f, 13f, MapSurfaceRole.Vault),
+            });
+        }
+
+        /// <summary>
         /// Vault Complex (map #3) room rectangles — see <c>GameBootstrap.BuildVaultComplexGeometry()</c>
         /// for the wall/door numerics and full tactical rationale. Five small rooms tiled across
         /// [0,8]x[0,9] in a real 2x3 lattice: Entry (attacker spawn) branches into Courtyard (east,
@@ -128,9 +146,11 @@ namespace LogiCard.Board
             {
                 case MapId.FreightYard:
                     return FreightYard();
+                case MapId.RailPlatform:
+                    return RailPlatform();
+                case MapId.VaultComplex:
+                    return VaultComplex();
                 default:
-                    // RailPlatform/VaultComplex land in a follow-up checkpoint (docs/DRAFT_HANDOFF.md) —
-                    // fail loudly instead of silently substituting the wrong map's geometry.
                     throw new System.NotImplementedException(
                         $"MapDefinitions.ForId({id}): this map's layout isn't authored yet.");
             }
