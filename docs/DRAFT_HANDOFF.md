@@ -1,5 +1,53 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 4) — both worker slots landed: real URP post-processing, real doors
+
+**`feat/urp-post-processing` merged** (`f2d9ca9`, worker commit `17db2bb`). Fixes every gap the URP
+audit found: `LogiCardVolumeProfile.asset` wired into `LogiCardURP.asset`'s `m_VolumeProfile` (ACES
+tonemap, cool-filter color grading, restrained bloom on warm glass/practicals, vignette), SSAO renderer
+feature added (`m_RendererFeatures` was `[]`), MSAA 1→4, `m_AdditionalLightShadowsSupported` 0→1 (so the
+checkpoint-2 point-light practicals actually cast the soft shadows they were already configured for),
+`m_SoftShadowsSupported` 0→1, `m_ShadowCascadeCount` 1→2. Also shipped the C54 photo-mode stretch goal:
+`PhotoModeController` (new `Assets/_Project/Rendering/`) swaps the scene's Diorama Volume between the
+live readability grade and a stronger hero-shot profile (`LogiCardVolumeProfile_Photo.asset`) on `F9`.
+SSR investigated and found infeasible in this URP version (17.5.0, no SSR renderer feature
+package-side) — wet-street reflections still need probes or a planar reflection later, not done here.
+Scoped `GameBootstrap.cs` touch (2 lines: one `using`, one `AddComponent` call) matched the brief exactly.
+
+**`feat/env-checkpoint3-doors` merged** (`0acdbef`, 2 worker commits). Imports the Quaternius Ultimate
+House Interior Pack (CC0, C54's chosen pack) via a new `InteriorPackImportTool.cs` (same FBX→URP/Lit
+pattern as `PawnImportTool`), replaces the tinted-box door placeholders with real fitted door meshes —
+hinge swings ~95° open, and the standing green/red state tint is preserved, still driven by the
+authoritative `Door` model state via `ApplyDoorVisualState`, not inferred — and swaps Yard/Hall/Vault's
+primitive cube dressing for real cabinets, shelves, tables, chairs, window frames, and ceiling lights.
+Falls back to the old tinted-box/cube behavior if the imported prefabs aren't found (keeps EditMode tests
+green without needing `Resources.Load` to succeed on a synthetic board). Camera/`orthographicSize`
+untouched per C54 — worker flagged it as possibly needing a look once doors are actually seen, not
+retuned blind. `THIRD_PARTY.md` updated: Quaternius selected and imported, KayKit rejected.
+
+**Both merges were clean, no conflicts** — despite both branches independently touching
+`Assets/_Project/Boot/GameBootstrap.cs` (URP: 2-line scoped addition; doors: none in the end) and one
+touching `BoardView.cs` on top of the other's fork point, git's 3-way merge resolved everything
+correctly. Each worker's own doc edits (stale-base branch-divergence artifacts, same pattern as the
+prior two merges) resolved back to master's current docs with zero diff — confirmed before committing,
+not assumed.
+
+**Batchmode not independently re-run on `master` post-merge** — Editor still open/live, same recurring
+constraint. Both workers reported clean runs on their own branches (URP: EditMode 124/124, PlayMode
+37/37; doors: EditMode 124/124, PlayMode 37/37) via their own batchmode jobs (not self-reported without
+evidence — actual `Finished Run ... batchmode` tool results). Self-reviewed both diffs directly instead
+of re-running: URP asset diff matches the audit finding line-for-line, `PhotoModeController.cs` is
+defensive (null-checks missing resources, logs rather than throws), door mesh code preserves the
+door-state-drives-tint contract and strips colliders consistent with C40. Checked `Logs/Editor.log` for
+compile errors — none present, though the Editor hasn't regained focus/recompiled since these files
+landed on disk, so this isn't a positive confirmation, just an absence of a negative one.
+
+**Still needed from the human:** a Play + screenshot of Yard→Hall→Vault (checkpoint 2's ask) and of
+Door #1 closed/open (checkpoint 3's ask) — both workers explicitly said they have no screenshot-capture
+capability themselves. `orthographicSize` (5.0) may need a look once real doors are visible at that
+framing. Character models (Quaternius chibi pawns) still haven't been reviewed in-Editor since the C53
+pivot — the one open item from the original look-and-feel punch list that nothing has touched yet.
+
 ## 2026-08-10 (continued 3) — env checkpoint 2 merged; two decisions now waiting on the human
 
 **`feat/env-lookfeel-overhaul` checkpoint 2 merged** (`3feccca`, 3 worker commits). Real, visible change:

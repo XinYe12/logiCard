@@ -4,12 +4,13 @@
 human until this wave lands — see `SCHEDULE.md`'s Cadence section. **UI side landed and merged three times**
 (`feat/ui-component-system`, a same-session dock move right-edge → bottom band, then `feat/ui-dock-polish`'s
 ultrawide-overflow fix + dialog tightening) — `Assets/_Project/UI/**` is closed out again, no worker
-assigned. **Environment side:** checkpoint 1 merged 2026-08-09; checkpoint 2 merged 2026-08-10 (real Poly
-Haven PBR board-surface textures, room-zoned) — checkpoint 3 (door/prop meshes) blocked on a human mesh-pack
-choice, see `DRAFT_HANDOFF.md`. **Integrator also landed, in the main tree directly:** camera rotation
-(`BoardCameraRig`, smooth right-drag) and an interim cloud-size fix. **URP render pipeline audited
-2026-08-10 (in response to a direct human ask about progress): no post-processing Volume Profile, no
-renderer features, MSAA off — real gap, not yet addressed, see DRAFT_HANDOFF for the full finding.**
+assigned. **Environment side: all three checkpoints merged** — checkpoint 1 (2026-08-09, weather/lighting),
+checkpoint 2 (2026-08-10, real Poly Haven PBR board-surface textures), checkpoint 3 (2026-08-10, Quaternius
+door/prop meshes replacing tinted boxes, per C54). **Rendering: URP post-processing gap closed** — real
+Volume Profile, SSAO, MSAA, soft shadows all landed 2026-08-10, plus a C54 photo-mode stretch goal
+(`PhotoModeController`, `F9`). **Integrator also landed, in the main tree directly:** camera rotation
+(`BoardCameraRig`, smooth right-drag) and an interim cloud-size fix. **Still open:** human screenshot
+sign-off on checkpoints 2/3, `orthographicSize` retune check, character-model review (never done since C53).
 **Updated:** 2026-08-10 by Integrator.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
