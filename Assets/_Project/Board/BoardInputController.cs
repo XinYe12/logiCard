@@ -271,6 +271,12 @@ namespace LogiCard.Board
 
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
+                // Debug-only, not player-facing (this fires on every legitimate HUD dock click too,
+                // which would make it noisy as a rejection toast) — but logged so a repeated "my board
+                // click did nothing" report can be checked against the console: if this fires for a
+                // click the player intended for the board, the HUD dock's raycast area is overlapping
+                // board screen-space, not a raycast/pathfinding bug.
+                Debug.Log($"[logiCard] Click at {Input.mousePosition} absorbed by UI, never reached the board.");
                 return;
             }
 
@@ -479,6 +485,12 @@ namespace LogiCard.Board
 
             if (!Physics.Raycast(cam.ScreenPointToRay(Input.mousePosition), out RaycastHit hit))
             {
+                // Was totally silent before (2026-08-10) — a click that doesn't land on any collider
+                // at all (e.g. past the board edge, or a real click-to-world bug) previously gave the
+                // player zero feedback, indistinguishable from "nothing happened." Surface it so a
+                // repeatedly-missed click is at least visible/diagnosable, not a mystery.
+                Debug.Log("[logiCard] Click raycast hit nothing.");
+                ActionRejected?.Invoke("click didn't land on the board");
                 return;
             }
 
@@ -486,6 +498,8 @@ namespace LogiCard.Board
             if (!hit.collider.transform.IsChildOf(_boardView.transform)
                 && hit.collider.transform != _boardView.transform)
             {
+                Debug.Log($"[logiCard] Click raycast hit '{hit.collider.gameObject.name}', which isn't part of this board.");
+                ActionRejected?.Invoke("click landed off the board");
                 return;
             }
 
