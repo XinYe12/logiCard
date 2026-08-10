@@ -9,8 +9,11 @@ checkpoint 2 (2026-08-10, real Poly Haven PBR board-surface textures), checkpoin
 door/prop meshes replacing tinted boxes, per C54). **Rendering: URP post-processing gap closed** — real
 Volume Profile, SSAO, MSAA, soft shadows all landed 2026-08-10, plus a C54 photo-mode stretch goal
 (`PhotoModeController`, `F9`). **Integrator also landed, in the main tree directly:** camera rotation
-(`BoardCameraRig`, smooth right-drag) and an interim cloud-size fix. **Still open:** human screenshot
-sign-off on checkpoints 2/3, `orthographicSize` retune check, character-model review (never done since C53).
+(`BoardCameraRig`, smooth right-drag), an interim cloud-size fix, and dropping stepped stop-motion pawn
+animation for smooth interpolation (**C55**, human-confirmed as an improvement). **Now in flight:**
+character-model research (`feat/character-model-rework`) and wet-surface reflection probes
+(`feat/wet-surface-reflections`) — both worker slots in use again. **Still open:** human screenshot
+sign-off on checkpoints 2/3, `orthographicSize` retune check.
 **Updated:** 2026-08-10 by Integrator.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.

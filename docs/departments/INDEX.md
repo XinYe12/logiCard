@@ -1,22 +1,25 @@
 # Departments — Active Index
 
-**Updated:** 2026-08-10 — both worker slots landed and merged: checkpoint 3 door/prop meshes (Quaternius
-Ultimate House Interior Pack) and real URP post-processing (Volume Profile, SSAO, MSAA, soft shadows, plus
-the C54 photo-mode stretch goal). Both worker slots now open. Core-gameplay work stays paused. Still
-outstanding: human screenshot sign-off on both checkpoints, and a character-model (Quaternius pawns) review
-that's never happened since the C53 pivot.
+**Updated:** 2026-08-10 — human confirmed the smooth-animation fix (C55) reads better and asked to continue
+the schedule. Two new worker slots spun for Phase 5's remaining real gaps: character-model research
+(Quaternius pawns never reviewed since C53) and wet-surface reflection probes (SSR isn't available in this
+URP version; human flagged reflections as "needs more rework" on the latest screenshot). Core-gameplay work
+stays paused.
 **Ops constitution:** [`../PARALLEL_OPS.md`](../PARALLEL_OPS.md) · human-side playbook: [`../DIRECTING_AGENTS.md`](../DIRECTING_AGENTS.md)
 **Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md)
 **Human rollup:** [`../DRAFT_HANDOFF.md`](../DRAFT_HANDOFF.md)
 
 ## Capacity
 
-Integrator + up to **2** coding workers — **0 of 2 in use**. Both worktrees merged and closed out this
-pass. Check `git worktree list` and `DRAFT_HANDOFF.md`'s top section before assuming this table is current.
+Integrator + up to **2** coding workers — **2 of 2 in use**. Check `git worktree list` and
+`DRAFT_HANDOFF.md`'s top section before assuming this table is current.
 
 ## Active agents / worktrees
 
-_(none active — both worker slots closed out this pass, worktrees not yet deleted)_
+| Dept | Branch | Status file | Notes |
+|------|--------|--------------|-------|
+| Presentation (characters) | `feat/character-model-rework` | `logiCard-env-lookfeel` worktree | Propose-then-execute: assess current Scout/Juggernaut pawns against the now-realistic board, research 2-3 CC0 replacement pack candidates, do not import blind. Brief: `CHARACTER_MODEL_REWORK_AGENT_BRIEF.md` at the worktree root. |
+| Rendering | `feat/wet-surface-reflections` | `logiCard-ui-dock-polish` worktree (directory name stale) | Reflection probes for wet board surfaces (SSR unavailable in this URP version); retune `BoardSurfaceMaterials`' wetness once real reflection exists. Brief: `WET_SURFACE_REFLECTIONS_AGENT_BRIEF.md` at the worktree root. |
 
 ## Ownership matrix (write locks)
 
@@ -24,10 +27,11 @@ Wave-specific rows on top of the evergreen ones below:
 
 | Path / concern | Owner now |
 |----------------|-----------|
-| `Assets/_Project/Board/**`, `PrimitiveMaterialFactory.cs`, `Assets/_Project/Art/**` | Closed out — `feat/env-checkpoint3-doors` merged, open for the next assignment |
-| `Assets/_Project/Rendering/**` | Closed out — `feat/urp-post-processing` merged, open for the next assignment |
+| `Assets/_Project/Art/Characters/**`, character-facing bits of `Assets/_Project/Board/PawnView.cs` | Presentation (`feat/character-model-rework`) |
+| `Assets/_Project/Art/URP/**`, `Assets/_Project/Rendering/**` | Rendering (`feat/wet-surface-reflections`) |
+| `Assets/_Project/Board/**` (non-character), `PrimitiveMaterialFactory.cs`, `Assets/_Project/Art/Environment/**` | Read-only reference this pass — no worker assigned, don't edit without checking in |
 | `Assets/_Project/UI/**` | Closed out — `feat/ui-dock-polish` merged, open for the next assignment |
-| `Assets/_Project/Boot/GameBootstrap.cs`, `Assets/_Project/Board/BoardCameraRig.cs` | Integrator-only edit target |
+| `Assets/_Project/Boot/GameBootstrap.cs`, `Assets/_Project/Board/BoardCameraRig.cs` | Integrator-only edit target — one scoped exception may be granted to `feat/wet-surface-reflections` for a probe-setup hook, see its brief |
 | `Boot/`, `Net/`, `Timeline/`, `Sim/` (fixes) | Core — paused this wave, not touched unless something breaks |
 | `docs/DRAFT_HANDOFF.md`, `docs/SCHEDULE.md` ticks, `docs/contracts/CURRENT.md`, `docs/PRODUCT_MEMORY.md` | Core / Integrator |
 | `docs/departments/<dept>/STATUS.md` | That dept only |
