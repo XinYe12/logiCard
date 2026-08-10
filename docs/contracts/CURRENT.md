@@ -13,10 +13,12 @@ Volume Profile, SSAO, MSAA, soft shadows all landed 2026-08-10, plus a C54 photo
 animation for smooth interpolation (**C55**, human-confirmed as an improvement). **Character-model
 research** landed real findings (genre-clash outfit, flat materials); human picked the minimal fix
 (**C56**), landed as **Scout re-outfitted Adventurer→Worker** within the existing CC0 pack. **Wet-surface
-reflections** landed real Reflection Probes (SSR unavailable in this URP version) plus a
-`wetSmoothnessBoost` retune. Both worker slots open again. **Still open:** human sighted pass on
-reflections + Scout's new outfit (neither agent had Editor/screenshot access), `orthographicSize` retune
-check carried from checkpoint 3.
+reflections**: first pass (Reflection Probes + retune) shipped but a human screenshot showed no visible
+change — root-caused directly (probe `clearFlags` never set, rendering the wrong environment) and fixed.
+**Clouds**: replaced primitive spheres with real textured particle clouds (Kenney CC0 sprite atlas). Both
+worker slots open again. **Still open:** a fresh human sighted pass on the reflection fix + new clouds +
+Scout's new outfit — none of the last three changes have been visually confirmed yet, `orthographicSize`
+retune check carried from checkpoint 3.
 **Updated:** 2026-08-10 by Integrator.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.

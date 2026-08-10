@@ -1,5 +1,31 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 9) — real clouds merged; ready for a fresh human look
+
+**`feat/real-cloud-models` merged** (`be119b8`, worker commit `c0c4f39`). Replaces every flat tinted
+primitive-sphere cloud puff with a burst-spawned, non-moving `ParticleSystem` cluster of billboarded,
+randomly-framed cloud sprites — a real CC0 texture atlas (Kenney "Smoke Particles," 8 "White puff" frames
+composed into one 4x2 grid), not geometry, so the alpha silhouette reads as soft mass instead of a hard
+sphere edge. Reuses the exact original puff bounding boxes/positions and the `InterimCloudScale`/
+`InterimCloudHeightBoost` framing correction unchanged, so the earlier "clouds loom over the board" bug
+(fixed 2026-08-09) can't regress. Rain untouched, as asked. `Assets/_Project/Art/Environment/THIRD_PARTY.md`
+updated with full provenance, including why the atlas is a derived composite rather than a raw asset copy.
+
+**Reviewed before merging, not taken on the report:** read the full `BoardWeatherPocket.cs` diff —
+confirmed the bounding-box/scale reuse claim by inspection, confirmed particle tinting happens per-particle
+via `startColor` (reusing the sphere code's exact tint values) rather than a lossy shared-material
+approach, confirmed `PlaceRain` has zero diff.
+
+**Re-verified via a disposable detached worktree** (`logiCard-verify-clouds`, created and removed same
+session), Editor still locked on the main tree: EditMode 124/124, PlayMode 37/37.
+
+**Where this leaves Phase 5's open items:** reflection clear-flags fix (`80049df`) and the cloud rework
+(`be119b8`) both landed today in response to direct playtest feedback that neither reflections nor clouds
+were reading as improvements. **Neither has had an actual human look yet** — both agents/the Integrator
+worked without Editor/screenshot access. This is the natural next checkpoint: get a fresh screenshot before
+doing anything else in this area, same "don't chain blind changes" discipline this session has used
+throughout.
+
 ## 2026-08-10 (continued 8) — reflection root-cause found and fixed; cloud rework in flight
 
 **Human caught the reflection retune not actually working** from a real screenshot ("i dont think the
