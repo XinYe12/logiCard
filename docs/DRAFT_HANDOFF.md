@@ -1,5 +1,47 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-10 (continued 10) — human stepped away for 2h, Integrator pushing autonomously
+
+**Human explicit instruction:** "keep pushing the schedule till i come back notify me of decisions, but
+i will not be check in editor." No human visual sign-off is available for this window — proceeding on
+Integrator judgment for calls that would normally wait for a screenshot or a human pick, logging every
+decision here instead of pausing. Push notifications are unavailable this session (mobile push disabled
+in the human's config), so decisions are logged here and surfaced at the top of this file instead.
+
+**Two more real bugs found and fixed while auditing the cloud fix, both same root-cause class as the
+reflection-probe bug (silent misconfiguration batchmode can't catch):**
+
+1. **Clouds rendered as solid black rectangles**, not soft puffs — the human caught this immediately on
+   the very next screenshot after the cloud rework merged. Root cause: `BoardWeatherPocket.CloudMaterial()`
+   created a URP particle material via `new Material(shader)` without ever configuring transparency — URP
+   materials default to **Opaque**, they don't infer blending from a texture's alpha channel. Every
+   billboard rendered as a hard-edged opaque quad; the atlas's transparent padding read as solid black.
+   Fixed (`af5d2b1`): added `ConfigureAlphaBlend()`, setting `_Surface`/`_Blend`/blend-factor/`_ZWrite`
+   properties and the `_ALPHABLEND_ON` keyword (correct for the particle shader family) plus Transparent
+   render queue. Verified via disposable worktree batchmode: EditMode 124/124, PlayMode 37/37.
+
+2. **Window glass material was also opaque** (`Glass.mat`, used by `WindowSmall`/`WindowLarge`), found by
+   proactively auditing other runtime-material creation sites for the same pattern rather than waiting for
+   another screenshot to catch it. This one silently defeated an already-shipped feature — `BoardView.cs`
+   places a warm emissive glow pane essentially at the same position as each window's own glass mesh
+   (checkpoint 3's "lit window" dressing), so an opaque glass pane in front of it would fully block the
+   glow. **First fix attempt was itself wrong** — used `_ALPHABLEND_ON` (the particle-shader keyword) on a
+   `Universal Render Pipeline/Lit` material, which doesn't recognize that keyword; caught by inspecting the
+   regenerated `.mat` file directly (`m_InvalidKeywords` contained it, `m_ValidKeywords` was empty,
+   `stringTagMap` still said `Opaque`) rather than assuming the first attempt worked. Corrected to the
+   right URP Lit keyword, `_SURFACE_TYPE_TRANSPARENT` (`c45dafb`, `5720d31`). New tool:
+   `InteriorPackImportTool.RunGlassFix()` (re-runnable, same bootstrap-tool pattern as the rest of this
+   session's fixes) — ran via batchmode in a disposable worktree, verified the resulting asset's serialized
+   properties directly before copying it back to `master`, not assumed correct from a clean log.
+
+**Final combined batchmode pass** (disposable worktree `logiCard-verify-final`, created and removed same
+session) on `master` @ `5720d31` with all three fixes together: **EditMode 124/124, PlayMode 37/37.**
+
+**None of this is visually confirmed** — same caveat as everything else in this session's visual work, now
+more pointed since there's no human available to check for 2 hours. Treat all three fixes (reflection
+clear-flags, cloud alpha-blend, glass transparency) as "should be correct by direct inspection of the
+serialized asset state," not "confirmed to look right."
+
 ## 2026-08-10 (continued 9) — real clouds merged; ready for a fresh human look
 
 **`feat/real-cloud-models` merged** (`be119b8`, worker commit `c0c4f39`). Replaces every flat tinted
