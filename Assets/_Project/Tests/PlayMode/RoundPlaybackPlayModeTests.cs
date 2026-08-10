@@ -64,8 +64,8 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(Playback.Tape.Tracks.ContainsKey(GameBootstrap.DefenderPawnId), Is.True);
         }
 
-        [UnityTest]
-        public IEnumerator DefenderStaysHomeUntilTheTapeArms()
+        [Test]
+        public void DefenderStaysHomeUntilTheTapeArms()
         {
             Clock.Pause();
             Clock.SetSeconds(20f);
@@ -73,10 +73,6 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(Vector3.Distance(DefenderPawn.transform.position, home), Is.LessThan(0.0001f));
 
             ArmWithAttackerMoveTo(AmbushPoint);
-
-            // Newly armed tape forces one exact apply at t=0; wait past PawnView's stepped-playback
-            // hold (ART_DIRECTION §2) before the next scrub so it isn't read back mid-throttle.
-            yield return WaitForPawnStepRelease();
 
             // Defender Walk base 2s/unit × Walk×2: 1.4 units to (4, 4.6) ⇒ 5.6s.
             Clock.SetSeconds(5.6f);

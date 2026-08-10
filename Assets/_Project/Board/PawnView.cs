@@ -32,21 +32,8 @@ namespace LogiCard.Board
         /// </summary>
         private const float TargetVisualHeight = 1.0f;
 
-        /// <summary>
-        /// Real-world seconds between visible pose updates while riding an already-armed tape —
-        /// ART_DIRECTION §2's stepped 8-12fps ("pose snaps, not blends"); ~10fps sits mid-band.
-        /// A fresh <see cref="SetPath"/> (new draft preview, newly armed tape, Disarm's carry-point
-        /// reset) always applies its very next <see cref="ApplyTime"/> immediately and exactly — only
-        /// repeated scrubs/ticks against the *same* path get held between steps. That keeps interactive
-        /// draft preview and key poses (path start/end) exact while playback of a locked-in tape reads
-        /// as stop-motion instead of a 60fps glide.
-        /// </summary>
-        private const float StepIntervalSeconds = 1f / 10f;
-
         private BoardView _board;
         private Transform _visual;
-        private float _nextStepRealTime;
-        private bool _forceNextApply;
 
         public ScheduledPath Path { get; private set; }
 
@@ -75,7 +62,6 @@ namespace LogiCard.Board
                 }
             }
 
-            _forceNextApply = true;
             ApplyTime(0f);
         }
 
@@ -206,7 +192,6 @@ namespace LogiCard.Board
         public void SetPath(ScheduledPath path)
         {
             Path = path;
-            _forceNextApply = true;
         }
 
         public void ApplyTime(float timeResourceSeconds)
@@ -216,17 +201,6 @@ namespace LogiCard.Board
                 return;
             }
 
-            // Path start/end are key poses, not in-between frames — always land on them exactly
-            // even mid-throttle, so playback never reads as falling short of its destination.
-            bool boundary = timeResourceSeconds <= 0f || timeResourceSeconds >= Path.EndSeconds;
-
-            if (!_forceNextApply && !boundary && Time.unscaledTime < _nextStepRealTime)
-            {
-                return;
-            }
-
-            _forceNextApply = false;
-            _nextStepRealTime = Time.unscaledTime + StepIntervalSeconds;
             transform.position = _board.WorldFromPlanar(Path.Evaluate(timeResourceSeconds));
         }
 
