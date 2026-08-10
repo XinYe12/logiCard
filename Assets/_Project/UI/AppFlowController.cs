@@ -185,9 +185,11 @@ namespace LogiCard.UI
             GameObject screen = CreateScreen("CharacterSelect");
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            Text title = _ui.CreateText(rt, "Title", "CHARACTER SELECT", 48, TextAnchor.MiddleCenter, UiStyle.Accent);
-            UiFactory.Stretch(title.rectTransform, new Vector2(0.1f, 0.82f), new Vector2(0.9f, 0.95f));
+            Text title = _ui.CreateText(rt, "Title", "CHARACTER SELECT", 44, TextAnchor.MiddleCenter, UiStyle.Accent,
+                UiTextOverflow.SingleLine);
+            UiFactory.Stretch(title.rectTransform, new Vector2(0.1f, 0.84f), new Vector2(0.9f, 0.95f));
 
+            // Clear vertical bands: title → grid → detail → confirm (old grid/detail edge was only 0.02 apart).
             _characterGrid = SelectionGrid.Build(
                 _ui,
                 rt,
@@ -196,18 +198,18 @@ namespace LogiCard.UI
                     new SelectionOption("Scout", "SCOUT"),
                     new SelectionOption("Juggernaut", "JUGGERNAUT"),
                 },
-                new Vector2(0.12f, 0.48f),
-                new Vector2(0.88f, 0.74f),
+                new Vector2(0.14f, 0.50f),
+                new Vector2(0.86f, 0.78f),
                 columns: 2,
-                fontSize: 32);
+                fontSize: 34);
             _characterGrid.SelectionChanged += OnCharacterSelectionChanged;
 
-            _characterDetail = _ui.CreateText(rt, "Detail", string.Empty, 26, TextAnchor.MiddleCenter, UiStyle.Ink);
-            UiFactory.Stretch(_characterDetail.rectTransform, new Vector2(0.1f, 0.28f), new Vector2(0.9f, 0.46f));
+            _characterDetail = _ui.CreateText(rt, "Detail", string.Empty, 24, TextAnchor.MiddleCenter, UiStyle.Ink);
+            UiFactory.Stretch(_characterDetail.rectTransform, new Vector2(0.12f, 0.30f), new Vector2(0.88f, 0.46f));
 
-            Button confirm = _ui.CreateButton(rt, "ConfirmCharacter", "CONFIRM", UiStyle.Accent, UiStyle.InkDark, 34,
+            Button confirm = _ui.CreateButton(rt, "ConfirmCharacter", "CONFIRM", UiStyle.Accent, UiStyle.InkDark, 32,
                 () => Show(Screen.Lobby));
-            UiFactory.Stretch(confirm.GetComponent<RectTransform>(), new Vector2(0.35f, 0.10f), new Vector2(0.65f, 0.22f));
+            UiFactory.Stretch(confirm.GetComponent<RectTransform>(), new Vector2(0.34f, 0.10f), new Vector2(0.66f, 0.24f));
 
             OnCharacterSelectionChanged(_characterGrid.SelectedId);
             return screen;

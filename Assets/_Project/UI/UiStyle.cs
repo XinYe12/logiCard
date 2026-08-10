@@ -23,14 +23,16 @@ namespace LogiCard.UI
         public static readonly Vector2 ReferenceResolution = new Vector2(1920f, 1080f);
 
         /// <summary>
-        /// Slight height bias so dock type stays readable on wide ultrawides without ballooning on
-        /// shorter 16:9 windows. Was 0.5 before the readability pass.
+        /// Mild width bias (below 0.5) so dock type stays a bit larger on ultrawide than a pure
+        /// 16:9 match would give. Vertical fit on those windows is owned by
+        /// <see cref="ProgramHud"/>'s compact row budget — do not "fix" overflow by driving this
+        /// back toward 1.0 (that shrinks type on wide screens).
         /// </summary>
         public const float CanvasMatchWidthOrHeight = 0.4f;
 
-        public const float Pad = 20f;
-        public const float Gap = 10f;
-        public const float RowGap = 12f;
+        public const float Pad = 16f;
+        public const float Gap = 8f;
+        public const float RowGap = 8f;
     }
 
     /// <summary>

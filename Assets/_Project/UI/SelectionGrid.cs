@@ -108,7 +108,7 @@ namespace LogiCard.UI
                 float y0 = 1f - (row + 1) / (float)rows;
 
                 // Inset so neighboring cells don't share an edge (readable mouse targets).
-                const float inset = 0.03f;
+                const float inset = 0.04f;
                 Button button = ui.CreateButton(
                     root,
                     $"Pick_{option.Id}",
@@ -117,6 +117,15 @@ namespace LogiCard.UI
                     UiStyle.Ink,
                     fontSize,
                     null);
+
+                // Long labels (JUGGERNAUT) stay inside the cell at 720p instead of truncating mid-word.
+                Text label = button.GetComponentInChildren<Text>();
+                if (label != null)
+                {
+                    label.resizeTextForBestFit = true;
+                    label.resizeTextMinSize = Mathf.Max(16, fontSize - 14);
+                    label.resizeTextMaxSize = fontSize;
+                }
 
                 string capturedId = option.Id;
                 button.onClick.AddListener(() => grid.Select(capturedId));

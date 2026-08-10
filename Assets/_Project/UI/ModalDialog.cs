@@ -60,28 +60,42 @@ namespace LogiCard.UI
             ModalDialog dialog = null;
             dialog = new ModalDialog(dimmer.gameObject);
 
+            // Centered ~40%×40% card — the old 56%×44% band stretched unreadably on ultrawide and
+            // left title/body/buttons floating in a wide empty panel at 16:9.
             RectTransform card = ui.CreatePanel(dimmer, "DialogCard", UiStyle.PanelDark,
-                new Vector2(0.22f, 0.28f), new Vector2(0.78f, 0.72f));
+                new Vector2(0.30f, 0.30f), new Vector2(0.70f, 0.70f));
             card.GetComponent<Image>().color = UiStyle.PanelMid;
 
-            Text titleText = ui.CreateText(card, "Title", title ?? string.Empty, 36, TextAnchor.MiddleCenter, UiStyle.Accent);
-            UiFactory.Stretch(titleText.rectTransform, new Vector2(0.08f, 0.72f), new Vector2(0.92f, 0.92f));
+            Text titleText = ui.CreateText(card, "Title", title ?? string.Empty, 34, TextAnchor.MiddleCenter, UiStyle.Accent,
+                UiTextOverflow.SingleLine);
+            UiFactory.Stretch(titleText.rectTransform, new Vector2(0.08f, 0.70f), new Vector2(0.92f, 0.92f));
 
-            Text bodyText = ui.CreateText(card, "Body", body ?? string.Empty, 24, TextAnchor.MiddleCenter, UiStyle.Ink);
-            UiFactory.Stretch(bodyText.rectTransform, new Vector2(0.1f, 0.38f), new Vector2(0.9f, 0.70f));
+            Text bodyText = ui.CreateText(card, "Body", body ?? string.Empty, 22, TextAnchor.MiddleCenter, UiStyle.Ink);
+            UiFactory.Stretch(bodyText.rectTransform, new Vector2(0.1f, 0.36f), new Vector2(0.9f, 0.68f));
 
             bool hasSecondary = !string.IsNullOrEmpty(secondaryLabel);
             if (hasSecondary)
             {
-                Button secondary = ui.CreateButton(card, "ModalSecondary", secondaryLabel, UiStyle.PanelDark, UiStyle.Ink, 28,
+                Button secondary = ui.CreateButton(card, "ModalSecondary", secondaryLabel, UiStyle.PanelDark, UiStyle.Ink, 26,
                     () =>
                     {
                         dialog.Close();
                         onSecondary?.Invoke();
                     });
                 UiFactory.Stretch(secondary.GetComponent<RectTransform>(),
-                    new Vector2(0.1f, 0.12f), new Vector2(0.46f, 0.30f));
+                    new Vector2(0.08f, 0.10f), new Vector2(0.46f, 0.30f));
 
+                Button primary = ui.CreateButton(card, "ModalPrimary", primaryLabel ?? "OK", UiStyle.Accent, UiStyle.InkDark, 26,
+                    () =>
+                    {
+                        dialog.Close();
+                        onPrimary?.Invoke();
+                    });
+                UiFactory.Stretch(primary.GetComponent<RectTransform>(),
+                    new Vector2(0.54f, 0.10f), new Vector2(0.92f, 0.30f));
+            }
+            else
+            {
                 Button primary = ui.CreateButton(card, "ModalPrimary", primaryLabel ?? "OK", UiStyle.Accent, UiStyle.InkDark, 28,
                     () =>
                     {
@@ -89,18 +103,7 @@ namespace LogiCard.UI
                         onPrimary?.Invoke();
                     });
                 UiFactory.Stretch(primary.GetComponent<RectTransform>(),
-                    new Vector2(0.54f, 0.12f), new Vector2(0.9f, 0.30f));
-            }
-            else
-            {
-                Button primary = ui.CreateButton(card, "ModalPrimary", primaryLabel ?? "OK", UiStyle.Accent, UiStyle.InkDark, 30,
-                    () =>
-                    {
-                        dialog.Close();
-                        onPrimary?.Invoke();
-                    });
-                UiFactory.Stretch(primary.GetComponent<RectTransform>(),
-                    new Vector2(0.3f, 0.12f), new Vector2(0.7f, 0.30f));
+                    new Vector2(0.28f, 0.10f), new Vector2(0.72f, 0.30f));
             }
 
             return dialog;
