@@ -12,7 +12,7 @@ error, two PlayMode regressions, and a shipped-build bug it caught. Both worker 
 
 ## Capacity
 
-Integrator + up to **2** coding workers — **0 of 2 in use.** Check `git worktree list` and
+Integrator + up to **2** coding workers — **2 of 2 in use.** Check `git worktree list` and
 `DRAFT_HANDOFF.md`'s top section before assuming this table is current. (`logiCard-art-pack-research`
 below runs in the human's own separate session and isn't counted against this cap.)
 
@@ -21,11 +21,20 @@ below runs in the human's own separate session and isn't counted against this ca
 `feat/nappin-interior-wiring` and `feat/weather-fx-wiring` both merged clean — slots closed, worktrees
 removed. See `DRAFT_HANDOFF.md`'s "nappin interior + weather VFX wiring merged" entry for what landed and
 how it was verified (independently re-run batchmode in each worktree by the Integrator, not just taken on
-the workers' reports).
+the workers' reports). Two new slices open next:
 
-**Next up, no file overlap with anything just merged, safe to open new slots for:** Characters wiring
-(`ithappy/Creative_Characters_FREE` into `PawnImportTool.cs`/`PawnView.cs` — material/shader fit still
-needs checking first) and exterior dressing (`ithappy/Cartoon_City_Free` as Yard/board-edge backdrop).
+- **`logiCard-character-pack-swap`** (branch `feat/character-pack-swap`, off `master` @ `23af934`) —
+  assemble Scout/Juggernaut from `ithappy/Creative_Characters_FREE`'s modular parts (using the pack's own
+  `CharacterCustomizationWindow` Editor tool), adapt `PawnImportTool.cs`, bake to the
+  `Resources/<Scout|Juggernaut>` contract `PawnView.cs` already expects. Confirmed materials are already
+  URP/Lit (this project's own shader GUID) — no conversion step needed, unlike every prior character/prop
+  pack. Brief at worktree root (`CHARACTER_PACK_SWAP_AGENT_BRIEF.md`). Owns
+  `Assets/_Project/Editor/PawnImportTool.cs` + `Assets/_Project/Art/Characters/**` this wave.
+- **`logiCard-void-city-dressing`** (branch `feat/void-city-dressing`, off `master` @ `23af934`) — replace
+  `BoardView.cs`'s `PlaceVoidDressing`/`PlaceVoidClutter` placeholder primitive cubes with real
+  `ithappy/Cartoon_City_Free` prefabs (also already URP/Lit). Brief at worktree root
+  (`VOID_CITY_DRESSING_AGENT_BRIEF.md`). Owns only `BoardView.cs`'s void-dressing methods this wave — no
+  overlap with the character slot above.
 
 - **`logiCard-art-pack-research` (branch `feat/art-pack-research`) — human-run, active.** Produced the
   current `docs/ART_PACK_RESEARCH.md`; Integrator pulls its content into `master` directly rather than
