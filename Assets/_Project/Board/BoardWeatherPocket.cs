@@ -210,6 +210,14 @@ namespace LogiCard.Board
 
             var main = ps.main;
             main.prewarm = true;
+            // The pack's own authored startSpeed (25-40) and startLifetime (1.2-2s) were left at their
+            // open-world values in the first pass of this re-source — at those numbers a particle travels
+            // 30-80 world units before dying, several times the board's own 8-13 unit footprint, so every
+            // streak (Stretch render mode) rendered far longer than the visible frame and read as harsh
+            // "laser" lines crossing the whole scene (caught via a human screenshot, 2026-08-11). Same
+            // proven-good numbers the old procedural rain used before this re-source, not a fresh guess.
+            main.startSpeed = new ParticleSystem.MinMaxCurve(5.5f, 7.5f);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.55f, 0.85f);
 
             ps.Play(true);
         }

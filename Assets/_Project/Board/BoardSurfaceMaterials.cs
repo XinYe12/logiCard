@@ -38,19 +38,29 @@ namespace LogiCard.Board
             tint: new Color(0.75f, 0.57f, 0.45f),
             tile: 2.2f);
 
-        public static Material HallFloor => _hall ??= BuildWetSurface(
+        // 2026-08-11: Hall/Vault switched from the Poly Haven procedural concrete build to nappin's own
+        // baked floor material directly (human direction: "use asset pack floor directly," after a
+        // screenshot showed the interior floor reading badly) — LoadInteriorFloor() falls back to the
+        // old BuildWetSurface concrete approach only if InteriorPackImportTool.BakeFloorMaterial() hasn't
+        // been run yet, so EditMode tests (no baked Resources asset present) still compile/run.
+        public static Material HallFloor => _hall ??= LoadInteriorFloor() ?? BuildWetSurface(
             "concrete_diff", "concrete_nor", "concrete_rough",
             fallback: new Color(0.45f, 0.40f, 0.34f),
             wetSmoothnessBoost: 0.34f, // was 0.28
             tint: new Color(0.88f, 0.72f, 0.58f),
             tile: 1.8f);
 
-        public static Material VaultFloor => _vault ??= BuildWetSurface(
+        public static Material VaultFloor => _vault ??= LoadInteriorFloor() ?? BuildWetSurface(
             "concrete_diff", "concrete_nor", "concrete_rough",
             fallback: new Color(0.26f, 0.30f, 0.34f),
             wetSmoothnessBoost: 0.46f, // was 0.62
             tint: new Color(0.45f, 0.58f, 0.78f),
             tile: 2.4f);
+
+        private static Material LoadInteriorFloor()
+        {
+            return Resources.Load<Material>("Interior/Materials/(Mat)Floor_URP");
+        }
 
         public static Material FlankFloor => _flank ??= BuildWetSurface(
             "asphalt_diff", "asphalt_nor", "asphalt_rough",

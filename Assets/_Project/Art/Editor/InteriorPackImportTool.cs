@@ -63,6 +63,7 @@ namespace LogiCard.Art.Editor
         private const string SourcePrefabs = "Assets/nappin/OfficeEssentialsPack/Prefabs";
         private const string GlassMaterialSourcePath = "Assets/nappin/OfficeEssentialsPack/Materials/(Mat)Glass.mat";
         private const string GlassMaterialCopyPath = MaterialFolder + "/(Mat)Glass_URP.mat";
+        private const string FloorMaterialSourcePath = "Assets/nappin/OfficeEssentialsPack/Materials/(Mat)Floor.mat";
 
         /// <summary>
         /// Original nappin material asset path → its converted duplicate under <see cref="MaterialFolder"/>.
@@ -175,11 +176,58 @@ namespace LogiCard.Art.Editor
                 }
 
                 FixGlassTransparency();
+                BakeFloorMaterial();
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
             }
 
             return built;
+        }
+
+        [MenuItem("Tools/LogiCard/Bake Interior Floor Material")]
+        public static void BakeFloorMaterialFromMenu()
+        {
+            BakeFloorMaterial();
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>Run: -executeMethod LogiCard.Art.Editor.InteriorPackImportTool.RunBakeFloorMaterial
+        /// (batchmode-safe — exits itself rather than relying on an external -quit, which has raced
+        /// -executeMethod/-runTests before in this project and can end the process before the method
+        /// body actually runs).</summary>
+        public static void RunBakeFloorMaterial()
+        {
+            try
+            {
+                BakeFloorMaterial();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError("[InteriorPackImportTool] Bake floor material failed: " + ex);
+                EditorApplication.Exit(1);
+            }
+        }
+
+        /// <summary>
+        /// Bakes a URP/Lit duplicate of nappin's <c>(Mat)Floor.mat</c> (flat near-black matte, no
+        /// texture) to <c>Resources/Interior/Materials/(Mat)Floor_URP.mat</c> so
+        /// <see cref="LogiCard.Board.BoardSurfaceMaterials"/> can load it by name at runtime — used to
+        /// replace the Poly Haven procedural Hall/Vault floor materials directly with the asset-pack
+        /// floor per the human's explicit direction (2026-08-11: "use asset pack floor directly"), rather
+        /// than continuing to debug/retune the procedural approach. Reuses
+        /// <see cref="GetOrCreateConvertedMaterial"/> unchanged — same duplicate-then-convert discipline
+        /// as every other nappin material this tool touches, never mutates the original.
+        /// </summary>
+        private static void BakeFloorMaterial()
+        {
+            Material material = GetOrCreateConvertedMaterial(FloorMaterialSourcePath);
+            if (material == null)
+            {
+                Debug.LogWarning($"[InteriorPackImportTool] No material at {FloorMaterialSourcePath} to bake.");
+            }
         }
 
         [MenuItem("Tools/LogiCard/Fix Interior Glass Transparency")]
