@@ -1,57 +1,56 @@
-# Art pack research — clay / stylized shopping notes
+# Art pack research — clay / stylized shopping + motion notes
 
-**Date:** 2026-08-10 (updated same day after reference screenshot + Office Pack Free confirm); extended
-2026-08-11 with a licensing note on the already-imported Synty packs, a Characters section, and
-confirmed current Asset Store pricing (`docs/ASSET_PACK_AUDIT.md` is the companion doc — Part 1 of that
-session's task, auditing what else is sitting in `D:\XinyeData\projects\assets`).
-**Branch:** `feat/asset-pack-audit` (this update); originally `feat/art-pack-research`
-**Scope:** Research only. No imports from this agent. Human already added Office Pack Free to Unity My Assets.
+**Date:** 2026-08-10 (clay/nappin pivot); extended 2026-08-11 (licensing audit, Synty purge, nappin URP check, chubby-character + motion strategy discussion).  
+**Companion:** `docs/ASSET_PACK_AUDIT.md` (external folder licensing).  
+**Scope:** Research and decisions. Human owns Asset Store purchases/imports.
 
-## Urgent: Synty POLYGON Heist/Office/City are already in the project, unlicensed — buy or replace
+---
 
-Three Synty packs (`Assets/PolygonHeist/`, `Assets/PolygonOffice/`, `Assets/PolygonCity/`) were already
-imported raw from a local folder whose packaging strongly indicates a Chinese reseller bundle, not
-individual Asset Store purchases — see `docs/DRAFT_HANDOFF.md`'s 2026-08-11 entry and
-`docs/ASSET_PACK_AUDIT.md` for a follow-up audit that found the same reseller bundle sitting in the
-external assets folder, containing those exact three packages each wrapped with an explicit "not for
-commercial use, buy the genuine version" disclaimer and a Taobao storefront link. **This is a real
-ship-blocking TODO**, not resolved by any research pass — the human made an informed call to prototype
-with the raw import now and buy real licenses before any public release or Steam upload.
+## Session status (2026-08-11) — what is actually in the project
 
-**If the human decides to keep the Synty look** (rather than pivot fully to the nappin clay direction
-below), the direct action is buying legitimate Asset Store licenses for **the exact three packs already
-in hand** — don't buy different Synty packs instead, these are already integrated in spirit even if not
-yet wired. Current prices, confirmed live 2026-08-11:
+| Item | Status |
+|---|---|
+| Unlicensed Synty `PolygonHeist` / `PolygonOffice` / `PolygonCity` | **Deleted** from `master` + `feat/heist-character-swap`. Do not re-import from reseller bundles. |
+| Interior props wiring | Rewound to **Quaternius CC0** pipeline (`InteriorPackImportTool` + `Resources/Interior/*`) after PolygonOffice re-source was undone |
+| **nappin Office Essentials Pack** | **In project** at `Assets/nappin/OfficeEssentialsPack/` (~54 prefabs, gradients, demo scene). Style lock for interiors. |
+| **nappin URP upgrade** | Downloaded: `OfficeEssentialsPack_URP.unitypackage` (Downloads + dropped under `Assets/nappin/`). **Checked OK** — overwrites same material GUIDs with URP Lit (matches project shader `933532a4…`). Glass transparent. Skybox stays built-in skybox shader. **Human still needs to Import Package in Unity**, then may delete the `.unitypackage` from `Assets/nappin/`. |
+| Characters | Still Quaternius Scout/Juggernaut placeholders. No chubby pack purchased yet. |
 
-| Pack | Asset Store link | Current price |
+**nappin Office pack check notes:** Materials were Built-in Standard until URP package is imported. Pack is **not wired** into `BoardView` / `Resources/Interior/` yet. Catalog gaps vs current 14 interior slots: no real door (only `SeparatorDoor`), one window, no dedicated cabinet — desks/chairs/lights/shelves/tables map fine.
+
+---
+
+## Buy list — Synty (only if you want that look back)
+
+Unlicensed reseller copies were removed. Legitimate Asset Store total ≈ **$99.98**:
+
+| Pack | Link | Price |
 |---|---|---|
-| POLYGON - Heist Pack - Art by Synty | [Asset Store](https://assetstore.unity.com/packages/3d/environments/urban/polygon-heist-pack-art-by-synty-97949) | $29.99 |
-| POLYGON - Office Pack - Art by Synty | [Asset Store](https://assetstore.unity.com/packages/3d/props/interior/polygon-office-pack-art-by-synty-159492) | $49.99 |
-| POLYGON - City Pack - Art by Synty | [Asset Store](https://assetstore.unity.com/packages/3d/environments/urban/polygon-city-pack-art-by-synty-95214) | $20.00 |
-| **Total** | | **≈ $99.98** |
+| POLYGON - Heist Pack | [Asset Store](https://assetstore.unity.com/packages/3d/environments/urban/polygon-heist-pack-art-by-synty-97949) | $29.99 |
+| POLYGON - Office Pack | [Asset Store](https://assetstore.unity.com/packages/3d/props/interior/polygon-office-pack-art-by-synty-159492) | $49.99 |
+| POLYGON - City Pack | [Asset Store](https://assetstore.unity.com/packages/3d/environments/urban/polygon-city-pack-art-by-synty-95214) | $20.00 |
 
-(All three list the standard Unity Asset Store EULA — commercial and Steam use is covered once purchased;
-no separate paid-upgrade tier needed for this project's scale. Confirm against
-[unity.com/legal/as-terms](https://unity.com/legal/as-terms) if terms matter for a contract/legal review,
-but nothing found this pass suggests the standard EULA has changed from "commercial use OK once bought.")
+Do **not** re-import from `D:\XinyeData\projects\assets` reseller bundles — see `docs/ASSET_PACK_AUDIT.md`.
 
-If the nappin/clay pivot wins instead, these three packs become dead weight to strip back out — worth
-deciding one way or the other before more integration work goes into either direction.
+**Current art direction prefers nappin clay over Synty.** Hold Synty until free clay stack is in-scene and still feels thin.
+
+---
 
 ## Verdict (current)
 
-**Primary look = soft clay / curvy-minimal** (the office screenshot vibe: matte rounded props, soft lighting, glass UI) — **not** wet PBR + Quaternius, and **not** Synty-first anymore.
+**Primary look = soft clay / curvy-minimal** (office screenshot vibe: matte rounded props, soft lighting, glass UI) — **not** wet PBR + Quaternius, and **not** Synty-first.
 
 | Priority | What | Buy? |
 |---|---|---|
-| Locked | **nappin Office Pack – Free** | Already in your Unity assets — use this as the style anchor |
+| Locked | **nappin Office Pack – Free** | In project — import URP upgrade, then wire |
 | Next free (same style family) | nappin **House Interior** + **Weapons** | Yes — add from Asset Store while still free |
 | Weather (rain/clouds/fog) | Free URP weather VFX + free clouds/sky | Yes — free first |
 | Lightning | Free Zap / FX Lightning | Yes — free |
 | Buildings + streets | Free low-poly city / Kenney city kits | Yes — free first; accept slightly blockier roads |
-| Tornado | Paid stylized VFX (~$40) | Only if you actually need a tornado beat |
-| Railway / 高铁 | Paid modular railway (~$10–$30) | Catalog now; **deferred from 14-day ship (C31/C34)** |
-| Synty POLYGON Heist/Office/City | $99.98 confirmed (see urgent note above) | **Already imported raw, unlicensed — hold on *new* Synty purchases, but if keeping the Synty look, license these exact three, not different packs** |
+| Chubby / round characters | See Characters section below | Paid candidates; try free PolyPeople sample first |
+| Tornado | Paid stylized VFX (~$40) | Only if a real match beat needs it |
+| Railway / 高铁 | Paid modular railway (~$10–$30) | Catalog; **deferred (C31)** — motion is mostly **code**, not pack anims |
+| Synty POLYGON Heist/Office/City | $99.98 | Optional upgrade path only |
 
 Most of the “premium” feel in the reference is **lighting + matte materials + frosted UI**, not expensive meshes.
 
@@ -63,14 +62,13 @@ Publisher: **nappin** — curvy, gradient-matte, soft edges. Matches the clay sc
 
 | Pack | Link | Price | Role for logiCard |
 |---|---|---|---|
-| **Office Pack – Free** | [Asset Store](https://assetstore.unity.com/packages/3d/props/interior/office-pack-free-258600) · [nappin.dev](https://nappin.dev/details/officeEssentialsPack.html) | Free (listed “limited time”) | **Hall / facility dressing**: desks, chairs, doors, plants, lights, kitchenette. Replaces Quaternius house-interior subset. |
-| **House Interior – Free** | [Asset Store](https://assetstore.unity.com/packages/3d/props/interior/house-interior-free-258782) | Free | Extra sofas/beds/appliances if any room needs “lived-in” props |
-| **Weapons Pack – Free** | [Asset Store](https://assetstore.unity.com/packages/3d/props/weapons/weapons-pack-free-259025) | Free | Stylized guns for Shoot readability / pawn props (same clay silhouette language) |
-| Racing tileset (micro) | [itch](https://nappin.itch.io/racing-microset) | Free | Tiny road tiles only — **not** a city builder; skip unless you want grid road experiments |
+| **Office Pack – Free** | [Asset Store](https://assetstore.unity.com/packages/3d/props/interior/office-pack-free-258600) · [nappin.dev](https://nappin.dev/details/officeEssentialsPack.html) | Free (limited time) | **Hall / facility dressing**. In `Assets/nappin/OfficeEssentialsPack/`. |
+| **URP materials upgrade** | [nappin.dev](https://nappin.dev) (site download) | Free with pack | `OfficeEssentialsPack_URP.unitypackage` — import over existing materials (same GUIDs). |
+| **House Interior – Free** | [Asset Store](https://assetstore.unity.com/packages/3d/props/interior/house-interior-free-258782) | Free | Extra sofas/beds/appliances |
+| **Weapons Pack – Free** | [Asset Store](https://assetstore.unity.com/packages/3d/props/weapons/weapons-pack-free-259025) | Free | Stylized guns for Shoot readability |
+| Racing tileset (micro) | [itch](https://nappin.itch.io/racing-microset) | Free | Tiny road tiles only — skip unless experimenting |
 
-**URP note:** Packs ship Built-in materials; nappin provides URP integration packages on nappin.dev — use those for this Unity 6000 URP project.
-
-**Does not include:** outdoor city shells, streets at scale, railway, storm systems, characters. Those are separate categories below.
+**Does not include:** outdoor city shells, streets at scale, railway, storm systems, characters.
 
 ---
 
@@ -80,86 +78,132 @@ Publisher: **nappin** — curvy, gradient-matte, soft edges. Matches the clay sc
 
 | Need | Recommend | Price | Notes |
 |---|---|---|---|
-| Rain + snow + fog/clouds (URP particles) | **[FREE] Cinematic Weather VFX Bundle** | Free | [Asset Store](https://assetstore.unity.com/packages/vfx/particles/free-cinematic-weather-vfx-bundle-rain-snow-fog-urp-particle-sys-382428) — drop-in ParticleSystem prefabs; good replacement for Kenney smoke-as-clouds + upgrades rain |
-| Cartoon sky / sun-moon clouds | **SIMPLE Sky – Cartoon assets** (Synty) | Free | [Asset Store](https://assetstore.unity.com/packages/3d/environments/simple-sky-cartoon-assets-42373) — clay-friendly sky dome; not a storm system |
-| Mesh clouds (toy puffs) | Stylized Low Poly Clouds | ~$7.50 | Optional if particle fog still feels thin |
-| Lightning | **Zap VFX – URP** | Free | [Asset Store](https://assetstore.unity.com/packages/vfx/particles/spells/zap-vfx-urp-303479) — stylized bolts + SFX |
-| Lightning (alt) | FX Lightning II free | Free | Older but usable |
-| Stylized rain + lightning + snow bundle | Simple Weather and Environment 3D VFX | ~€4.59 | Cheap paid if free packs look too realistic |
-| Stylized FX kit (rain/fog/lightning flash) | Fx Pack – Environment Effects | ~$12 | Broader ambient kit |
-| Tornado / whirlwind | Stylized Tornado and Whirlwind Magic VFX | ~$39.99 | Fantasy-looking; buy **only** if tornado is a real match beat |
-| Full weather director (day/night seasons) | COZY: Stylized Weather 3 | $50 | **Overkill** for a small board pocket — skip for now |
+| Rain + snow + fog/clouds (URP) | **[FREE] Cinematic Weather VFX Bundle** | Free | [Asset Store](https://assetstore.unity.com/packages/vfx/particles/free-cinematic-weather-vfx-bundle-rain-snow-fog-urp-particle-sys-382428) |
+| Cartoon sky | **SIMPLE Sky – Cartoon assets** (Synty) | Free | [Asset Store](https://assetstore.unity.com/packages/3d/environments/simple-sky-cartoon-assets-42373) — add from Store, not reseller bundle |
+| Mesh clouds | Stylized Low Poly Clouds | ~$7.50 | Optional |
+| Lightning | **Zap VFX – URP** | Free | [Asset Store](https://assetstore.unity.com/packages/vfx/particles/spells/zap-vfx-urp-303479) |
+| Tornado | Stylized Tornado VFX | ~$39.99 | Only if designed in |
+| Full weather director | COZY: Stylized Weather 3 | $50 | **Overkill** — skip |
 
-**Practical weather stack for this game:** Cinematic Weather free (rain/fog) + Zap free (lightning) + SIMPLE Sky free (backdrop). Keep existing `BoardWeatherPocket` rain path if it already reads; swap cloud source first. Tornado stays optional/paid.
+**Practical stack:** Cinematic Weather + Zap + optional SIMPLE Sky. Keep `BoardWeatherPocket` rain if OK; swap clouds first.
 
-### 2. Buildings (different kinds)
+### 2. Buildings / streets
 
-Office Pack covers **interior** dressing, not building shells.
+| Need | Recommend | Price |
+|---|---|---|
+| Urban shells | Free Low Poly Simple Urban City **or** Mini World City Starter | Free |
+| Roads | Bundled with above, or Kenney City Kit Roads (CC0) | Free |
+| Dense city / vault (optional) | Synty City / Heist — buy legitimate Store copies only | $20 / $29.99 |
 
-| Need | Recommend | Price | Notes |
-|---|---|---|---|
-| Quick free urban shells | **Free Low Poly Simple Urban City** | Free | [Asset Store](https://assetstore.unity.com/packages/3d/environments/urban/free-low-poly-simple-urban-city-3d-asset-pack-239474) — houses, cottage, street props; flatter low-poly than nappin, OK for far Yard backdrop |
-| Modular office buildings + roads | **Low Poly City Starter Pack** (Mini World Studio) | Free | [Asset Store](https://assetstore.unity.com/packages/3d/environments/urban/low-poly-city-starter-pack-mini-world-studio-380946) — 3 office buildings + modular roads |
-| Industrial / commercial / suburban kits | **Kenney City Kit** (Industrial, Commercial, Suburban, Roads) | Free CC0 | [kenney.nl](https://kenney.nl/assets/city-kit-industrial) — blockier than clay; fine for board-edge skyline if materials are retinted matte |
-| Dense modular city (already in hand, unlicensed) | POLYGON City Pack (Synty) | $20.00 confirmed, no sale active 2026-08-11 | Already imported raw — see urgent licensing note at top of doc |
-| Heist / vault building kit (already in hand, unlicensed) | POLYGON Heist Pack | $29.99 confirmed, no sale active 2026-08-11 | Already imported raw — see urgent licensing note at top of doc |
+**Rule:** One exterior language. Keep nappin for interiors.
 
-**Rule:** Prefer **one exterior language** (pick either Free Urban City *or* Mini World *or* Kenney — don’t mix all three in one shot). Keep nappin for **interiors**.
+### 3. Railway (高铁) — meshes vs motion
 
-### 3. Streets / roads
-
-| Need | Recommend | Price | Notes |
-|---|---|---|---|
-| Modular roads (with free city starter) | Mini World City Starter | Free | Included road/sidewalk/crosswalk modules |
-| Roads + highways + barriers | **Kenney City Kit (Roads)** | Free CC0 | [itch](https://kenney-assets.itch.io/city-kit-roads) / kenney.nl |
-| Roads bundled with free urban pack | Free Low Poly Simple Urban City | Free | Includes road paths / crossroads |
-
-Streets are **Yard / board-edge dressing**, not gameplay navmesh — continuous pathfinding stays code-owned.
-
-### 4. Railway (高铁 / rail)
-
-Confirmed design exists (**C31**) but is **deferred from the 14-day ship (C34)**. Catalog only; do not block demo art on this.
+Confirmed design **C31**, deferred from ship. Mesh packs (~$10–$30) give tracks/cars; they usually do **not** include “ride the whole route” animation.
 
 | Pack | Price | Notes |
 |---|---|---|
-| **Modular Railway stylized lowpoly** | ~$9.99 | [Asset Store](https://assetstore.unity.com/packages/3d/environments/modular-railway-stylized-lowpoly-280486) — cheapest stylized modular tracks |
-| Lowpoly Railway Pack | ~$25 | Locos, wagons, signals, crossings — fuller set |
-| Stylized Railway Modular Constructor | ~$30 | Heavier constructor kit |
+| Modular Railway stylized lowpoly | ~$9.99 | [Asset Store](https://assetstore.unity.com/packages/3d/environments/modular-railway-stylized-lowpoly-280486) |
+| Lowpoly Railway Pack | ~$25 | Fuller set |
+| Stylized Railway Modular Constructor | ~$30 | Heavier kit |
 
-No strong free clay-matched railway pack found. When 高铁 returns to scope, start with the ~$10 modular kit and tint materials toward nappin matte gradients.
+**Motion model (same for buses):** move transforms in **code** along a path (matches Host/ReplayTape + **no root motion**, C23/C55). Optional tiny loops (wheels, sway, doors) only if they read. Do not block art on buying a pack that “includes ride animation.”
 
-### 5. Characters (Scout / Juggernaut) — new section, added 2026-08-11
+### 4. Characters — chubby / round / Link’s Awakening taste
 
-**nappin has no character pack** — confirmed again this pass (checked nappin.dev's full product list
-directly: Office Essentials, House Interior, Weapons Pack, plus non-art tools like Mobile Controller
-Framework and GridForge — no characters, paid or free). Nothing stylistically identical to the
-soft-clay/curvy-minimal look exists as a ready-made character line on the Asset Store as far as this pass
-found. Two real candidates, neither a perfect match, both need real prep work:
+**nappin has no character pack.** Target: soft, chubby, round toy figures (not Synty facets, not adult Quaternius realism).
 
-| Pack | Link | Price | Fit notes |
+| Pack | Link | Price | Fit |
 |---|---|---|---|
-| **Toony Tiny Citizens Megapack** (Polygon Blacksmith) | [Asset Store](https://assetstore.unity.com/packages/3d/characters/toony-tiny-citizens-megapack-99854) | $30 | Closest stylistic match found — soft, rounded, chunky-proportioned "toony" characters, reads closer to clay than any faceted-low-poly alternative. Delivered as a megapack of many character prefabs (not confirmed single-FBX-per-part-material-no-texture — likely does carry its own textures, unlike the current Quaternius pipeline's texture-free per-part-material approach). **Needs verification + probable rework** to fit `PawnImportTool.cs`'s expected shape (single FBX, per-part materials, no textures, a renderer literally named `"Body"` for `PawnView`'s `MaterialPropertyBlock` team-color tint) before it could drop in cleanly. |
-| **Toony Tiny Soldiers** (same publisher/family) | [Asset Store](https://assetstore.unity.com/packages/3d/characters/toony-tiny-soldiers-177336) | Not confirmed this pass | Same family/style as above; worth checking specifically for Juggernaut (military-coded) if the Citizens pack doesn't have a suitable heavy/armored option. |
-| **Stylized Character Pack** (Unity Technologies, official) | [Asset Store](https://assetstore.unity.com/packages/3d/characters/stylized-character-pack-360808) | Free | Cartoon/stylized, URP-only, rigged, 137.6MB. Free and from Unity directly so licensing is a non-issue, but style/material breakdown wasn't confirmed against the `"Body"`-renderer-naming and no-texture requirements this pass — would need hands-on inspection before committing. |
+| **Kotangent Chubby Characters** | [Asset Store](https://assetstore.unity.com/packages/3d/characters/kotangent-chubby-characters-pack-271155) | ~$12.99 | Closest “round blob people”; URP compatible; includes a few anims |
+| **Toony Tiny Citizens Megapack** | [Asset Store](https://assetstore.unity.com/packages/3d/characters/toony-tiny-citizens-megapack-99854) | ~$30 | Chunky toony humans; good Scout/civilian |
+| **Toony Tiny Soldiers** | [Asset Store](https://assetstore.unity.com/packages/3d/characters/toony-tiny-soldiers-177336) | Check Store | Same family — Juggernaut / tactical |
+| **PolyPeople City People [Free]** | [Asset Store](https://assetstore.unity.com/packages/3d/characters/polypeople-series-city-people-free-325204) | Free | Sample one character in URP before buying full (~$5) |
+| Stylized Character Pack (Unity) | [Asset Store](https://assetstore.unity.com/packages/3d/characters/stylized-character-pack-360808) | Free | Backup inspect candidate |
+| Quaternius Ultimate Modular Men | (already in project) | Free CC0 | Honest fallback — wired today, style mismatch with nappin |
 
-**Practical note:** the project's *current* Scout/Juggernaut placeholders (`Worker.fbx` / `Swat.fbx` under
-`Assets/_Project/Art/Characters/Resources/`) are themselves CC0 — confirmed via `docs/ASSET_PACK_AUDIT.md`
-that they trace back to Quaternius's **"Ultimate Modular Men"** pack (verified genuine CC0 license,
-present twice in the external assets folder). That pack is safe and already fits `PawnImportTool.cs`'s
-shape exactly (it's literally what the tool was built against) — if the clay-character search stalls, the
-honest fallback is "keep Quaternius, it's free and already wired," accepting the style doesn't match
-nappin's soft-clay direction as closely as the Toony Tiny candidates might.
+**Try first:** Kotangent Chubby if “plump toy” is the goal; Toony Tiny if clearer Scout vs Juggernaut outfits; PolyPeople free to smoke-test URP + round stylization.
 
-**Interior 14-name gap (Cabinet/Chair/Table/Shelf/ShelfLarge/Bookshelf/LightCeiling/LightCeilingAlt/
-LightDesk/WindowSmall/WindowLarge/Door/DoorAlt/DoorDouble):** no paid nappin-family pack was found this
-pass — nappin's full catalog (checked directly on nappin.dev) is Office Essentials, House Interior, and
-Weapons Pack, all free, nothing paid in the interior category. General office-prop packs exist at various
-price points (e.g. **Office Pack v2** — [Asset Store](https://assetstore.unity.com/packages/3d/props/interior/office-pack-v2-130690),
-"50+ Game-Ready Props") but none were confirmed to actually match nappin's soft-clay material language —
-treat as an unverified fallback candidate, not a recommendation, until someone eyeballs it against the
-reference screenshot. **Best current plan stays what `DRAFT_HANDOFF.md` already scoped:** Office Pack
-Free + House Interior Free likely cover most of the 14 names; do a targeted search through both packs'
-actual prefab lists before assuming a paid pack is needed at all.
+**Skip for this taste:** Synty POLYGON characters (too faceted); KayKit (cuter blocky, less clay-round).
+
+**Pipeline note:** Any buy must still fit or be adapted to `PawnImportTool` / `PawnView` (height normalize, `"Body"` tint marker or extended tint logic). Expect prep work — not a one-click drop-in.
+
+---
+
+## Motions & animation — discussion notes (2026-08-11)
+
+### Do character packs include motions?
+
+| Need | Usually included? |
+|---|---|
+| Idle / walk / run | Sometimes |
+| Gun reload / weapon switch | Rarely (soldier packs sometimes) |
+| Full shoot / hit / down set | Rarely complete |
+| Tennis serve / sport-specific | Almost never unless a sport pack |
+| Every GDD fantasy verb | **No** |
+
+Always read the listing for “animations included” / clip count. Synty-style characters often ship **mesh + Humanoid, no clips**.
+
+### Can you use motions from another pack?
+
+**Not always — but often yes** if both sides are **Mecanim Humanoid**:
+- Character = Humanoid avatar  
+- Clip pack = Humanoid  
+→ retarget (shared Animator Controller, Mixamo, etc.)
+
+Fails or looks bad when: Generic/custom skeleton, extreme chibi proportions (foot slide), Legacy-only clips.
+
+### Can you design your own?
+
+Yes: Blender/Maya → FBX Humanoid; Mixamo; Unity Animation window; paid anim packs. Human has no motion-design background — **do not plan to hand-key everything**.
+
+### Project constraints (already locked)
+
+- **C55:** smooth per-frame interpolation in Playback (not stepped stop-motion).  
+- **C23 / ART_DIRECTION:** **no root motion** — Host/ReplayTape moves transforms; clips play in place.  
+- Vehicles/高铁: same idea — **code moves the car**; decorative loops optional.
+
+### GDD fantasy vs ship order
+
+Long wishlist (soldier reload/switch, tennis player kit, railways, buses) is real product fantasy, but **mature solo sequencing** is:
+
+1. **Now:** Scout + Juggernaut readable; idle + walk (+ shoot pose later); clay board + nappin props  
+2. **Later:** reload/switch only if it reads in Playback  
+3. **高铁 / buses:** code path motion when C31 (and any bus gadget) is scheduled  
+4. **Tennis / unique operators:** only when that character is in active build — then buy/retarget or outsource a few signature clips  
+
+Do not buy or author a full anim set for every future roster fantasy before the clay board + two pawns look right.
+
+### How mature solo devs handle “many motions”
+
+They rarely animate everything themselves. Typical pattern:
+
+1. **Design for reuse** — one Humanoid body plan; shared walk/idle; unique clips only for signature moves  
+2. **Buy / retarget** — character pack + Mixamo or anim pack  
+3. **Fake polish early** — in-place cycles + code travel; procedural bob/lean for toy feel; VFX sells hits  
+4. **Outsource selectively** — pay for 5–15 hero clips, not 200  
+5. **Sequence** — fun loop → silhouettes → locomotion → combat beats → vehicle gadgets → roster flourishes  
+
+| Approach | Solo norm |
+|---|---|
+| Hand-key every motion | Rare |
+| Mixamo + Asset Store + retarget | Very common |
+| Code-driven travel + few loops | Extremely common (tactics / board / vehicles) |
+| Full custom mocap | Almost never alone |
+
+### How the Cursor agent can help with motions
+
+| Phase | Agent can |
+|---|---|
+| Planning | Must-have clip list vs defer; Humanoid vs Generic; match to `PawnView` / tape playback |
+| Import | Avatar check, import settings, Animator Controllers, masks |
+| Adaptation | Mixamo/Blender export steps; retarget guidance; fix foot slide / looping / root-motion-off |
+| Wiring | Hook states to tape events (arrive, shoot, wounded); keep tint/height normalize on skinned meshes |
+| Polish | Procedural toy motion in code if clips aren’t ready; batchmode/PlayMode guards |
+
+**Agent cannot:** replace a full mocap studio or live-sculpt every Blender keyframe for the human. Split: human (or Mixamo/freelancer) authors clips; agent owns Unity import, retarget, Animator, and logiCard playback wiring.
+
+**Best handoff:** drop character (or hierarchy/Avatar screenshot) in project → list 3–5 moves for Scout/Juggernaut → Agent mode for wiring.
 
 ---
 
@@ -167,50 +211,48 @@ actual prefab lists before assuming a paid pack is needed at all.
 
 | Current | Action |
 |---|---|
-| Quaternius Ultimate House Interior (`Resources/Interior/`) | Replace with nappin Office (doors/desks/lights/plants) |
-| Poly Haven wet floors via `BoardSurfaceMaterials` | Retire wet PBR; use flat/gradient clay mats (nappin gradients or `Mat_Clay*`) |
-| Kenney smoke → `CloudAtlas` | Replace with Cinematic Weather fog/clouds or SIMPLE Sky / mesh clouds |
-| Quaternius Scout/Juggernaut | Still open — see new "Characters" section above; nappin has **no** character pack, closest candidates found are Toony Tiny Citizens/Soldiers ($30, needs prep work) or keep Quaternius (free, already fits the pipeline, style mismatch) |
-| Path 线稿涂鸦, URP volumes, rain if OK | Keep; retune lighting toward soft bright clay |
+| Quaternius interior (`Resources/Interior/`) | Replace with nappin Office (after URP import + wire) |
+| Poly Haven wet floors | Retire; matte/gradient clay (`Mat_Clay*` / nappin gradients) |
+| Kenney smoke clouds | Replace with free weather/sky packs |
+| Quaternius Scout/Juggernaut | Replace when a chubby pack is chosen; keep as fallback |
+| Path 线稿涂鸦, URP volumes, rain if OK | Keep; softer brighter lighting |
 | Door interaction code | Keep; swap mesh only |
+| 高铁 / bus travel | Code pathing when scheduled — not pack ride anims |
 
 ---
 
-## Integration sketch (still no code)
+## Integration sketch
 
-1. **Office props:** Import nappin Office + URP materials. Wrap needed prefabs under existing `Resources/Interior/` names (`Door`, `Table`, …) or retarget `BoardView` load strings once.
-2. **Floors:** Point `YardFloor`/`HallFloor`/`VaultFloor` at matte solid/gradient materials — stop `BuildWetSurface` Poly Haven path.
-3. **Weather:** Parent free rain/fog/lightning prefabs inside `BoardWeatherPocket` bounds; kill Kenney atlas clouds.
-4. **Buildings/streets:** Place as non-colliding (or lightly colliding) Yard dressing outside the playable continuous footprint; don’t let road meshes fight pathfinding.
-5. **Railway:** Don’t integrate until C31 is scheduled; keep purchase optional.
-6. **UI:** Glass panels are UI work, not an asset pack — separate from this list.
-
----
-
-## Buy order (aligned with your current call)
-
-1. **Already done:** Office Pack Free  
-2. **Add free now:** House Interior Free, Weapons Pack Free (same nappin look, still free)  
-3. **Add free weather:** Cinematic Weather VFX + Zap VFX (+ optional SIMPLE Sky)  
-4. **Add free exterior:** one of Mini World City Starter **or** Free Simple Urban City (+ Kenney Roads if needed)  
-5. **Paid later only if needed:** Modular Railway (~$10) when 高铁 returns; Synty Heist if Vault needs bank modules; tornado VFX if designed in  
-
-**Hold:** COZY ($50), ithappy Cartoon City ($489), full Synty cart — wrong spend for clay-first.
+1. Import nappin URP `.unitypackage` in Editor; delete leftover `.unitypackage` from `Assets/nappin/` if desired.  
+2. Retarget `InteriorPackImportTool` / `Resources/Interior/` names to nappin prefabs (or wrap under existing names).  
+3. Floors → matte clay materials; stop Poly Haven wet path.  
+4. Weather → free rain/fog/lightning in `BoardWeatherPocket`.  
+5. Characters → buy/test chubby Humanoid pack; adapt tint/import pipeline.  
+6. Motions → Humanoid clips in place; tape drives transform; vehicles later via code.  
+7. Railway → mesh purchase only when C31 is on; no anim-pack dependency.  
+8. UI glass → UI work, not an asset pack.
 
 ---
 
-## Earlier Synty recommendation (superseded for now)
+## Buy / do order (current)
 
-The first pass recommended POLYGON Heist + Office + City (~$100). That remains a valid **upgrade path** for denser modular heist architecture, but your screenshot + Office Pack Free confirm push the near-term target to **nappin clay + free weather/city**. Revisit Synty only after the free clay stack is in-scene and still feels thin.
+1. **Done:** nappin Office Essentials in project  
+2. **Do now:** Import `OfficeEssentialsPack_URP.unitypackage` in Unity  
+3. **Add free:** House Interior, Weapons, weather (Cinematic + Zap), optional SIMPLE Sky  
+4. **Add free exterior:** one city/roads language  
+5. **Characters:** try PolyPeople free → then Kotangent Chubby and/or Toony Tiny  
+6. **Paid later:** Modular Railway when 高铁 returns; Synty only if clay stack still feels thin; tornado only if designed  
+
+**Hold:** COZY ($50), ithappy Cartoon City ($489), unlicensed reseller anything, full custom anim library before two pawns look right.
 
 ---
 
-## Price caveat
+## Earlier Synty recommendation (superseded as primary)
 
-Prices sampled 2026-08-10; nappin packs are marked free for a limited time — grab House + Weapons while they are. Confirm URP packages from nappin.dev before dropping into the Unity 6000 project.
+First pass recommended POLYGON Heist + Office + City (~$100). Still a valid **upgrade path** for denser modular heist architecture. Near-term target remains **nappin clay + free weather/city + chubby Humanoid characters**. Unlicensed copies were purged 2026-08-11 — buy from Asset Store only if revisiting Synty.
 
-**2026-08-11 re-check:** nappin House Interior Free and Weapons Pack Free both confirmed still free (live
-Asset Store fetch). Synty Heist/Office/City prices above confirmed live the same day — no sale active on
-any of the three at time of check, so no urgency to "buy before a sale ends," but the licensing TODO
-itself is time-sensitive in the sense that it's been open since 2026-08-11 and gets riskier the more
-integration work goes on top of the unlicensed import.
+---
+
+## Price / license caveat
+
+Prices sampled 2026-08-10 / 2026-08-11. nappin free packs are limited-time — grab House + Weapons while free. Confirm URP packages from nappin.dev (Office URP package already downloaded and verified). Never use Taobao/reseller `.unitypackage` trees under `D:\XinyeData\projects\assets` for shippable content.
