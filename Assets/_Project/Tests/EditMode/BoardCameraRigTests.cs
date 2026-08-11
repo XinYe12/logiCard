@@ -125,5 +125,83 @@ namespace LogiCard.Tests.EditMode
                     $"Camera dropped below expected height at yaw {_rig.YawDegrees}.");
             }
         }
+
+        [Test]
+        public void Init_StartsAtBaselineOrthographicSize()
+        {
+            // GameBootstrap.ConfigureCamera sets 5.0 before Init runs; Init must not silently change
+            // an in-bounds starting value.
+            Assert.That(_rig.OrthographicSize, Is.EqualTo(5.0f).Within(0.001f));
+        }
+
+        [Test]
+        public void ZoomBy_AddsDeltaToOrthographicSize()
+        {
+            _rig.ZoomBy(1.5f);
+            Assert.That(_rig.OrthographicSize, Is.EqualTo(6.5f).Within(0.001f));
+        }
+
+        [Test]
+        public void ZoomBy_AppliesImmediatelyToTheCamera()
+        {
+            _rig.ZoomBy(-1f);
+            Assert.That(_cameraGo.GetComponent<Camera>().orthographicSize, Is.EqualTo(_rig.OrthographicSize).Within(0.001f));
+        }
+
+        [Test]
+        public void ZoomBy_ClampsToMinOrthographicSize()
+        {
+            _rig.ZoomBy(-100f);
+            Assert.That(_rig.OrthographicSize, Is.EqualTo(BoardCameraRig.MinOrthographicSize).Within(0.001f));
+        }
+
+        [Test]
+        public void ZoomBy_ClampsToMaxOrthographicSize()
+        {
+            _rig.ZoomBy(100f);
+            Assert.That(_rig.OrthographicSize, Is.EqualTo(BoardCameraRig.MaxOrthographicSize).Within(0.001f));
+        }
+
+        [Test]
+        public void ZoomBy_ZeroDelta_DoesNotRaiseRotated()
+        {
+            int fired = 0;
+            _rig.Rotated += () => fired++;
+
+            _rig.ZoomBy(0f);
+
+            Assert.That(fired, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ZoomBy_NonZeroDelta_RaisesRotatedOnce()
+        {
+            int fired = 0;
+            _rig.Rotated += () => fired++;
+
+            _rig.ZoomBy(0.5f);
+
+            Assert.That(fired, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ZoomBy_AlreadyAtBound_DoesNotRaiseRotated()
+        {
+            _rig.ZoomBy(-100f); // drive to the min bound
+            int fired = 0;
+            _rig.Rotated += () => fired++;
+
+            _rig.ZoomBy(-5f); // still clamped to the same min bound - no actual change
+
+            Assert.That(fired, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ZoomBy_KeepsYawUnchanged()
+        {
+            _rig.RotateBy(40f);
+            _rig.ZoomBy(2f);
+            Assert.That(_rig.YawDegrees, Is.EqualTo(40f).Within(0.001f));
+        }
     }
 }
