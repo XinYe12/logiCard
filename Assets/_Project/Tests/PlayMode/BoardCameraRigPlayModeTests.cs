@@ -42,12 +42,14 @@ namespace LogiCard.Tests.PlayMode
         [Test]
         public void ZoomingChangesOrthographicSize()
         {
+            // Zoom out (+size), not in — baseline 5.0 minus 1.0 would hit MinOrthographicSize (4.2)
+            // and clamp, which is covered by ZoomingIsClampedWithinAnalyticBounds instead.
             BoardCameraRig rig = Bootstrap.CameraRig;
             float before = rig.OrthographicSize;
 
-            rig.ZoomBy(-1f);
+            rig.ZoomBy(1f);
 
-            Assert.That(rig.OrthographicSize, Is.EqualTo(before - 1f).Within(0.001f));
+            Assert.That(rig.OrthographicSize, Is.EqualTo(before + 1f).Within(0.001f));
         }
 
         [Test]
