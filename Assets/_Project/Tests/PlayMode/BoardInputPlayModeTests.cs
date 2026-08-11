@@ -3,9 +3,12 @@ using LogiCard.Board;
 using LogiCard.Net;
 using LogiCard.Sim;
 using LogiCard.Timeline;
+using LogiCard.UI;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace LogiCard.Tests.PlayMode
 {
@@ -225,5 +228,121 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(1));
             Assert.That(AttackerInput.Program.UsedSeconds, Is.EqualTo(committed).Within(0.0001f));
         }
+
+        /// <summary>
+        /// BUG FOUND 2026-08-11: OutcomeBanner sat in the board region with Unity's default
+        /// Text.raycastTarget=true. At ConfigureCamera's fill zoom (ortho 3.4) that band covers
+        /// most of Freight Yard's soil floor — Move clicks there were absorbed by UI and never
+        /// reached the ground plane (matches the earlier undiagnosed "Yard soil click" report).
+        /// </summary>
+        [Test]
+        public void OutcomeBannerDoesNotRaycastBlockBoardClicks()
+        {
+            Text banner = FindByName<Text>("OutcomeBanner");
+            Assert.That(banner, Is.Not.Null, "Match chrome should include OutcomeBanner.");
+            Assert.That(banner.raycastTarget, Is.False,
+                "OutcomeBanner is display-only and must not absorb board clicks.");
+        }
+
+        /// <summary>
+        /// South-Yard screen taps (the band just above the bottom dock) must reach Move scheduling
+        /// under the live camera rect + HUD, not die as UI-absorbed no-ops.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SouthYardScreenClickQueuesMoveThroughFullClickPipeline()
+        {
+            yield return null;
+
+            Camera cam = Camera.main;
+            Assert.That(cam, Is.Not.Null);
+            Assert.That(cam.orthographicSize, Is.EqualTo(3.4f).Within(0.05f),
+                "Fixture must keep ConfigureCamera's fill zoom — that is what exposes the bug.");
+
+            // Heart of the Yard soil floor: on-screen this sits inside the OutcomeBanner band at ortho 3.4.
+            PlanarPosition yardPoint = new PlanarPosition(4f, 2f);
+            Assert.That(BoardVisual.Model.InBounds(yardPoint), Is.True);
+            Assert.That(yardPoint.DistanceTo(Home), Is.GreaterThan(0.5f),
+                "Probe must be away from the spawn so TryAddWaypoint is a real Move.");
+
+            Vector3 screen = cam.WorldToScreenPoint(BoardVisual.WorldFromPlanar(yardPoint));
+            Assert.That(screen.z, Is.GreaterThan(0f), "Yard probe should be in front of the camera.");
+
+            // Pre-fix: EventSystem would hit OutcomeBanner here. Post-fix: no UI hit (or only
+            // non-blocking graphics), then the click pipeline queues a Move draft.
+            var pointer = new PointerEventData(EventSystem.current) { position = screen };
+            var uiHits = new System.Collections.Generic.List<RaycastResult>();
+            EventSystem.current.RaycastAll(pointer, uiHits);
+            foreach (RaycastResult hit in uiHits)
+            {
+                Assert.That(hit.gameObject.name, Is.Not.EqualTo("OutcomeBanner"),
+                    "OutcomeBanner must not be in the UI raycast stack over the Yard.");
+            }
+
+            AttackerInput.Mode = ActionVerb.Move;
+            Assert.That(AttackerInput.TryClickAtScreenPosition(screen), Is.True,
+                $"South-Yard screen click at {screen} should queue a Move via the full pipeline.");
+            Assert.That(AttackerInput.Program.HasDraft, Is.True);
+            Assert.That(AttackerInput.Program.DraftWaypoints[AttackerInput.Program.DraftWaypoints.Count - 1]
+                .DistanceTo(yardPoint), Is.LessThan(0.35f),
+                "Resolved planar point should land near the Yard probe.");
+        }
+
+        /// <summary>
+        /// Clicks inside the bottom HUD dock must still be absorbed (controls stay clickable) and
+        /// must not schedule board Moves.
+        /// </summary>
+        [Test]
+        public void HudDockScreenClickIsAbsorbedAndDoesNotQueueMove()
+        {
+            // Middle of the bottom dock band in screen pixels.
+            float x = Screen.width * 0.5f;
+            float y = Screen.height * (ProgramHud.HudDockHeight * 0.5f);
+            Vector3 dockScreen = new Vector3(x, y, 0f);
+
+            AttackerInput.Mode = ActionVerb.Move;
+            int before = AttackerInput.Program.HasDraft
+                ? AttackerInput.Program.DraftWaypoints.Count
+                : 0;
+
+            Assert.That(AttackerInput.TryClickAtScreenPosition(dockScreen), Is.False,
+                "Dock clicks must not fall through to the board.");
+            int after = AttackerInput.Program.HasDraft
+                ? AttackerInput.Program.DraftWaypoints.Count
+                : 0;
+            Assert.That(after, Is.EqualTo(before));
+        }
+
+        /// <summary>
+        /// Near-south in-bounds taps still resolve when the physics underlay is briefly disabled -
+        /// ground-plane fallback keeps the bottom edge clickable under fill zoom.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator GroundPlaneFallbackResolvesSouthEdgeWhenUnderlayDisabled()
+        {
+            yield return null;
+
+            Transform underlay = BoardVisual.transform.Find("RoomFloors/GroundUnderlay");
+            Assert.That(underlay, Is.Not.Null, "BoardView should still expose GroundUnderlay.");
+            Collider col = underlay.GetComponent<Collider>();
+            Assert.That(col, Is.Not.Null);
+            col.enabled = false;
+
+            try
+            {
+                Camera cam = Camera.main;
+                PlanarPosition south = new PlanarPosition(4f, 1.2f);
+                Vector3 screen = cam.WorldToScreenPoint(BoardVisual.WorldFromPlanar(south));
+
+                AttackerInput.Mode = ActionVerb.Move;
+                Assert.That(AttackerInput.TryClickAtScreenPosition(screen), Is.True,
+                    "Plane fallback must resolve an in-bounds south Yard tap without the underlay collider.");
+                Assert.That(AttackerInput.Program.HasDraft, Is.True);
+            }
+            finally
+            {
+                col.enabled = true;
+            }
+        }
+
     }
 }
