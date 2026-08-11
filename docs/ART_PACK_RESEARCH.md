@@ -13,8 +13,14 @@
 | Unlicensed Synty `PolygonHeist` / `PolygonOffice` / `PolygonCity` | **Deleted** from `master` + `feat/heist-character-swap`. Do not re-import from reseller bundles. |
 | Interior props wiring | Rewound to **Quaternius CC0** pipeline (`InteriorPackImportTool` + `Resources/Interior/*`) after PolygonOffice re-source was undone |
 | **nappin Office Essentials Pack** | **In project** at `Assets/nappin/OfficeEssentialsPack/` (~54 prefabs, gradients, demo scene). Style lock for interiors. |
-| **nappin URP upgrade** | Downloaded: `OfficeEssentialsPack_URP.unitypackage` (Downloads + dropped under `Assets/nappin/`). **Checked OK** — overwrites same material GUIDs with URP Lit (matches project shader `933532a4…`). Glass transparent. Skybox stays built-in skybox shader. **Human still needs to Import Package in Unity**, then may delete the `.unitypackage` from `Assets/nappin/`. |
-| Characters | Still Quaternius Scout/Juggernaut placeholders. No chubby pack purchased yet. |
+| **nappin URP upgrade** | Downloaded: `OfficeEssentialsPack_URP.unitypackage`, still sitting at `Assets/nappin/OfficeEssentialsPack_URP.unitypackage`. **Checked OK** — overwrites same material GUIDs with URP Lit (matches project shader `933532a4…`). Glass transparent. Skybox stays built-in skybox shader. **Confirm the in-Editor Import Package step has actually run** — the file's continued presence on disk doesn't by itself prove it has (Unity doesn't delete the source `.unitypackage` after import), then may delete the `.unitypackage` from `Assets/nappin/` once confirmed. |
+| **nappin House Interior Free** | **In project** at `Assets/nappin/HouseInteriorPack/` |
+| **nappin Weapons Pack Free** | **In project** at `Assets/nappin/WeaponStylizedPack/` |
+| **Cinematic Weather VFX Bundle** | **In project** at `Assets/RainSnowCloudEffect/` (rain/fog/cloud prefabs confirmed present — not yet wired into `BoardWeatherPocket`) |
+| **Zap VFX – URP** | **In project** at `Assets/Vefects/Zap VFX URP/` |
+| **Creative Characters FREE - Animated Pack** | **In project** at `Assets/ithappy/Creative_Characters_FREE/` — not yet wired into `PawnImportTool`/`PawnView`; material/tint-fit check (see Characters section) still open |
+| **City/exterior — locked pick** | **ithappy Cartoon City Free**, in project at `Assets/ithappy/Cartoon_City_Free/` (has its own `Render_Pipeline_Convert` folder). Human's choice — supersedes the earlier Free Low Poly Simple Urban City / Mini World City Starter options, same publisher family as Creative Characters. Not yet wired. |
+| Unplanned addition | `Assets/ExplosiveLLC/` (`Warrior FREE`, `Warrior Pack Bundle 1 FREE`, `SuperCharacterController`) — not part of any recommendation in this doc; flagged, not yet explained. |
 
 **nappin Office pack check notes:** Materials were Built-in Standard until URP package is imported. Pack is **not wired** into `BoardView` / `Resources/Interior/` yet. Catalog gaps vs current 14 interior slots: no real door (only `SeparatorDoor`), one window, no dedicated cabinet — desks/chairs/lights/shelves/tables map fine.
 
@@ -46,7 +52,7 @@ Do **not** re-import from `D:\XinyeData\projects\assets` reseller bundles — se
 | Next free (same style family) | nappin **House Interior** + **Weapons** | Yes — add from Asset Store while still free |
 | Weather (rain/clouds/fog) | Free URP weather VFX + free clouds/sky | Yes — free first |
 | Lightning | Free Zap / FX Lightning | Yes — free |
-| Buildings + streets | Free low-poly city / Kenney city kits | Yes — free first; accept slightly blockier roads |
+| Buildings + streets | **ithappy Cartoon City Free** | In project — locked pick |
 | Characters | See Characters section below | **Creative Characters FREE - Animated Pack** — free, confirmed Humanoid/Mixamo-compatible, ships 30 animations already |
 | Tornado | Paid stylized VFX (~$40) | Only if a real match beat needs it |
 | Railway / 高铁 | Paid modular railway (~$10–$30) | Catalog; **deferred (C31)** — motion is mostly **code**, not pack anims |
@@ -89,10 +95,13 @@ Publisher: **nappin** — curvy, gradient-matte, soft edges. Matches the clay sc
 
 ### 2. Buildings / streets
 
+**Locked pick, 2026-08-11: ithappy Cartoon City Free** — in project at `Assets/ithappy/Cartoon_City_Free/`. Same publisher as the Creative Characters pack (consistent toony style family, both free), ships its own `Render_Pipeline_Convert` folder. Supersedes the earlier two-option shortlist below.
+
 | Need | Recommend | Price |
 |---|---|---|
-| Urban shells | Free Low Poly Simple Urban City **or** Mini World City Starter | Free |
-| Roads | Bundled with above, or Kenney City Kit Roads (CC0) | Free |
+| Urban shells | **ithappy Cartoon City Free** | Free — in project |
+| ~~Urban shells (superseded options)~~ | ~~Free Low Poly Simple Urban City / Mini World City Starter~~ | Free — not used |
+| Roads | Bundled with Cartoon City Free, or Kenney City Kit Roads (CC0) if a gap remains | Free |
 | Dense city / vault (optional) | Synty City / Heist — buy legitimate Store copies only | $20 / $29.99 |
 
 **Rule:** One exterior language. Keep nappin for interiors.
@@ -235,14 +244,21 @@ They rarely animate everything themselves. Typical pattern:
 
 ## Buy / do order (current)
 
-1. **Done:** nappin Office Essentials in project  
-2. **Do now:** Import `OfficeEssentialsPack_URP.unitypackage` in Unity  
-3. **Add free:** House Interior, Weapons, weather (Cinematic + Zap), optional SIMPLE Sky  
-4. **Add free exterior:** one city/roads language  
-5. **Characters:** import **Creative Characters FREE - Animated Pack** (free, confirmed Humanoid/Mixamo-compatible, ships 30 animations + Animator Controller already) — verify material/tint fit against `PawnView.cs` before wiring; Modular Stylized Character 1 / Kotangent Chubby / Toony Tiny stay fallback options if style or texture approach doesn't fit  
-6. **Paid later:** Modular Railway when 高铁 returns; Synty only if clay stack still feels thin; tornado only if designed  
+**All near-term free assets landed 2026-08-11** — nappin Office Essentials, nappin House Interior Free,
+nappin Weapons Pack Free, Cinematic Weather VFX Bundle (`RainSnowCloudEffect`), Zap VFX URP, Creative
+Characters FREE - Animated Pack, and ithappy Cartoon City Free are all present in `Assets/`. Nothing left
+to buy to keep pushing Phase 5 — remaining work is **wiring**, not shopping:
 
-**Hold:** COZY ($50), ithappy Cartoon City ($489), unlicensed reseller anything, full custom anim library before two pawns look right.
+1. **Confirm, don't assume:** verify `OfficeEssentialsPack_URP.unitypackage` has actually been run through Unity's Import Package dialog, not just downloaded — the file staying on disk doesn't prove it.
+2. **Wire interiors:** retarget `InteriorPackImportTool`/`Resources/Interior/*` names to nappin (Office + House Interior) prefabs.
+3. **Wire weather:** swap `BoardWeatherPocket`'s placeholder clouds for `RainSnowCloudEffect` prefabs; wire Zap VFX for lightning if that beat is still wanted.
+4. **Wire exterior:** place `Cartoon_City_Free` dressing as non-colliding Yard/board-edge backdrop.
+5. **Wire characters:** verify Creative Characters' material/shader approach fits `PawnView.cs`'s plain `_BaseColor` tint (see Characters section) before committing the swap from Quaternius Scout/Juggernaut.
+6. **Paid later, only if needed:** Modular Railway when 高铁 (C31) returns to scope; Synty license only if the clay stack still feels thin after all the above is actually in-scene; tornado VFX only if designed in.
+
+**Hold:** COZY ($50), ithappy Cartoon City *paid* tier ($489, not the Free one now in project), unlicensed reseller anything, full custom anim library before two pawns look right.
+
+**Unresolved, not a buy decision:** `Assets/ExplosiveLLC/` (Warrior FREE / Warrior Pack Bundle 1 FREE / SuperCharacterController) is in the project but isn't part of any recommendation here — confirm with the human whether it's intentional before wiring anything against it.
 
 ---
 
