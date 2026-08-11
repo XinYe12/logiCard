@@ -42,8 +42,9 @@ namespace LogiCard.Tests.PlayMode
         [Test]
         public void ZoomingChangesOrthographicSize()
         {
-            // Zoom out (+size), not in — baseline 5.0 minus 1.0 would hit MinOrthographicSize (4.2)
-            // and clamp, which is covered by ZoomingIsClampedWithinAnalyticBounds instead.
+            // Zoom out (+size), not in — a large negative delta from the ConfigureCamera default can
+            // hit MinOrthographicSize and clamp, which is covered by ZoomingIsClampedWithinAnalyticBounds
+            // instead. Keep the in-bounds +delta pattern so this asserts real motion, not a clamp.
             BoardCameraRig rig = Bootstrap.CameraRig;
             float before = rig.OrthographicSize;
 

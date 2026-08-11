@@ -129,9 +129,22 @@ namespace LogiCard.Tests.EditMode
         [Test]
         public void Init_StartsAtBaselineOrthographicSize()
         {
-            // GameBootstrap.ConfigureCamera sets 5.0 before Init runs; Init must not silently change
-            // an in-bounds starting value.
+            // Unity Camera default / historical ConfigureCamera baseline is 5.0; Init must not
+            // silently change an in-bounds starting value.
             Assert.That(_rig.OrthographicSize, Is.EqualTo(5.0f).Within(0.001f));
+        }
+
+        [Test]
+        public void Init_PreservesConfigureCameraDefaultNearFill()
+        {
+            // Integrator may lower ConfigureCamera's default toward fill (~3.4). Min must stay ≤ that
+            // value or Init clamps the new default back up and undoes the framing change.
+            var cam = _cameraGo.GetComponent<Camera>();
+            cam.orthographicSize = 3.4f;
+            _rig.Init(cam, Vector3.zero);
+
+            Assert.That(_rig.OrthographicSize, Is.EqualTo(3.4f).Within(0.001f));
+            Assert.That(cam.orthographicSize, Is.EqualTo(3.4f).Within(0.001f));
         }
 
         [Test]
