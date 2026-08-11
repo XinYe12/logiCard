@@ -1,5 +1,14 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-11 (later) — unlicensed Synty packs deleted
+
+Human asked to unwire/delete unlicensed assets. Removed `Assets/PolygonHeist/`, `Assets/PolygonOffice/`,
+`Assets/PolygonCity/` from `master` and `feat/heist-character-swap`. Restored
+`InteriorPackImportTool` + `Resources/Interior/*.prefab` to the Quaternius CC0 pipeline (undoes
+`ee95328` / `e2892ef` PolygonOffice re-source). Kept licensed `Assets/nappin/`. Buy list for legitimate
+replacements: Heist $29.99 + Office $49.99 + City $20 ≈ $99.98 — see `docs/ART_PACK_RESEARCH.md`.
+Changes are on disk, not committed yet.
+
 ## 2026-08-11 (continued) — asset-pack audit merged, interior props re-sourcing in flight
 
 Human asked to use a worktree to (1) audit `D:\XinyeData\projects\assets` for anything licensing-safe to
