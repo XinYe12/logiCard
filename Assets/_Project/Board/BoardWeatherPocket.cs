@@ -198,17 +198,15 @@ namespace LogiCard.Board
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
             var shape = ps.shape;
-            // Authored shape (40x1x40) is sized for a large open scene; refit to the board with the
-            // same inset-95% fit and thin (0.15) vertical band the old procedural rain box used.
+            // Pack authored a Cone (type 5, angle 25, emits local +Z). Prior sessions only overrode
+            // .scale + velocityOverLifetime, which left startSpeed still firing mostly sideways —
+            // Stretch then drew short bright horizontal dashes that read as blue spark/dots from the
+            // board camera (screenshot 13). Force the old procedural rain's Box so emission is along
+            // shape +Y, then flip the shape so that axis is world -Y (down).
+            shape.shapeType = ParticleSystemShapeType.Box;
             shape.scale = new Vector3(width * 0.95f, 0.15f, depth * 0.95f);
-            // The pack's shape is actually a Cone (type 5, angle 25, length 5, not a Box — .scale still
-            // applies but doesn't change the emission geometry) whose default emission direction is local
-            // +Z (forward), not -Y (down). Combined with only a weak authored gravityModifier (0.2), that
-            // read as rain spraying sideways/"horizontal" rather than falling (confirmed via a third human
-            // screenshot, 2026-08-11) — startSpeed/lifetime/lengthScale/color fixes alone couldn't touch
-            // this, they don't affect direction. Fixed the same way the old procedural rain guaranteed a
-            // real downward fall below (velocityOverLifetime), rather than trying to re-orient the cone's
-            // own angle/length geometry.
+            shape.position = Vector3.zero;
+            shape.rotation = new Vector3(180f, 0f, 0f);
 
             var emission = ps.emission;
             // Fixed, not board-scaled: this exact rate is what the *previous* procedural rain used, and
@@ -218,14 +216,23 @@ namespace LogiCard.Board
 
             var main = ps.main;
             main.prewarm = true;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 2500;
             // The pack's own authored startSpeed (25-40) and startLifetime (1.2-2s) were left at their
             // open-world values in the first pass of this re-source — at those numbers a particle travels
             // 30-80 world units before dying, several times the board's own 8-13 unit footprint, so every
             // streak (Stretch render mode) rendered far longer than the visible frame and read as harsh
             // "laser" lines crossing the whole scene (caught via a human screenshot, 2026-08-11). Same
             // proven-good numbers the old procedural rain used before this re-source, not a fresh guess.
+            // startSpeed now feeds Stretch length *and* falls down (Box + 180° rotation above).
             main.startSpeed = new ParticleSystem.MinMaxCurve(5.5f, 7.5f);
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.55f, 0.85f);
+            // Pack left size3D on with a near-dot width (0.03) — Stretch needs the old thin-but-readable
+            // drop proportions or streaks collapse to spark points once direction is fixed.
+            main.startSize3D = true;
+            main.startSizeX = new ParticleSystem.MinMaxCurve(0.012f, 0.02f);
+            main.startSizeY = new ParticleSystem.MinMaxCurve(0.18f, 0.32f);
+            main.startSizeZ = new ParticleSystem.MinMaxCurve(0.012f, 0.02f);
 
             // Stretch-billboard renderer length is size*lengthScale + speed*velocityScale, independent
             // of startSpeed/startLifetime above — the pack's authored lengthScale (3.5) still rendered
@@ -235,8 +242,10 @@ namespace LogiCard.Board
             var psRenderer = instance.GetComponent<ParticleSystemRenderer>();
             if (psRenderer != null)
             {
+                psRenderer.renderMode = ParticleSystemRenderMode.Stretch;
                 psRenderer.lengthScale = 1.8f;
                 psRenderer.velocityScale = 0.06f;
+                psRenderer.sharedMaterial = SoftRainMaterial(psRenderer.sharedMaterial);
             }
 
             // Pack's authored startColor (alpha 0.7-0.9) reads far more opaque/saturated than the old
@@ -246,12 +255,30 @@ namespace LogiCard.Board
             main.startColor = new Color(0.72f, 0.78f, 0.88f, 0.42f);
             main.gravityModifier = 0.35f;
 
-            // The actual fix for the "rain looks horizontal" bug — same exact override the old
-            // procedural rain used to guarantee a real downward fall regardless of the emitter shape's
-            // own initial direction. World-space so it adds a constant drift independent of local shape
-            // rotation. Every axis must share the same MinMaxCurve mode (constant vs curve) — Unity
-            // errors otherwise ("Particle Velocity curves must all be in the same mode") and PlayMode
-            // tests treat that Error log as a failure.
+            // Soft edge fade — pack has none; without it opaque birth/death reads as popping sparks.
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(Color.white, 0f),
+                    new GradientColorKey(Color.white, 1f),
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(0.55f, 0.12f),
+                    new GradientAlphaKey(0.45f, 0.75f),
+                    new GradientAlphaKey(0f, 1f),
+                });
+            colorOverLifetime.color = gradient;
+
+            // Extra world-space downward drift + light wind, same as the old procedural rain. With the
+            // Box/downward startSpeed above this reinforces fall rather than fighting a Cone +Z spray.
+            // Every axis must share the same MinMaxCurve mode (constant vs curve) — Unity errors
+            // otherwise ("Particle Velocity curves must all be in the same mode") and PlayMode tests
+            // treat that Error log as a failure.
             var velocity = ps.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.World;
@@ -260,6 +287,55 @@ namespace LogiCard.Board
             velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
             ps.Play(true);
+        }
+
+        private static Material _softRainMaterial;
+
+        /// <summary>
+        /// Runtime instance of the pack rain material: keep the streak texture, drop soft-particle
+        /// depth fade (authored FarFadeDistance 1 eats drops near the board → sparse surviving
+        /// sparks), and soften the bright blue base tint. Never mutates the shared pack/Resources asset.
+        /// </summary>
+        private static Material SoftRainMaterial(Material source)
+        {
+            if (_softRainMaterial != null)
+            {
+                return _softRainMaterial;
+            }
+
+            if (source != null)
+            {
+                _softRainMaterial = new Material(source);
+            }
+            else
+            {
+                var particles = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                    ?? Shader.Find("Particles/Standard Unlit")
+                    ?? Shader.Find("Sprites/Default");
+                _softRainMaterial = new Material(particles);
+            }
+
+            var rainTint = new Color(0.75f, 0.82f, 0.92f, 0.55f);
+            _softRainMaterial.color = rainTint;
+            if (_softRainMaterial.HasProperty("_BaseColor"))
+            {
+                _softRainMaterial.SetColor("_BaseColor", rainTint);
+            }
+
+            if (_softRainMaterial.HasProperty("_SoftParticlesEnabled"))
+            {
+                _softRainMaterial.SetFloat("_SoftParticlesEnabled", 0f);
+            }
+
+            if (_softRainMaterial.HasProperty("_CameraFadingEnabled"))
+            {
+                _softRainMaterial.SetFloat("_CameraFadingEnabled", 0f);
+            }
+
+            _softRainMaterial.DisableKeyword("_SOFTPARTICLES_ON");
+            _softRainMaterial.DisableKeyword("_FADING_ON");
+
+            return _softRainMaterial;
         }
 
         /// <summary>Randomized interval between flashes — modest and occasional, not constant storm
