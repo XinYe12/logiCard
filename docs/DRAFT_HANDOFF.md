@@ -32,16 +32,19 @@ relevant `.mat` files' serialized properties directly to confirm the transparenc
 independently re-ran full batchmode in each worktree: **EditMode 124/124, PlayMode 37/37, both branches,
 both confirmed twice** (once by each worker, once by the Integrator).
 
-**Standing blocker, not a regression from this wave:** attempted one final combined batchmode pass on
-`master` after both merges — it hit the same `Assets/ExplosiveLLC/SuperCharacterController` compile
-errors flagged earlier this session (missing Terrain Physics module reference, invalid `SerializeField`
-usage). That folder is still sitting uncommitted in the main tree's working directory (deliberately kept
-out of every checkpoint/worktree this wave specifically so it couldn't break the workers' own batchmode),
-which means **the main tree itself currently cannot run batchmode at all** until this is resolved one way
-or another. This has been flagged twice now and still needs a human call: fix it (enable Terrain Physics
-package + patch/exclude the `SerializeField` line) or decide `ExplosiveLLC`/`SuperCharacterController`
-isn't wanted and delete it. Either merged branch above is safe regardless — verified in isolation — but no
-one can get a green combined run on `master` until this is settled.
+**`ExplosiveLLC` blocker — fixed.** Both compile errors resolved directly: added
+`com.unity.modules.terrainphysics` to `Packages/manifest.json` (Unity split terrain physics into its own
+module, `SuperCollider.cs`'s `TerrainCollider` reference needed it) and removed a stray `[SerializeField]`
+sitting on a struct type declaration in `SuperCharacterController.cs` (invalid target under this Unity
+version's stricter attribute checking — pure error fix, `[SerializeField]` never affected struct-level
+serialization anyway). One unrelated auto-side-effect from the batchmode run — Unity had silently wired
+`UNITY_POST_PROCESSING_STACK_V2` scripting-define symbols across every platform into
+`ProjectSettings/ProjectSettings.asset` and dropped the existing `SENTIS_ANALYTICS_ENABLED` define in the
+process — was reverted before committing, same discipline both workers used this wave. First clean
+combined batchmode run on `master` since the Synty deletion: **EditMode 124/124, PlayMode 37/37.**
+`Assets/ExplosiveLLC/` itself is still untracked/uncommitted — this fix unblocks batchmode, it doesn't
+adopt the folder into the project. Its origin/purpose is still unexplained; human's call whether to keep
+or remove it.
 
 **Queued, not started:** Characters wiring (`ithappy/Creative_Characters_FREE` into
 `PawnImportTool.cs`/`PawnView.cs` — material/shader fit still needs checking) and exterior dressing

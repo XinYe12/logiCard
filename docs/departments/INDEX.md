@@ -31,13 +31,12 @@ needs checking first) and exterior dressing (`ithappy/Cartoon_City_Free` as Yard
   current `docs/ART_PACK_RESEARCH.md`; Integrator pulls its content into `master` directly rather than
   merging the branch, so it may be redundant — human's call whether to keep it running.
 
-**Standing blocker, now actively biting:** `Assets/ExplosiveLLC/` (Warrior character packs +
-`SuperCharacterController`) is still uncommitted in the main tree's working directory — has real compile
-errors (missing Terrain Physics module reference, invalid `SerializeField` usage) that abort Unity
-batchmode entirely. Every worktree this wave deliberately excluded it from their checkpoint so their own
-batchmode would work, which is why both merges above verified clean — but **the main tree itself cannot
-run batchmode at all right now**, confirmed by a failed combined-verification attempt after both merges.
-Needs a human call: fix it or delete it. Flagged three times now across this session.
+**`Assets/ExplosiveLLC/` blocker — resolved.** Fixed both compile errors (added
+`com.unity.modules.terrainphysics` to the package manifest; removed an invalid `[SerializeField]` on a
+struct type in `SuperCharacterController.cs`, a pure error fix with no behavior change). Combined
+batchmode on `master` now passes: EditMode 124/124, PlayMode 37/37 — first clean full run since the Synty
+deletion. `ExplosiveLLC` itself is still untracked/uncommitted (this fix unblocks batchmode, it doesn't
+adopt the folder) — its origin/purpose is still unexplained, human's call whether to keep or remove it.
 
 Three other now-finished worktrees remain on disk as empty shells pending cleanup (`logiCard-env-lookfeel`,
 `logiCard-ui-dock-polish` from the map-roster wave; `logiCard-vibrancy-pass`/`logiCard-map-continuation`
