@@ -288,9 +288,9 @@ tool (`CharacterCustomizationWindow`/`CustomizableCharacter`) rather than one fi
   Slots the library never assigns to any pickable variant at all (`Mustache`/`T_Shirt` — no `SlotType`
   entry exists for either in `SlotLibrary.asset`) and slots left toggled off (`Full_body`, `Accessories`,
   `Glasses`) keep whatever `Base_Mesh.fbx` ships by default for that node — confirmed by direct inspection
-  (`Tools/LogiCard/Diagnostics/Log Baked Prefab Renderer Meshes`) to be degenerate 4-vertex/zero-volume
-  placeholders on both baked prefabs, not real leftover geometry, so leaving them unassigned is silent by
-  construction.
+  (`Tools/LogiCard/Diagnostics/Log Assembled Prefab Renderer Vertex Counts`) to be degenerate 4-vertex/
+  zero-volume placeholders on both baked prefabs, not real leftover geometry, so leaving them unassigned is
+  silent by construction.
 - **Material/shader:** confirmed directly on both baked prefabs — every `SkinnedMeshRenderer` (all slots,
   enabled or not) shares the pack's single `Materials/Color.mat` (shader guid
   `933532a4fcc9baf4fa0491de14d08ed7`, `Universal Render Pipeline/Lit` — same shader already verified on
@@ -325,8 +325,9 @@ tool (`CharacterCustomizationWindow`/`CustomizableCharacter`) rather than one fi
 - **Verification performed:** Unity 6000.5.5f1 batchmode from this worktree
   (`D:\projects\Game\logiCard-character-pack-swap`) — both archetypes rebuilt via `Tools/LogiCard/Import
   Scout (Creative Characters Pack)` / `...Juggernaut...`, confirmed via direct inspection of the baked
-  prefabs' serialized YAML (mesh/material assignments, `Animator` state) and a dedicated diagnostic
-  (`Tools/LogiCard/Diagnostics/Log Baked Prefab Renderer Meshes`), not just "the menu item ran without an
-  exception." EditMode/PlayMode batchmode results recorded in `docs/DRAFT_HANDOFF.md`. **Not verified:** how
-  this actually looks rendered — same standing limitation as every entry above; a human sighted pass in the
-  Editor is still needed.
+  prefabs' serialized YAML (mesh/material assignments, `Animator` state) and dedicated diagnostics
+  (`Tools/LogiCard/Diagnostics/Log Assembled Prefab Renderer Vertex Counts` and `.../Log Assembled Prefab
+  Rescale Math`), not just "the menu item ran without an exception." Full EditMode+PlayMode batchmode: see
+  this worktree's own report-back (not recorded in `docs/DRAFT_HANDOFF.md` — that file is Integrator-only
+  per this brief's boundary). **Not verified:** how this actually looks rendered — same standing limitation
+  as every entry above; a human sighted pass in the Editor is still needed.
