@@ -1,8 +1,78 @@
 # Art pack research — clay / stylized shopping + motion notes
 
-**Date:** 2026-08-10 (clay/nappin pivot); extended 2026-08-11 (licensing audit, Synty purge, nappin URP check, chubby-character + motion strategy discussion).  
+**Date:** 2026-08-10 (clay/nappin pivot); extended 2026-08-11 (licensing audit, Synty purge, nappin URP check, chubby-character + motion strategy discussion; **lighting + ground shopping for image-copy-14**).  
 **Companion:** `docs/ASSET_PACK_AUDIT.md` (external folder licensing).  
-**Scope:** Research and decisions. Human owns Asset Store purchases/imports.
+**Scope:** Research and decisions. Human owns Asset Store purchases/imports. Docs-only passes do **not** invent PRODUCT_MEMORY C-rows.
+
+---
+
+## Lighting + Ground — 2026-08-11 (image copy 14)
+
+**Trigger:** Human screenshot `screenshots/image copy 14.png` — board still reads flat/muddy (“nobody wants to play this game”). Prior waves (C58–C61 vibrancy, nappin floor bake, weather pack wiring, zoom-fill to default ~3.4 / min **2.6**) did not land a convincing lighting + ground look.  
+**This section owns:** shopping / use-now for **lighting VFX** (godrays / practicals / atmosphere that fit Desk-Lamp Diorama / C29+C53) and **ground / floor materials** that survive close orthographic zoom.  
+**Out of scope here:** synthesizer packs, character packs, Integrator wiring (`BoardWeatherPocket` / `BoardSurfaceMaterials` / bootstrap), map-bottom-click.
+
+### Diagnosis (why “keep tuning what we have” is stalling)
+
+| Layer | What’s in hand today | Why it still reads muddy/flat at play distance |
+|---|---|---|
+| Hall / Vault floors | Baked nappin `(Mat)Floor_URP` (URP Lit) — human asked for pack floor directly; C60/image-13 retinted `_BaseColor` ~`(0.34,0.28,0.22)` | Source material is a **near-featureless matte slab** (source `(Mat)Floor` was ~pure black). Tint brightens it; it never gains micro-detail. At ortho **2.6–3.4** the camera is close enough that “no texture” reads as cardboard. |
+| Yard / Flank | Poly Haven CC0 **1K** asphalt + heavy tint + wet smoothness (`BoardSurfaceMaterials`) | 1K + tile ~2.0–2.2 on an ~8×10 board → coarse texels once zoomed; heavy tint flattens albedo contrast so wet-PBR never “pops.” |
+| Atmosphere | Cinematic Weather rain/clouds wired; Zap for lightning | Pack also ships **unused** `PF_Fog_Ground` / `PF_RainMist` / `PF_Fog_*` — soft volume near the board never landed. Rain alone does not sell desk-lamp **pools**. |
+| Practical lighting | nappin `DeskLight` / `CeilingLight*` / `Lamp` / `RoomLight` / `CornerLight` meshes in pack; warm key/fill in bootstrap | Mesh practicals ≠ visible **shafts / dust / lamp cones**. No owned pack is a volumetric beam / godray system. |
+| Style tension | ART_PACK clay/nappin vs C53 grounded wet detail | Flat clay floor + desaturated wet asphalt both fail the screenshot complaint in different ways; the fix is **readable micro-detail + ortho-safe lamp atmosphere**, not another character/city pack. |
+
+**Orthographic constraint (hard):** screen-space sun-shaft / radial-blur god rays (built for perspective directional lights) are a known fragile class under ortho depth. Prefer **mesh cone beams + particle dust** (geometry in world space) over fullscreen god-ray post.
+
+### Owned inventory re-check (project + `D:\XinyeData\projects\assets`)
+
+**In project (licensing already accepted for ship):**
+
+| Asset | Path | Lighting / ground usefulness |
+|---|---|---|
+| nappin Floor + Gradient* / Reflective | `Assets/nappin/OfficeEssentialsPack/Materials/` | Floor = current Hall/Vault; Gradients = clay alternate; `*_Reflective` = cheap wet-sheen helpers without a new pack |
+| nappin lamp/ceiling practicals | `…/Prefabs/(Prb)DeskLight|CeilingLight*|Lamp|RoomLight|CornerLight` | Desk-Lamp Diorama **practical meshes** — already owned |
+| Poly Haven asphalt/concrete/brick/wood | `Resources/BoardSurfaces/` (1K JPG; originals under `Textures/`) | CC0 — **same URLs support 2K/4K free re-download**; best zoom fix for Yard without buying Store textures |
+| Weather fog/mist (unused) | `Assets/RainSnowCloudEffect/Prefabs/PF_Fog_*`, `PF_RainMist` | Soft ground haze / lamp-pocket atmosphere — **use-now**, URP materials already present |
+| ithappy city surfaces | `Cartoon_City_Free/Materials/Roads`, `Asphalt_Dark_Gray`, `Tile_1`, `Grass` | Already **URP Lit** (`933532a4…`) — Yard/edge candidates if clay floor stays for interiors |
+| Zap VFX | `Assets/Vefects/Zap VFX URP/` | Lightning only — not lamp godrays |
+
+**External folder (`D:\XinyeData\projects\assets`) — lighting/ground pass, 2026-08-11:** same top-level set as `docs/ASSET_PACK_AUDIT.md` (no new folders). Reseller / catalog-numbered bundles remain **unsafe**. Kenney All-in-1 + Kenney_Extracted remain the only **confirmed CC0** libraries; useful here mainly as particle sprites (Smoke Particles already sourced) / simple road kits — **not** a Desk-Lamp volumetric solution, and **not** a close-zoom interior floor library that beats Poly Haven 4K or nappin gradients. No `ASSET_PACK_AUDIT.md` update (nothing newly audited).
+
+### Use-now vs buy-now ranking
+
+| Priority | Action | Price | License | URP / ortho | Beats “keep tinting C60”? |
+|---|---|---|---|---|---|
+| **1 — USE NOW** | Re-download Poly Haven **same** assets at **2K or 4K** into `BoardSurfaces` (asphalt_02, concrete_floor, brick_wall_02, wood_planks); optionally raise tile so zoom 2.6 shows grain, not mush | **Free** | CC0 (already in `THIRD_PARTY.md`) | Drop-in URP Lit maps; camera-agnostic | **Yes for Yard/Flank zoom mush** — prior pass bought *nothing* for resolution; 1K was the ceiling |
+| **2 — USE NOW** | Wire weather pack **fog/mist** (`PF_Fog_Ground`, `PF_RainMist`, soft `PF_Fog_Main`) at board scale; pair with existing nappin **DeskLight / CeilingLight** practicals as warm pools | **Free** (owned) | Asset Store EULA (already imported) | Particle volumes — **ortho-safe** | **Yes for “no atmosphere / no lamp read”** — pack was bought for weather; only rain/clouds were used |
+| **3 — BUY NOW** (if 1–2 still flat after Integrator wires them) | **[RekindledFX VolumetricLight](https://assetstore.unity.com/packages/vfx/shaders/rekindledfx-volumetriclight-volumetriclightshader-and-beam-dust--391504)** — cone mesh beams + in-beam dust, URP-only, ceiling/spot presets | **~$9.99** | Unity Asset Store EULA | Mesh + particles (needs Depth/Opaque textures); **not** perspective radial blur → best Desk-Lamp fit under ortho | **Yes for missing godray/lamp shafts** — nothing owned draws a volumetric cone; cheaper than VLB / Searchlight / Kronnect |
+| **4 — BUY ONLY IF** Hall/Vault must leave featureless nappin Floor **and** Poly Haven concrete still fights clay | **[4K Urban Concrete Textures & Materials (URP)](https://assetstore.unity.com/packages/2d/textures-materials/4k-urban-concrete-textures-materials-wall-floor-urp-built-in-383682)** | **~$4.99** | Store EULA | Ships URP materials | Cheap zoom-survivor for industrial Hall/Vault; **skip** if PH 4K concrete + retile is enough |
+| **Alt ground (style)** | Prefer ithappy `Tile_1` / `Roads` / `Asphalt_Dark_Gray` (owned, URP) or nappin `Gradient*` over a megapack if the target is clay-readable, not photoreal wet | Free (owned) | Already in project | URP Lit | Style-consistent alternate — try before $55–$149 texture libraries |
+
+### Explicit **do not buy** (this wave)
+
+| Pack / class | Price (sampled 2026-08-11) | Why not |
+|---|---|---|
+| Character / synthesizer / roster packs | any | Brief: out of scope; board flatness is lighting + ground |
+| **Super Rays** (screen-space sun shafts) | ~$19.99 | Directional + screen-space; ortho depth class is fragile |
+| **LSPP** god rays | ~$25 | Same screen-space scattering family |
+| **Volumetric Lights 2** (Kronnect) | ~$32–$65 | Real raymarch overkill for a tabletop board; integration weight ≫ desk-lamp cones |
+| **Volumetric Light Beam** (Tech Salad) | ~$44.90 (often ~$20–$23 on sale) | Proven mesh-beam tool (ortho claimed in marketing), but **~4–5×** RekindledFX for the same job class — wait for sale only if RekindledFX fails |
+| **Searchlight System** | ~€18 | Aimed at sweeping searchlights / detection — wrong fantasy for desk-lamp pools |
+| **500+ Stylized Floor** / manmade megapacks | ~$149 / $229 | Need ~3 room surfaces, not 500; resolution/style solvable cheaper |
+| **Stylized Plaster & Concrete Mega** | ~$54.99 | Same overbuy; consider only after PH 4K + $5 concrete fail |
+| Ambient-dust-only packs (~$5) | ~$4.99–$5.59 | Buy RekindledFX instead (beams **include** dust); or author a tiny Shuriken mote from Kenney CC0 sprites already owned |
+| COZY / tornado / Synty / reseller trees under `D:\XinyeData\projects\assets` | various | Unchanged — overkill, wrong style, or **unsafe license** |
+
+### Top 3 recommendations (report summary)
+
+1. **Use now (free): Poly Haven 2K/4K re-fetch + unused weather fog/mist + nappin practical lamp meshes** — license already clear; directly attacks 1K mush + missing atmosphere; no Store spend.  
+2. **Buy now if still flat: RekindledFX VolumetricLight (~$9.99, Store EULA, URP)** — desk-lamp cones + dust that work as world meshes under orthographic portrait framing; best fit to C29 Desk-Lamp Diorama among paid lighting options surveyed.  
+3. **Conditional cheap ground: 4K Urban Concrete (~$4.99, URP) only if Hall/Vault abandon featureless nappin Floor and PH 4K concrete still fails** — otherwise stay on owned ithappy/nappin/PH stack.
+
+**Already-owned enough if re-wired?** **Partially yes for grounds + soft atmosphere** (PH resolution + fog prefabs + practical meshes). **No for true lamp godrays** — that gap needs a mesh-beam pack (or custom cone shader); tuning key/fill alone already had multiple vibrancy passes (C58/C60) without fixing the screenshot complaint.
+
+**Integrator note (not this branch):** wiring fog prefabs / swapping BoardSurfaces resolution / attaching beam prefabs to existing lights is code+import work owned elsewhere. This doc does not claim the look is fixed.
 
 ---
 
@@ -220,7 +290,7 @@ They rarely animate everything themselves. Typical pattern:
 | Current | Action |
 |---|---|
 | Quaternius interior (`Resources/Interior/`) | Replace with nappin Office (after URP import + wire) |
-| Poly Haven wet floors | Retire; matte/gradient clay (`Mat_Clay*` / nappin gradients) |
+| Poly Haven wet floors | **Amended 2026-08-11 (lighting+ground):** keep for Yard/Flank — re-fetch **2K/4K** (still CC0); Hall/Vault stay on nappin Floor unless that slab still fails close zoom, then PH concrete or ithappy `Tile_1` — see Lighting + Ground section. Do not buy megapack floors first. |
 | Kenney smoke clouds | Replace with free weather/sky packs |
 | Quaternius Scout/Juggernaut | Replace when a chubby pack is chosen; keep as fallback |
 | Path 线稿涂鸦, URP volumes, rain if OK | Keep; softer brighter lighting |
@@ -233,30 +303,41 @@ They rarely animate everything themselves. Typical pattern:
 
 1. Import nappin URP `.unitypackage` in Editor; delete leftover `.unitypackage` from `Assets/nappin/` if desired.  
 2. Retarget `InteriorPackImportTool` / `Resources/Interior/` names to nappin prefabs (or wrap under existing names).  
-3. Floors → matte clay materials; stop Poly Haven wet path.  
-4. Weather → free rain/fog/lightning in `BoardWeatherPocket`.  
-5. Characters → buy/test chubby Humanoid pack; adapt tint/import pipeline.  
-6. Motions → Humanoid clips in place; tape drives transform; vehicles later via code.  
-7. Railway → mesh purchase only when C31 is on; no anim-pack dependency.  
-8. UI glass → UI work, not an asset pack.
+3. Floors → Hall/Vault: nappin Floor (retinted) until close-zoom fails; Yard: Poly Haven at **2K/4K** (not 1K). See Lighting + Ground.  
+4. Weather → free rain/fog/lightning in `BoardWeatherPocket` — **also** unused fog/mist prefabs for lamp pockets.  
+5. Lighting VFX → only after free fog+practicals: consider RekindledFX mesh beams (not screen-space god rays).  
+6. Characters → buy/test chubby Humanoid pack; adapt tint/import pipeline.  
+7. Motions → Humanoid clips in place; tape drives transform; vehicles later via code.  
+8. Railway → mesh purchase only when C31 is on; no anim-pack dependency.  
+9. UI glass → UI work, not an asset pack.
 
 ---
 
 ## Buy / do order (current)
 
-**All near-term free assets landed 2026-08-11** — nappin Office Essentials, nappin House Interior Free,
-nappin Weapons Pack Free, Cinematic Weather VFX Bundle (`RainSnowCloudEffect`), Zap VFX URP, Creative
-Characters FREE - Animated Pack, and ithappy Cartoon City Free are all present in `Assets/`. Nothing left
-to buy to keep pushing Phase 5 — remaining work is **wiring**, not shopping:
+**Near-term free mesh/VFX packs landed 2026-08-11** — nappin Office/House/Weapons, Cinematic Weather, Zap,
+Creative Characters FREE, Cartoon City Free are in `Assets/`. Interiors/weather/characters/city dressing
+were largely **wired** the same day (see `DRAFT_HANDOFF.md`). Image-copy-14 feedback reopens **shopping
+only for lighting shafts + ground zoom survivors** — see **Lighting + Ground** section above.
+
+**Lighting / ground order (2026-08-11):**
+
+1. **Free, owned first:** Poly Haven **2K/4K** re-download for `BoardSurfaces`; wire unused `PF_Fog_*` /
+   `PF_RainMist`; lean on nappin DeskLight/CeilingLight practicals for warm pools.
+2. **Buy if still flat:** RekindledFX VolumetricLight (~$9.99) for ortho-safe lamp cones + dust.
+3. **Buy only if Hall/Vault leave nappin Floor and PH 4K fails:** 4K Urban Concrete (~$4.99 URP).
+4. **Do not buy:** screen-space god rays (Super Rays / LSPP), Kronnect VL2, VLB at full price, floor megapacks, characters/synthesizers.
+
+**Older Phase 5 wiring checklist (mostly done — keep for archaeology):**
 
 1. **Confirm, don't assume:** verify `OfficeEssentialsPack_URP.unitypackage` has actually been run through Unity's Import Package dialog, not just downloaded — the file staying on disk doesn't prove it.
 2. **Wire interiors:** retarget `InteriorPackImportTool`/`Resources/Interior/*` names to nappin (Office + House Interior) prefabs.
-3. **Wire weather:** swap `BoardWeatherPocket`'s placeholder clouds for `RainSnowCloudEffect` prefabs; wire Zap VFX for lightning if that beat is still wanted.
+3. **Wire weather:** swap `BoardWeatherPocket`'s placeholder clouds for `RainSnowCloudEffect` prefabs; wire Zap VFX for lightning if that beat is still wanted. *(Rain/clouds/Zap landed; fog/mist still unused — Lighting + Ground §.)*
 4. **Wire exterior:** place `Cartoon_City_Free` dressing as non-colliding Yard/board-edge backdrop.
 5. **Wire characters:** verify Creative Characters' material/shader approach fits `PawnView.cs`'s plain `_BaseColor` tint (see Characters section) before committing the swap from Quaternius Scout/Juggernaut.
 6. **Paid later, only if needed:** Modular Railway when 高铁 (C31) returns to scope; Synty license only if the clay stack still feels thin after all the above is actually in-scene; tornado VFX only if designed in.
 
-**Hold:** COZY ($50), ithappy Cartoon City *paid* tier ($489, not the Free one now in project), unlicensed reseller anything, full custom anim library before two pawns look right.
+**Hold:** COZY ($50), ithappy Cartoon City *paid* tier ($489, not the Free one now in project), unlicensed reseller anything, full custom anim library before two pawns look right, screen-space god-ray packs under orthographic camera.
 
 **Unresolved, not a buy decision:** `Assets/ExplosiveLLC/` (Warrior FREE / Warrior Pack Bundle 1 FREE / SuperCharacterController) is in the project but isn't part of any recommendation here — confirm with the human whether it's intentional before wiring anything against it.
 
