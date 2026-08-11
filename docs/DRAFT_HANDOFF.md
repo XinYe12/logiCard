@@ -1,5 +1,33 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-11 (second screenshot) — rain renderer fix landed; Glass_URP.mat regression root-caused permanently
+
+**Second human screenshot** (`screenshots/image copy 11.png`) showed rain still reading harsh after the
+first speed/lifetime fix, plus a direct question: does the human need to buy more asset packs (lighting/
+VFX) to fix the look? **Answer given: no, not yet** — every issue found this session has traced back to a
+free pack's own open-world-scale defaults left unmodified for this board's much smaller footprint, not an
+asset-quality problem; recommended finishing the tuning pass on what's already owned before buying more.
+
+**Rain, second fix.** `ParticleSystemRenderer.lengthScale` (3.5, still the pack's open-world value)
+stretches each streak independently of `startSpeed`/`startLifetime` — the first fix alone wasn't enough.
+Also `startColor` alpha (0.7-0.9) was nearly double the old procedural rain's tint (0.42). Both reverted
+to the old procedural rain's exact proven values (`lengthScale 1.8`, `velocityScale 0.06`, tint
+`(0.72, 0.78, 0.88, 0.42)`). Batchmode: EditMode 124/124, PlayMode 37/37.
+
+**A recurring regression, finally root-caused instead of manually reverted a fourth time.** The
+`(Mat)Glass_URP.mat` blend-state corruption (`_SrcBlend` 5→1, `_ALPHAPREMULTIPLY_ON` added) had appeared
+three separate times this session after unrelated batchmode runs. Root cause found by direct testing, not
+assumed: `RunImportPasses()` only ever looked safe because it happens to re-call
+`FixGlassTransparency()` right before each of its own saves; the newer `RunBakeFloorMaterial` entry point
+did its own `AssetDatabase.Refresh()` without that re-assert, so it kept shipping the corruption. Fixed by
+adding the same `FixGlassTransparency()` call to both entry points. **Confirmed via direct testing that a
+plain `-runTests` pass alone does NOT corrupt the material** — the regression is specifically tied to this
+tool's own asset-duplication event, not "any batchmode run." Verified the fix holds across a full
+EditMode+PlayMode pass with zero manual revert needed, for the first time this session.
+
+Commits: `a80e315` (rain renderer/color), `9242536` (Glass_URP.mat permanent fix). Still not visually
+re-confirmed — next screenshot should show soft, proportioned rain instead of streaks.
+
 ## 2026-08-11 (first real screenshot) — rain "laser streak" bug fixed, Hall/Vault floor switched to nappin material
 
 **First actual human screenshot of this session's Phase 5 wiring waves** (`screenshots/image copy 10.png`)
