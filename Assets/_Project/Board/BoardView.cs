@@ -612,9 +612,13 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Dark recessed apron beyond the board plus a few dim primitive silhouettes (messy
-        /// workbench cue). Tilt-shift DoF blurs them further — they only need to read as
-        /// "something in the void," not detailed props.
+        /// Dark recessed apron beyond the board plus a handful of ithappy Cartoon City Free prefab
+        /// fragments (sidewalk slab, trash can, broken lamp post, debris) reading as scattered
+        /// street/ruin debris at the board's edge — not a continuous city block, see
+        /// docs/ART_PACK_RESEARCH.md and the void-city-dressing brief. Tilt-shift DoF blurs them
+        /// further — they only need to read as "something in the void," not detailed props.
+        /// Same positions/rotations as the original placeholder primitive-cube pass; only the
+        /// visual (real prefab vs. tinted cube) and per-item vertical anchoring changed.
         /// </summary>
         private void PlaceVoidDressing(ArenaBoard model)
         {
@@ -639,44 +643,99 @@ namespace LogiCard.Board
             apron.GetComponent<MeshRenderer>().sharedMaterial = PrimitiveMaterialFactory.Tinted(VoidApronColor);
             StripCollider(apron);
 
-            PlaceVoidClutter(
+            // Debris pile (was Clutter_Block) — Trash_04, bottom-pivoted, raw height 0.876.
+            PlaceVoidCityProp(
                 voidRoot.transform,
                 "Clutter_Block",
+                "DebrisPile",
                 new PlanarPosition(model.MinX - 1.35f, model.MinY + (depth * 0.28f)),
+                0.571f,
+                -0.295f,
+                18f,
                 new Vector3(0.9f * WorldScale, 0.35f, 0.55f * WorldScale),
-                -0.12f,
-                18f);
-            PlaceVoidClutter(
+                -0.12f);
+            // Broken sidewalk slab (was Clutter_Slab) — Set_B_Tiles_05, center-pivoted, 15x0.2x15.
+            PlaceVoidCityProp(
                 voidRoot.transform,
                 "Clutter_Slab",
+                "SidewalkSlab",
                 new PlanarPosition(model.MaxX + 1.45f, model.MaxY - (depth * 0.22f)),
-                new Vector3(1.2f * WorldScale, 0.18f, 0.7f * WorldScale),
+                0.12f,
                 -0.14f,
-                -25f);
-            PlaceVoidClutter(
+                -25f,
+                new Vector3(1.2f * WorldScale, 0.18f, 0.7f * WorldScale),
+                -0.14f);
+            // Trash can (was Clutter_Can) — Trash_Can_07, bottom-pivoted, raw height 1.645.
+            PlaceVoidCityProp(
                 voidRoot.transform,
                 "Clutter_Can",
+                "TrashCan",
                 new PlanarPosition(model.MinX + (width * 0.18f), model.MaxY + 1.55f),
+                0.334f,
+                -0.355f,
+                40f,
                 new Vector3(0.35f * WorldScale, 0.55f, 0.35f * WorldScale),
-                -0.08f,
-                40f);
-            PlaceVoidClutter(
+                -0.08f);
+            // Flattened debris (was Clutter_Tray) — Trash_06, bottom-pivoted, raw height 1.242.
+            PlaceVoidCityProp(
                 voidRoot.transform,
                 "Clutter_Tray",
+                "DebrisFlat",
                 new PlanarPosition(model.MaxX - (width * 0.25f), model.MinY - 1.4f),
+                0.282f,
+                -0.22f,
+                8f,
                 new Vector3(0.85f * WorldScale, 0.12f, 0.45f * WorldScale),
-                -0.16f,
-                8f);
-            PlaceVoidClutter(
+                -0.16f);
+            // Broken lamp-post stub (was Clutter_Peg) — Spotlight_02, bottom-pivoted, raw height 7.103.
+            PlaceVoidCityProp(
                 voidRoot.transform,
                 "Clutter_Peg",
+                "StreetlampBroken",
                 new PlanarPosition(model.MinX - 1.6f, model.MaxY - (depth * 0.35f)),
+                0.155f,
+                -0.4f,
+                -12f,
                 new Vector3(0.22f * WorldScale, 0.7f, 0.22f * WorldScale),
-                -0.05f,
-                -12f);
+                -0.05f);
         }
 
-        private void PlaceVoidClutter(
+        /// <summary>
+        /// Instantiates a real ithappy Cartoon City Free prefab from <c>Resources/CityDressing</c> at
+        /// a void-edge dressing slot. Mirrors <see cref="PlaceInteriorProp"/>'s
+        /// Resources.Load-with-fallback shape: if the prefab hasn't been baked yet (
+        /// <see cref="LogiCard.Art.Editor.CityDressingPackImportTool"/> hasn't run), falls back to the
+        /// original tinted primitive cube so the scene still builds in tests.
+        /// </summary>
+        private void PlaceVoidCityProp(
+            Transform parent,
+            string name,
+            string resourceName,
+            PlanarPosition planarCenter,
+            float uniformScale,
+            float localY,
+            float yawDegrees,
+            Vector3 fallbackScale,
+            float fallbackLocalY)
+        {
+            GameObject prefab = Resources.Load<GameObject>("CityDressing/" + resourceName);
+            if (prefab == null)
+            {
+                PlaceVoidClutterFallback(parent, name, planarCenter, fallbackScale, fallbackLocalY, yawDegrees);
+                return;
+            }
+
+            GameObject prop = Object.Instantiate(prefab, parent, false);
+            prop.name = name;
+            prop.transform.localPosition = LocalFromPlanar(planarCenter) + new Vector3(0f, localY, 0f);
+            prop.transform.localScale = Vector3.one * (uniformScale * WorldScale);
+            prop.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            StripCollidersRecursive(prop);
+        }
+
+        /// <summary>Pre-import fallback — the original tinted primitive cube, kept so builds/tests
+        /// stay green before <see cref="LogiCard.Art.Editor.CityDressingPackImportTool"/> has run.</summary>
+        private void PlaceVoidClutterFallback(
             Transform parent,
             string name,
             PlanarPosition planarCenter,
