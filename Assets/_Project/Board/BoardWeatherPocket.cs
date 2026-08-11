@@ -219,6 +219,24 @@ namespace LogiCard.Board
             main.startSpeed = new ParticleSystem.MinMaxCurve(5.5f, 7.5f);
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.55f, 0.85f);
 
+            // Stretch-billboard renderer length is size*lengthScale + speed*velocityScale, independent
+            // of startSpeed/startLifetime above — the pack's authored lengthScale (3.5) still rendered
+            // streaks ~4 world units long even after the speed/lifetime fix (confirmed via a second human
+            // screenshot, 2026-08-11: still reading as long harsh lines, not soft rain). Same proven-good
+            // renderer values the old procedural rain used.
+            var psRenderer = instance.GetComponent<ParticleSystemRenderer>();
+            if (psRenderer != null)
+            {
+                psRenderer.lengthScale = 1.8f;
+                psRenderer.velocityScale = 0.06f;
+            }
+
+            // Pack's authored startColor (alpha 0.7-0.9) reads far more opaque/saturated than the old
+            // procedural rain's tint (alpha 0.42) — on top of the long-streak issue, this was the other
+            // half of why it read as harsh "laser" lines rather than soft rain. Same tint the old
+            // procedural rain used.
+            main.startColor = new Color(0.72f, 0.78f, 0.88f, 0.42f);
+
             ps.Play(true);
         }
 
