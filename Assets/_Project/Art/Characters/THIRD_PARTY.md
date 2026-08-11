@@ -256,3 +256,77 @@ CC0 Quaternius "Ultimate Modular Men" pack rather than adopt a new pack. This en
   this session, same limitation the reassessment above notes. A human sighted pass is still needed to
   confirm the Worker outfit actually reads as "plainclothes/civilian-operator" against the SWAT-facility
   board rather than something else unanticipated from asset inspection alone.
+
+---
+
+## 2026-08-11 — Quaternius "Ultimate Modular Men" retired, ithappy "Creative Characters FREE" adopted (character-pack-swap)
+
+Human decision (per `docs/ART_PACK_RESEARCH.md`'s Characters section): stop compensating for Quaternius's
+faceted/matte/adult-proportioned geometry downstream and switch the base pack instead. `Assets/ithappy/
+Creative_Characters_FREE/` (publisher ithappy, 85,000+ ratings) landed for this — confirmed Humanoid rig,
+Mixamo-compatible, 420 combinable modular parts across 15 slot categories, ships its own Editor assembly
+tool (`CharacterCustomizationWindow`/`CustomizableCharacter`) rather than one finished FBX per archetype.
+
+- **Author / source:** ithappy (Unity Asset Store, "Creative Characters FREE").
+- **License:** Unity Asset Store standard EULA (free asset). Already present in the repo prior to this
+  pass (`b3d9eb7`/`0c430a3`); this entry records its adoption as the Scout/Juggernaut base, not its import.
+- **What changed:** `PawnImportTool.cs` (Quaternius's one-FBX-in pipeline) does not fit a slot-based
+  modular system, so a sibling tool, `Assets/_Project/Editor/CharacterCustomizationImportTool.cs`, drives
+  the pack's own `CustomizableCharacter`/`SlotLibrary` assembly API directly — same discipline as
+  `InteriorPackImportTool`/`PawnImportTool`'s "reuse the pack's intended workflow" precedent. `Tools/
+  LogiCard/Import Scout (Creative Characters Pack)` and `Tools/LogiCard/Import Juggernaut (Creative
+  Characters Pack)` rebuild `Resources/Scout/Scout.prefab` and `Resources/Juggernaut/Juggernaut.prefab` in
+  place at the exact paths `PawnView.cs` already expects — `PawnView.cs` itself needed zero changes.
+- **Part picks:** Scout (lean/civilian) — `Outfit_010` (the pack's only Outfit-group option),
+  `Pants_009`, `Shoe_Slippers_005`, `Hairstyle_Male_005`, no headgear (bare head reads lean next to
+  Juggernaut's helmet). Juggernaut (bulky/armored) — `Outwear_050`, `Pants_010`, `Shoe_Sneakers_009`,
+  `Hat_Single_016`, `Gloves_014`, no hairstyle (helmet covers the head instead). Every ambiguous pick
+  (Outwear/Pants/Shoes/Hat/Gloves variant) was chosen by comparing `SkinnedMeshRenderer.sharedMesh.bounds`
+  volume across that slot's real variants (`Tools/LogiCard/Diagnostics/Log Character Part Bounds`) and
+  taking the largest for Juggernaut / smallest for Scout, not guessed from filenames — see
+  `CharacterCustomizationImportTool.BuildScout`/`BuildJuggernaut`'s inline comments for the exact numbers.
+  Slots the library never assigns to any pickable variant at all (`Mustache`/`T_Shirt` — no `SlotType`
+  entry exists for either in `SlotLibrary.asset`) and slots left toggled off (`Full_body`, `Accessories`,
+  `Glasses`) keep whatever `Base_Mesh.fbx` ships by default for that node — confirmed by direct inspection
+  (`Tools/LogiCard/Diagnostics/Log Baked Prefab Renderer Meshes`) to be degenerate 4-vertex/zero-volume
+  placeholders on both baked prefabs, not real leftover geometry, so leaving them unassigned is silent by
+  construction.
+- **Material/shader:** confirmed directly on both baked prefabs — every `SkinnedMeshRenderer` (all slots,
+  enabled or not) shares the pack's single `Materials/Color.mat` (shader guid
+  `933532a4fcc9baf4fa0491de14d08ed7`, `Universal Render Pipeline/Lit` — same shader already verified on
+  every other archetype material in this project). No shader conversion step needed, unlike every prior
+  pack this project re-sourced; `CustomizableCharacter`'s own assembly forces every part onto that one
+  material regardless of which parts are picked, matching the pack's texture-atlas-driven, not
+  per-part-unique-material, design.
+- **Team-color tint hook:** verified, no `PawnView.cs` change needed. Both baked prefabs have a
+  `SkinnedMeshRenderer` named exactly `Body` (torso mesh `Body_011`), which `PawnView.TintedPartNameMarker`
+  ("Body", case-insensitive substring) matches directly. Note for future readers: the same substring also
+  matches the `Full_body` renderer (case-insensitive `"Full_body".Contains("Body")`) — currently harmless
+  since neither archetype selects a `FullBody` costume and that renderer stays at its degenerate
+  placeholder mesh, but a future archetype using a Costume variant would tint `Full_body` too. Not changed
+  here since it's inert for the current two archetypes.
+- **Scale sanity check:** combined renderer bounds before `PawnView.TryBuildImported`'s rescale — Scout
+  `(1.4407, 1.8521, 0.4134)`, Juggernaut `(1.4454, 2.0887, 0.4559)` — against `TargetVisualHeight = 1.0f`
+  gives scale factors of ~0.54x and ~0.48x respectively. Neither is absurdly tiny/huge; both land in the
+  same range the old Quaternius archetypes did.
+- **Animator:** both baked prefabs keep the `Animator` component `Base_Mesh.prefab` ships with (harmless,
+  keeps the door open for a future real animation pass) but with `m_Controller` cleared to `{fileID: 0}`
+  and `m_ApplyRootMotion: 0` — confirmed directly in both prefabs' serialized YAML. No `CharacterController`/
+  `CharacterMover`/`MovePlayerInput` components from the pack's own `CharacterCustomizationWindow.SavePrefab`
+  workflow were added; this project's own `PawnView`/`RoundPlayback` drives position, not the pack's
+  built-in player-input movement scripts.
+- **Quaternius "Ultimate Modular Men" status:** retired as the Scout/Juggernaut base. Its entries above are
+  kept for provenance per this doc's own stated purpose; the source FBX/materials under
+  `Resources/Scout/Worker.fbx` and `Resources/Juggernaut/Swat.fbx` (plus their per-part `.mat` files) are
+  left in the repo, now unreferenced by the rebuilt prefabs — deliberately not deleted this pass, same
+  discipline as this doc's earlier "not addressed further, out of scope" notes on `Scout_Body.mat`/
+  `Adventurer.fbx`. Repo-hygiene cleanup (deleting the now-orphaned Quaternius source assets) is a safe
+  follow-up whenever someone's next in this folder.
+- **Verification performed:** Unity 6000.5.5f1 batchmode from this worktree
+  (`D:\projects\Game\logiCard-character-pack-swap`) — both archetypes rebuilt via `Tools/LogiCard/Import
+  Scout (Creative Characters Pack)` / `...Juggernaut...`, confirmed via direct inspection of the baked
+  prefabs' serialized YAML (mesh/material assignments, `Animator` state) and a dedicated diagnostic
+  (`Tools/LogiCard/Diagnostics/Log Baked Prefab Renderer Meshes`), not just "the menu item ran without an
+  exception." EditMode/PlayMode batchmode results recorded in `docs/DRAFT_HANDOFF.md`. **Not verified:** how
+  this actually looks rendered — same standing limitation as every entry above; a human sighted pass in the
+  Editor is still needed.
