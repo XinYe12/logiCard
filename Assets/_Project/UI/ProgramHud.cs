@@ -693,6 +693,11 @@ namespace LogiCard.UI
             UiFactory.Stretch(_outcomeLabel.rectTransform,
                 new Vector2(0f, HudDockHeight + 0.02f), new Vector2(1f, HudDockHeight + 0.14f),
                 new Vector2(Pad, 0f), new Vector2(-Pad, 0f));
+            // BUG FOUND 2026-08-11 (playtest + closer ortho 3.4): Unity UI Text defaults to
+            // raycastTarget=true, so this empty full-width banner silently ate every board click in
+            // screen Y in [HudDockHeight+0.02, HudDockHeight+0.14] - with the fill zoom that band
+            // covers most of the Yard (soil floor / south board). Display-only; never a control.
+            _outcomeLabel.raycastTarget = false;
         }
 
         public void ShowOutcome(string text)

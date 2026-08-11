@@ -269,18 +269,54 @@ namespace LogiCard.Board
                 return;
             }
 
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            TryClickAtScreenPosition(Input.mousePosition);
+        }
+
+        /// <summary>
+        /// Full click pipeline (UI absorb → ground ray / plane → <see cref="TryTapPoint"/>) at an
+        /// explicit screen position. <see cref="Update"/> uses the live pointer; PlayMode tests drive
+        /// south-edge / HUD-overlap cases without synthesizing <c>Input.mousePosition</c>.
+        /// </summary>
+        public bool TryClickAtScreenPosition(Vector3 screenPosition)
+        {
+            if (_locked || _phase.Phase != RoundPhase.Program)
+            {
+                return false;
+            }
+
+            if (IsScreenPositionAbsorbedByUi(screenPosition, out string uiName))
             {
                 // Debug-only, not player-facing (this fires on every legitimate HUD dock click too,
                 // which would make it noisy as a rejection toast) — but logged so a repeated "my board
                 // click did nothing" report can be checked against the console: if this fires for a
                 // click the player intended for the board, the HUD dock's raycast area is overlapping
                 // board screen-space, not a raycast/pathfinding bug.
-                Debug.Log($"[logiCard] Click at {Input.mousePosition} absorbed by UI, never reached the board.");
-                return;
+                Debug.Log(
+                    $"[logiCard] Click at {screenPosition} absorbed by UI '{uiName}', never reached the board.");
+                return false;
             }
 
-            TryHandleClick();
+            return TryHandleClickAtScreenPosition(screenPosition);
+        }
+
+        private static bool IsScreenPositionAbsorbedByUi(Vector3 screenPosition, out string uiName)
+        {
+            uiName = "(none)";
+            if (EventSystem.current == null)
+            {
+                return false;
+            }
+
+            var pointer = new PointerEventData(EventSystem.current) { position = screenPosition };
+            var hits = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(pointer, hits);
+            if (hits.Count == 0)
+            {
+                return false;
+            }
+
+            uiName = hits[0].gameObject != null ? hits[0].gameObject.name : "(unknown)";
+            return true;
         }
 
         /// <summary>
@@ -473,35 +509,77 @@ namespace LogiCard.Board
             _pathPreview.Clear();
         }
 
-        private void TryHandleClick()
+        private bool TryHandleClickAtScreenPosition(Vector3 screenPosition)
         {
             Camera cam = Camera.main;
             if (cam == null || _boardView == null)
             {
-                return;
+                return false;
             }
 
-            if (!Physics.Raycast(cam.ScreenPointToRay(Input.mousePosition), out RaycastHit hit))
+            Ray ray = cam.ScreenPointToRay(screenPosition);
+            if (Physics.Raycast(ray, out RaycastHit hit))
             {
-                // Was totally silent before (2026-08-10) — a click that doesn't land on any collider
-                // at all (e.g. past the board edge, or a real click-to-world bug) previously gave the
-                // player zero feedback, indistinguishable from "nothing happened." Surface it so a
-                // repeatedly-missed click is at least visible/diagnosable, not a mystery.
-                Debug.Log("[logiCard] Click raycast hit nothing.");
-                ActionRejected?.Invoke("click didn't land on the board");
-                return;
+                // Only accept hits on this board's ground (or any collider under the BoardView root).
+                if (!hit.collider.transform.IsChildOf(_boardView.transform)
+                    && hit.collider.transform != _boardView.transform)
+                {
+                    Debug.Log(
+                        $"[logiCard] Click raycast hit '{hit.collider.gameObject.name}', which isn't part of this board.");
+                    ActionRejected?.Invoke("click landed off the board");
+                    return false;
+                }
+
+                return TryTapPoint(_boardView.PlanarFromWorld(hit.point));
             }
 
-            // Only accept hits on this board's ground (or any collider under the BoardView root).
-            if (!hit.collider.transform.IsChildOf(_boardView.transform)
-                && hit.collider.transform != _boardView.transform)
+            // Physics miss: still resolve against the authored ground plane. Closer ortho fill
+            // (3.4) pushes the south lip near/past the camera viewport bottom — rays that skim the
+            // underlay's vertical face or graze void just past MinY used to fail silently-then-toast
+            // even when the mathematical plane hit is still a legal in-bounds Move target.
+            if (TryPlanarFromGroundPlane(ray, out PlanarPosition planar))
             {
-                Debug.Log($"[logiCard] Click raycast hit '{hit.collider.gameObject.name}', which isn't part of this board.");
-                ActionRejected?.Invoke("click landed off the board");
-                return;
+                if (_board != null && !_board.InBounds(planar))
+                {
+                    Debug.Log($"[logiCard] Click ground-plane hit {planar} is outside the board.");
+                    ActionRejected?.Invoke("click didn't land on the board");
+                    return false;
+                }
+
+                return TryTapPoint(planar);
             }
 
-            TryTapPoint(_boardView.PlanarFromWorld(hit.point));
+            // Was totally silent before (2026-08-10) — a click that doesn't land on any collider
+            // at all (e.g. past the board edge, or a real click-to-world bug) previously gave the
+            // player zero feedback, indistinguishable from "nothing happened." Surface it so a
+            // repeatedly-missed click is at least visible/diagnosable, not a mystery.
+            Debug.Log("[logiCard] Click raycast hit nothing.");
+            ActionRejected?.Invoke("click didn't land on the board");
+            return false;
+        }
+
+        /// <summary>
+        /// Intersect <paramref name="ray"/> with the board's ground plane (local Y = 0) and convert
+        /// to planar coordinates. Used when the ground collider miss but the click still aims at the
+        /// diorama floor — keeps south-edge taps working under fill zoom / pitched ortho.
+        /// </summary>
+        private bool TryPlanarFromGroundPlane(Ray ray, out PlanarPosition planar)
+        {
+            planar = default;
+            if (_boardView == null)
+            {
+                return false;
+            }
+
+            // Ground plane through the board origin, normal = board up (handles any board tilt later).
+            var plane = new Plane(_boardView.transform.up, _boardView.WorldFromPlanar(new PlanarPosition(0f, 0f)));
+            if (!plane.Raycast(ray, out float enter) || enter < 0f)
+            {
+                return false;
+            }
+
+            planar = _boardView.PlanarFromWorld(ray.GetPoint(enter));
+            return true;
         }
     }
 }
