@@ -1,5 +1,44 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-11 (first real screenshot) — rain "laser streak" bug fixed, Hall/Vault floor switched to nappin material
+
+**First actual human screenshot of this session's Phase 5 wiring waves** (`screenshots/image copy 10.png`)
+— caught two real bugs neither batchmode nor code review surfaced, plus confirmed characters/other assets
+imported correctly. Also flagged lighting as bad; investigated, found no code-level cause (no legacy
+Post-Processing Stack v2 conflict — that package is a dead dependency from one of the new asset packs, not
+wired into any scene component; ambient/key/fill light setup reads as deliberately moody, not obviously
+broken) — this looks like a design/tuning question, not a bug, and is parked pending more specific human
+direction rather than guessed at blind.
+
+**Rain fixed** — `PF_RainSystem`'s authored `startSpeed` (25-40) and `startLifetime` (1.2-2s) were left at
+the pack's open-world values when `BoardWeatherPocket.PlaceRain` board-fit-rescaled the shape/rate; a
+particle traveled 30-80 world units before dying against the board's actual 8-13 unit footprint, rendering
+as harsh laser-like streaks instead of rain. Rescaled both to the exact values the old procedural rain
+used (proven to read fine before this pack re-source): `startSpeed 5.5-7.5`, `startLifetime 0.55-0.85`.
+
+**Floor switched to nappin's own material directly** — human's explicit call ("use asset pack floor
+directly") after the procedural Poly Haven concrete build read badly, rather than continuing to debug/
+retune it. New `InteriorPackImportTool.BakeFloorMaterial` bakes `(Mat)Floor.mat` (nappin's own flat matte
+floor material) to `Resources/Interior/Materials/(Mat)Floor_URP.mat`, same duplicate-then-URP-convert
+discipline as every other nappin material this tool touches. `BoardSurfaceMaterials.HallFloor`/`VaultFloor`
+load it directly, falling back to the old procedural build only if the baked material is missing (so
+EditMode tests still compile without it).
+
+**A real regression caught before committing, not after:** baking the floor material's
+`AssetDatabase.Refresh()` silently re-derived `(Mat)Glass_URP.mat`'s blend state
+(`_SrcBlend` 5→1, `_ALPHAPREMULTIPLY_ON` added) — the same "first-touch blend-state re-derivation" bug
+class this project has already hit and fixed twice on different materials this session. Caught by diffing
+before commit (not assumed clean from a green test run), reverted, confirmed the correct value held.
+
+Also fixed a batchmode gotcha along the way: the new `RunBakeFloorMaterial` executeMethod entry point
+calls `EditorApplication.Exit(0)` itself rather than relying on an external `-quit` flag — the first
+attempt using `-quit` raced the method call and the bake silently never ran, same class of issue this
+project's docs already warn about for `-runTests`, now confirmed to apply to `-executeMethod` too.
+
+Batchmode: **EditMode 124/124, PlayMode 37/37.** Committed `efde1a3`. Not yet re-confirmed visually — the
+human's Editor was open mid-investigation and had to be closed before these fixes could be batchmode-
+verified; next screenshot should confirm both actually look right now.
+
 ## 2026-08-11 (yet later) — void-city dressing merged; character-pack swap resumed after stalling
 
 Continuing the Phase 5 wave with the two ithappy packs: `feat/character-pack-swap` (Scout/Juggernaut from
