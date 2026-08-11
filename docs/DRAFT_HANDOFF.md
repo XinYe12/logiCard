@@ -1,5 +1,43 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-11 (image-14) — game bugs + lighting research + south-click merged
+
+Human screenshot `screenshots/image copy 14.png`: path first-leg missing, door snap/cabinet feel,
+lightning mid-air, clouds deferred, **round state reset to spawn**, lighting/ground still bad,
+bottom-of-map move-click fails. Parallel wave: Integrator fixed gameplay/presentation bugs; two
+workers took lighting/ground research + south-edge click.
+
+**Integrator (`7b5babb`) — four bugs:**
+
+1. **Path first leg** — `RefreshPathBeads` had dropped `_origin` to avoid a duplicate start bead
+   (2026-08-05), which also dropped the stroke. Seed origin again; `PathPreviewView.Show(...,
+   skipFirstDot: true)` draws the leg without the extra bead.
+2. **Round carry / “resets to spawn”** — hardened C33: `CommitRoundState` before Disarm when
+   entering Allot/Program with a live tape, and again in `OnNextRoundRequested` + early
+   `PrepareRound` so Next Round cannot drop end positions/doors if Aftermath was skipped.
+3. **Lightning mid-air** — Zap instance was at `y = 3.2 * cloudBoost` (~6.7). Now floor-anchored
+   (`y = 0.05`).
+4. **Door swing** — hinge no longer snaps ±95°. ~0.38s smoothstep Slerp arc; `DoorVisual` promoted
+   to a class so anim state persists. (Mesh is still nappin `(Prb)Door` — if it still reads as a
+   cabinet, that’s an asset/pivot follow-up, not the missing arc.)
+
+**Clouds** — explicitly deferred (human).
+
+**`feat/map-bottom-click` → merge `5971f23` (worker `358357a`).** Root cause: empty
+`OutcomeBanner` full-width `raycastTarget` ate south-board clicks under closer fill zoom; also
+physics-miss fallback via ground-plane ray. Banner `raycastTarget = false`; `TryClickAtScreenPosition`
++ PlayMode coverage. Auto-merged cleanly with Integrator path-seed changes on
+`BoardInputController`.
+
+**`feat/lighting-ground-assets` → merge `71174a7` (worker `581900d`).** Docs-only update to
+`ART_PACK_RESEARCH.md` (image-14 lighting/ground section): why current floor/lighting still reads
+flat at ortho 2.6–3.4, use-now owned fog/mist + Poly Haven 2K/4K re-download, buy ranking for
+ortho-safe lamp atmosphere — **no imports**. Human still chooses purchases.
+
+Worker slots closed. Worktrees pending removal. **Needs human Play / screenshot** for path stroke,
+door arc, lightning ground hit, round carry, and south-edge clicks. Lighting look unchanged until
+someone wires the research.
+
 ## 2026-08-11 (image-13 workers) — zoom-fill + soft-rain merged
 
 Human feedback on `screenshots/image copy 13.png`: better than C60, but floor/zoom-in need to be
