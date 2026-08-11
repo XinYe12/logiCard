@@ -16,10 +16,9 @@ research** landed real findings (genre-clash outfit, flat materials); human pick
 reflections**: first pass (Reflection Probes + retune) shipped but a human screenshot showed no visible
 change — root-caused directly (probe `clearFlags` never set, rendering the wrong environment) and fixed.
 **Clouds**: replaced primitive spheres with real textured particle clouds (Kenney CC0 sprite atlas). Both
-worker slots open again. **Still open:** a fresh human sighted pass on the reflection fix + new clouds +
-Scout's new outfit — none of the last three changes have been visually confirmed yet, `orthographicSize`
-retune check carried from checkpoint 3.
-**Updated:** 2026-08-10 by Integrator.
+worker slots closed again after C60/C61 (2026-08-11). **Still open:** human sighted pass on C60 vibrancy
+(runtime grade actually warm now) + C61 scroll zoom feel + earlier reflection/clouds/Scout outfit items.
+**Updated:** 2026-08-11 by Integrator (C60/C61 merge).
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 

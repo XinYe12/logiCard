@@ -1,34 +1,27 @@
 # Presentation — STATUS
 
-**Wave / Day:** none active — reset 2026-08-08 for the **C46** scope pivot. Wave 1 (Day 10 hit VFX) fully
-delivered and merged; see git history (`fc32a2d`, `a57d095`) or prior versions of this file for the full
-record.
-**Branch / worktree:** none — worktree removed after merge
-**Brief:** n/a until a new slice is briefed
-**Last cross-reviewed:** 2026-08-08 — reset alongside `departments/INDEX.md` and `contracts/CURRENT.md`
+**Wave / Day:** C60 vibrancy + C61 camera zoom — **merged 2026-08-11**, slots closed.
+**Branch / worktree:** none active (`feat/vibrancy-relight`, `feat/camera-zoom` merged)
+**Brief:** n/a — see `PRODUCT_MEMORY.md` C60/C61 and `DRAFT_HANDOFF.md` top entry
+**Last cross-reviewed:** 2026-08-11 — Integrator resume after prior-session limit stall
 
 ## Owned files (this wave)
 
-*(populate when a new slice is briefed)*
+*(none — wave closed)*
 
 ## Done
 
-*(pre-pivot record lives in git history / prior file versions, not restated here)*
+- C60 runtime vibrancy (grade/lighting/surfaces/floor retint) — merged
+- C61 scroll-wheel orthographic zoom on `BoardCameraRig` — merged
 
 ## In progress
 
-- Nothing. No Presentation slice is currently briefed under the new phase table (`docs/SCHEDULE.md`) —
-  candidates include board dressing (already partly in flight elsewhere, see `DRAFT_HANDOFF.md`) or
-  Phase 5 (Commercial Art Bar) work once that phase opens.
+- Nothing. Awaiting human screenshot confirmation that C60 reads vibrant and C61 zoom feels right.
 
 ## Blocked
 
-- Nothing.
+- Visual sign-off cannot come from batchmode.
 
 ## Depends on
 
-- `docs/ART_DIRECTION.md`'s reframed commercial ship art bar.
-
-## Offers
-
-- Available for the next briefed slice.
+- Human Play-mode look / screenshot after Editor recompiles the merged `master` changes.

@@ -1,5 +1,33 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-11 (Integrator resume) — vibrancy (C60) + camera zoom (C61) merged after prior-session stall
+
+Prior Claude session hit a **session limit** mid-parallel-wave while both workers' cold-cache
+batchmode imports were still running. Neither worker had committed. New Integrator session (this one)
+picked up from `DRAFT_HANDOFF` / `PARALLEL_OPS` / `departments/INDEX.md`, reviewed the uncommitted
+worktrees, stripped incidental Unity noise (`ProjectSettings` POST_PROCESSING_STACK_V2 define spam +
+orphan `.unitypackage.meta` deletions), committed both branches, verified in the **worktree paths**
+(main Editor was open on `logiCard`), fixed one real test bug, merged both to `master`.
+
+**Also already on master before this resume (prior Integrator, same day):** rain "looks horizontal"
+fix `7b07ab3` — pack Cone emitter sprays local +Z; added the old procedural rain's world-space
+`velocityOverLifetime` downward pull + gravity. Third human screenshot (`screenshots/image copy 12.png`)
+was the trigger for the vibrancy + zoom asks below.
+
+**`feat/vibrancy-relight` → C60 (merge `301df0d`).** Root cause of "still not vibrant after C58":
+`BuildDioramaVolume()` was still constructing the cool desaturated wet-dusk grade every boot and
+overriding/stacking on C58's warmed baked profile. Full before/after lives in `PRODUCT_MEMORY.md` C60
+and the commit diff. Hall/Vault stay on the asset-pack floor asset; baked `_BaseColor` lifted off pure
+black. Batchmode in worktree: **EditMode 124/124, PlayMode 37/37.** Glass `_SrcBlend` stayed 5.
+**Not visually confirmed** — re-enter Play / screenshot to judge.
+
+**`feat/camera-zoom` → C61 (merge `535bfaa`).** Scroll-wheel `orthographicSize` zoom on
+`BoardCameraRig` (4.2–10.0, eased, fires `Rotated`). Integrator fixed
+`ZoomingChangesOrthographicSize` which asserted `5.0 - 1.0` and hit the 4.2 clamp. Batchmode in
+worktree: **EditMode 133/133, PlayMode 40/40.**
+
+Worker slots closed. Worktrees `logiCard-vibrancy-relight` / `logiCard-camera-zoom` pending removal.
+
 ## 2026-08-11 (second screenshot) — rain renderer fix landed; Glass_URP.mat regression root-caused permanently
 
 **Second human screenshot** (`screenshots/image copy 11.png`) showed rain still reading harsh after the
