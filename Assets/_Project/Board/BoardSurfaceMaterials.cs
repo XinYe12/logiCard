@@ -31,11 +31,14 @@ namespace LogiCard.Board
         // (avoids the small board's low-res cubemap reading as an obvious low-fidelity mirror at full
         // gloss) while Hall/Flank came up slightly (they can now afford a bit more sheen to actually
         // sell wetness instead of needing to stay low specifically to hide the lack of a reflection).
+        // C60 vibrancy pass: Yard tint pushed further into a richer terracotta (was already the
+        // warmest of the three procedural floors, but "vibrant" per the human's direct feedback means
+        // punching the saturation up further, not just staying warm-but-muted).
         public static Material YardFloor => _yard ??= BuildWetSurface(
             "asphalt_diff", "asphalt_nor", "asphalt_rough",
             fallback: new Color(0.28f, 0.22f, 0.18f),
             wetSmoothnessBoost: 0.42f, // was 0.55
-            tint: new Color(0.75f, 0.57f, 0.45f),
+            tint: new Color(0.82f, 0.58f, 0.40f), // was (0.75, 0.57, 0.45)
             tile: 2.2f);
 
         // 2026-08-11: Hall/Vault switched from the Poly Haven procedural concrete build to nappin's own
@@ -43,6 +46,14 @@ namespace LogiCard.Board
         // screenshot showed the interior floor reading badly) — LoadInteriorFloor() falls back to the
         // old BuildWetSurface concrete approach only if InteriorPackImportTool.BakeFloorMaterial() hasn't
         // been run yet, so EditMode tests (no baked Resources asset present) still compile/run.
+        //
+        // C60 tension, resolved: that baked material (Resources/Interior/Materials/(Mat)Floor_URP.mat)
+        // was a near-black flat matte (_BaseColor ~0.043,0.043,0.043) and a real contributor to "not
+        // vibrant." The human's "use asset pack floor directly" direction stays respected — this code
+        // still loads that exact material asset, unchanged in shader/texture/structure — but the baked
+        // .mat's _BaseColor/_Color were retinted in place to a warm taupe (~0.17,0.145,0.125, ~4x
+        // brighter) rather than reverting to the procedural tint approach. Still "the asset pack floor,"
+        // just not literally black.
         public static Material HallFloor => _hall ??= LoadInteriorFloor() ?? BuildWetSurface(
             "concrete_diff", "concrete_nor", "concrete_rough",
             fallback: new Color(0.45f, 0.40f, 0.34f),
@@ -50,11 +61,16 @@ namespace LogiCard.Board
             tint: new Color(0.88f, 0.72f, 0.58f),
             tile: 1.8f);
 
+        // C60: procedural fallback tint (used only when the baked Resources asset is missing, e.g.
+        // EditMode tests) retinted off cool blue toward a warm brass/gold — still reads as a distinct
+        // "vault" identity (valuables, not a cold storeroom) without contributing to the overall
+        // cool-and-flat complaint. Real render path uses LoadInteriorFloor() -> the retinted baked
+        // material below, same as HallFloor.
         public static Material VaultFloor => _vault ??= LoadInteriorFloor() ?? BuildWetSurface(
             "concrete_diff", "concrete_nor", "concrete_rough",
             fallback: new Color(0.26f, 0.30f, 0.34f),
             wetSmoothnessBoost: 0.46f, // was 0.62
-            tint: new Color(0.45f, 0.58f, 0.78f),
+            tint: new Color(0.62f, 0.52f, 0.30f), // was cool blue (0.45, 0.58, 0.78)
             tile: 2.4f);
 
         private static Material LoadInteriorFloor()
@@ -62,11 +78,13 @@ namespace LogiCard.Board
             return Resources.Load<Material>("Interior/Materials/(Mat)Floor_URP");
         }
 
+        // C60: was flat neutral-grey (0.52, 0.48, 0.42), read as desaturated/dull. Warmed into an ochre
+        // tone with real saturation instead of near-grey.
         public static Material FlankFloor => _flank ??= BuildWetSurface(
             "asphalt_diff", "asphalt_nor", "asphalt_rough",
             fallback: new Color(0.26f, 0.22f, 0.18f),
             wetSmoothnessBoost: 0.30f, // was 0.35
-            tint: new Color(0.52f, 0.48f, 0.42f),
+            tint: new Color(0.58f, 0.46f, 0.36f), // was (0.52, 0.48, 0.42)
             tile: 2.0f);
 
         public static Material BrickWall => _wall ??= BuildWetSurface(

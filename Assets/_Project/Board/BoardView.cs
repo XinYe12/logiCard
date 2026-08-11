@@ -21,8 +21,11 @@ namespace LogiCard.Board
         private static readonly Color DoorOpenColor = new Color(0.35f, 0.82f, 0.42f);
         private static readonly Color DoorClosedColor = new Color(0.82f, 0.22f, 0.18f);
 
-        private static readonly Color VoidApronColor = new Color(0.05f, 0.045f, 0.055f);
-        private static readonly Color VoidClutterColor = new Color(0.11f, 0.09f, 0.08f);
+        // C60 vibrancy pass: both were near-black, contributing to the void reading as flat dark rather
+        // than a rich contrast frame around a warm board. Lightened and warmed while staying dark enough
+        // to read as void, not floor.
+        private static readonly Color VoidApronColor = new Color(0.13f, 0.11f, 0.10f); // was (0.05, 0.045, 0.055)
+        private static readonly Color VoidClutterColor = new Color(0.20f, 0.16f, 0.12f); // was (0.11, 0.09, 0.08)
 
         private ArenaBoard _model;
         private readonly List<DoorVisual> _doorVisuals = new List<DoorVisual>();

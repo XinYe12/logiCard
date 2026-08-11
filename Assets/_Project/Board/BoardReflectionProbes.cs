@@ -28,7 +28,10 @@ namespace LogiCard.Board
         // camera shows. That's almost certainly why the reflection retune read as invisible on a real
         // screenshot (2026-08-10) despite batchmode passing — nothing was verifying the probe's own
         // clear color, only that it built and ran without throwing.
-        private static readonly Color VoidBackgroundColor = new Color(0.035f, 0.04f, 0.055f);
+        // C60 vibrancy pass: kept in sync with ConfigureCamera's retuned backgroundColor
+        // (0.035,0.04,0.055 -> 0.06,0.055,0.06) — leaving this stale would have reintroduced the exact
+        // probe/camera mismatch the comment above describes, just with the new color.
+        private static readonly Color VoidBackgroundColor = new Color(0.06f, 0.055f, 0.06f);
 
         /// <summary>
         /// Build (or rebuild) one probe per room in <paramref name="board"/>'s <see cref="MapLayout"/>
