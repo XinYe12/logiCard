@@ -201,6 +201,14 @@ namespace LogiCard.Board
             // Authored shape (40x1x40) is sized for a large open scene; refit to the board with the
             // same inset-95% fit and thin (0.15) vertical band the old procedural rain box used.
             shape.scale = new Vector3(width * 0.95f, 0.15f, depth * 0.95f);
+            // The pack's shape is actually a Cone (type 5, angle 25, length 5, not a Box — .scale still
+            // applies but doesn't change the emission geometry) whose default emission direction is local
+            // +Z (forward), not -Y (down). Combined with only a weak authored gravityModifier (0.2), that
+            // read as rain spraying sideways/"horizontal" rather than falling (confirmed via a third human
+            // screenshot, 2026-08-11) — startSpeed/lifetime/lengthScale/color fixes alone couldn't touch
+            // this, they don't affect direction. Fixed the same way the old procedural rain guaranteed a
+            // real downward fall below (velocityOverLifetime), rather than trying to re-orient the cone's
+            // own angle/length geometry.
 
             var emission = ps.emission;
             // Fixed, not board-scaled: this exact rate is what the *previous* procedural rain used, and
@@ -236,6 +244,20 @@ namespace LogiCard.Board
             // half of why it read as harsh "laser" lines rather than soft rain. Same tint the old
             // procedural rain used.
             main.startColor = new Color(0.72f, 0.78f, 0.88f, 0.42f);
+            main.gravityModifier = 0.35f;
+
+            // The actual fix for the "rain looks horizontal" bug — same exact override the old
+            // procedural rain used to guarantee a real downward fall regardless of the emitter shape's
+            // own initial direction. World-space so it adds a constant drift independent of local shape
+            // rotation. Every axis must share the same MinMaxCurve mode (constant vs curve) — Unity
+            // errors otherwise ("Particle Velocity curves must all be in the same mode") and PlayMode
+            // tests treat that Error log as a failure.
+            var velocity = ps.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.World;
+            velocity.x = new ParticleSystem.MinMaxCurve(-0.6f, -0.2f);
+            velocity.y = new ParticleSystem.MinMaxCurve(-2.5f, -1.5f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
             ps.Play(true);
         }
