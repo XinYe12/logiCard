@@ -637,13 +637,13 @@ namespace LogiCard.Boot
             cam.rect = new Rect(0f, ProgramHud.HudDockHeight, 1f, 1f - ProgramHud.HudDockHeight - ProgramHud.TopStripHeight);
             cam.orthographic = true;
             // Was 9.0f, a blind proportional-scale estimate never actually verified in the Editor (see
-            // DRAFT_HANDOFF.md's long-standing "needs an eyeball check" flag on this line). A human
-            // screenshot (2026-08-09) showed it badly over-zoomed — the board occupied only ~43% of the
-            // board region's height, with the dark void apron (BoardView.PlaceVoidDressing) dominating
-            // the frame above and below as what read like solid black bars, not a margin. Recalibrated
-            // from that measurement (9.0 * 43/77, targeting ~75-80% board coverage) to 5.0f — still an
-            // estimate pending another human look, not a final tuned value.
-            cam.orthographicSize = 5.0f;
+            // Framing history: 9.0 over-zoomed out (board ~43% of region, 2026-08-09); 5.0 was the
+            // first recalibration toward ~75-80% coverage. Screenshot `image copy 13.png` (2026-08-11)
+            // still showed the board as a small island in a large void — portrait/tall Game view +
+            // bottom HUD dock leave less usable height than that earlier estimate assumed. Drop to
+            // 3.4 so the board fills the play region by default; runtime zoom bounds (closer min) are
+            // owned by BoardCameraRig / feat/camera-zoom-fill this wave, not this line.
+            cam.orthographicSize = 3.4f;
             // Solid-color void stays — C53 weather is a contained pocket above the board, not a skybox
             // horizon; ART_DIRECTION's "diorama base + void outside board" doctrine wants the void to
             // stay dark so the board reads as a lit stage. C60 vibrancy pass: was near-black-blue
@@ -696,40 +696,35 @@ namespace LogiCard.Boot
             keyGo.transform.SetParent(transform, false);
             var key = keyGo.AddComponent<Light>();
             key.type = LightType.Directional;
-            key.color = new Color(0.68f, 0.74f, 0.86f);
-            key.intensity = 0.55f;
+            // image copy 13 (2026-08-11): still read as one harsh top light + crushed black shadows.
+            // Soften the key further (weaker intensity + much weaker shadows) so it rims rather than
+            // carving the board into black silhouettes.
+            key.color = new Color(0.72f, 0.76f, 0.88f);
+            key.intensity = 0.40f;
             key.shadows = LightShadows.Soft;
-            key.shadowStrength = 0.55f;
+            key.shadowStrength = 0.28f;
             key.transform.rotation = Quaternion.Euler(50f, -25f, 0f);
 
-            // Warm practical fill — bounce from interior windows/lamps (reinforced by point lights below).
-            // C60: promoted from a barely-there rim (0.22, well under the key's 0.95) to the light that
-            // actually sets the scene's overall warmth (0.75, now above the demoted key's 0.55) — richer
-            // color too, less washed-out amber.
+            // Warm fill stays the dominant temperature-setter; bumped again so lit faces stay readable
+            // when the key no longer punches hard shadows.
             var fillGo = new GameObject("Warm Practical Fill");
             fillGo.transform.SetParent(transform, false);
             var fill = fillGo.AddComponent<Light>();
             fill.type = LightType.Directional;
-            fill.color = new Color(0.95f, 0.78f, 0.55f);
-            fill.intensity = 0.75f;
+            fill.color = new Color(0.98f, 0.82f, 0.60f);
+            fill.intensity = 1.05f;
             fill.shadows = LightShadows.None;
             fill.transform.rotation = Quaternion.Euler(28f, 145f, 0f);
 
-            // Localized warm practicals at Hall/Vault window dressing — reference's lit-window language
-            // translated indoors. Point lights (not more directionals) so wet floors catch glints.
-            // C60: intensities raised roughly 35-65% and color brightened (1,0.72,0.42 -> 1,0.76,0.5 in
-            // PlacePracticalPoint below) so these read as real warm pools of light instead of a faint glow
-            // competing against the old dominant cool key.
-            PlacePracticalPoint("Hall Practical W", new PlanarPosition(2.2f, 5.5f), 0.7f, 3.2f, 1.5f);
-            PlacePracticalPoint("Hall Practical E", new PlanarPosition(5.8f, 5.5f), 0.7f, 3.2f, 1.5f);
-            PlacePracticalPoint("Vault Practical", new PlanarPosition(4f, 9.4f), 0.7f, 4.0f, 1.8f);
-            PlacePracticalPoint("Yard Spill", new PlanarPosition(4f, 2.2f), 0.55f, 3.5f, 0.9f);
+            // Practical pools raised another notch — interior props were falling into silhouette.
+            PlacePracticalPoint("Hall Practical W", new PlanarPosition(2.2f, 5.5f), 0.7f, 3.2f, 2.0f);
+            PlacePracticalPoint("Hall Practical E", new PlanarPosition(5.8f, 5.5f), 0.7f, 3.2f, 2.0f);
+            PlacePracticalPoint("Vault Practical", new PlanarPosition(4f, 9.4f), 0.7f, 4.0f, 2.3f);
+            PlacePracticalPoint("Yard Spill", new PlanarPosition(4f, 2.2f), 0.55f, 3.5f, 1.2f);
 
-            // C60: ambient floor was very dark and cool (0.09,0.11,0.15) — anything not directly lit fell
-            // into a cold near-black. Raised and warmed so shadow/ambient-occluded areas still read with
-            // some color instead of going flat dark.
+            // Ambient floor lifted hard — image 13's unlit sides were near-black despite C60's 0.20.
             RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.20f, 0.18f, 0.16f);
+            RenderSettings.ambientLight = new Color(0.32f, 0.28f, 0.24f);
 
             BuildDioramaVolume();
         }
@@ -795,14 +790,16 @@ namespace LogiCard.Boot
             var profile = ScriptableObject.CreateInstance<VolumeProfile>();
 
             var color = profile.Add<ColorAdjustments>(true);
+            // image 13: still underexposed with crushed shadow side — lift exposure, ease contrast
+            // so the warm fill/ambient actually show up instead of the grade re-crushing them.
             color.postExposure.overrideState = true;
-            color.postExposure.value = 0.18f;
+            color.postExposure.value = 0.35f;
             color.contrast.overrideState = true;
-            color.contrast.value = 10f;
+            color.contrast.value = 6f;
             color.colorFilter.overrideState = true;
-            color.colorFilter.value = new Color(1f, 0.94f, 0.86f);
+            color.colorFilter.value = new Color(1f, 0.95f, 0.88f);
             color.saturation.overrideState = true;
-            color.saturation.value = 20f;
+            color.saturation.value = 22f;
 
             var bloom = profile.Add<Bloom>(true);
             bloom.threshold.overrideState = true;

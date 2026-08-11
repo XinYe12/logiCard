@@ -1,48 +1,40 @@
 # Departments — Active Index
 
-**Updated:** 2026-08-11 — vibrancy (C60) + camera zoom (C61) merged after Integrator resume from a
-prior-session limit stall. Both worker slots closed. Rain horizontal-direction fix (`7b07ab3`) was
-already on master before the resume.
+**Updated:** 2026-08-11 — post–image-13 pass: closer default framing + softer lighting/floor
+(Integrator) parallel with zoom-fill + rain-VFX workers. Capacity **2 of 2**.
 **Ops constitution:** [`../PARALLEL_OPS.md`](../PARALLEL_OPS.md) · human-side playbook: [`../DIRECTING_AGENTS.md`](../DIRECTING_AGENTS.md)
 **Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md)
 **Human rollup:** [`../DRAFT_HANDOFF.md`](../DRAFT_HANDOFF.md)
 
 ## Capacity
 
-Integrator + up to **2** coding workers — **0 of 2 in use.** Check `git worktree list` and
+Integrator + up to **2** coding workers — **2 of 2 in use.** Check `git worktree list` and
 `DRAFT_HANDOFF.md`'s top section before assuming this table is current. (`logiCard-art-pack-research`
 below runs in the human's own separate session and isn't counted against this cap.)
 
 ## Active agents / worktrees
 
-`feat/vibrancy-relight` and `feat/camera-zoom` **merged** (`301df0d`, `535bfaa`) after Integrator
-review + worktree batchmode. See `DRAFT_HANDOFF.md` top entry and `PRODUCT_MEMORY.md` C60/C61.
+Human feedback on `screenshots/image copy 13.png`: better than C60, but floor/zoom-in need to be
+bigger; lighting + VFX still bad; **no new pack purchase** this wave.
 
-- **`logiCard-art-pack-research` (branch `feat/art-pack-research`) — human-run, active.** Produced the
-  current `docs/ART_PACK_RESEARCH.md`; Integrator pulls its content into `master` directly rather than
-  merging the branch, so it may be redundant — human's call whether to keep it running.
-
-**`Assets/ExplosiveLLC/` blocker — resolved earlier; folder still untracked.** Combined batchmode on
-`master` previously passed with it present as a compile-unblock. Origin/purpose still unexplained —
-human's call whether to keep or remove it.
-
-Finished worktree directories that may still sit on disk as empty shells (OneDrive/Search-Indexer lock
-class): `logiCard-vibrancy-relight`, `logiCard-camera-zoom`, plus older
-`logiCard-void-city-dressing` / `logiCard-character-pack-swap` / `logiCard-env-lookfeel` /
-`logiCard-ui-dock-polish` / `logiCard-vibrancy-pass` / `logiCard-map-continuation` — deregister with
-`git worktree remove` when the lock clears; safe to delete by hand.
+- **Integrator (main `logiCard`, `master`)** — owns `GameBootstrap.ConfigureCamera` (default
+  `orthographicSize` closer), `BuildLighting` / `BuildDioramaVolume` (soften harsh shadows / lift
+  crushed blacks), `BoardSurfaceMaterials.cs` + baked `(Mat)Floor_URP.mat` (brighter floor), docs.
+- **`logiCard-camera-zoom-fill`** (`feat/camera-zoom-fill`) — lower `BoardCameraRig` min zoom +
+  retune max/scroll feel + tests. Brief: `CAMERA_ZOOM_FILL_AGENT_BRIEF.md`.
+- **`logiCard-rain-vfx-tune`** (`feat/rain-vfx-tune`) — soft-rain retune in `BoardWeatherPocket.cs`
+  using already-owned weather packs. Brief: `RAIN_VFX_TUNE_AGENT_BRIEF.md`.
+- **`logiCard-art-pack-research`** — human-run; not counted against the 2-worker cap.
 
 ## Ownership matrix (write locks)
 
 | Path / concern | Owner now |
 |----------------|-----------|
-| `Assets/_Project/Art/Characters/**`, `Assets/_Project/Art/URP/**`, `Assets/_Project/Rendering/**`, `PrimitiveMaterialFactory.cs`, `Assets/_Project/UI/**` | Open, no worker assigned |
-| `GameBootstrap.cs` (including `ConfigureCamera` / `BuildLighting` / `BuildDioramaVolume` and map-dispatch) | Integrator — C60 just landed; no worker owns it |
-| `Assets/_Project/Board/BoardCameraRig.cs` | Integrator — C61 just landed; no worker owns it |
-| `Assets/_Project/Board/BoardSurfaceMaterials.cs`, `BoardView.cs`, `BoardReflectionProbes.cs` | Integrator — C60 just landed |
-| `Assets/_Project/Board/BoardWeatherPocket.cs` | Integrator — rain velocity fix already on master; leave unless a new rain screenshot fails |
-| `Boot/`, `Net/`, `Timeline/`, `Sim/` (fixes) | Core — paused unless something breaks |
-| `docs/DRAFT_HANDOFF.md`, `docs/SCHEDULE.md` ticks, `docs/contracts/CURRENT.md`, `docs/PRODUCT_MEMORY.md` | Core / Integrator |
+| `GameBootstrap.cs` (`ConfigureCamera` / `BuildLighting` / `BuildDioramaVolume` / practicals) | Integrator |
+| `BoardSurfaceMaterials.cs`, `Resources/Interior/Materials/(Mat)Floor_URP.mat`, `BoardView` void colors, `BoardReflectionProbes` clear color sync | Integrator |
+| `Assets/_Project/Board/BoardCameraRig.cs` + camera EditMode/PlayMode tests | `logiCard-camera-zoom-fill` |
+| `Assets/_Project/Board/BoardWeatherPocket.cs` | `logiCard-rain-vfx-tune` |
+| `docs/DRAFT_HANDOFF.md`, `PRODUCT_MEMORY.md`, `contracts/CURRENT.md`, this INDEX | Integrator |
 | `docs/departments/<dept>/STATUS.md` | That dept only |
 
 ## Cross-review checklist (session start)

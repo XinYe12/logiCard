@@ -38,7 +38,7 @@ namespace LogiCard.Board
             "asphalt_diff", "asphalt_nor", "asphalt_rough",
             fallback: new Color(0.28f, 0.22f, 0.18f),
             wetSmoothnessBoost: 0.42f, // was 0.55
-            tint: new Color(0.82f, 0.58f, 0.40f), // was (0.75, 0.57, 0.45)
+            tint: new Color(0.90f, 0.64f, 0.42f), // image-13: push Yard brighter still
             tile: 2.2f);
 
         // 2026-08-11: Hall/Vault switched from the Poly Haven procedural concrete build to nappin's own
@@ -51,9 +51,8 @@ namespace LogiCard.Board
         // was a near-black flat matte (_BaseColor ~0.043,0.043,0.043) and a real contributor to "not
         // vibrant." The human's "use asset pack floor directly" direction stays respected — this code
         // still loads that exact material asset, unchanged in shader/texture/structure — but the baked
-        // .mat's _BaseColor/_Color were retinted in place to a warm taupe (~0.17,0.145,0.125, ~4x
-        // brighter) rather than reverting to the procedural tint approach. Still "the asset pack floor,"
-        // just not literally black.
+        // .mat's _BaseColor/_Color were retinted in place (C60 ~0.17 taupe; image-13 pass ~0.34 warm
+        // wood/clay — still "the asset pack floor," just bright enough to read as a stage, not mud).
         public static Material HallFloor => _hall ??= LoadInteriorFloor() ?? BuildWetSurface(
             "concrete_diff", "concrete_nor", "concrete_rough",
             fallback: new Color(0.45f, 0.40f, 0.34f),
