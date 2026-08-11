@@ -188,18 +188,27 @@ namespace LogiCard.Art.Editor
         public static void BakeFloorMaterialFromMenu()
         {
             BakeFloorMaterial();
+            FixGlassTransparency();
             AssetDatabase.SaveAssets();
         }
 
         /// <summary>Run: -executeMethod LogiCard.Art.Editor.InteriorPackImportTool.RunBakeFloorMaterial
         /// (batchmode-safe — exits itself rather than relying on an external -quit, which has raced
         /// -executeMethod/-runTests before in this project and can end the process before the method
-        /// body actually runs).</summary>
+        /// body actually runs). Re-asserts <see cref="FixGlassTransparency"/> before saving — root-caused
+        /// 2026-08-11 after this exact regression recurred three times in one session: *any*
+        /// <see cref="AssetDatabase.Refresh"/> call can make Unity's own material validator silently
+        /// re-derive (Mat)Glass_URP.mat's blend state to the wrong pairing (confirmed via direct diff,
+        /// not assumed), and <see cref="RunImportPasses"/> only ever looked correct because it happens to
+        /// re-call <see cref="FixGlassTransparency"/> right before every one of its own saves — this
+        /// entry point didn't, so it kept shipping the regression. Same defensive re-assert, not a
+        /// one-off manual revert.</summary>
         public static void RunBakeFloorMaterial()
         {
             try
             {
                 BakeFloorMaterial();
+                FixGlassTransparency();
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
                 EditorApplication.Exit(0);
