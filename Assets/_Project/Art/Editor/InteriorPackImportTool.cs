@@ -7,69 +7,106 @@ using UnityEngine;
 namespace LogiCard.Art.Editor
 {
     /// <summary>
-    /// Imports curated Quaternius Ultimate House Interior FBX into URP/Lit prefabs under
-    /// Resources/Interior for runtime BoardView loading (C53 checkpoint 3).
+    /// Imports curated Synty POLYGON Office prefabs into URP/Lit prefabs under Resources/Interior
+    /// for runtime BoardView loading (C53 checkpoint 3).
     ///
-    /// Pattern mirrors <c>PawnImportTool</c>: keep per-part materials, re-hook to URP/Lit,
-    /// then bake a normalized prefab. Door prefabs are unit-scaled (width≈1, height≈1) with
-    /// pivot at bottom-center so BoardView can fit them to wall-segment geometry.
+    /// Re-sourced from the original Quaternius Ultimate House Interior FBX pipeline (2026-08 session)
+    /// to <c>Assets/PolygonOffice/</c> — see docs/DRAFT_HANDOFF.md's 2026-08-11 entry for why. Unlike
+    /// the old Quaternius source (raw FBX needing material extraction), PolygonOffice ships ready-made
+    /// prefabs with materials already external — so this pipeline instantiates the source *prefab*
+    /// directly instead of running it through <c>ModelImporter</c> first. Because a PolygonOffice prop
+    /// prefab's own root GameObject carries the MeshRenderer directly (no child node the way a raw FBX
+    /// import produces), each entry is instantiated as a *child* under a fresh empty root — that's what
+    /// lets the existing pivot/scale normalization (which reparents/rescales children, not the root
+    /// itself) work unchanged. Door entries can list two source prefabs (a matched L/R pair) that get
+    /// instantiated at their authored local transforms so they compose into one double-door mesh before
+    /// normalization.
+    ///
+    /// Pattern otherwise mirrors <c>PawnImportTool</c>: re-hook materials to URP/Lit, then bake a
+    /// normalized prefab. Door prefabs are unit-scaled (width≈1, height≈1) with pivot at bottom-center
+    /// so BoardView can fit them to wall-segment geometry.
+    ///
+    /// <c>Assets/PolygonOffice/**</c> is read-only reference content (shared by everything else that
+    /// might ever get imported from that pack) — unlike the old Quaternius pipeline, which owned its
+    /// source FBX outright and could mutate its materials in place, this tool never edits a
+    /// PolygonOffice-owned asset. Every material this catalog touches gets **duplicated** into
+    /// <c>Resources/Interior/Materials/</c> first (one copy per shared source material, cached across
+    /// catalog entries so e.g. the door/window glass material isn't duplicated 4 times), and only the
+    /// duplicate is shader-converted / transparency-fixed. Baked prefabs reference the duplicates.
+    ///
+    /// NOTE: PolygonOffice's licensing status (bundled-reseller import, not a confirmed individual Asset
+    /// Store purchase) is a tracked pre-ship TODO — see docs/DRAFT_HANDOFF.md. Not this tool's concern,
+    /// just don't lose sight of it.
     ///
     /// Run: -executeMethod LogiCard.Art.Editor.InteriorPackImportTool.Run
     /// Menu: Tools → LogiCard → Import Interior Pack Prefabs
     /// </summary>
     public static class InteriorPackImportTool
     {
-        private const string SourceFolder = "Assets/_Project/Art/Environment/Interior/Source";
         private const string PrefabFolder = "Assets/_Project/Art/Environment/Resources/Interior";
-        private const string GlassMaterialPath = SourceFolder + "/Materials/Glass.mat";
+        private const string MaterialFolder = PrefabFolder + "/Materials";
+        private const string GlassMaterialSourcePath = "Assets/PolygonOffice/Materials/PolygonOffice_Material_Glass.mat";
+        private const string GlassMaterialCopyPath = MaterialFolder + "/PolygonOffice_Material_Glass_URP.mat";
 
-        private static readonly (string fbx, string prefabName, bool normalizeDoor)[] Catalog =
+        /// <summary>
+        /// Original PolygonOffice material asset → its converted duplicate under
+        /// <see cref="MaterialFolder"/>. Populated/reused across all <see cref="ImportOne"/> calls in a
+        /// single <see cref="Run"/> so a shared source material (e.g. the glass material referenced by
+        /// both doors and windows) is only duplicated and shader-converted once.
+        /// </summary>
+        private static readonly Dictionary<string, Material> ConvertedMaterialCache = new Dictionary<string, Material>();
+
+        private const string Buildings = "Assets/PolygonOffice/Prefabs/Buildings";
+        private const string Furniture = "Assets/PolygonOffice/Prefabs/Props/Furniture";
+        private const string RoofProps = "Assets/PolygonOffice/Prefabs/Props/Roof Props";
+        private const string DeskProps = "Assets/PolygonOffice/Prefabs/Props/Desk Props";
+
+        /// <summary>
+        /// (source prefab path(s), output prefab name, normalizeDoor). Sizes/shapes below were
+        /// confirmed via a throwaway batchmode bounds probe against the actual PolygonOffice meshes
+        /// before picking, not guessed from names alone — see report for the measured dimensions.
+        /// </summary>
+        private static readonly (string[] sources, string prefabName, bool normalizeDoor)[] Catalog =
         {
-            ("Door_1.fbx", "Door", true),
-            ("Door_2.fbx", "DoorAlt", true),
-            ("Door_Double.fbx", "DoorDouble", true),
-            ("Window_Small1.fbx", "WindowSmall", false),
-            ("Window_Large1.fbx", "WindowLarge", false),
-            ("Light_CeilingSingle.fbx", "LightCeiling", false),
-            ("Light_Ceiling1.fbx", "LightCeilingAlt", false),
-            ("Light_Desk.fbx", "LightDesk", false),
-            ("Shelf_Large.fbx", "ShelfLarge", false),
-            ("Shelf_1.fbx", "Shelf", false),
-            ("Bookshelf.fbx", "Bookshelf", false),
-            ("Kitchen_Cabinet1.fbx", "Cabinet", false),
-            ("Table_RoundSmall.fbx", "Table", false),
-            ("Chair_1.fbx", "Chair", false),
+            // Doors — Door_01/Door_02 share identical frame bounds (1.03w x 1.97h); Door_01 carries a
+            // glass insert (visually distinct "alt"), Door_02 is the plain leaf. Door_Large_01_L/R are
+            // authored already offset around a shared local origin (L center x=-0.463, R center
+            // x=+0.463) so instantiating both at identity composes them into one double door.
+            (new[] { $"{Buildings}/SM_Bld_Door_02.prefab" }, "Door", true),
+            (new[] { $"{Buildings}/SM_Bld_Door_01.prefab" }, "DoorAlt", true),
+            (new[] { $"{Buildings}/SM_Bld_Door_Large_01_L.prefab", $"{Buildings}/SM_Bld_Door_Large_01_R.prefab" }, "DoorDouble", true),
+
+            // Windows — PolygonOffice has no standalone window-pane prop (windows are always part of a
+            // wall module in this kit); closest fit is the "Wall_Glass" module, which is almost entirely
+            // glass with a thin frame rather than a decorated wall segment. Small=2.5m module,
+            // Large=5m module. Both reference PolygonOffice_Material_Glass.mat, fixed up below.
+            (new[] { $"{Buildings}/SM_Bld_Wall_Glass_01.prefab" }, "WindowSmall", false),
+            (new[] { $"{Buildings}/SM_Bld_Wall_Glass_Large_01.prefab" }, "WindowLarge", false),
+
+            // Lights — Light_01 is a slim hanging pendant; Ceiling_Panel_Light_01 is a flush recessed
+            // panel, genuinely different fixture type from Light_01 (not just a recolor), matching the
+            // "Alt" naming intent. Desklamp_01 is a compact desk-height lamp.
+            (new[] { $"{RoofProps}/SM_Prop_Light_01.prefab" }, "LightCeiling", false),
+            (new[] { $"{Buildings}/SM_Bld_Ceiling_Panel_Light_01.prefab" }, "LightCeilingAlt", false),
+            (new[] { $"{DeskProps}/SM_Prop_Desklamp_01.prefab" }, "LightDesk", false),
+
+            // Shelving — measured bounds picked the size tier: Shelf_07 is the widest run (3.07m,
+            // "Large"), Shelf_04 is the smallest/squattest ("Shelf"), Shelf_03 is the tallest/narrowest
+            // (1.93m, reads as a bookcase).
+            (new[] { $"{Furniture}/SM_Prop_Shelf_07.prefab" }, "ShelfLarge", false),
+            (new[] { $"{Furniture}/SM_Prop_Shelf_04.prefab" }, "Shelf", false),
+            (new[] { $"{Furniture}/SM_Prop_Shelf_03.prefab" }, "Bookshelf", false),
+
+            (new[] { $"{Furniture}/SM_Prop_Cabinets_02.prefab" }, "Cabinet", false),
+            (new[] { $"{Furniture}/SM_Prop_Table_Round_01.prefab" }, "Table", false),
+            (new[] { $"{Furniture}/SM_Prop_Chair_01.prefab" }, "Chair", false),
         };
 
         public static void Run()
         {
             try
             {
-                EnsureFolder(PrefabFolder);
-                AssetDatabase.Refresh();
-
-                int built = 0;
-                foreach ((string fbx, string prefabName, bool normalizeDoor) entry in Catalog)
-                {
-                    string fbxPath = $"{SourceFolder}/{entry.fbx}";
-                    if (!File.Exists(Path.GetFullPath(fbxPath)))
-                    {
-                        // AssetDatabase path — File.Exists needs project-relative resolved.
-                        if (AssetDatabase.LoadAssetAtPath<Object>(fbxPath) == null)
-                        {
-                            Debug.LogWarning($"InteriorPackImportTool: missing {fbxPath}");
-                            continue;
-                        }
-                    }
-
-                    if (ImportOne(fbxPath, entry.prefabName, entry.normalizeDoor))
-                    {
-                        built++;
-                    }
-                }
-
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
+                int built = RunImportPasses();
                 Debug.Log($"[InteriorPackImportTool] Built {built} prefab(s) under {PrefabFolder}");
                 EditorApplication.Exit(0);
             }
@@ -83,26 +120,47 @@ namespace LogiCard.Art.Editor
         [MenuItem("Tools/LogiCard/Import Interior Pack Prefabs")]
         public static void RunFromMenu()
         {
+            int built = RunImportPasses();
+            Debug.Log($"[InteriorPackImportTool] Built {built} prefab(s) (menu).");
+        }
+
+        /// <summary>
+        /// Runs the full catalog import twice. Empirically, a brand-new URP/Lit material duplicated
+        /// from a Standard-shader source (see <see cref="GetOrCreateConvertedMaterial"/>) can have its
+        /// blend-state properties (_SrcBlend/_DstBlend) and keywords silently re-derived by Unity's own
+        /// asset-import pipeline the *first* time that specific asset is ever saved/imported — clobbering
+        /// the values this tool just set a moment earlier back to shader defaults (confirmed by
+        /// inspecting the serialized .mat: a single-pass run left the glass material's blend state
+        /// wrong — <c>_SrcBlend: 1</c> instead of <c>SrcAlpha (5)</c> — even though the exact same
+        /// property-set code ran; a second pass against the now-already-imported asset converged
+        /// correctly every time). Re-running the whole conversion against the now-existing assets is a
+        /// cheap, reliable way to sidestep that first-import quirk rather than depending on its cause.
+        /// </summary>
+        private static int RunImportPasses()
+        {
             EnsureFolder(PrefabFolder);
+            EnsureFolder(MaterialFolder);
+            ConvertedMaterialCache.Clear();
             AssetDatabase.Refresh();
+
             int built = 0;
-            foreach ((string fbx, string prefabName, bool normalizeDoor) entry in Catalog)
+            for (int pass = 0; pass < 2; pass++)
             {
-                string fbxPath = $"{SourceFolder}/{entry.fbx}";
-                if (AssetDatabase.LoadAssetAtPath<Object>(fbxPath) == null)
+                built = 0;
+                foreach ((string[] sources, string prefabName, bool normalizeDoor) entry in Catalog)
                 {
-                    Debug.LogWarning($"InteriorPackImportTool: missing {fbxPath}");
-                    continue;
+                    if (ImportOne(entry.sources, entry.prefabName, entry.normalizeDoor))
+                    {
+                        built++;
+                    }
                 }
 
-                if (ImportOne(fbxPath, entry.prefabName, entry.normalizeDoor))
-                {
-                    built++;
-                }
+                FixGlassTransparency();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
             }
 
-            AssetDatabase.SaveAssets();
-            Debug.Log($"[InteriorPackImportTool] Built {built} prefab(s) (menu).");
+            return built;
         }
 
         [MenuItem("Tools/LogiCard/Fix Interior Glass Transparency")]
@@ -130,20 +188,26 @@ namespace LogiCard.Art.Editor
         }
 
         /// <summary>
-        /// The generic per-FBX material loop in <see cref="ImportOne"/> re-hooks every extracted
-        /// material onto URP/Lit uniformly (color/smoothness/metallic only) — it has no notion of
-        /// "this one should be see-through." <c>Glass.mat</c> (used by <c>WindowSmall</c>/
-        /// <c>WindowLarge</c>) landed fully Opaque as a result, silently blocking the warm emissive
-        /// glow pane <c>BoardView</c> places just behind each window frame — checkpoint 3's "lit
-        /// window" dressing was invisible. Confirmed via a human screenshot review, 2026-08-10. Same
-        /// fix shape as <c>BoardWeatherPocket.ConfigureAlphaBlend</c>.
+        /// The generic per-prefab material loop in <see cref="ImportOne"/> re-hooks every extracted
+        /// material onto URP/Lit uniformly (color/smoothness/metallic only) — it has no notion of "this
+        /// one should be see-through." <c>PolygonOffice_Material_Glass.mat</c> (shared by WindowSmall/
+        /// WindowLarge and the glass-paneled DoorAlt/DoorDouble) ships as built-in Standard shader
+        /// already configured Transparent (Fade mode, alpha 0.491) — after the blind shader swap it
+        /// silently becomes Opaque URP/Lit unless fixed up here. Same exact bug shape as the prior
+        /// Quaternius Glass.mat regression (2026-08-10, confirmed only by inspecting the regenerated
+        /// .mat directly): <c>_SURFACE_TYPE_TRANSPARENT</c> is the correct URP/Lit surface-type keyword,
+        /// not <c>_ALPHABLEND_ON</c> (a particle-shader keyword — silently ineffective, filed under the
+        /// material's own m_InvalidKeywords, no error). Same fix shape as
+        /// <c>BoardWeatherPocket.ConfigureAlphaBlend</c>.
         /// </summary>
         private static void FixGlassTransparency()
         {
-            var material = AssetDatabase.LoadAssetAtPath<Material>(GlassMaterialPath);
+            // Ensure the duplicate (never the PolygonOffice-owned original) exists and is URP-converted
+            // even if this runs standalone (menu / RunGlassFix) without a prior full Run().
+            Material material = GetOrCreateConvertedMaterial(GlassMaterialSourcePath);
             if (material == null)
             {
-                Debug.LogWarning($"[InteriorPackImportTool] No material at {GlassMaterialPath} to fix.");
+                Debug.LogWarning($"[InteriorPackImportTool] No material at {GlassMaterialSourcePath} to fix.");
                 return;
             }
 
@@ -172,20 +236,14 @@ namespace LogiCard.Art.Editor
                 material.SetInt("_ZWrite", 0);
             }
 
-            // NOTE: _ALPHABLEND_ON (used by BoardWeatherPocket.ConfigureAlphaBlend) is a *particle*
-            // shader keyword — this material is Universal Render Pipeline/Lit, whose surface-type
-            // keyword is _SURFACE_TYPE_TRANSPARENT. Using the wrong one is silently ineffective
-            // (Unity just files it under the material's own m_InvalidKeywords, no error) — caught by
-            // inspecting the regenerated .mat directly after the first attempt, not assumed correct.
             material.DisableKeyword("_ALPHATEST_ON");
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
             material.SetOverrideTag("RenderType", "Transparent");
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
 
-            // Real glass should also actually let some light through, not just stop occluding
-            // what's behind it — the extracted color's alpha is whatever the source FBX authored
-            // (often a fully opaque "colored panel" look); push it down so it reads as translucent.
+            // Real glass should also actually let some light through, not just stop occluding what's
+            // behind it. Source alpha (0.491) is already reasonably translucent; keep it modest.
             Color color = material.HasProperty("_BaseColor") ? material.GetColor("_BaseColor") : material.color;
             color.a = Mathf.Min(color.a, 0.35f);
             material.color = color;
@@ -195,67 +253,140 @@ namespace LogiCard.Art.Editor
             }
 
             EditorUtility.SetDirty(material);
-            Debug.Log($"[InteriorPackImportTool] Fixed transparency on {GlassMaterialPath}.");
+            Debug.Log($"[InteriorPackImportTool] Fixed transparency on {GlassMaterialCopyPath}.");
         }
 
-        private static bool ImportOne(string fbxPath, string prefabName, bool normalizeDoor)
+        /// <summary>
+        /// Returns the URP/Lit-converted duplicate of a PolygonOffice-owned source material, creating
+        /// and converting it under <see cref="MaterialFolder"/> on first request and reusing it for
+        /// every subsequent request in the same run (see <see cref="ConvertedMaterialCache"/>). Never
+        /// mutates <paramref name="originalAssetPath"/> itself — that file lives under the read-only
+        /// <c>Assets/PolygonOffice/</c> reference content.
+        /// </summary>
+        private static Material GetOrCreateConvertedMaterial(string originalAssetPath)
         {
-            var importer = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
-            if (importer == null)
+            if (ConvertedMaterialCache.TryGetValue(originalAssetPath, out Material cached) && cached != null)
             {
-                Debug.LogError($"InteriorPackImportTool: no ModelImporter at {fbxPath}");
-                return false;
+                return cached;
             }
 
-            importer.importNormals = ModelImporterNormals.Calculate;
-            importer.normalCalculationMode = ModelImporterNormalCalculationMode.AreaAndAngleWeighted;
-            importer.normalSmoothingSource = ModelImporterNormalSmoothingSource.FromAngle;
-            importer.normalSmoothingAngle = 60f;
-            importer.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
-            importer.materialLocation = ModelImporterMaterialLocation.External;
-            // Quaternius house pack is authored ~meters; we normalize doors ourselves.
-            importer.globalScale = 1f;
-            importer.SaveAndReimport();
+            var original = AssetDatabase.LoadAssetAtPath<Material>(originalAssetPath);
+            if (original == null)
+            {
+                return null;
+            }
 
             Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
             if (urpLit == null)
             {
                 Debug.LogError("InteriorPackImportTool: URP Lit shader missing.");
+                return null;
+            }
+
+            string copyPath = $"{MaterialFolder}/{original.name}_URP.mat";
+            Material copy = AssetDatabase.LoadAssetAtPath<Material>(copyPath);
+            if (copy == null)
+            {
+                // Copies the original's shader + all serialized properties into a brand-new asset —
+                // the original object is never touched.
+                copy = new Material(original);
+                AssetDatabase.CreateAsset(copy, copyPath);
+            }
+
+            if (copy.shader != urpLit)
+            {
+                Color baseColor = copy.HasProperty("_Color") ? copy.color : Color.white;
+                copy.shader = urpLit;
+                copy.SetColor("_BaseColor", baseColor);
+                copy.SetFloat("_Smoothness", 0.35f);
+                copy.SetFloat("_Metallic", 0f);
+                EditorUtility.SetDirty(copy);
+            }
+
+            ConvertedMaterialCache[originalAssetPath] = copy;
+            return copy;
+        }
+
+        private static bool ImportOne(string[] sourcePrefabPaths, string prefabName, bool normalizeDoor)
+        {
+            var sourceGos = new List<GameObject>();
+            foreach (string sourcePath in sourcePrefabPaths)
+            {
+                var sourceGo = AssetDatabase.LoadAssetAtPath<GameObject>(sourcePath);
+                if (sourceGo == null)
+                {
+                    Debug.LogWarning($"InteriorPackImportTool: missing source prefab {sourcePath}");
+                    continue;
+                }
+
+                sourceGos.Add(sourceGo);
+            }
+
+            if (sourceGos.Count == 0)
+            {
+                Debug.LogError($"InteriorPackImportTool: no valid source prefabs for {prefabName}");
                 return false;
             }
 
+            // Duplicate + URP-convert every material this entry's source prefab(s) depend on. The
+            // original PolygonOffice .mat assets are never modified — see GetOrCreateConvertedMaterial.
             int converted = 0;
-            foreach (string dependency in AssetDatabase.GetDependencies(fbxPath, true))
+            foreach (string sourcePath in sourcePrefabPaths)
             {
-                if (!dependency.EndsWith(".mat"))
+                foreach (string dependency in AssetDatabase.GetDependencies(sourcePath, true))
                 {
-                    continue;
-                }
+                    if (!dependency.EndsWith(".mat"))
+                    {
+                        continue;
+                    }
 
-                var material = AssetDatabase.LoadAssetAtPath<Material>(dependency);
-                if (material == null || material.shader == urpLit)
-                {
-                    continue;
+                    bool alreadyCached = ConvertedMaterialCache.ContainsKey(dependency);
+                    if (GetOrCreateConvertedMaterial(dependency) != null && !alreadyCached)
+                    {
+                        converted++;
+                    }
                 }
-
-                Color baseColor = material.HasProperty("_Color") ? material.color : Color.white;
-                material.shader = urpLit;
-                material.SetColor("_BaseColor", baseColor);
-                material.SetFloat("_Smoothness", 0.35f);
-                material.SetFloat("_Metallic", 0f);
-                EditorUtility.SetDirty(material);
-                converted++;
             }
 
-            var sourceGo = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
-            if (sourceGo == null)
+            // Wrap in a fresh empty root — matches the shape a raw FBX instantiate produces (a root
+            // node with mesh-carrying children), which is what NormalizeDoorPivotAndScale /
+            // NormalizePropPivot expect to reparent/rescale. PolygonOffice's own prefab roots carry
+            // their MeshRenderer directly with no children, so instantiating them as-is at top level
+            // would leave normalization a no-op.
+            var instance = new GameObject(prefabName);
+            foreach (GameObject sourceGo in sourceGos)
             {
-                Debug.LogError($"InteriorPackImportTool: could not load {fbxPath}");
-                return false;
+                Object.Instantiate(sourceGo, instance.transform, false);
             }
 
-            var instance = (GameObject)Object.Instantiate(sourceGo);
-            instance.name = prefabName;
+            // The instantiated hierarchy still points at the original PolygonOffice materials (Unity
+            // preserves material references on Instantiate) — swap every renderer over to the converted
+            // duplicates now that they exist.
+            foreach (Renderer renderer in instance.GetComponentsInChildren<Renderer>(true))
+            {
+                Material[] materials = renderer.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    Material original = materials[i];
+                    if (original == null)
+                    {
+                        continue;
+                    }
+
+                    string originalPath = AssetDatabase.GetAssetPath(original);
+                    if (ConvertedMaterialCache.TryGetValue(originalPath, out Material replacement))
+                    {
+                        materials[i] = replacement;
+                        changed = true;
+                    }
+                }
+
+                if (changed)
+                {
+                    renderer.sharedMaterials = materials;
+                }
+            }
 
             if (normalizeDoor)
             {
@@ -272,7 +403,7 @@ namespace LogiCard.Art.Editor
             PrefabUtility.SaveAsPrefabAsset(instance, prefabPath);
             Object.DestroyImmediate(instance);
 
-            Debug.Log($"InteriorPackImportTool: {prefabPath} (URP mats={converted}, doorNormalize={normalizeDoor})");
+            Debug.Log($"InteriorPackImportTool: {prefabPath} (URP mats={converted}, sources={sourcePrefabPaths.Length}, doorNormalize={normalizeDoor})");
             return true;
         }
 
