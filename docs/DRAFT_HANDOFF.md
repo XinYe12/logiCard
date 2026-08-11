@@ -1,5 +1,26 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-11 (image-13 workers) — zoom-fill + soft-rain merged
+
+Human feedback on `screenshots/image copy 13.png`: better than C60, but floor/zoom-in need to be
+bigger; lighting + VFX still bad; **no new pack purchase**. Integrator already landed closer default
+framing / brighter floor / softer lighting on `master` @ `0840188`. Two workers finished the rest.
+
+**`feat/camera-zoom-fill` → merge `31feb30` (worker `99a02cf`).** `BoardCameraRig` Min 4.2→**2.6**
+(≤ Integrator default 3.4 so `Init` doesn't clamp it back up), Max 10→**8.0**, SizePerScrollNotch
+0.6→**0.45**. EditMode **134/134** (+1 for `Init_PreservesConfigureCameraDefaultNearFill`), PlayMode
+**40/40**. Scope held: rig + two test files only.
+
+**`feat/rain-vfx-tune` → merge `28dcdda` (worker `b719288`).** Still `Weather/PF_RainSystem` (no swap).
+Root cause of blue spark/dots: Cone emit local +Z + soft-particle FarFade + near-dot startSize.
+Runtime overrides: Box + rot (180,0,0), startSize3D thin streaks, force Stretch, cloned material
+(soft fade off, softer tint), colorOverLifetime alpha in/out. Clouds untouched. EditMode **133/133**,
+PlayMode **40/40**.
+
+Worker slots closed. Worktrees `logiCard-camera-zoom-fill` / `logiCard-rain-vfx-tune` pending
+removal. **Neither visually confirmed** — need a fresh Play / screenshot for zoom fill + soft rain
+(batchmode only proves wired, not look).
+
 ## 2026-08-11 (Integrator resume) — vibrancy (C60) + camera zoom (C61) merged after prior-session stall
 
 Prior Claude session hit a **session limit** mid-parallel-wave while both workers' cold-cache
