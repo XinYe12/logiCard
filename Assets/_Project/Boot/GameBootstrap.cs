@@ -645,9 +645,13 @@ namespace LogiCard.Boot
             // estimate pending another human look, not a final tuned value.
             cam.orthographicSize = 5.0f;
             // Solid-color void stays — C53 weather is a contained pocket above the board, not a skybox
-            // horizon. Cooler near-black so the stormy pocket reads against the void (was warmer grey).
+            // horizon; ART_DIRECTION's "diorama base + void outside board" doctrine wants the void to
+            // stay dark so the board reads as a lit stage. C60 vibrancy pass: was near-black-blue
+            // (0.035, 0.04, 0.055) — the cool tint was compounding the "cold/not vibrant" complaint even
+            // though the void isn't the board itself. Lifted slightly and de-blued to a warm-neutral
+            // near-black so it still frames the board as a dark void, just not an icy one.
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.035f, 0.04f, 0.055f);
+            cam.backgroundColor = new Color(0.06f, 0.055f, 0.06f);
 
             // Pitch/distance/position are BoardCameraRig's job now (yaw rotation, C48) — it owns the
             // same Euler(52,0,0)-from-center-minus-forward*14 shape this used to set directly.
@@ -681,37 +685,51 @@ namespace LogiCard.Boot
                 return;
             }
 
-            // C53 wet-dusk key: cool overcast, softer shadows than the old warm desk-lamp. Direction
-            // stays high so the cloud pocket above the board casts readable contact on the chunk.
+            // C53 wet-dusk key, rebalanced C60 (vibrancy pass): three rounds of human "looks bad"
+            // feedback this session pointed at this exact ratio — a dominant cool-blue key (0.95) over a
+            // much dimmer warm fill (0.22) reads as cold overall even with warm practicals present.
+            // Demoted from the dominant light to a moody accent (0.95 -> 0.55) and desaturated its blue
+            // (0.58,0.66,0.82 -> 0.68,0.74,0.86, closer to neutral overcast than saturated blue) rather
+            // than deleting the cool-key concept outright — still reads as a cool rim/accent, just no
+            // longer the light that sets the scene's overall temperature.
             var keyGo = new GameObject("Storm Key");
             keyGo.transform.SetParent(transform, false);
             var key = keyGo.AddComponent<Light>();
             key.type = LightType.Directional;
-            key.color = new Color(0.58f, 0.66f, 0.82f);
-            key.intensity = 0.95f;
+            key.color = new Color(0.68f, 0.74f, 0.86f);
+            key.intensity = 0.55f;
             key.shadows = LightShadows.Soft;
             key.shadowStrength = 0.55f;
             key.transform.rotation = Quaternion.Euler(50f, -25f, 0f);
 
             // Warm practical fill — bounce from interior windows/lamps (reinforced by point lights below).
+            // C60: promoted from a barely-there rim (0.22, well under the key's 0.95) to the light that
+            // actually sets the scene's overall warmth (0.75, now above the demoted key's 0.55) — richer
+            // color too, less washed-out amber.
             var fillGo = new GameObject("Warm Practical Fill");
             fillGo.transform.SetParent(transform, false);
             var fill = fillGo.AddComponent<Light>();
             fill.type = LightType.Directional;
-            fill.color = new Color(0.92f, 0.72f, 0.48f);
-            fill.intensity = 0.22f;
+            fill.color = new Color(0.95f, 0.78f, 0.55f);
+            fill.intensity = 0.75f;
             fill.shadows = LightShadows.None;
             fill.transform.rotation = Quaternion.Euler(28f, 145f, 0f);
 
             // Localized warm practicals at Hall/Vault window dressing — reference's lit-window language
             // translated indoors. Point lights (not more directionals) so wet floors catch glints.
-            PlacePracticalPoint("Hall Practical W", new PlanarPosition(2.2f, 5.5f), 0.7f, 3.2f, 1.1f);
-            PlacePracticalPoint("Hall Practical E", new PlanarPosition(5.8f, 5.5f), 0.7f, 3.2f, 1.1f);
-            PlacePracticalPoint("Vault Practical", new PlanarPosition(4f, 9.4f), 0.7f, 4.0f, 1.35f);
-            PlacePracticalPoint("Yard Spill", new PlanarPosition(4f, 2.2f), 0.55f, 3.5f, 0.55f);
+            // C60: intensities raised roughly 35-65% and color brightened (1,0.72,0.42 -> 1,0.76,0.5 in
+            // PlacePracticalPoint below) so these read as real warm pools of light instead of a faint glow
+            // competing against the old dominant cool key.
+            PlacePracticalPoint("Hall Practical W", new PlanarPosition(2.2f, 5.5f), 0.7f, 3.2f, 1.5f);
+            PlacePracticalPoint("Hall Practical E", new PlanarPosition(5.8f, 5.5f), 0.7f, 3.2f, 1.5f);
+            PlacePracticalPoint("Vault Practical", new PlanarPosition(4f, 9.4f), 0.7f, 4.0f, 1.8f);
+            PlacePracticalPoint("Yard Spill", new PlanarPosition(4f, 2.2f), 0.55f, 3.5f, 0.9f);
 
+            // C60: ambient floor was very dark and cool (0.09,0.11,0.15) — anything not directly lit fell
+            // into a cold near-black. Raised and warmed so shadow/ambient-occluded areas still read with
+            // some color instead of going flat dark.
             RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.09f, 0.11f, 0.15f);
+            RenderSettings.ambientLight = new Color(0.20f, 0.18f, 0.16f);
 
             BuildDioramaVolume();
         }
@@ -723,7 +741,7 @@ namespace LogiCard.Boot
             go.transform.position = _board.WorldFromPlanar(planar) + new Vector3(0f, height, 0f);
             var light = go.AddComponent<Light>();
             light.type = LightType.Point;
-            light.color = new Color(1f, 0.72f, 0.42f);
+            light.color = new Color(1f, 0.76f, 0.5f);
             light.intensity = intensity;
             light.range = range;
             light.shadows = LightShadows.Soft;
@@ -754,11 +772,18 @@ namespace LogiCard.Boot
         }
 
         /// <summary>
-        /// Global post-process grade for the wet-dusk diorama (C53): cool color filter, higher
-        /// contrast, restrained bloom for wet glints (not glow-game lasers — ART_DIRECTION §3), and
-        /// a vignette that keeps the void reading as the stage surround. DoF kept for the miniature
-        /// tilt-shift read; aperture slightly stopped down vs. the old toy pass so checkpoint-1
-        /// gameplay readability stays available for the human look.
+        /// Global post-process grade for the diorama. C53 shipped this as a cool, desaturated
+        /// "wet-dusk" grade; C58 (2026-08-10) separately warmed a *different* baked profile
+        /// (<c>UrpPostProcessingBootstrap.EnsureLiveProfile()</c> -> <c>LogiCardVolumeProfile.asset</c>)
+        /// but never touched this method — this runtime-created global Volume was still building the
+        /// old pre-C58 cool/desaturated values from scratch every boot, silently overriding/stacking on
+        /// top of the baked one and undoing C58's intent in practice. That's the most likely reason the
+        /// human still saw a cold, flat look after C58 was reported "merged." C60 applies the same
+        /// warm-vibrant intent directly here (values deliberately similar to, and a notch stronger than,
+        /// C58's live-profile numbers, since this is the volume actually dominating the runtime look):
+        /// higher saturation, warm-neutral color filter, brighter exposure, softer vignette. Restrained
+        /// bloom for wet glints (not glow-game lasers — ART_DIRECTION §3) is unchanged. DoF kept for the
+        /// miniature tilt-shift read; aperture unchanged from the checkpoint-1 gameplay-readability tune.
         /// </summary>
         private void BuildDioramaVolume()
         {
@@ -771,13 +796,13 @@ namespace LogiCard.Boot
 
             var color = profile.Add<ColorAdjustments>(true);
             color.postExposure.overrideState = true;
-            color.postExposure.value = -0.12f;
+            color.postExposure.value = 0.18f;
             color.contrast.overrideState = true;
-            color.contrast.value = 16f;
+            color.contrast.value = 10f;
             color.colorFilter.overrideState = true;
-            color.colorFilter.value = new Color(0.82f, 0.88f, 1f);
+            color.colorFilter.value = new Color(1f, 0.94f, 0.86f);
             color.saturation.overrideState = true;
-            color.saturation.value = -4f;
+            color.saturation.value = 20f;
 
             var bloom = profile.Add<Bloom>(true);
             bloom.threshold.overrideState = true;
@@ -789,9 +814,9 @@ namespace LogiCard.Boot
 
             var vignette = profile.Add<Vignette>(true);
             vignette.color.overrideState = true;
-            vignette.color.value = new Color(0.01f, 0.015f, 0.03f);
+            vignette.color.value = new Color(0.08f, 0.07f, 0.09f);
             vignette.intensity.overrideState = true;
-            vignette.intensity.value = 0.38f;
+            vignette.intensity.value = 0.15f;
             vignette.smoothness.overrideState = true;
             vignette.smoothness.value = 0.7f;
 
