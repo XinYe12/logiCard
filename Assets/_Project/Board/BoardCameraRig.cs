@@ -6,8 +6,9 @@ namespace LogiCard.Board
     /// <summary>
     /// Owns the diorama camera's yaw around the board's vertical axis, and (2026-08-11) its zoom —
     /// <c>orthographicSize</c>. Pitch and distance stay exactly as <c>GameBootstrap.ConfigureCamera</c>
-    /// set them; <c>orthographicSize</c> is set once there too (5.0, the analytically-calibrated
-    /// baseline — see DRAFT_HANDOFF's "orthographicSize resolved analytically" entry) but ownership of
+    /// set them; <c>orthographicSize</c> is set once there too (default owned by ConfigureCamera —
+    /// historically the analytically-calibrated 5.0 baseline, see DRAFT_HANDOFF's "orthographicSize
+    /// resolved analytically" entry; later waves may lower it toward fill) but ownership of
     /// runtime changes to it now belongs here, same as yaw already did.
     ///
     /// Smooth, continuous yaw via right-mouse-drag (2026-08-10 — supersedes an earlier discrete
@@ -43,49 +44,51 @@ namespace LogiCard.Board
         public const float DegreesPerPixel = 0.25f;
 
         /// <summary>
-        /// Zoom-in floor. At yaw 0 (the rig's default/rest orientation) and the narrowest landscape
-        /// aspect this project supports (`aspect == 1`, `docs/SCOPE.md` C48's landscape-desktop floor),
-        /// the board's world width (8 units, constant across all three maps —
-        /// <c>GameBootstrap.BuildFreightYardGeometry/BuildRailPlatformGeometry/BuildVaultComplexGeometry</c>)
-        /// needs <c>orthographicSize ≥ width / (2 * aspect) = 4.0</c> to stay fully in frame
-        /// horizontally. 4.2 adds ~5% headroom above that strict floor (board never touches the frame
-        /// edge, some void margin stays visible) while still letting the player zoom in noticeably
-        /// closer than the 5.0 baseline.
+        /// Zoom-in floor. Deliberately below the yaw-0 full-width fit
+        /// (<c>width / (2 * aspect) = 8 / 2 = 4.0</c> at the narrowest landscape aspect this project
+        /// supports — `aspect == 1`, `docs/SCOPE.md` C48) so the player can fill the board in frame.
+        /// At 2.6, board width covers <c>8 / (2 * 2.6) ≈ 1.54×</c> the frame horizontally at yaw 0 /
+        /// aspect 1 — edges clip; that is the point of a zoom-in-to-fill control (human feedback
+        /// 2026-08-11: prior floor 4.2 left almost no zoom-in headroom against a ~5.0 default).
         ///
-        /// This bound only guarantees the board's *width* at yaw 0. Board *depth* varies by map
-        /// (FreightYard 10, VaultComplex 9, RailPlatform 13) and the vertical fit needed is
-        /// <c>depth * sin(52°) / 2</c> — 3.94 / 3.55 / 5.12 respectively. RailPlatform's 5.12 exceeds
-        /// this 4.2 floor (and even exceeds the shipped 5.0 baseline!), so on that map, at max zoom-in,
-        /// the far/near board edge can run past the top/bottom of frame. This is a pre-existing gap in
-        /// the yaw-0 calibration itself (not introduced by zoom — 5.0 already under-covers
-        /// RailPlatform's depth by the same math), out of this feature's scope to fix (bounds a single
-        /// map's baseline `orthographicSize`, `GameBootstrap.ConfigureCamera` territory).
+        /// Hard constraint vs ConfigureCamera: <see cref="Init"/> clamps the camera's starting
+        /// <c>orthographicSize</c> into <c>[Min, Max]</c>. Whatever default ConfigureCamera ships
+        /// (historically 5.0; later waves may lower toward fill around ~3.4) must be ≥ this floor,
+        /// or Init silently forces it back up. 2.6 leaves clear headroom under a 3.4-class default.
+        ///
+        /// Board *depth* still varies by map (FreightYard 10, VaultComplex 9, RailPlatform 13);
+        /// vertical fit needed is <c>depth * sin(52°) / 2</c> — 3.94 / 3.55 / 5.12 respectively.
+        /// All three already exceed this floor (and RailPlatform's 5.12 already exceeded the old
+        /// 5.0 baseline), so max zoom-in can run the far/near edge past the top/bottom of frame —
+        /// accepted, same as C61. No per-map zoom floors.
         ///
         /// Yaw makes this worse still: at 45°-ish diagonal yaw the board's on-screen footprint is its
-        /// full bounding-box diagonal, not its width or depth — for RailPlatform,
+        /// full bounding-box diagonal — for RailPlatform,
         /// <c>sqrt((width/2)² + (depth/2)²) = sqrt(4² + 6.5²) ≈ 7.63</c>, well above this floor.
-        /// Guaranteeing zero clipping at every yaw angle would require raising the zoom-in floor above
-        /// the *zoom-out* ceiling below, which defeats the point of a zoom-in control — the existing
-        /// yaw feature already carries this same latent risk independently of zoom (nothing here
-        /// re-clamps yaw based on zoom level), so this is an accepted, pre-existing trade-off, not a
-        /// regression.
+        /// Guaranteeing zero clipping at every yaw would require raising the zoom-in floor above the
+        /// zoom-out ceiling below, which defeats the control — accepted trade-off, documented since C61.
         /// </summary>
-        public const float MinOrthographicSize = 4.2f;
+        public const float MinOrthographicSize = 2.6f;
 
         /// <summary>
         /// Zoom-out ceiling. Vertical board coverage is <c>depth * sin(52°) / (2 * orthographicSize)</c>
         /// (aspect-independent, per the DRAFT_HANDOFF derivation). The smallest board, VaultComplex
         /// (depth 9), is the binding case — smaller boards read as proportionally smaller still as you
-        /// zoom out. At <c>orthographicSize = 10</c> (exactly double the 5.0 baseline) VaultComplex
-        /// still covers <c>9 * 0.788 / 20 ≈ 35.5%</c> of the frame vertically — chosen as a floor for
-        /// "still readable as a tactical board, not a speck." FreightYard/RailPlatform read larger
-        /// still at this same bound since their depth is bigger.
+        /// zoom out. At <c>orthographicSize = 8</c> VaultComplex covers
+        /// <c>9 * sin(52°) / 16 ≈ 9 * 0.788 / 16 ≈ 44.3%</c> of the frame vertically — still readable
+        /// as a tactical board, not a speck, while tighter than the prior 10.0 ceiling now that the
+        /// ConfigureCamera default is moving closer to the board (a 10× speck from a ~3.4 default
+        /// would feel worse than the same ceiling did against a 5.0 baseline). FreightYard /
+        /// RailPlatform read larger still at this same bound since their depth is bigger
+        /// (~49% / ~64% vertical coverage respectively).
         /// </summary>
-        public const float MaxOrthographicSize = 10.0f;
+        public const float MaxOrthographicSize = 8.0f;
 
         /// <summary>orthographicSize units removed per positive notch of <c>Input.mouseScrollDelta.y</c>
-        /// (scroll up/away = zoom in = smaller size, hence the sign flip in <see cref="Update"/>).</summary>
-        public const float SizePerScrollNotch = 0.6f;
+        /// (scroll up/away = zoom in = smaller size, hence the sign flip in <see cref="Update"/>).
+        /// Full travel <c>(Max - Min) / 0.45 = 5.4 / 0.45 = 12</c> notches — usable across the wider
+        /// magnification span without feeling sluggish or twitchy.</summary>
+        public const float SizePerScrollNotch = 0.45f;
 
         /// <summary>orthographicSize units per second the camera eases toward its scroll-set target —
         /// same "apply a small delta every frame via the public primitive" shape yaw already uses
