@@ -34,9 +34,10 @@ physics-miss fallback via ground-plane ray. Banner `raycastTarget = false`; `Try
 flat at ortho 2.6–3.4, use-now owned fog/mist + Poly Haven 2K/4K re-download, buy ranking for
 ortho-safe lamp atmosphere — **no imports**. Human still chooses purchases.
 
-Worker slots closed. Worktrees pending removal. **Needs human Play / screenshot** for path stroke,
-door arc, lightning ground hit, round carry, and south-edge clicks. Lighting look unchanged until
-someone wires the research.
+Worker slots closed. Worktrees pending removal. Integrator disposable verify
+(`logiCard-verify-img14` @ merge tip): **EditMode 134/134, PlayMode 44/44.** Still needs human
+Play / screenshot for path stroke, door arc, lightning ground hit, round carry, and south-edge
+clicks. Lighting look unchanged until someone wires the research.
 
 ## 2026-08-11 (image-13 workers) — zoom-fill + soft-rain merged
 
