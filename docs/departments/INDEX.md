@@ -12,28 +12,43 @@ error, two PlayMode regressions, and a shipped-build bug it caught. Both worker 
 
 ## Capacity
 
-Integrator + up to **2** coding workers — **1 of 2 in use.** Check `git worktree list` and
-`DRAFT_HANDOFF.md`'s top section before assuming this table is current.
+Integrator + up to **2** coding workers — **2 of 2 in use.** Check `git worktree list` and
+`DRAFT_HANDOFF.md`'s top section before assuming this table is current. (`logiCard-art-pack-research`
+below runs in the human's own separate session and isn't counted against this cap.)
 
 ## Active agents / worktrees
 
-`feat/asset-pack-audit` and `feat/interior-props-wiring` both merged clean — slots closed, worktrees
-removed. Interior props landed on PolygonOffice, then **superseded same day**: the human decided to
-delete all three unlicensed Synty packs outright rather than carry the licensing TODO forward, so the
-interior pipeline is now back on Quaternius CC0 (`master` @ `3e06126`) — see `DRAFT_HANDOFF.md`'s
-"unlicensed Synty packs deleted" entry.
+`feat/asset-pack-audit`, `feat/interior-props-wiring` (PolygonOffice re-source, later superseded by the
+Synty purge — pipeline now on Quaternius CC0), and `feat/heist-character-swap` (closed out unused, its
+premise died with the Synty deletion) are all resolved and removed. Six free art packs landed 2026-08-11
+(checkpoint `971985c`): nappin House Interior/Weapons, Cinematic Weather VFX (`RainSnowCloudEffect`), Zap
+VFX, ithappy Creative Characters FREE, ithappy Cartoon City Free — see `docs/ART_PACK_RESEARCH.md`. Two
+new worker slices wire them in:
 
-- **`logiCard-heist-character-swap` (branch `feat/heist-character-swap`) — brief now obsolete, not yet
-  closed out.** Its whole premise (isolate SWAT/Overall renderers out of `Assets/PolygonHeist/`'s shared
-  modular rig prefabs) no longer applies — that pack is deleted. No work had landed on the branch yet
-  (still sitting at the pre-deletion merge commit, nothing lost). Needs a human call: repurpose this slot
-  for a chubby/round character pack once one is purchased (see `ART_PACK_RESEARCH.md`'s Characters
-  section — Kotangent Chubby / Toony Tiny candidates), or close the worktree out unused.
-- **`logiCard-art-pack-research` (branch `feat/art-pack-research`) — human-run, active again**, not the
-  empty finished shell it was before. Produced the current `docs/ART_PACK_RESEARCH.md` rewrite (session
-  status, chubby-character shortlist, motion/animation strategy) — Integrator pulled that content
-  directly into `master` (`403e9f8`) from the synced working-tree copy rather than merging this branch,
-  so the branch itself may now be redundant; human's call whether to keep it running or fold it.
+- **`logiCard-nappin-interior-wiring`** (branch `feat/nappin-interior-wiring`, off `master` @ `971985c`)
+  — re-source `InteriorPackImportTool.cs` + `Resources/Interior/*.prefab` from nappin
+  (`OfficeEssentialsPack` + `HouseInteriorPack`) instead of Quaternius, same pattern as the earlier
+  PolygonOffice re-source. Brief at worktree root (`NAPPIN_INTERIOR_WIRING_AGENT_BRIEF.md`). Owns
+  `Assets/_Project/Art/Editor/InteriorPackImportTool.cs` +
+  `Assets/_Project/Art/Environment/Resources/Interior/**` this wave.
+- **`logiCard-weather-fx-wiring`** (branch `feat/weather-fx-wiring`, off `master` @ `971985c`) — replace
+  `BoardWeatherPocket.cs`'s fully-procedural cloud/rain particle code with `RainSnowCloudEffect`'s real
+  prefabs (fit to the board footprint, preserving the already-tuned "contained sky pocket, not looming"
+  framing), add lightning via Zap VFX (new feature, nothing existing to replace). Brief at worktree root
+  (`WEATHER_FX_WIRING_AGENT_BRIEF.md`). Owns `Assets/_Project/Board/BoardWeatherPocket.cs` this wave.
+
+Not yet scoped this wave (queued for next): Characters wiring (`ithappy/Creative_Characters_FREE` into
+`PawnImportTool.cs`/`PawnView.cs`) and exterior/city dressing (`ithappy/Cartoon_City_Free` as Yard/board-
+edge backdrop) — no file overlap with either slot above, safe to pick up once a slot frees.
+
+- **`logiCard-art-pack-research` (branch `feat/art-pack-research`) — human-run, active.** Produced the
+  current `docs/ART_PACK_RESEARCH.md`; Integrator pulls its content into `master` directly rather than
+  merging the branch, so it may be redundant — human's call whether to keep it running.
+
+**Deliberately left uncommitted on `master` this wave:** `Assets/ExplosiveLLC/` (Warrior character packs
++ `SuperCharacterController`) — has real compile errors that abort Unity batchmode entirely, unresolved
+origin/purpose, excluded from the checkpoint both new worktrees forked from so it can't break their
+batchmode too.
 
 Three other now-finished worktrees remain on disk as empty shells pending cleanup (`logiCard-env-lookfeel`,
 `logiCard-ui-dock-polish` from the map-roster wave; `logiCard-vibrancy-pass`/`logiCard-map-continuation`
