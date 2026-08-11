@@ -12,34 +12,33 @@ error, two PlayMode regressions, and a shipped-build bug it caught. Both worker 
 
 ## Capacity
 
-Integrator + up to **2** coding workers — **1 of 2 in use.** Check `git worktree list` and
+Integrator + up to **2** coding workers — **0 of 2 in use.** Check `git worktree list` and
 `DRAFT_HANDOFF.md`'s top section before assuming this table is current. (`logiCard-art-pack-research`
 below runs in the human's own separate session and isn't counted against this cap.)
 
 ## Active agents / worktrees
 
-`feat/nappin-interior-wiring`, `feat/weather-fx-wiring`, and `feat/void-city-dressing` all merged clean.
-See `DRAFT_HANDOFF.md` for what landed and how each was independently re-verified before merge, not just
-taken on the workers' reports.
+`feat/nappin-interior-wiring`, `feat/weather-fx-wiring`, `feat/void-city-dressing`, and
+`feat/character-pack-swap` all merged clean — all Phase 5 worker slots closed. See `DRAFT_HANDOFF.md` for
+what landed and how each was independently re-verified before merge, not just taken on the workers'
+reports. **`feat/character-pack-swap` had a real two-agent-collision incident** (Integrator resumed a
+stalled worker with a fresh `Agent()` call instead of `SendMessage`, and the original agent turned out not
+to be fully stopped) — logged in full in `DRAFT_HANDOFF.md` and as a standing Integrator-memory lesson
+(`feedback_agent_resume_not_new_agent`); no work was lost, both agents handled the collision with real
+discipline, but worth reading before assuming "completed" means an agent has truly stopped.
 
-- **`logiCard-character-pack-swap`** (branch `feat/character-pack-swap`, off `master` @ `23af934`) —
-  **in progress, resumed after its first pass stalled** (no commit landed; left only an uncommitted
-  diagnostic tool and a log that turned out to be pure cold-cache import noise, this worktree's first-ever
-  batchmode run — same slow-first-run pattern hit repeatedly elsewhere this session, not a real problem,
-  just needed patience the agent didn't have). Job: assemble Scout/Juggernaut from
-  `ithappy/Creative_Characters_FREE`'s modular parts (using the pack's own `CharacterCustomizationWindow`
-  Editor tool), adapt `PawnImportTool.cs`, bake to the `Resources/<Scout|Juggernaut>` contract
-  `PawnView.cs` already expects. Confirmed materials are already this project's own URP/Lit shader — no
-  conversion step needed. Brief at worktree root (`CHARACTER_PACK_SWAP_AGENT_BRIEF.md`). Owns
-  `Assets/_Project/Editor/PawnImportTool.cs` + `Assets/_Project/Art/Characters/**` this wave.
-
-`logiCard-void-city-dressing`'s worktree directory is deregistered from git but wouldn't delete on disk
-(same transient OneDrive/Search-Indexer lock class documented elsewhere in this file) — harmless empty
-shell, safe to delete by hand whenever the lock clears.
+`logiCard-void-city-dressing` and `logiCard-character-pack-swap`'s worktree directories are deregistered
+from git but wouldn't delete on disk (same transient OneDrive/Search-Indexer lock class documented
+elsewhere in this file) — harmless empty shells, safe to delete by hand whenever the lock clears.
 
 - **`logiCard-art-pack-research` (branch `feat/art-pack-research`) — human-run, active.** Produced the
   current `docs/ART_PACK_RESEARCH.md`; Integrator pulls its content into `master` directly rather than
   merging the branch, so it may be redundant — human's call whether to keep it running.
+
+**Next up, no worker assigned:** everything scoped in the current `ART_PACK_RESEARCH.md`/`DRAFT_HANDOFF.md`
+free-pack wave is now wired. Remaining open items are visual confirmation (human Editor pass — nothing
+character/environment-related this session has been seen rendered yet) and whatever the human wants to
+scope next.
 
 **`Assets/ExplosiveLLC/` blocker — resolved.** Fixed both compile errors (added
 `com.unity.modules.terrainphysics` to the package manifest; removed an invalid `[SerializeField]` on a

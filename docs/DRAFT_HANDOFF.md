@@ -20,12 +20,40 @@ merge-base — clean, the worker correctly left several incidental Unity-auto-ge
 uncommitted; read the full `BoardView.cs` diff; independently re-ran batchmode): **EditMode 124/124,
 PlayMode 37/37.**
 
-**`feat/character-pack-swap` — stalled on its first attempt, resumed.** The worker's first pass left no
-commit — just an uncommitted diagnostic tool and a 20,000-line log that turned out to be nothing but
-generic first-time cold-cache Unity import noise (this worktree's first-ever batchmode invocation, same
-slow-cache pattern this session has hit repeatedly elsewhere), with the actual diagnostic output never
-produced before the agent's turn ended. Resumed with an explicit note about expecting multi-minute cold
-first-runs and to poll patiently rather than give up early. Still in progress as of this entry.
+**`feat/character-pack-swap` merged — after a real process incident, disclosed in full.** The worker's
+first pass left no commit — just an uncommitted diagnostic tool and a 20,000-line log that turned out to
+be nothing but generic first-time cold-cache Unity import noise, the actual diagnostic output never
+produced before the agent's turn ended. **Resumed incorrectly**: instead of `SendMessage` to that same
+stalled agent, a fresh `Agent()` call was launched pointed at the identical worktree path — a mistake, now
+logged as a standing lesson (`feedback_agent_resume_not_new_agent` in Integrator memory). The original
+agent's "completed" status did not mean it had actually stopped — it had a background Unity batchmode
+process still in flight, and woke back up on its own once that finished, continuing to work **concurrently
+with the freshly-spawned resume agent in the same worktree** — a direct hit on the "never share a working
+tree with another agent" rule, caused by Integrator orchestration error, not anything either agent did
+wrong. Both agents independently detected the collision (a diagnostic file neither fully recognized as its
+own authorship, log references to methods not in the committed code) and handled it with real discipline —
+cross-verified against the actual committed state rather than blindly trusting or overwriting, and the
+original agent added a second, reconciling cleanup commit (`ef935b9`: reverted a `ProjectSettings.asset`
+auto-side-effect, removed a redundant diagnostic tool, fixed two doc references). No work was lost.
+
+Swaps Scout/Juggernaut from the Quaternius Ultimate Modular Men single-FBX pipeline to `ithappy Creative
+Characters FREE`'s modular slot-assembly API (`CustomizableCharacter`/`SlotLibrary`), via a new
+`CharacterCustomizationImportTool.cs` — `PawnImportTool`'s one-FBX-in shape doesn't fit a slot-based
+system, so this drives the pack's own assembly API instead (the same one its `CharacterCustomizationWindow`
+GUI drives). Scout (lean/civilian): `Outfit_010`, `Pants_009`, `Shoe_Slippers_005`, `Hairstyle_Male_005`,
+no headgear. Juggernaut (bulky/armored): `Outwear_050`, `Pants_010`, `Shoe_Sneakers_009`, `Hat_Single_016`,
+`Gloves_014`, no hairstyle. Ambiguous picks chosen by comparing real `SkinnedMeshRenderer.sharedMesh.bounds`
+volume across each slot's variants, not filenames (no screenshot capability this session). Every renderer
+on both baked prefabs shares the pack's one `Materials/Color.mat` — confirmed directly, this project's own
+URP/Lit shader guid, no conversion step needed. `PawnView.cs`'s `"Body"` tint-marker substring and
+`TargetVisualHeight` rescale both already fit this pack's output — **zero `PawnView.cs` changes**,
+confirmed by direct inspection of the baked prefabs' serialized YAML, not assumed.
+
+**Verified three separate times before merge** — the worker's own report, a second independent
+re-verification after the two-agent collision was reconciled, and a third final clean run by the
+Integrator (after discarding leftover batchmode noise from all the concurrent runs). All three:
+**EditMode 124/124, PlayMode 37/37.** Not yet visually confirmed in-Editor — same standing
+`PAWN_ART_REWORK_PLAN.md` limitation as every character change this project has made.
 
 ## 2026-08-11 (later still) — nappin interior + weather VFX wiring merged; ExplosiveLLC blocks main-tree batchmode
 
