@@ -27,11 +27,27 @@ their full catalog). Closest clay-adjacent candidate found: Toony Tiny Citizens 
 as needing real prep work to fit `PawnImportTool.cs`'s single-FBX/no-texture/`"Body"`-renderer shape.
 Honest fallback stays keeping Quaternius (free, already fits the pipeline exactly).
 
-**Second worker in flight, not yet merged:** `feat/interior-props-wiring` — re-sourcing the 14
-`Resources/Interior/*.prefab` names from `Assets/PolygonOffice/` instead of Quaternius, adapting
-`InteriorPackImportTool.cs`, preserving `BoardView.cs`'s load-by-name contract. This is Phase 5 art-bar
-work (currently the top-priority phase per `SCHEDULE.md`), closing item 2 of the "what's actually left to
-wire" list two sections below. Will review/verify/merge when it reports back.
+**`feat/interior-props-wiring` merged.** All 14 `Resources/Interior/*.prefab` names re-sourced from
+`Assets/PolygonOffice/` instead of Quaternius (Door/DoorAlt/DoorDouble/WindowSmall/WindowLarge/
+LightCeiling/LightCeilingAlt/LightDesk/ShelfLarge/Shelf/Bookshelf/Cabinet/Table/Chair) — closes item 2 of
+the "what's actually left to wire" list two sections below. `InteriorPackImportTool.cs` rewritten to
+instantiate PolygonOffice's ready-made prefabs directly (that pack ships prefabs with external materials
+already, unlike Quaternius's raw-FBX source) and, critically, **duplicates every source material into
+`Resources/Interior/Materials/` before URP-converting it rather than mutating the shared
+PolygonOffice-owned original** — those materials are referenced by content well beyond this catalog.
+`BoardView.cs` needed zero changes; the `Resources/Interior/<name>.prefab` load-by-name contract and the
+door pivot/unit-scale contract are both fully preserved (verified directly in the serialized prefabs, not
+just taken on the report). Window glass re-verified transparent post-rebuild — same
+`_SURFACE_TYPE_TRANSPARENT`/`_SrcBlend`/`_DstBlend`/`_ZWrite` fix shape as the earlier Quaternius glass
+regression, this time confirmed by the Integrator reading the actual serialized `.mat` before merging,
+not assumed from a green log. One real Unity quirk hit and worked around: a material's blend-state
+keywords/properties can get silently re-derived back to shader defaults the *first* time a newly-shader-
+converted asset is ever saved — the tool now runs its whole catalog+fix pass twice per invocation, which
+converges correctly. Batchmode (worker-reported, matches the Integrator's independent artifact checks):
+EditMode 124/124, PlayMode 37/37 — Integrator could not re-run batchmode itself this pass (didn't locate
+the Editor executable quickly) but did independently verify the boundary (`git diff` against the true
+merge-base: zero touches under `Assets/PolygonOffice/**`, zero touches to `BoardView.cs`) and the glass
+material's serialized properties directly. Merged `e2892ef` on `master`; worktree removed.
 
 **A third worktree was set up for the human to run themselves** (their own separate agent tooling,
 same pattern as the 2026-08-10 vibrancy/map-continuation waves) rather than the Integrator spawning a

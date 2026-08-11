@@ -12,13 +12,16 @@ error, two PlayMode regressions, and a shipped-build bug it caught. Both worker 
 
 ## Capacity
 
-Integrator + up to **2** coding workers — **2 of 2 in use.** Check `git worktree list` and
+Integrator + up to **2** coding workers — **1 of 2 in use.** Check `git worktree list` and
 `DRAFT_HANDOFF.md`'s top section before assuming this table is current.
 
 ## Active agents / worktrees
 
-`feat/asset-pack-audit` merged clean (`docs/ART_PACK_RESEARCH.md` + new `docs/ASSET_PACK_AUDIT.md`) —
-slot closed, worktree removed.
+`feat/asset-pack-audit` and `feat/interior-props-wiring` both merged clean — slots closed, worktrees
+removed. Interior props: all 14 `Resources/Interior/*.prefab` names now sourced from `Assets/PolygonOffice/`
+instead of Quaternius; window-glass transparency and the `Assets/PolygonOffice/**` read-only boundary
+independently verified by the Integrator against the serialized assets before merge (see
+`DRAFT_HANDOFF.md`).
 
 - `logiCard-heist-character-swap` (branch `feat/heist-character-swap`, off `master`) — Phase 5 art-bar
   slice, **human-run in their own separate session, not Integrator-spawned.** Swaps Scout/Juggernaut's
@@ -26,13 +29,6 @@ slot closed, worktree removed.
   since Heist's prefabs are a shared modular rig with every outfit variant nested in one file. Brief at
   worktree root (`HEIST_CHARACTER_SWAP_AGENT_BRIEF.md`). Owns `Assets/_Project/Editor/PawnImportTool.cs`
   + `Assets/_Project/Art/Characters/**` this wave.
-- `logiCard-interior-props-wiring` (branch `feat/interior-props-wiring`, off `master` @ `0234103`) —
-  Phase 5 art-bar slice: re-source the 14 `Resources/Interior/*.prefab` names from the already-imported
-  `Assets/PolygonOffice/` pack instead of Quaternius, adapting `InteriorPackImportTool.cs`, preserving
-  `BoardView.cs`'s load-by-name contract so no `BoardView` changes are needed. Brief at worktree root
-  (`INTERIOR_PROPS_AGENT_BRIEF.md`). Owns `Assets/_Project/Art/Editor/InteriorPackImportTool.cs` +
-  `Assets/_Project/Art/Environment/Resources/Interior/**` for this wave — no overlap with the audit
-  worker (docs-only) or with Sim/Net/GameBootstrap dispatch.
 
 Five now-finished worktrees exist on disk as empty shells pending cleanup (`logiCard-env-lookfeel`,
 `logiCard-ui-dock-polish` from the map-roster wave; `logiCard-vibrancy-pass`, `logiCard-map-continuation`
