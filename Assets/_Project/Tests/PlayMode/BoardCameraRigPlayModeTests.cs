@@ -38,5 +38,38 @@ namespace LogiCard.Tests.PlayMode
             BoardCameraRig rig = Bootstrap.CameraRig;
             Assert.That(() => rig.RotateBy(10f), Throws.Nothing);
         }
+
+        [Test]
+        public void ZoomingChangesOrthographicSize()
+        {
+            BoardCameraRig rig = Bootstrap.CameraRig;
+            float before = rig.OrthographicSize;
+
+            rig.ZoomBy(-1f);
+
+            Assert.That(rig.OrthographicSize, Is.EqualTo(before - 1f).Within(0.001f));
+        }
+
+        [Test]
+        public void ZoomingDoesNotThrowWithNoDoorSelected()
+        {
+            // Zoom reuses the same Rotated event as yaw (see BoardCameraRig's class doc) specifically
+            // so it gets the same GameBootstrap-wired RefreshBoardAnchoredUI invalidation - confirm
+            // that path is exercised and safe here too, not just for RotateBy.
+            BoardCameraRig rig = Bootstrap.CameraRig;
+            Assert.That(() => rig.ZoomBy(1f), Throws.Nothing);
+        }
+
+        [Test]
+        public void ZoomingIsClampedWithinAnalyticBounds()
+        {
+            BoardCameraRig rig = Bootstrap.CameraRig;
+
+            rig.ZoomBy(-100f);
+            Assert.That(rig.OrthographicSize, Is.EqualTo(BoardCameraRig.MinOrthographicSize).Within(0.001f));
+
+            rig.ZoomBy(100f);
+            Assert.That(rig.OrthographicSize, Is.EqualTo(BoardCameraRig.MaxOrthographicSize).Within(0.001f));
+        }
     }
 }
