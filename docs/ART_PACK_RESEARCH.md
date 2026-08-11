@@ -47,7 +47,7 @@ Do **not** re-import from `D:\XinyeData\projects\assets` reseller bundles — se
 | Weather (rain/clouds/fog) | Free URP weather VFX + free clouds/sky | Yes — free first |
 | Lightning | Free Zap / FX Lightning | Yes — free |
 | Buildings + streets | Free low-poly city / Kenney city kits | Yes — free first; accept slightly blockier roads |
-| Chubby / round characters | See Characters section below | Paid candidates; try free PolyPeople sample first |
+| Characters | See Characters section below | **Modular Stylized Character 1 ($40)** — confirmed Humanoid/Mixamo-compatible rig, primary pick |
 | Tornado | Paid stylized VFX (~$40) | Only if a real match beat needs it |
 | Railway / 高铁 | Paid modular railway (~$10–$30) | Catalog; **deferred (C31)** — motion is mostly **code**, not pack anims |
 | Synty POLYGON Heist/Office/City | $99.98 | Optional upgrade path only |
@@ -111,22 +111,22 @@ Confirmed design **C31**, deferred from ship. Mesh packs (~$10–$30) give track
 
 ### 4. Characters — chubby / round / Link’s Awakening taste
 
-**nappin has no character pack.** Target: soft, chubby, round toy figures (not Synty facets, not adult Quaternius realism).
+**nappin has no character pack.** Target: soft, chubby, round toy figures (not Synty facets, not adult Quaternius realism) that can also carry future roster fantasy (tennis player, other unique operators) without a second character-pipeline rebuild.
+
+**Primary recommendation, 2026-08-11: Modular Stylized Character 1 (Rukha93).**
 
 | Pack | Link | Price | Fit |
 |---|---|---|---|
-| **Kotangent Chubby Characters** | [Asset Store](https://assetstore.unity.com/packages/3d/characters/kotangent-chubby-characters-pack-271155) | ~$12.99 | Closest “round blob people”; URP compatible; includes a few anims |
-| **Toony Tiny Citizens Megapack** | [Asset Store](https://assetstore.unity.com/packages/3d/characters/toony-tiny-citizens-megapack-99854) | ~$30 | Chunky toony humans; good Scout/civilian |
-| **Toony Tiny Soldiers** | [Asset Store](https://assetstore.unity.com/packages/3d/characters/toony-tiny-soldiers-177336) | Check Store | Same family — Juggernaut / tactical |
-| **PolyPeople City People [Free]** | [Asset Store](https://assetstore.unity.com/packages/3d/characters/polypeople-series-city-people-free-325204) | Free | Sample one character in URP before buying full (~$5) |
-| Stylized Character Pack (Unity) | [Asset Store](https://assetstore.unity.com/packages/3d/characters/stylized-character-pack-360808) | Free | Backup inspect candidate |
+| **Modular Stylized Character 1** | [Asset Store](https://assetstore.unity.com/packages/3d/characters/humanoids/humans/modular-stylized-character-1-255279) | $40 | **Confirmed Humanoid/Mecanim rig, explicitly Mixamo-compatible** — the key property Kotangent below only implies. Male + female base bodies, swappable modular outfits, custom 3-channel color shader (Shader Graph), facial blendshapes + 10 phoneme blendshapes for lip sync (unused by this project, harmless). Toon/casual/anime-influenced stylization — proportions are far less extreme than a "chubby blob" pack, so a retargeted Humanoid clip (Mixamo or a paid sports pack) is much less likely to foot-slide or clip than on an exaggerated chibi rig. **Ships with zero animations** — budget for Mixamo/retarget regardless, same as every option here. Sibling pack **Modular Stylized Character 2 – Fantasy** ([Asset Store](https://assetstore.unity.com/packages/3d/characters/humanoids/humans/modular-stylized-character-2-fantasy-294319), ~$24.80 on sale) exists if a fantasy-coded operator ever joins the roster. |
+| Kotangent Chubby Characters | [Asset Store](https://assetstore.unity.com/packages/3d/characters/kotangent-chubby-characters-pack-271155) | ~$12.99 | Closest "round blob people" look, but rig type/animation contents aren't confirmed from the listing itself (tags only say "Rigged"/"Animated") — and if the proportions are as extreme as "chubby" implies, that's the exact shape that breaks Humanoid retargeting worst. Cheaper fallback, not the primary pick anymore. |
+| Toony Tiny Citizens Megapack | [Asset Store](https://assetstore.unity.com/packages/3d/characters/toony-tiny-citizens-megapack-99854) | ~$30 | Chunky toony humans; good Scout/civilian alternate |
+| Toony Tiny Soldiers | [Asset Store](https://assetstore.unity.com/packages/3d/characters/toony-tiny-soldiers-177336) | Check Store | Same family — Juggernaut / tactical alternate |
+| PolyPeople City People [Free] | [Asset Store](https://assetstore.unity.com/packages/3d/characters/polypeople-series-city-people-free-325204) | Free | Free smoke-test of URP + rig fit before spending on anything above |
 | Quaternius Ultimate Modular Men | (already in project) | Free CC0 | Honest fallback — wired today, style mismatch with nappin |
-
-**Try first:** Kotangent Chubby if “plump toy” is the goal; Toony Tiny if clearer Scout vs Juggernaut outfits; PolyPeople free to smoke-test URP + round stylization.
 
 **Skip for this taste:** Synty POLYGON characters (too faceted); KayKit (cuter blocky, less clay-round).
 
-**Pipeline note:** Any buy must still fit or be adapted to `PawnImportTool` / `PawnView` (height normalize, `"Body"` tint marker or extended tint logic). Expect prep work — not a one-click drop-in.
+**Pipeline note — real integration cost, not a drop-in:** `PawnImportTool.cs`/`PawnView.cs` currently do team-color tinting via a plain `MaterialPropertyBlock._BaseColor` swap on any renderer named `"Body"`. Modular Stylized Character 1's color customization runs through its own **Shader Graph-based multi-channel shader**, not a simple base color — wiring it in means either adapting `PawnView`'s tint call to drive that shader's actual color-channel property, or picking one channel to serve as the team-tint slot. Same shape of adaptation work as every other character-pipeline change this project has needed, just a different specific hookup than the Quaternius/Heist cases.
 
 ---
 
@@ -240,7 +240,7 @@ They rarely animate everything themselves. Typical pattern:
 2. **Do now:** Import `OfficeEssentialsPack_URP.unitypackage` in Unity  
 3. **Add free:** House Interior, Weapons, weather (Cinematic + Zap), optional SIMPLE Sky  
 4. **Add free exterior:** one city/roads language  
-5. **Characters:** try PolyPeople free → then Kotangent Chubby and/or Toony Tiny  
+5. **Characters:** buy **Modular Stylized Character 1 ($40)** — confirmed Humanoid/Mixamo-compatible, lower retarget risk than the chubby-proportion alternatives; Kotangent Chubby / Toony Tiny stay fallback options  
 6. **Paid later:** Modular Railway when 高铁 returns; Synty only if clay stack still feels thin; tornado only if designed  
 
 **Hold:** COZY ($50), ithappy Cartoon City ($489), unlicensed reseller anything, full custom anim library before two pawns look right.
