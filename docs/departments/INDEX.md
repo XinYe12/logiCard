@@ -18,23 +18,27 @@ Integrator + up to **2** coding workers — **1 of 2 in use.** Check `git worktr
 ## Active agents / worktrees
 
 `feat/asset-pack-audit` and `feat/interior-props-wiring` both merged clean — slots closed, worktrees
-removed. Interior props: all 14 `Resources/Interior/*.prefab` names now sourced from `Assets/PolygonOffice/`
-instead of Quaternius; window-glass transparency and the `Assets/PolygonOffice/**` read-only boundary
-independently verified by the Integrator against the serialized assets before merge (see
-`DRAFT_HANDOFF.md`).
+removed. Interior props landed on PolygonOffice, then **superseded same day**: the human decided to
+delete all three unlicensed Synty packs outright rather than carry the licensing TODO forward, so the
+interior pipeline is now back on Quaternius CC0 (`master` @ `3e06126`) — see `DRAFT_HANDOFF.md`'s
+"unlicensed Synty packs deleted" entry.
 
-- `logiCard-heist-character-swap` (branch `feat/heist-character-swap`, off `master`) — Phase 5 art-bar
-  slice, **human-run in their own separate session, not Integrator-spawned.** Swaps Scout/Juggernaut's
-  Quaternius placeholders for Heist's SWAT/Overall character prefabs — needs an outfit-isolation step
-  since Heist's prefabs are a shared modular rig with every outfit variant nested in one file. Brief at
-  worktree root (`HEIST_CHARACTER_SWAP_AGENT_BRIEF.md`). Owns `Assets/_Project/Editor/PawnImportTool.cs`
-  + `Assets/_Project/Art/Characters/**` this wave.
+- **`logiCard-heist-character-swap` (branch `feat/heist-character-swap`) — brief now obsolete, not yet
+  closed out.** Its whole premise (isolate SWAT/Overall renderers out of `Assets/PolygonHeist/`'s shared
+  modular rig prefabs) no longer applies — that pack is deleted. No work had landed on the branch yet
+  (still sitting at the pre-deletion merge commit, nothing lost). Needs a human call: repurpose this slot
+  for a chubby/round character pack once one is purchased (see `ART_PACK_RESEARCH.md`'s Characters
+  section — Kotangent Chubby / Toony Tiny candidates), or close the worktree out unused.
+- **`logiCard-art-pack-research` (branch `feat/art-pack-research`) — human-run, active again**, not the
+  empty finished shell it was before. Produced the current `docs/ART_PACK_RESEARCH.md` rewrite (session
+  status, chubby-character shortlist, motion/animation strategy) — Integrator pulled that content
+  directly into `master` (`403e9f8`) from the synced working-tree copy rather than merging this branch,
+  so the branch itself may now be redundant; human's call whether to keep it running or fold it.
 
-Five now-finished worktrees exist on disk as empty shells pending cleanup (`logiCard-env-lookfeel`,
-`logiCard-ui-dock-polish` from the map-roster wave; `logiCard-vibrancy-pass`, `logiCard-map-continuation`
-from the vibrancy wave; `logiCard-art-pack-research` from the prior research pass) — all deregistered
-from git cleanly, on-disk removal blocked on a transient file lock (OneDrive/Search Indexer), not a git
-or project-state issue.
+Three other now-finished worktrees remain on disk as empty shells pending cleanup (`logiCard-env-lookfeel`,
+`logiCard-ui-dock-polish` from the map-roster wave; `logiCard-vibrancy-pass`/`logiCard-map-continuation`
+from the vibrancy wave) — deregistered from git cleanly, on-disk removal blocked on a transient file lock
+(OneDrive/Search Indexer), not a git or project-state issue.
 
 ## Ownership matrix (write locks)
 
