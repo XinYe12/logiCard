@@ -1,5 +1,44 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-11 (continued) — asset-pack audit merged, interior props re-sourcing in flight
+
+Human asked to use a worktree to (1) audit `D:\XinyeData\projects\assets` for anything licensing-safe to
+use, and (2) research more Asset-Store-buyable packs. Delegated to a worker in `feat/asset-pack-audit`,
+reviewed the diff directly before merging, merged clean (docs-only, no `Assets/`/code touched, no test
+run needed).
+
+**Confirms, doesn't newly discover, the existing Synty licensing flag** — the reseller bundle in that
+folder (`80套…U3D素材`) contains the exact three already-imported packs (Office/Heist/City), each wrapped
+with an explicit "not for commercial use, buy the genuine version" disclaimer + Taobao shop link. No
+folder anywhere in the desk has a real Asset Store receipt for those three. New: confirmed live prices to
+license them if the human keeps the Synty look (Heist $29.99 + Office $49.99 + City $20.00 ≈ $99.98
+total) — see `docs/ART_PACK_RESEARCH.md`'s new top section.
+
+**Safe-to-use-now subset identified** (`docs/ASSET_PACK_AUDIT.md`, new): `Kenney_Extracted` and
+`Tem_0230_Kenney…All-in-1` (genuine Kenney CC0, verified by license-file content not just labeling), and
+Quaternius "Ultimate Modular Men" (genuine CC0) — the latter's file naming (`Worker_Body.fbx`,
+`Swat_Body.fbx`) matches `PawnImportTool.cs`'s existing source paths almost exactly, so it's very likely
+the actual origin of the current Scout/Juggernaut placeholders. Flagged unsafe: `0095城市`, `B840 Anime
+City Pack`, `G108、卡通城镇` (worse — raw scraped forum files with a second, different Taobao shop link,
+not even Unity-packaged).
+
+**New Characters section in `ART_PACK_RESEARCH.md`** — nappin has no character pack (confirmed against
+their full catalog). Closest clay-adjacent candidate found: Toony Tiny Citizens Megapack ($30), flagged
+as needing real prep work to fit `PawnImportTool.cs`'s single-FBX/no-texture/`"Body"`-renderer shape.
+Honest fallback stays keeping Quaternius (free, already fits the pipeline exactly).
+
+**Second worker in flight, not yet merged:** `feat/interior-props-wiring` — re-sourcing the 14
+`Resources/Interior/*.prefab` names from `Assets/PolygonOffice/` instead of Quaternius, adapting
+`InteriorPackImportTool.cs`, preserving `BoardView.cs`'s load-by-name contract. This is Phase 5 art-bar
+work (currently the top-priority phase per `SCHEDULE.md`), closing item 2 of the "what's actually left to
+wire" list two sections below. Will review/verify/merge when it reports back.
+
+**A third worktree was set up for the human to run themselves** (their own separate agent tooling,
+same pattern as the 2026-08-10 vibrancy/map-continuation waves) rather than the Integrator spawning a
+third background agent — see whatever slice/brief that session's own summary describes for what it
+covers; check `git worktree list` / `docs/departments/INDEX.md` for its current name and status if this
+entry is stale by the time you're reading it.
+
 ## 2026-08-11 — save draft: Synty POLYGON packs landed (raw import), integration scoped for next session
 
 Session pausing here per the human — everything below is committed on `master` locally (not pushed this
