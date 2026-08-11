@@ -339,6 +339,15 @@ namespace LogiCard.Boot
         {
             if (phase == RoundPhase.Allot || phase == RoundPhase.Program)
             {
+                // Safety net (playtest 2026-08-11): if Aftermath was skipped (debug jump, early
+                // Allot, etc.) the tape would be dropped without carrying end positions/doors —
+                // pawns snapped back to round-start/spawn and opens vanished. Commit while tape
+                // still exists, then disarm.
+                if (_tape != null)
+                {
+                    CommitRoundState();
+                }
+
                 Disarm();
             }
             else if (phase == RoundPhase.Aftermath)

@@ -442,11 +442,9 @@ namespace LogiCard.Board
                 return;
             }
 
-            // BUG FOUND 2026-08-05: this used to seed the list with _origin, so every draft always
-            // rendered a spurious extra bead at/near the pawn's own starting point — the pawn already
-            // marks that, and the stray bead was easy to mistake for a wrongly-placed destination
-            // marker (most visible when a route behind a wall collapses to a single real waypoint).
-            var points = new List<PlanarPosition>();
+            // Seed with round-origin so the first move leg is stroked (playtest 2026-08-11). Skip the
+            // origin bead in PathPreviewView — the pawn already marks that point (2026-08-05 fix).
+            var points = new List<PlanarPosition> { _origin };
             foreach (ActionNode node in Program.Nodes)
             {
                 if (node.Verb == ActionVerb.Move)
@@ -462,13 +460,13 @@ namespace LogiCard.Board
                     points.Add(Program.DraftWaypoints[i]);
                 }
 
-                _pathPreview.Show(points, isDraft: true);
+                _pathPreview.Show(points, isDraft: true, skipFirstDot: true);
                 return;
             }
 
-            if (points.Count > 0)
+            if (points.Count > 1)
             {
-                _pathPreview.Show(points, isDraft: false);
+                _pathPreview.Show(points, isDraft: false, skipFirstDot: true);
                 return;
             }
 

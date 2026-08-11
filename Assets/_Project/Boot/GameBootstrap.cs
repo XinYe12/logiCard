@@ -152,6 +152,15 @@ namespace LogiCard.Boot
                 return;
             }
 
+            // Belt-and-suspenders carry (C33 / playtest 2026-08-11): commit tape end-state before
+            // Allot's Disarm, and refresh the attacker's Program origin immediately so a subsequent
+            // Time Card cannot rebuild from a stale spawn if PrepareRound were ever skipped.
+            _playback.CommitRoundState();
+            if (_attackerInput != null)
+            {
+                _attackerInput.PrepareRound(_playback.PositionOf(AttackerPawnId), 0f);
+            }
+
             _matchClock.EndRound();
             _phase.GoTo(RoundPhase.Allot);
             Debug.Log($"[logiCard] Round {_matchClock.RoundIndex}: {_matchClock.CurrentChooser} picks the Time Card.");

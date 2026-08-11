@@ -354,10 +354,10 @@ namespace LogiCard.Board
 
             var instance = Instantiate(prefab, transform);
             instance.name = "Lightning";
-            // Under the cloud shelf, offset off-center so repeated flashes don't read as dead-center
-            // metronomic.
-            instance.transform.localPosition = new Vector3(
-                width * 0.18f, 3.2f * InterimCloudHeightBoost, -depth * 0.12f);
+            // Ground strike — playtest 2026-08-11 (screenshot 14): prior y = 3.2 * cloud boost (~6.7)
+            // floated the Zap impact mid-air. Anchor at board floor with a slight off-center XZ so
+            // flashes don't metronome dead-center; bolt reads as hitting dirt, not hanging in void.
+            instance.transform.localPosition = new Vector3(width * 0.18f, 0.05f, -depth * 0.12f);
             instance.transform.localRotation = Quaternion.identity;
             instance.transform.localScale = Vector3.one;
 

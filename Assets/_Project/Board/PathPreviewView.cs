@@ -38,7 +38,12 @@ namespace LogiCard.Board
             _board = board;
         }
 
-        public void Show(IReadOnlyList<PlanarPosition> waypoints, bool isDraft)
+        /// <param name="skipFirstDot">
+        /// When true, the first waypoint is the pawn's standing origin — draw the stroke from it, but
+        /// do not place an ink bead there (the pawn already marks that point). Playtest 2026-08-11:
+        /// omitting the origin from the polyline entirely left the first move leg undrawn.
+        /// </param>
+        public void Show(IReadOnlyList<PlanarPosition> waypoints, bool isDraft, bool skipFirstDot = false)
         {
             Clear();
             if (_board == null || waypoints == null || waypoints.Count == 0)
@@ -53,7 +58,8 @@ namespace LogiCard.Board
 
             Color dotColor = isDraft ? DraftInk : BookedInk;
             float dotRadius = isDraft ? DraftDotRadius : BookedDotRadius;
-            for (int i = 0; i < waypoints.Count; i++)
+            int dotStart = skipFirstDot ? 1 : 0;
+            for (int i = dotStart; i < waypoints.Count; i++)
             {
                 BuildDot(waypoints[i], dotColor, dotRadius);
             }

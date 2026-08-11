@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using LogiCard.Sim;
 using UnityEngine;
@@ -20,6 +21,14 @@ namespace LogiCard.Board
         // read as "door never changes color." Checkpoint 3 replaces these boxes with real door meshes.
         private static readonly Color DoorOpenColor = new Color(0.35f, 0.82f, 0.42f);
         private static readonly Color DoorClosedColor = new Color(0.82f, 0.22f, 0.18f);
+
+        /// <summary>Open swing around the hinge Y axis (degrees). Negative = swing the leaf clear of
+        /// the wall gap in the leaf's local space.</summary>
+        private const float DoorOpenYawDegrees = -95f;
+
+        /// <summary>Real-time seconds for the hinge arc — playtest 2026-08-11: instant snap read as a
+        /// cabinet teleporting out of the wall circle, not a door swinging.</summary>
+        private const float DoorSwingSeconds = 0.38f;
 
         // C60 vibrancy pass: both were near-black, contributing to the void reading as flat dark rather
         // than a rich contrast frame around a warm board. Lightened and warmed while staying dark enough
@@ -75,7 +84,7 @@ namespace LogiCard.Board
             {
                 Door door = model.Doors[i];
                 DoorVisual visual = PlaceDoorMesh($"Door_{i}", door);
-                ApplyDoorVisualState(visual, model.GetDoorState(door));
+                ApplyDoorVisualState(visual, model.GetDoorState(door), animate: false);
                 _doorVisuals.Add(visual);
             }
         }
@@ -109,7 +118,7 @@ namespace LogiCard.Board
                 DoorState state = overrideStates != null && overrideStates.TryGetValue(visual.Door, out DoorState preview)
                     ? preview
                     : _model.GetDoorState(visual.Door);
-                ApplyDoorVisualState(visual, state);
+                ApplyDoorVisualState(visual, state, animate: true);
             }
         }
 
@@ -551,17 +560,51 @@ namespace LogiCard.Board
             return colors;
         }
 
-        private static void ApplyDoorVisualState(DoorVisual visual, DoorState state)
+        private void ApplyDoorVisualState(DoorVisual visual, DoorState state, bool animate)
         {
             bool open = state == DoorState.Open;
-            Color tint = open ? DoorOpenColor : DoorClosedColor;
+            ApplyDoorTint(visual, open ? DoorOpenColor : DoorClosedColor);
 
-            // Swing the leaf open (~95°) so the gap reads clear; closed sits in the wall line.
-            if (visual.Hinge != null)
+            if (visual.Hinge == null)
             {
-                visual.Hinge.localRotation = Quaternion.Euler(0f, open ? -95f : 0f, 0f);
+                visual.DisplayedState = state;
+                return;
             }
 
+            Quaternion target = Quaternion.Euler(0f, open ? DoorOpenYawDegrees : 0f, 0f);
+
+            // Same state already shown (and not mid-swing) — scrubber/refresh spam must not restart
+            // the arc every tick.
+            if (visual.DisplayedState == state && visual.SwingRoutine == null)
+            {
+                visual.Hinge.localRotation = target;
+                return;
+            }
+
+            visual.DisplayedState = state;
+
+            if (!animate || !isActiveAndEnabled)
+            {
+                if (visual.SwingRoutine != null)
+                {
+                    StopCoroutine(visual.SwingRoutine);
+                    visual.SwingRoutine = null;
+                }
+
+                visual.Hinge.localRotation = target;
+                return;
+            }
+
+            if (visual.SwingRoutine != null)
+            {
+                StopCoroutine(visual.SwingRoutine);
+            }
+
+            visual.SwingRoutine = StartCoroutine(SwingDoorHinge(visual, target));
+        }
+
+        private static void ApplyDoorTint(DoorVisual visual, Color tint)
+        {
             if (visual.Renderers == null)
             {
                 return;
@@ -603,6 +646,29 @@ namespace LogiCard.Board
 
                 renderer.materials = mats;
             }
+        }
+
+        private IEnumerator SwingDoorHinge(DoorVisual visual, Quaternion target)
+        {
+            Transform hinge = visual.Hinge;
+            Quaternion from = hinge.localRotation;
+            float elapsed = 0f;
+            while (elapsed < DoorSwingSeconds && hinge != null)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / DoorSwingSeconds);
+                // Smoothstep — eases into/out of the arc so it reads as a hinged swing, not a lerp teleport.
+                float s = t * t * (3f - (2f * t));
+                hinge.localRotation = Quaternion.Slerp(from, target, s);
+                yield return null;
+            }
+
+            if (hinge != null)
+            {
+                hinge.localRotation = target;
+            }
+
+            visual.SwingRoutine = null;
         }
 
         private static void StripCollidersRecursive(GameObject go)
@@ -794,7 +860,7 @@ namespace LogiCard.Board
             return box;
         }
 
-        private readonly struct DoorVisual
+        private sealed class DoorVisual
         {
             public Door Door { get; }
 
@@ -807,6 +873,12 @@ namespace LogiCard.Board
             public MeshRenderer[] Renderers { get; }
 
             public Color[][] OriginalColors { get; }
+
+            /// <summary>Last Open/Closed applied to tint + hinge target (for skip-restart).</summary>
+            public DoorState? DisplayedState { get; set; }
+
+            /// <summary>In-flight hinge arc, if any — stopped/replaced on a new state change.</summary>
+            public Coroutine SwingRoutine { get; set; }
 
             public DoorVisual(
                 Door door,
@@ -822,6 +894,8 @@ namespace LogiCard.Board
                 Leaf = leaf;
                 Renderers = renderers;
                 OriginalColors = originalColors;
+                DisplayedState = null;
+                SwingRoutine = null;
             }
         }
     }
