@@ -1,5 +1,32 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-11 (yet later) — void-city dressing merged; character-pack swap resumed after stalling
+
+Continuing the Phase 5 wave with the two ithappy packs: `feat/character-pack-swap` (Scout/Juggernaut from
+`Creative_Characters_FREE`) and `feat/void-city-dressing` (Cartoon City Free at the board's edge), both
+forked from `master` @ `23af934` (post-ExplosiveLLC-fix, batchmode-clean).
+
+**`feat/void-city-dressing` merged.** `BoardView.cs`'s 5 placeholder tinted-primitive void-clutter cubes
+replaced with real `Cartoon_City_Free` prefabs (`DebrisPile`, `SidewalkSlab`, `TrashCan`, `DebrisFlat`,
+`StreetlampBroken`) — deliberately picked as scattered ruins/debris rather than anything implying a
+continuous intact street, to protect the "contained board chunk in a dark void" framing. Same positions/
+rotations as the original placeholder pass, only scale/vertical anchoring changed, tuned against each
+prefab's real measured bounds. New `CityDressingPackImportTool.cs` mirrors the existing
+`WeatherPackImportTool` shape; no material conversion needed since the pack ships already on this
+project's own URP/Lit shader (confirmed directly). `Resources.Load`-with-fallback keeps the original
+tinted cube as a safety net if the baked prefabs are ever missing, matching `PlaceInteriorProp`'s
+established pattern. Verified independently before merge (diffed the commit-only content against the
+merge-base — clean, the worker correctly left several incidental Unity-auto-generated side effects
+uncommitted; read the full `BoardView.cs` diff; independently re-ran batchmode): **EditMode 124/124,
+PlayMode 37/37.**
+
+**`feat/character-pack-swap` — stalled on its first attempt, resumed.** The worker's first pass left no
+commit — just an uncommitted diagnostic tool and a 20,000-line log that turned out to be nothing but
+generic first-time cold-cache Unity import noise (this worktree's first-ever batchmode invocation, same
+slow-cache pattern this session has hit repeatedly elsewhere), with the actual diagnostic output never
+produced before the agent's turn ended. Resumed with an explicit note about expecting multi-minute cold
+first-runs and to poll patiently rather than give up early. Still in progress as of this entry.
+
 ## 2026-08-11 (later still) — nappin interior + weather VFX wiring merged; ExplosiveLLC blocks main-tree batchmode
 
 Six free art packs (nappin House Interior/Weapons, Cinematic Weather VFX, Zap VFX, ithappy Creative
