@@ -12,43 +12,32 @@ error, two PlayMode regressions, and a shipped-build bug it caught. Both worker 
 
 ## Capacity
 
-Integrator + up to **2** coding workers — **2 of 2 in use.** Check `git worktree list` and
+Integrator + up to **2** coding workers — **0 of 2 in use.** Check `git worktree list` and
 `DRAFT_HANDOFF.md`'s top section before assuming this table is current. (`logiCard-art-pack-research`
 below runs in the human's own separate session and isn't counted against this cap.)
 
 ## Active agents / worktrees
 
-`feat/asset-pack-audit`, `feat/interior-props-wiring` (PolygonOffice re-source, later superseded by the
-Synty purge — pipeline now on Quaternius CC0), and `feat/heist-character-swap` (closed out unused, its
-premise died with the Synty deletion) are all resolved and removed. Six free art packs landed 2026-08-11
-(checkpoint `971985c`): nappin House Interior/Weapons, Cinematic Weather VFX (`RainSnowCloudEffect`), Zap
-VFX, ithappy Creative Characters FREE, ithappy Cartoon City Free — see `docs/ART_PACK_RESEARCH.md`. Two
-new worker slices wire them in:
+`feat/nappin-interior-wiring` and `feat/weather-fx-wiring` both merged clean — slots closed, worktrees
+removed. See `DRAFT_HANDOFF.md`'s "nappin interior + weather VFX wiring merged" entry for what landed and
+how it was verified (independently re-run batchmode in each worktree by the Integrator, not just taken on
+the workers' reports).
 
-- **`logiCard-nappin-interior-wiring`** (branch `feat/nappin-interior-wiring`, off `master` @ `971985c`)
-  — re-source `InteriorPackImportTool.cs` + `Resources/Interior/*.prefab` from nappin
-  (`OfficeEssentialsPack` + `HouseInteriorPack`) instead of Quaternius, same pattern as the earlier
-  PolygonOffice re-source. Brief at worktree root (`NAPPIN_INTERIOR_WIRING_AGENT_BRIEF.md`). Owns
-  `Assets/_Project/Art/Editor/InteriorPackImportTool.cs` +
-  `Assets/_Project/Art/Environment/Resources/Interior/**` this wave.
-- **`logiCard-weather-fx-wiring`** (branch `feat/weather-fx-wiring`, off `master` @ `971985c`) — replace
-  `BoardWeatherPocket.cs`'s fully-procedural cloud/rain particle code with `RainSnowCloudEffect`'s real
-  prefabs (fit to the board footprint, preserving the already-tuned "contained sky pocket, not looming"
-  framing), add lightning via Zap VFX (new feature, nothing existing to replace). Brief at worktree root
-  (`WEATHER_FX_WIRING_AGENT_BRIEF.md`). Owns `Assets/_Project/Board/BoardWeatherPocket.cs` this wave.
-
-Not yet scoped this wave (queued for next): Characters wiring (`ithappy/Creative_Characters_FREE` into
-`PawnImportTool.cs`/`PawnView.cs`) and exterior/city dressing (`ithappy/Cartoon_City_Free` as Yard/board-
-edge backdrop) — no file overlap with either slot above, safe to pick up once a slot frees.
+**Next up, no file overlap with anything just merged, safe to open new slots for:** Characters wiring
+(`ithappy/Creative_Characters_FREE` into `PawnImportTool.cs`/`PawnView.cs` — material/shader fit still
+needs checking first) and exterior dressing (`ithappy/Cartoon_City_Free` as Yard/board-edge backdrop).
 
 - **`logiCard-art-pack-research` (branch `feat/art-pack-research`) — human-run, active.** Produced the
   current `docs/ART_PACK_RESEARCH.md`; Integrator pulls its content into `master` directly rather than
   merging the branch, so it may be redundant — human's call whether to keep it running.
 
-**Deliberately left uncommitted on `master` this wave:** `Assets/ExplosiveLLC/` (Warrior character packs
-+ `SuperCharacterController`) — has real compile errors that abort Unity batchmode entirely, unresolved
-origin/purpose, excluded from the checkpoint both new worktrees forked from so it can't break their
-batchmode too.
+**Standing blocker, now actively biting:** `Assets/ExplosiveLLC/` (Warrior character packs +
+`SuperCharacterController`) is still uncommitted in the main tree's working directory — has real compile
+errors (missing Terrain Physics module reference, invalid `SerializeField` usage) that abort Unity
+batchmode entirely. Every worktree this wave deliberately excluded it from their checkpoint so their own
+batchmode would work, which is why both merges above verified clean — but **the main tree itself cannot
+run batchmode at all right now**, confirmed by a failed combined-verification attempt after both merges.
+Needs a human call: fix it or delete it. Flagged three times now across this session.
 
 Three other now-finished worktrees remain on disk as empty shells pending cleanup (`logiCard-env-lookfeel`,
 `logiCard-ui-dock-polish` from the map-roster wave; `logiCard-vibrancy-pass`/`logiCard-map-continuation`

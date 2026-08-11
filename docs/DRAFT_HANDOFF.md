@@ -1,5 +1,52 @@
 # Draft Handoff — 2026-08-07
 
+## 2026-08-11 (later still) — nappin interior + weather VFX wiring merged; ExplosiveLLC blocks main-tree batchmode
+
+Six free art packs (nappin House Interior/Weapons, Cinematic Weather VFX, Zap VFX, ithappy Creative
+Characters FREE, ithappy Cartoon City Free) landed as a checkpoint (`971985c`), deliberately excluding
+`Assets/ExplosiveLLC/` (still unresolved, has real compile errors — see below). Two worker worktrees wired
+two of them in, both reviewed and merged:
+
+**`feat/nappin-interior-wiring` merged.** 13 of 14 `Resources/Interior/*.prefab` names re-sourced from
+`Assets/nappin/OfficeEssentialsPack/` instead of Quaternius (`DoorDouble` stays Quaternius — no matching
+asset exists in nappin, and nothing places it today anyway). Real bug caught mid-pass: the generic
+material-conversion loop was silently dropping emission on the three light prefabs (a third `m_Materials`
+slot a shallow scan missed) — same "silent regression on shader conversion" shape as two earlier
+transparency bugs, this time on emission; fixed by carrying `_EmissionColor`/keyword through the
+conversion. Also corrects a stale `ART_PACK_RESEARCH.md` claim ("no real door") — `(Prb)Door.prefab`
+exists. `HouseInteriorPack` confirmed to add zero new meshes (pure demo scene reusing
+`OfficeEssentialsPack`). A stray `NAPPIN_INTERIOR_WIRING_AGENT_BRIEF.md` got committed to the repo root by
+the worker — removed in a follow-up commit, never meant to land.
+
+**`feat/weather-fx-wiring` merged.** `BoardWeatherPocket.cs`'s fully-procedural cloud/rain particle
+construction replaced with instantiated, board-fit-rescaled copies of the Cinematic Weather VFX Bundle's
+real prefabs (`PF_CloudLayer`/`PF_RainSystem`), plus a new lightning feature (Zap VFX white bolt, random
+12-22s interval). Board-fit math and the already-tuned `InterimCloudScale`/`InterimCloudHeightBoost`
+framing constants carried forward unchanged specifically to avoid re-triggering the "clouds loomed over
+the board" bug this project already fixed once. Rain density pinned to the old procedural rate rather than
+the pack's own much-higher open-world rate, to not regress the human-confirmed "already reads fine" bar.
+
+**Both merges were independently re-verified by the Integrator before merging, not just taken on the
+worker's report** — diffed against the true merge-base to confirm zero boundary violations, read the
+relevant `.mat` files' serialized properties directly to confirm the transparency/emission claims, and
+independently re-ran full batchmode in each worktree: **EditMode 124/124, PlayMode 37/37, both branches,
+both confirmed twice** (once by each worker, once by the Integrator).
+
+**Standing blocker, not a regression from this wave:** attempted one final combined batchmode pass on
+`master` after both merges — it hit the same `Assets/ExplosiveLLC/SuperCharacterController` compile
+errors flagged earlier this session (missing Terrain Physics module reference, invalid `SerializeField`
+usage). That folder is still sitting uncommitted in the main tree's working directory (deliberately kept
+out of every checkpoint/worktree this wave specifically so it couldn't break the workers' own batchmode),
+which means **the main tree itself currently cannot run batchmode at all** until this is resolved one way
+or another. This has been flagged twice now and still needs a human call: fix it (enable Terrain Physics
+package + patch/exclude the `SerializeField` line) or decide `ExplosiveLLC`/`SuperCharacterController`
+isn't wanted and delete it. Either merged branch above is safe regardless — verified in isolation — but no
+one can get a green combined run on `master` until this is settled.
+
+**Queued, not started:** Characters wiring (`ithappy/Creative_Characters_FREE` into
+`PawnImportTool.cs`/`PawnView.cs` — material/shader fit still needs checking) and exterior dressing
+(`ithappy/Cartoon_City_Free` as Yard/board-edge backdrop). Both worker slots are free again.
+
 ## 2026-08-11 (later) — unlicensed Synty packs deleted
 
 Human asked to unwire/delete unlicensed assets. Removed `Assets/PolygonHeist/`, `Assets/PolygonOffice/`,
