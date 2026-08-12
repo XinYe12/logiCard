@@ -1,27 +1,27 @@
 # Character — STATUS
 
-**Wave / Day:** Permanent department seat (GDD §11 / PARALLEL_OPS) — 2026-08-12
-**Branch / worktree:** Canonical `D:\projects\Game\logiCard-character` (current slice: `logiCard-char-select-motion` / `feat/char-select-motion`)
-**Last cross-reviewed:** 2026-08-12
+**Wave / Day:** Permanent seat — live `logiCard-char-select-motion`
+**Branch / worktree:** `feat/char-select-motion` @ `D:\projects\Game\logiCard-char-select-motion`
+**Last cross-reviewed:** 2026-08-12 — Integrator accepted idle-ready report-back
 
 ## Owned files (this seat)
 
-- Character Select motion / `CharacterSelectView` / `CharSelect*` tokens when INDEX assigns
-- Roster / pawn look pipelines when briefed
-- This STATUS
+- `CharacterSelectView.cs`, `UiMotion.cs`, `CharSelect*` UiStyle tokens, `AppFlowController.BuildCharacterSelect`, related PlayMode tests
+- `PLAY_NOTES.md`, `CHAR_SELECT_MOTION_AGENT_BRIEF.md`, this STATUS
 
 ## Done
 
-- Char-select carousel worker green @ `b5d7c77` (EditMode 137 / PlayMode 48) — awaiting human Play + Integrator merge
+- Deliverable `b5d7c77` (EditMode 137 / PlayMode 48)
+- Docs/cleanup `25244d7` — worktree clean, idle-ready
 
 ## In progress
 
-- Seat standing; merge gated on human Play of `logiCard-char-select-motion`
+- Nothing — standing by for merge/regression fixes only
 
 ## Blocked
 
-- Human Play / merge for `feat/char-select-motion`
+- Human Play + Integrator merge
 
 ## Offers
 
-- Continual Character Card / roster / pawn fantasy work in permanent worktree
+- Help Integrator on `UiStyle` combine if needed after merge

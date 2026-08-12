@@ -1,27 +1,27 @@
 # UI — STATUS
 
-**Wave / Day:** Permanent department seat (GDD §11 / PARALLEL_OPS) — 2026-08-12
-**Branch / worktree:** Canonical `D:\projects\Game\logiCard-ui` (current slice: `logiCard-modal-restyle` / `feat/modal-restyle`)
-**Last cross-reviewed:** 2026-08-12
+**Wave / Day:** Permanent seat — live `logiCard-modal-restyle`
+**Branch / worktree:** `feat/modal-restyle` @ `D:\projects\Game\logiCard-modal-restyle`
+**Last cross-reviewed:** 2026-08-12 — Integrator accepted idle-ready report-back
 
 ## Owned files (this seat)
 
-- `ModalDialog`, `Modal*` UiStyle tokens, Program HUD chrome when INDEX assigns
-- Shell screens except Character Select when Character dept owns that slice
-- This STATUS
+- `ModalDialog.cs`, `Modal*` UiStyle tokens
+- `PLAY_NOTES.md`, `MODAL_RESTYLE_AGENT_BRIEF.md`, this STATUS
 
 ## Done
 
-- Modal cardstock worker green @ `492b8fe` (EditMode 137 / PlayMode 47) — awaiting human Play + Integrator merge
+- Deliverable `492b8fe` (EditMode 137 / PlayMode 47)
+- Docs/cleanup `6f1739c` — worktree clean, idle-ready
 
 ## In progress
 
-- Seat standing; merge gated on human Play of `logiCard-modal-restyle`
+- Nothing — standing by for merge/regression / UiStyle conflict help
 
 ## Blocked
 
-- Human Play / merge for `feat/modal-restyle`
+- Human Play (Match Over → Quit → confirm) + Integrator merge
 
 ## Offers
 
-- Continual shell / HUD / modal polish in permanent worktree
+- Assist Integrator if Character merges first and `UiStyle` needs a combine pass

@@ -23,16 +23,17 @@
 - **Urban floors** + brighter lighting + dark void; DoF aperture 2.6; GDD §8 / ART_DIRECTION framing.
 - Scratch cotton fog was rejected earlier; pack wiring restored before atmosphere worker landed the LA bank (now merged).
 
-**UI workers (Done — awaiting human Play + merge):**
-- `logiCard-char-select-motion` / `feat/char-select-motion` @ `b5d7c77` — EditMode 137 / PlayMode 48.
-- `logiCard-modal-restyle` / `feat/modal-restyle` @ `492b8fe` — EditMode 137 / PlayMode 47.
+**UI workers (Done — idle-ready; awaiting human Play + merge):**
+- `logiCard-char-select-motion` / `feat/char-select-motion` — deliverable **`b5d7c77`** + docs **`25244d7`** (EditMode 137 / PlayMode 48). Clean worktree. See `PLAY_NOTES.md`.
+- `logiCard-modal-restyle` / `feat/modal-restyle` — deliverable **`492b8fe`** + docs **`6f1739c`** (EditMode 137 / PlayMode 47). Clean worktree. See `PLAY_NOTES.md`.
+- Merge order when Play clears: **Character first**, then UI (`CharSelect*` then `Modal*` on `UiStyle`).
 
-**Docs cards collection (research — not coding slot):**
-- `logiCard-cards-collection` / `feat/cards-collection-docs` @ `d00acfc` — `docs/CARD_COLLECTION.md`.
-- Awaiting human answers in doc §8 before PRODUCT_MEMORY row.
+**Docs cards collection:**
+- `logiCard-cards-collection` / `feat/cards-collection-docs` @ **`14db79e`** — expanded research + Cards STATUS.
+- Awaiting human answers in CARD_COLLECTION §8 before PRODUCT_MEMORY row.
 
 **Atmosphere follow-up (weather lock — do not reclaim yet):**
-- Live folder `logiCard-atmosphere-stylized` @ **`083d50f`** (varied atlas / stronger lobes / lighter edges) — awaiting dept report-back + look; then Integrator merges.
+- Live folder `logiCard-atmosphere-stylized` @ **`083d50f`** — awaiting look; then Integrator merges.
 - **Do not merge** Character/UI until human Play OK.
 
 ## Verification
