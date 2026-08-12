@@ -1,33 +1,22 @@
 ﻿# Core / Integrator — STATUS
 
-**Wave / Day:** Phase 5 — Integrator 2026-08-12
-**Branch / worktree:** `master` @ `5d610b1` + dirty rematch/floors/lighting
-**Last cross-reviewed:** 2026-08-12 — Character + UI idle-ready report-backs accepted
-
-## Owned files (this wave)
-
-- Dirty code (hold): rematch/floors/lighting Boot/Timeline/board
-- Docs: INDEX / DRAFT_HANDOFF / dept STATUS
-- Weather: **not** reclaimed (Atmosphere @ `083d50f`)
+**Wave / Day:** Phase 5 — Integrator 2026-08-12 evening
+**Branch / worktree:** `master` (cards merge `8b791d9` + C62 commit this pass) + dirty rematch/floors
+**Last cross-reviewed:** 2026-08-12 — accepted Character/UI/Cards report-backs; wrote **C62**; merged cards docs
 
 ## Done
 
-- Permanent 4-dept model committed (`5d610b1`)
-- Character cleanup+docs @ `25244d7` (deliverable `b5d7c77`) — idle-ready
-- UI cleanup+docs @ `6f1739c` (deliverable `492b8fe`) — idle-ready
-- Cards research tip noted @ `14db79e`
+- **C62** gear collection rules; OPEN #3 → resolved; cursor rule synced
+- Merged `feat/cards-collection-docs`
+- Character + UI idle-ready tracked (Play gates stand)
+- Atmosphere Ready tip noted (`c3296dc`) — not merged yet
 
 ## In progress
 
-- Monitor; **no merges** until human Play OK (Character → UI order preferred)
-- Await Atmosphere look on `083d50f`
-
-## Blocked
-
-- Human Play gates; main Editor batchmode lock
+- Monitor Play gates; weather still with Atmosphere
+- Rematch/floors dirty hold
 
 ## Offers
 
-- Merge Character then UI on Play clear
-- Merge Atmosphere polish on look clear
-- Commit rematch/floors when asked
+- Merge Character → UI → Atmosphere on human clear
+- Open gear implementation brief (post-C62) when human wants Sim/HUD work

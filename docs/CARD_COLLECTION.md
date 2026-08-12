@@ -1,6 +1,6 @@
 # Card Collection & Gear Deck — Design Research
 
-**Status:** Research draft (2026-08-12); **§8 answered by human in chat 2026-08-12** (see below). **Still not CONFIRMED** in the save-file sense — nothing here is locked until Integrator promotes these answers into a `PRODUCT_MEMORY.md` C# row (save-file rule); Cards dept does not edit that file.  
+**Status:** Research + **CONFIRMED** direction via **C62** (2026-08-12). §8 answers promoted to `PRODUCT_MEMORY.md`. Gear **numerics** (§6A) and Adrenaline real-effect redesign remain OPEN.  
 **Worktree:** `D:\projects\Game\logiCard-cards-collection` / `feat/cards-collection-docs`  
 **Depends on:** [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) **C15**, **C18**, **C33**, **C34**/**C46**, OPEN #3; [`GDD.md`](GDD.md) § deferred cards; [`CORE_LOOP.md`](CORE_LOOP.md); [`UI_FLOW.md`](UI_FLOW.md); [`MONETIZATION.md`](MONETIZATION.md) **C47**; [`CHARACTER_ROSTER_LONGTERM.md`](CHARACTER_ROSTER_LONGTERM.md).
 
@@ -249,7 +249,7 @@ What was a strawman guess is now what the human answered in §8:
 - **Adrenaline:** stub stays a stub; real effect is a separate later design pass.
 - **Unique roster power:** verbs (Bomber / Time Player), not exclusive gear.
 
-**Still not CONFIRMED in the save-file sense** — binding only once Integrator writes the `PRODUCT_MEMORY.md` C# row for this.
+**CONFIRMED as C62** — binding product direction. Numerics in §6A and Adrenaline redesign remain OPEN (see PRODUCT_MEMORY OPEN #16).
 
 ---
 
