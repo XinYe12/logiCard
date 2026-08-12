@@ -1,6 +1,6 @@
 # Card Collection & Gear Deck — Design Research
 
-**Status:** Research draft (2026-08-12). **Not CONFIRMED** — nothing here may be treated as locked until human confirm → `PRODUCT_MEMORY.md` C# row (save-file rule).  
+**Status:** Research draft (2026-08-12); **§8 answered by human in chat 2026-08-12** (see below). **Still not CONFIRMED** in the save-file sense — nothing here is locked until Integrator promotes these answers into a `PRODUCT_MEMORY.md` C# row (save-file rule); Cards dept does not edit that file.  
 **Worktree:** `D:\projects\Game\logiCard-cards-collection` / `feat/cards-collection-docs`  
 **Depends on:** [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) **C15**, **C18**, **C33**, **C34**/**C46**, OPEN #3; [`GDD.md`](GDD.md) § deferred cards; [`CORE_LOOP.md`](CORE_LOOP.md); [`UI_FLOW.md`](UI_FLOW.md); [`MONETIZATION.md`](MONETIZATION.md) **C47**; [`CHARACTER_ROSTER_LONGTERM.md`](CHARACTER_ROSTER_LONGTERM.md).
 
@@ -203,35 +203,23 @@ If a Steam “collection” page is desired for marketing, it can start as **cos
 
 Reply with letters / short notes; Integrator will promote confirmed answers into PRODUCT_MEMORY.
 
-1. **Catalog scope for first gear wave**  
-   - (a) Only the four named: Bandage, Interact-as-card, Flashbang, Adrenaline  
-   - (b) Four + a minimal Otherwise rule card  
-   - (c) Larger catalog (list names)
+**Answered by human in chat, 2026-08-12.** Each answer below is Cards dept's recommendation, accepted as-is. This resolves the doc's open questions; it does **not** by itself amend `PRODUCT_MEMORY.md` — that still needs an Integrator-written C# row per the save-file rule (`PRODUCT_MEMORY.md` §How to update: "Confirm in chat → edit C# row").
 
-2. **Same deck?**  
-   - (a) Keep **C18** — Scout/Juggernaut identical gear legality  
-   - (b) Amend C18 — per-Character exclusives (describe)  
-   - (c) Shared cards + attr-scaled costs (**§5 option B**)
+1. **Catalog scope for first gear wave** — **Answered: (a).** Only the four named: Bandage, Interact-as-card, Flashbang, Adrenaline. No Otherwise card in this wave — Otherwise is a family (§4.3), not a single card, and scoping it in now turns a bounded 4-item wave into an open-ended one.
+   - ~~(b) Four + a minimal Otherwise rule card~~ — rejected, see above.
+   - ~~(c) Larger catalog~~ — rejected; no new names invented per brief.
 
-3. **In-match economy**  
-   - (a) Full hand every Program + charges  
-   - (b) Draw each Program  
-   - (c) Pre-match loadout ≤K  
-   - (d) Hybrid (specify staples)
+2. **Same deck?** — **Answered: (a), with one scoped carve-out.** Keep **C18** — every Character has the same legal gear list, no exclusives. Carve-out: **Interact-as-card**'s cost may scale by Strength, mirroring the existing Door open/close precedent (GDD §6 — Scout slower, Juggernaut faster) it's generalizing. Bandage and Flashbang stay flat-cost for everyone unless playtest indicates otherwise — this is not a blanket adoption of §5 option B, just applying an existing precedent where the card is a direct generalization of an already-scaled action.
+   - ~~(b) Amend C18 — per-Character exclusives~~ — rejected.
+   - ~~(c) Shared cards + attr-scaled costs, unscoped~~ — rejected as a blanket rule; see carve-out above instead.
 
-4. **Meta collection**  
-   - (a) None this milestone — definitions only  
-   - (b) Cosmetic binder only (Time Card / gear skins)  
-   - (c) Unlock-to-use gear (⚠️ P2W risk — needs strong free path or reject)
+3. **In-match economy** — **Answered: (a).** Full hand every Program + per-card charges (§6 model 1). No draw/RNG (fights blind-programming clarity) and no pre-match loadout screen prerequisite (§6 models 2–4 all rejected for the first wave).
 
-5. **Interact-as-card vs contextual Door/Vent**  
-   - (a) Keep Door/Vent/Breach as map actions; Interact-card is for *future* stations only  
-   - (b) Migrate some map interacts onto the hand  
-   - (c) Defer Interact-card entirely until stations exist
+4. **Meta collection** — **Answered: (a).** None this milestone — rules catalog only, no binder/UI. Revisit **(b)** cosmetic binder once `MONETIZATION.md`'s Phase 4 IAP skeleton lands. **(c)** unlock-to-use gear is rejected outright, not just deferred — gates gameplay cards behind grind/pay in a PvP game, which sits too close to C47's no-pay-to-win line even if the letter of C47 (cosmetic-only) doesn't technically forbid a free-only unlock grind.
 
-6. **Adrenaline**  
-   - (a) Keep Execute-only stub until effect design exists  
-   - (b) Design effect now (must say whether tape may branch)
+5. **Interact-as-card vs contextual Door/Vent** — **Answered: (a).** Keep Door/Vent/Breach exactly as shipped (C57's `Door.Kind` reskin); Interact-as-card is reserved for **future stations that don't exist yet** (monitor / terminal / power station — `docs/UI_BOARD_ANCHORED_COMPONENTS.md`). Do not migrate any existing map interact onto the hand.
+
+6. **Adrenaline** — **Answered: (a).** Keep the Execute-only stub. A real effect needs the explicit tape-branch/second-resolve redesign `PLAYBACK_CONTRACT.md` §2 rule 5 requires — that's an architecture decision, sequenced as its own pass *after* the other three cards ship (§11), not bundled into this wave.
 
 ---
 
@@ -249,17 +237,19 @@ Reply with letters / short notes; Integrator will promote confirmed answers into
 
 ---
 
-## 10. One-page default (if human wants a strawman)
+## 10. One-page default — now the human-confirmed direction (§8, 2026-08-12)
 
-Until overridden:
+What was a strawman guess is now what the human answered in §8:
 
-- **Catalog:** Bandage, Flashbang, Adrenaline, Interact-as-card (stations later).  
-- **Ownership:** **Same gear deck** for all Characters (**C18**).  
-- **Economy:** Full visible hand + per-card charges / Adrenaline 1× match (model **1**).  
-- **Collection:** No unlock wall; cosmetic Time Card backs only for meta “collection” feel.  
+- **Catalog:** Bandage, Flashbang, Adrenaline, Interact-as-card (stations later). No Otherwise card this wave.
+- **Ownership:** **Same gear deck** for all Characters (**C18**), with one carve-out — Interact-as-card's cost may scale by Strength (Door precedent). Bandage/Flashbang stay flat.
+- **Economy:** Full visible hand + per-card charges / Adrenaline 1× match (model **1**).
+- **Collection:** No unlock wall, no binder UI this milestone — definitions only; cosmetic Time Card backs are a later Phase 4 item, not built now.
+- **Interact-as-card scope:** future stations only; Door/Vent/Breach stay untouched.
+- **Adrenaline:** stub stays a stub; real effect is a separate later design pass.
 - **Unique roster power:** verbs (Bomber / Time Player), not exclusive gear.
 
-This strawman is **still not CONFIRMED**.
+**Still not CONFIRMED in the save-file sense** — binding only once Integrator writes the `PRODUCT_MEMORY.md` C# row for this.
 
 ---
 
