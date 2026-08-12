@@ -17,10 +17,16 @@ namespace LogiCard.Board
         public float WallHeight = 0.85f;
         public float SegmentThickness = 0.14f;
 
-        // Keep these far from wall brick — playtest 2026-08-07: Closed used a near-wall rust and
-        // read as "door never changes color." Checkpoint 3 replaces these boxes with real door meshes.
+        // Soft state cue only — playtest 2026-08-12: 0.72 lerp painted the whole leaf into a solid
+        // red/green pillar and washed nappin wood to a flat plane. Keep far from brick so Closed still
+        // reads, but leave most of the authored albedo alone.
         private static readonly Color DoorOpenColor = new Color(0.35f, 0.82f, 0.42f);
         private static readonly Color DoorClosedColor = new Color(0.82f, 0.22f, 0.18f);
+        private const float DoorStateTintBlend = 0.22f;
+
+        /// <summary>Leaf depth in world units — thicker than wall SegmentThickness so the open door
+        /// reads as a slab, not a paper plane (screenshot 2026-08-12).</summary>
+        private const float DoorLeafThickness = 0.28f;
 
         /// <summary>Open swing around the hinge Y axis (degrees). Negative = swing the leaf clear of
         /// the wall gap in the leaf's local space.</summary>
@@ -471,7 +477,11 @@ namespace LogiCard.Board
             hinge.transform.localPosition = new Vector3(-length * 0.5f * WorldScale, 0f, 0f);
 
             float leafWidth = length * WorldScale;
-            float leafThickness = SegmentThickness * WorldScale;
+            float leafThickness = DoorLeafThickness * WorldScale;
+
+            // Static wood casing (jambs + lintel) on the root — import strips nappin's door_frame so
+            // the leaf alone read as a free pillar in the wall gap (screenshot 2026-08-12).
+            PlaceDoorCasing(root.transform, leafWidth, height);
 
             GameObject prefab = Resources.Load<GameObject>("Interior/Door");
             Transform leaf;
@@ -512,6 +522,41 @@ namespace LogiCard.Board
             originalColors = KindTintOverride(door.Kind, originalColors);
 
             return new DoorVisual(door, root, hinge.transform, leaf, renderers, originalColors);
+        }
+
+        private void PlaceDoorCasing(Transform root, float leafWidth, float height)
+        {
+            float jamb = 0.09f * WorldScale;
+            float depth = Mathf.Max(SegmentThickness, DoorLeafThickness) * WorldScale * 1.15f;
+            Material mat = BoardSurfaceMaterials.WoodEdge;
+
+            PlaceDoorCasingPart(
+                root, "Jamb_A",
+                new Vector3((-leafWidth * 0.5f) - (jamb * 0.5f), height * 0.5f, 0f),
+                new Vector3(jamb, height, depth),
+                mat);
+            PlaceDoorCasingPart(
+                root, "Jamb_B",
+                new Vector3((leafWidth * 0.5f) + (jamb * 0.5f), height * 0.5f, 0f),
+                new Vector3(jamb, height, depth),
+                mat);
+            PlaceDoorCasingPart(
+                root, "Lintel",
+                new Vector3(0f, height + (jamb * 0.5f), 0f),
+                new Vector3(leafWidth + (jamb * 2f), jamb, depth),
+                mat);
+        }
+
+        private static void PlaceDoorCasingPart(
+            Transform parent, string name, Vector3 localPosition, Vector3 localScale, Material material)
+        {
+            var part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            part.name = name;
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = localPosition;
+            part.transform.localScale = localScale;
+            part.GetComponent<MeshRenderer>().sharedMaterial = material;
+            StripCollider(part);
         }
 
         private static readonly Color VentBaseTint = new Color(0.55f, 0.58f, 0.62f);
@@ -637,8 +682,7 @@ namespace LogiCard.Board
                     }
 
                     Color baseColor = originals != null && m < originals.Length ? originals[m] : Color.white;
-                    // Keep some albedo so wood still reads; lean hard into the state color.
-                    Color mixed = Color.Lerp(baseColor, tint, 0.72f);
+                    Color mixed = Color.Lerp(baseColor, tint, DoorStateTintBlend);
                     mixed.a = 1f;
                     if (mat.HasProperty("_BaseColor"))
                     {

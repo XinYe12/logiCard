@@ -31,6 +31,9 @@ namespace LogiCard.Art.Editor
         {
             ("Assets/RainSnowCloudEffect/Prefabs/PF_CloudLayer.prefab", "PF_CloudLayer"),
             ("Assets/RainSnowCloudEffect/Prefabs/PF_RainSystem.prefab", "PF_RainSystem"),
+            // Soft atmosphere — ART_PACK_RESEARCH use-now #2 (2026-08-11); rain alone never sold lamp pockets.
+            ("Assets/RainSnowCloudEffect/Prefabs/PF_Fog_Ground.prefab", "PF_Fog_Ground"),
+            ("Assets/RainSnowCloudEffect/Prefabs/PF_RainMist.prefab", "PF_RainMist"),
             ("Assets/Vefects/Zap VFX URP/VFX/Zap/Particles/VFX_Zap_06_White.prefab", "VFX_Zap_White"),
         };
 

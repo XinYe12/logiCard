@@ -39,7 +39,9 @@ namespace LogiCard.Board
             fallback: new Color(0.28f, 0.22f, 0.18f),
             wetSmoothnessBoost: 0.42f, // was 0.55
             tint: new Color(0.90f, 0.64f, 0.42f), // image-13: push Yard brighter still
-            tile: 2.2f);
+            // 2026-08-12: raise tile so 1K asphalt shows grain at ortho 2.6–3.4 (ART_PACK use-now;
+            // 2K/4K re-fetch still better when someone pulls it).
+            tile: 3.4f);
 
         // 2026-08-11: Hall/Vault switched from the Poly Haven procedural concrete build to nappin's own
         // baked floor material directly (human direction: "use asset pack floor directly," after a
@@ -84,7 +86,7 @@ namespace LogiCard.Board
             fallback: new Color(0.26f, 0.22f, 0.18f),
             wetSmoothnessBoost: 0.30f, // was 0.35
             tint: new Color(0.58f, 0.46f, 0.36f), // was (0.52, 0.48, 0.42)
-            tile: 2.0f);
+            tile: 3.2f); // match Yard closer-zoom grain (2026-08-12)
 
         public static Material BrickWall => _wall ??= BuildWetSurface(
             "brick_diff", "brick_nor", "brick_rough",

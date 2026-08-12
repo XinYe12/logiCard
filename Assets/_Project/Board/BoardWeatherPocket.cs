@@ -35,10 +35,14 @@ namespace LogiCard.Board
     {
         private static GameObject _cloudLayerPrefab;
         private static GameObject _rainSystemPrefab;
+        private static GameObject _fogGroundPrefab;
+        private static GameObject _rainMistPrefab;
         private static GameObject _lightningPrefab;
 
         private const string CloudLayerResourcePath = "Weather/PF_CloudLayer";
         private const string RainSystemResourcePath = "Weather/PF_RainSystem";
+        private const string FogGroundResourcePath = "Weather/PF_Fog_Ground";
+        private const string RainMistResourcePath = "Weather/PF_RainMist";
         private const string LightningResourcePath = "Weather/VFX_Zap_White";
 
         /// <summary>
@@ -66,6 +70,7 @@ namespace LogiCard.Board
 
             PlaceCloudBank(width, depth);
             PlaceRain(width, depth);
+            PlaceFogMist(width, depth);
             PlaceLightning(width, depth);
         }
 
@@ -336,6 +341,105 @@ namespace LogiCard.Board
             _softRainMaterial.DisableKeyword("_FADING_ON");
 
             return _softRainMaterial;
+        }
+
+        /// <summary>
+        /// Soft ground haze + rain mist — ART_PACK_RESEARCH Lighting+Ground use-now #2. Owned weather
+        /// pack prefabs that were never wired (only rain/clouds/Zap landed). Sized to the board so
+        /// they read as desk-lamp atmosphere, not an open-world fog wall.
+        /// </summary>
+        private void PlaceFogMist(float width, float depth)
+        {
+            PlaceBoardScaledFog(
+                ref _fogGroundPrefab,
+                FogGroundResourcePath,
+                "FogGround",
+                localY: 0.35f,
+                width * 1.05f,
+                depth * 1.05f,
+                rateOverTime: 18f,
+                startSize: new ParticleSystem.MinMaxCurve(1.8f, 3.2f),
+                startColor: new Color(0.62f, 0.58f, 0.52f, 0.22f));
+
+            PlaceBoardScaledFog(
+                ref _rainMistPrefab,
+                RainMistResourcePath,
+                "RainMist",
+                localY: 1.1f,
+                width * 0.95f,
+                depth * 0.95f,
+                rateOverTime: 28f,
+                startSize: new ParticleSystem.MinMaxCurve(0.9f, 1.6f),
+                startColor: new Color(0.70f, 0.74f, 0.80f, 0.18f));
+        }
+
+        private void PlaceBoardScaledFog(
+            ref GameObject prefabCache,
+            string resourcePath,
+            string name,
+            float localY,
+            float targetWidth,
+            float targetDepth,
+            float rateOverTime,
+            ParticleSystem.MinMaxCurve startSize,
+            Color startColor)
+        {
+            GameObject prefab = LoadPrefab(ref prefabCache, resourcePath);
+            if (prefab == null)
+            {
+                return;
+            }
+
+            var instance = Instantiate(prefab, transform);
+            instance.name = name;
+            instance.transform.localPosition = new Vector3(0f, localY, 0f);
+            instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale = Vector3.one;
+
+            var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                ParticleSystem ps = systems[i];
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+                var shape = ps.shape;
+                if (shape.enabled)
+                {
+                    shape.shapeType = ParticleSystemShapeType.Box;
+                    shape.scale = new Vector3(targetWidth, 0.4f, targetDepth);
+                    shape.position = Vector3.zero;
+                    shape.rotation = Vector3.zero;
+                }
+
+                var emission = ps.emission;
+                if (emission.enabled)
+                {
+                    emission.rateOverTime = rateOverTime;
+                }
+
+                var main = ps.main;
+                main.prewarm = true;
+                main.simulationSpace = ParticleSystemSimulationSpace.Local;
+                main.startSize = startSize;
+                main.startColor = startColor;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(4.5f, 7.5f);
+                main.maxParticles = Mathf.Min(main.maxParticles, 400);
+
+                var psRenderer = ps.GetComponent<ParticleSystemRenderer>();
+                if (psRenderer != null && psRenderer.sharedMaterial != null)
+                {
+                    // Soften shared pack mats without mutating Resources — clone once per instance.
+                    psRenderer.material = new Material(psRenderer.sharedMaterial);
+                    Color tint = startColor;
+                    psRenderer.material.color = tint;
+                    if (psRenderer.material.HasProperty("_BaseColor"))
+                    {
+                        psRenderer.material.SetColor("_BaseColor", tint);
+                    }
+                }
+
+                ps.Play(true);
+            }
         }
 
         /// <summary>Randomized interval between flashes — modest and occasional, not constant storm
