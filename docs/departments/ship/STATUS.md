@@ -1,36 +1,34 @@
 # Ship — STATUS
 
-**Wave / Day:** none active — reset 2026-08-08 for the **C46** scope pivot. The old Wave 2 docs-only slice
-(README case study + capture checklist) fully delivered and merged; see git history (`950ff63`) or prior
-versions of this file for the full record. Both files it produced (`SHIP_README_DRAFT.md`,
-`CAPTURE_CHECKLIST.md`) were substantially rewritten for the pivot by the Integrator directly (2026-08-08) —
-portfolio-demo framing replaced with real-product framing, landscape aspect, phase-gate reusability.
-**Branch / worktree:** none — worktree removed after merge
-**Brief:** n/a until a new slice is briefed
-**Last cross-reviewed:** 2026-08-08 — reset alongside `departments/INDEX.md` and `contracts/CURRENT.md`
+**Wave / Day:** UI tools research (docs-only) — 2026-08-12  
+**Branch / worktree:** `feat/ui-tools-research` @ `D:\projects\Game\logiCard-ui-tools-research`  
+**Brief:** `UI_TOOLS_RESEARCH_AGENT_BRIEF.md` (worktree root)  
+**Last cross-reviewed:** n/a — research slice; Integrator merges later
 
 ## Owned files (this wave)
 
-*(populate when a new slice is briefed — likely candidate: Phase 6 Steam Certification & Ship, once a real
-build/capture exists)*
+- `docs/UI_TOOLS_RESEARCH.md` (new)
+- `docs/UI_FLOW.md` — single Character Select “See also” pointer only
+- `docs/departments/ship/STATUS.md` (this file)
 
 ## Done
 
-*(pre-pivot record lives in git history / prior file versions, not restated here)*
+- Inventoried current uGUI / `UiFactory` stack vs UI Toolkit / TMP.
+- Compared ≥4 tool paths (hand-rolled stay, Toolkit, UI Extensions, Kenney CC0 + Casual GUI, TMP-only).
+- Ranked default path + rejects; wrote 5 implementation brief stubs for later workers.
 
 ## In progress
 
-- Nothing. No Ship slice is currently briefed — `docs/SHIP_README_DRAFT.md`/`docs/CAPTURE_CHECKLIST.md` stay
-  DRAFT pending a real build and capture per `docs/SCHEDULE.md`'s Phase 6.
+- Nothing further in this slice (docs-only; no Unity batchmode).
 
 ## Blocked
 
-- A real capture/build to embed, per both docs' own "DRAFT until real capture exists" status lines.
+- Human open questions in `docs/UI_TOOLS_RESEARCH.md` (DOTween vs internal motion; Kenney vs bespoke; TMP gating; Toolkit lock).
 
 ## Depends on
 
-- Phases 1–5 landing enough of the real product to be worth capturing.
+- Integrator review/merge when main is free of rematch/floors/lighting dirt.
 
 ## Offers
 
-- Available for the next briefed slice.
+- Ready for Integrator to brief TMP / Kenney chrome / Character Select motion stubs from §5 of the research doc.
