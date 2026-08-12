@@ -166,6 +166,8 @@ Placeholder magnitudes — tune in playtest. "unit" = continuous board distance 
 
 ## 7. Map Elements
 
+See also: [`MAP_AUTHORING.md`](MAP_AUTHORING.md) (how to author additional maps under **C57**).
+
 | Element | This ship |
 |---------|-------------|
 | **Two Doors** | Contextual open/close (radius-based interact — **C39**); blocks move + LoS when closed — was one door pre-**C45** |
