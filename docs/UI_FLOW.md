@@ -45,6 +45,7 @@ flowchart TD
   role rotation: center/flank/back), now also covers a GSAP-based 3D depth-stack alternative (ReactBits
   DepthCarousel). Reference for the animation language only, not a literal build task or a stack we're
   adopting.
+- **See also:** [`UI_TOOLS_RESEARCH.md`](UI_TOOLS_RESEARCH.md) — tool/pack recommendation for future UI polish (uGUI stay-default; not a build task in that research slice).
 
 ---
 
