@@ -64,6 +64,13 @@ namespace LogiCard.UI
         /// <summary>Subtle inset strip along a dock region panel's bottom edge.</summary>
         public static readonly Color DockPanelInsetLip = new Color(0.07f, 0.06f, 0.05f, 0.55f);
 
+        // Character Select carousel accents (desk-lamp warm family — do not collide with Modal* tokens).
+        public static readonly Color CharSelectBgScout = new Color(0.42f, 0.28f, 0.14f, 0.97f);
+        public static readonly Color CharSelectBgJuggernaut = new Color(0.28f, 0.18f, 0.12f, 0.97f);
+        public static readonly Color CharSelectCardScout = new Color(0.98f, 0.72f, 0.25f, 1f);
+        public static readonly Color CharSelectCardJuggernaut = new Color(0.78f, 0.42f, 0.22f, 1f);
+        public static readonly Color CharSelectGhost = new Color(1f, 1f, 1f, 0.14f);
+
         private static Sprite _roundSprite;
         private const int RoundSpriteSize = 32;
         private const int RoundSpriteRadius = 10;

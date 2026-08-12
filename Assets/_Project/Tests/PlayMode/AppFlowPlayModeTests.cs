@@ -61,6 +61,33 @@ namespace LogiCard.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator CharacterSelectNextRotatesArchetypeAfterCrossfade()
+        {
+            AppFlowController flow = Hud.AppFlow;
+            flow.ShowBoot();
+
+            Button play = FindByName<Button>("TitlePlayButton");
+            play.onClick.Invoke();
+            Assert.That(flow.Current, Is.EqualTo(AppFlowController.Screen.CharacterSelect));
+            Assert.That(flow.SelectedArchetype, Is.EqualTo("Scout"));
+
+            Button next = FindByName<Button>("CharSelectNext");
+            Assert.That(next, Is.Not.Null, "Character Select carousel needs CharSelectNext.");
+            next.onClick.Invoke();
+            Assert.That(flow.SelectedArchetype, Is.EqualTo("Juggernaut"),
+                "Selection should update immediately on navigate.");
+
+            yield return new WaitForSecondsRealtime(0.7f);
+
+            Assert.That(flow.SelectedArchetype, Is.EqualTo("Juggernaut"));
+            Assert.That(flow.Current, Is.EqualTo(AppFlowController.Screen.CharacterSelect));
+
+            Button confirm = FindByName<Button>("ConfirmCharacter");
+            confirm.onClick.Invoke();
+            Assert.That(flow.Current, Is.EqualTo(AppFlowController.Screen.MapSelect));
+        }
+
+        [UnityTest]
         public IEnumerator FindMatchStubEntersMatchAfterDelay()
         {
             AppFlowController flow = Hud.AppFlow;
