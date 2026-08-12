@@ -12,13 +12,14 @@ namespace LogiCard.Board
     /// Clouds, rain, rim mist, and lightning are real scene geometry sized to the board footprint so
     /// weather reads as sitting on the diorama, matching the locked reference's "sky pocket over the chunk."
     ///
-    /// 2026-08-12 atmosphere stylized pass: cloud bank restored to CloudAtlas Kenney billboards
-    /// (<c>c0c4f39</c> <see cref="PlaceCloudPuff"/> / <see cref="CloudMaterial"/>) — pack
-    /// <c>PF_CloudLayer</c> demoted (open-world scale, wrong toy read). Soft atmosphere is rim-only
-    /// Kenney mist + optional pack <c>PF_Fog_Main</c>/<c>PF_Fog_Distant</c> at the board edge so the
-    /// playable center stays readable (no full-board white-out, no CreatePrimitive spheres).
+    /// 2026-08-12 atmosphere stylized pass: cloud bank = soft circular CloudAtlas discs (LA pillow
+    /// aim; Additive blend, few large overlapping masses). Pack <c>PF_CloudLayer</c> demoted.
+    /// Soft atmosphere is rim-only Kenney/soft-atlas mist + optional pack <c>PF_Fog_Main</c>/
+    /// <c>PF_Fog_Distant</c> at the board edge so the playable center stays readable.
     /// Rain stays pack <c>PF_RainSystem</c>; lightning stays Zap <c>VFX_Zap_White</c>.
     /// Prefab copies land via <see cref="LogiCard.Art.Editor.WeatherPackImportTool"/>.
+    /// Human Play <c>image copy 10</c>: Kenney whitePuff atlas rejected (dark rims / broken cloth);
+    /// atlas regenerated soft + bank retuned toward glued Link's Awakening pillows.
     /// </summary>
     public sealed class BoardWeatherPocket : MonoBehaviour
     {
@@ -64,27 +65,27 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Cloud scale/height — kept as a contained shelf over the chunk (not open-world sky).
-        /// 2026-08-12 human Play (`image copy 9`): height boost 2.1 put the bank above the ortho
-        /// frustum so the pocket vanished against the void; lowered so the shelf sits in-frame.
+        /// Cloud scale/height — contained shelf over the chunk. 1.15 sat too low on the board
+        /// (human Play <c>image copy 10</c>); 2.1 previously flew out of the ortho frustum
+        /// (<c>image copy 9</c>). 1.7 aims for LA backdrop height while staying in frame.
         /// </summary>
-        private const float InterimCloudScale = 0.85f;
-        private const float InterimCloudHeightBoost = 1.15f;
+        private const float InterimCloudScale = 0.9f;
+        private const float InterimCloudHeightBoost = 1.7f;
 
         /// <summary>
-        /// Cloud sprite atlas: 4x2 grid of Kenney "Smoke Particles" (CC0) puff silhouettes, composed
-        /// into one texture so <see cref="ParticleSystem.TextureSheetAnimationModule"/> can hand each
-        /// particle a random frame — see <c>Assets/_Project/Art/Environment/THIRD_PARTY.md</c>.
+        /// Soft LA-style CloudAtlas (4x2): glued bulbous lobes with white tops + soft blue-grey
+        /// undersides (<c>Tools/gen_soft_cloud_atlas.py</c>; ref <c>image copy 11.png</c>). No dark
+        /// smoke rim. Kenney whitePuff frames kept under Textures/ for provenance only.
         /// </summary>
         private const int CloudAtlasColumns = 4;
         private const int CloudAtlasRows = 2;
 
-        /// <summary>Particle count scales with each puff's footprint (world-unit width * depth), clamped
-        /// so tiny fringe puffs still read as a cluster and the wide ceiling shelf doesn't spawn a huge
-        /// batch of overlapping billboards.</summary>
-        private const float CloudParticleDensity = 1.35f;
-        private const int CloudParticlesMin = 12;
-        private const int CloudParticlesMax = 28;
+        /// <summary>
+        /// Few large billboards per mass — LA clouds are big glued pillows, not particle confetti.
+        /// </summary>
+        private const float CloudParticleDensity = 0.14f;
+        private const int CloudParticlesMin = 3;
+        private const int CloudParticlesMax = 6;
 
         /// <summary>Not a real "infinite" lifetime (Unity has none) — long enough that a burst-spawned,
         /// non-moving puff cluster never visibly expires during a play session.</summary>
@@ -95,42 +96,25 @@ namespace LogiCard.Board
             var root = new GameObject("CloudBank");
             root.transform.SetParent(transform, false);
 
-            // Dense ceiling layer — the solid cloud shelf the reference sits right above the chunk.
-            // Tints are mid/light gray (not near-black): dark storm colors vanish on SolidColor void.
-            PlaceCloudPuff(root.transform, "Ceiling", new Vector3(0f, 3.6f * InterimCloudHeightBoost, 0f),
-                new Vector3(width * 1.15f, 0.85f, depth * 1.1f) * InterimCloudScale,
-                new Color(0.62f, 0.64f, 0.70f, 1f));
+            // Three big overlapping masses high above the board — LA backdrop density, not a low fog lid.
+            PlaceCloudPuff(root.transform, "Mass_Main",
+                new Vector3(0f, 3.9f * InterimCloudHeightBoost, 0.02f * depth),
+                new Vector3(width * 1.05f, 1.25f, depth * 0.85f) * InterimCloudScale,
+                new Color(1f, 1f, 1f, 1f));
 
-            // Mid puffs — break the silhouette so it reads as volume, not one flat slab.
-            PlaceCloudPuff(root.transform, "Puff_NW", new Vector3(-width * 0.28f, 3.15f * InterimCloudHeightBoost, depth * 0.22f),
-                new Vector3(width * 0.55f, 0.7f, depth * 0.42f) * InterimCloudScale,
-                new Color(0.68f, 0.70f, 0.76f, 1f));
-            PlaceCloudPuff(root.transform, "Puff_SE", new Vector3(width * 0.30f, 3.25f * InterimCloudHeightBoost, -depth * 0.20f),
-                new Vector3(width * 0.50f, 0.65f, depth * 0.45f) * InterimCloudScale,
-                new Color(0.66f, 0.68f, 0.74f, 1f));
-            PlaceCloudPuff(root.transform, "Puff_NE", new Vector3(width * 0.22f, 3.55f * InterimCloudHeightBoost, depth * 0.28f),
-                new Vector3(width * 0.48f, 0.55f, depth * 0.38f) * InterimCloudScale,
-                new Color(0.58f, 0.60f, 0.66f, 1f));
-            PlaceCloudPuff(root.transform, "Puff_SW", new Vector3(-width * 0.18f, 3.05f * InterimCloudHeightBoost, -depth * 0.26f),
-                new Vector3(width * 0.42f, 0.5f, depth * 0.36f) * InterimCloudScale,
-                new Color(0.70f, 0.72f, 0.78f, 1f));
-            PlaceCloudPuff(root.transform, "Puff_Center", new Vector3(0.1f * width, 3.4f * InterimCloudHeightBoost, 0.05f * depth),
-                new Vector3(width * 0.62f, 0.75f, depth * 0.55f) * InterimCloudScale,
-                new Color(0.64f, 0.66f, 0.72f, 1f));
+            PlaceCloudPuff(root.transform, "Mass_NW",
+                new Vector3(-width * 0.26f, 3.7f * InterimCloudHeightBoost, depth * 0.18f),
+                new Vector3(width * 0.7f, 1.15f, depth * 0.58f) * InterimCloudScale,
+                new Color(0.98f, 0.99f, 1f, 1f));
 
-            // Lower fringe — warmer under-lit bellies so the pocket catches ground bounce.
-            PlaceCloudPuff(root.transform, "Fringe_A", new Vector3(-width * 0.35f, 2.7f * InterimCloudHeightBoost, 0.05f * depth),
-                new Vector3(width * 0.40f, 0.35f, depth * 0.30f) * InterimCloudScale,
-                new Color(0.78f, 0.74f, 0.66f, 1f));
-            PlaceCloudPuff(root.transform, "Fringe_B", new Vector3(width * 0.32f, 2.75f * InterimCloudHeightBoost, depth * 0.10f),
-                new Vector3(width * 0.38f, 0.32f, depth * 0.28f) * InterimCloudScale,
-                new Color(0.76f, 0.72f, 0.64f, 1f));
+            PlaceCloudPuff(root.transform, "Mass_SE",
+                new Vector3(width * 0.28f, 3.75f * InterimCloudHeightBoost, -depth * 0.16f),
+                new Vector3(width * 0.68f, 1.1f, depth * 0.55f) * InterimCloudScale,
+                new Color(1f, 0.99f, 0.97f, 1f));
         }
 
         /// <summary>
-        /// Builds one "puff" as a burst-spawned, non-moving cluster of textured billboard particles
-        /// (CloudAtlas Kenney frames). Restored from <c>c0c4f39</c> — replaces pack
-        /// <c>PF_CloudLayer</c> for the stylized toy read.
+        /// One coherent LA-style cloud mass: few large shaded-lobe billboards, heavily overlapped.
         /// </summary>
         private static void PlaceCloudPuff(
             Transform parent,
@@ -151,9 +135,8 @@ namespace LogiCard.Board
                 Mathf.RoundToInt(footprint * CloudParticleDensity),
                 CloudParticlesMin,
                 CloudParticlesMax);
-            // Overlap factor > 1 so neighboring billboards blend into one mass rather than sitting as
-            // visibly separate discs across the puff's footprint.
-            float baseSize = Mathf.Sqrt(footprint / count) * 1.75f;
+            // Large discs — atlas already holds a glued multi-lobe pillow per frame.
+            float baseSize = Mathf.Sqrt(footprint / count) * 3.4f;
 
             var main = ps.main;
             main.loop = false;
@@ -161,12 +144,13 @@ namespace LogiCard.Board
             main.duration = 1f;
             main.startLifetime = new ParticleSystem.MinMaxCurve(CloudParticleLifetimeSeconds);
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.85f, baseSize * 1.45f);
-            main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f * Mathf.Deg2Rad);
+            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.95f, baseSize * 1.12f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(-12f * Mathf.Deg2Rad, 12f * Mathf.Deg2Rad);
+            // Near-opaque so painted blue-grey undersides read (Additive washed that shading away).
             main.startColor = new ParticleSystem.MinMaxGradient(
-                new Color(tint.r * 0.9f, tint.g * 0.9f, tint.b * 0.9f, 0.92f),
-                new Color(Mathf.Min(1f, tint.r * 1.12f), Mathf.Min(1f, tint.g * 1.12f), Mathf.Min(1f, tint.b * 1.12f), 1f));
-            main.maxParticles = Mathf.Max(count, 4);
+                new Color(tint.r * 0.98f, tint.g * 0.98f, tint.b * 0.98f, 0.88f),
+                new Color(Mathf.Min(1f, tint.r * 1.02f), Mathf.Min(1f, tint.g * 1.02f), Mathf.Min(1f, tint.b * 1.02f), 0.98f));
+            main.maxParticles = Mathf.Max(count, 3);
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
             main.gravityModifier = 0f;
             main.scalingMode = ParticleSystemScalingMode.Local;
@@ -178,19 +162,14 @@ namespace LogiCard.Board
 
             var shape = ps.shape;
             shape.enabled = true;
-            shape.shapeType = ParticleSystemShapeType.Box;
-            // Thickness 0 = emit throughout the box volume. Vector3.one was wrong: on thin puff
-            // boxes it collapses the emit volume so the CloudBank looks empty in Play.
-            shape.boxThickness = Vector3.zero;
-            shape.scale = new Vector3(
-                Mathf.Max(localScale.x, 0.05f),
-                Mathf.Max(localScale.y, 0.05f),
-                Mathf.Max(localScale.z, 0.05f));
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            float radius = 0.42f * Mathf.Max(localScale.x, localScale.z);
+            shape.radius = Mathf.Max(radius, 0.25f);
+            shape.radiusThickness = 1f;
+            shape.scale = new Vector3(1f, Mathf.Clamp(localScale.y / Mathf.Max(radius, 0.01f), 0.5f, 1.2f), 1f);
             shape.position = Vector3.zero;
             shape.rotation = Vector3.zero;
 
-            // Each particle keeps a fixed random frame from the cloud atlas for its whole lifetime —
-            // frameOverTime stays flat 0 so it never flipbooks; variety is per-particle at spawn.
             var tsa = ps.textureSheetAnimation;
             tsa.enabled = true;
             tsa.mode = ParticleSystemAnimationMode.Grid;
@@ -681,8 +660,9 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Shared CloudAtlas material for ceiling cloud puffs — URP Particles/Unlit forced transparent
-        /// so atlas alpha reads (opaque default = white squares).
+        /// Shared CloudAtlas material for ceiling cloud puffs — Alpha blend so painted LA shading
+        /// (white tops / soft blue-grey undersides) survives. Soft edge RGB is near-white so the
+        /// fringe does not stroke a dark outline against the void.
         /// </summary>
         private static Material CloudMaterial()
         {
@@ -691,12 +671,12 @@ namespace LogiCard.Board
                 return _cloudMaterial;
             }
 
-            _cloudMaterial = CreateAtlasParticleMaterial(Color.white);
+            _cloudMaterial = CreateAtlasParticleMaterial(new Color(1f, 1f, 1f, 1f), additive: false);
             return _cloudMaterial;
         }
 
         /// <summary>
-        /// Shared CloudAtlas material for rim mist — same atlas, slightly softer base tint.
+        /// Shared CloudAtlas material for rim mist — Alpha blend (additive would wash the board apron).
         /// </summary>
         private static Material MistMaterial()
         {
@@ -705,11 +685,11 @@ namespace LogiCard.Board
                 return _mistMaterial;
             }
 
-            _mistMaterial = CreateAtlasParticleMaterial(new Color(1f, 1f, 1f, 0.85f));
+            _mistMaterial = CreateAtlasParticleMaterial(new Color(1f, 1f, 1f, 0.75f), additive: false);
             return _mistMaterial;
         }
 
-        private static Material CreateAtlasParticleMaterial(Color baseTint)
+        private static Material CreateAtlasParticleMaterial(Color baseTint, bool additive)
         {
             var particles = Shader.Find("Universal Render Pipeline/Particles/Unlit")
                 ?? Shader.Find("Particles/Standard Unlit")
@@ -738,31 +718,15 @@ namespace LogiCard.Board
                 mat.SetColor("_BaseColor", baseTint);
             }
 
-            // new Material(URP Particles/Unlit) defaults Opaque — force transparent or atlas alpha is lost.
             mat.SetOverrideTag("RenderType", "Transparent");
             if (mat.HasProperty("_Surface"))
             {
                 mat.SetFloat("_Surface", 1f);
             }
 
-            if (mat.HasProperty("_Blend"))
-            {
-                mat.SetFloat("_Blend", 0f); // Alpha
-            }
-
             if (mat.HasProperty("_ZWrite"))
             {
                 mat.SetFloat("_ZWrite", 0f);
-            }
-
-            if (mat.HasProperty("_SrcBlend"))
-            {
-                mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            }
-
-            if (mat.HasProperty("_DstBlend"))
-            {
-                mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
             }
 
             if (mat.HasProperty("_AlphaClip"))
@@ -771,10 +735,50 @@ namespace LogiCard.Board
             }
 
             mat.DisableKeyword("_ALPHATEST_ON");
-            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
             mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            mat.renderQueue = (int)RenderQueue.Transparent;
 
+            if (additive)
+            {
+                // URP Particles/Unlit BlendMode Additive = 2 — soft edges add light into the void
+                // instead of alpha-blending toward black (which reads as a grey/black outline).
+                if (mat.HasProperty("_Blend"))
+                {
+                    mat.SetFloat("_Blend", 2f);
+                }
+
+                if (mat.HasProperty("_SrcBlend"))
+                {
+                    mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                }
+
+                if (mat.HasProperty("_DstBlend"))
+                {
+                    mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+                }
+
+                mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            }
+            else
+            {
+                if (mat.HasProperty("_Blend"))
+                {
+                    mat.SetFloat("_Blend", 0f); // Alpha
+                }
+
+                if (mat.HasProperty("_SrcBlend"))
+                {
+                    mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                }
+
+                if (mat.HasProperty("_DstBlend"))
+                {
+                    mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                }
+
+                mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            }
+
+            mat.renderQueue = (int)RenderQueue.Transparent;
             return mat;
         }
 
