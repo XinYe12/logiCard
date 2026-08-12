@@ -52,6 +52,28 @@ Use these names in future docs so “card” stops meaning four different things
 
 ---
 
+## 3A. Player-facing glossary (one-page)
+
+**Status:** Draft strawman for a future in-game help/tooltip screen. Wording is a starting point for UI copy, not confirmed voice/tone.
+
+Plain-language versions of §3's dev vocabulary — what a player would actually read in a tooltip or help screen, not what this doc's authors call it internally.
+
+| Term (player-facing) | What it means to the player |
+|---|---|
+| **Character** | Who you're playing — Scout or Juggernaut today. Changes how fast you move and how quickly you handle doors and gear. Doesn't change what gear you can bring. |
+| **Time Card** | The card you play each round to commit part of the shared match clock. Bigger commitment = more time to act this round, but your opponent plans against that same window. |
+| **Program** | The planning phase — you secretly draw your path, aim your shots, and place any gear. Nobody sees your plan until it plays out. |
+| **Gear** | Tools like Bandage or Flashbang. Every Character has access to the same gear — there's no "Scout-only" or "Juggernaut-only" item. |
+| **Hand** | The gear you can use this round. |
+| **Otherwise** | What happens if your planned move gets blocked (like running into a closed door) — a backup rule, not something you choose in the moment. |
+| **Reveal** | The instant both plans flip face-up, right before they play out. |
+| **Playback** | The replay that shows both sides' round unfolding together, second by second. |
+| **Aftermath** | The moment where the round's outcome — position, wounds, doors — carries into the next round. |
+
+This is a starting vocabulary list, not locked UI copy — final tooltip wording is a UI/writing pass, not a design decision.
+
+---
+
 ## 4. Catalog — cards already named in product docs
 
 ### 4.1 Not gear (keep out of the gear binder)
@@ -109,6 +131,26 @@ Today resolve stops movement before a closed door / block. A full **Otherwise** 
 
 ---
 
+## 5A. "Same gear deck" vs unique-verb Characters — the boundary, spelled out
+
+§5 covers *whether Characters share a gear list*. This section is the sharper rule for telling **gear** apart from **unique Character verbs** (Bomber's bomb, Time Player's rewind — `CHARACTER_ROSTER_LONGTERM.md`, **C42–C44**) once both exist in the same product, since they will otherwise look like the same kind of thing to a player.
+
+**The test:** if the capability exists in a match **regardless of which Character either player picked**, it's gear. If it exists **only because a specific Character was picked**, it's a unique verb.
+
+| | Gear card | Unique Character verb |
+|---|---|---|
+| **Example** | Bandage, Flashbang, Interact-as-card, Adrenaline | Bomber's bomb-place, Time Player's rewind (**C43/C44**, long-term, not active build) |
+| **Who has access** | Every Character, every match (**C18**) | Only a player who picked that specific Character |
+| **What changes it** | Nothing — access is universal; attrs may scale *cost/speed* (§5.2 option B), never *legality* | Character selection itself |
+| **Doc home** | This file → future `GEAR_CATALOG.md` | `CHARACTER_ROSTER_LONGTERM.md` |
+| **C15 boundary** | "cards = gear" | "Characters differ by attrs (and later unique verbs)" |
+| **Resolve shape** | Schedulable event, same event-stream discipline as Move/Shoot/Door | Same event-stream discipline (**C42**'s requirement), but the verb itself doesn't exist for a Character who didn't pick it |
+| **Monetization** | Free gameplay; only the *skin* is sellable (**C47**, `MONETIZATION.md`) | Must ship free or skill-gated — never paywalled (`MONETIZATION.md` §Cross-reference) |
+
+**Why this matters for a future catalog:** adding a new gear card is a content addition inside the existing "same deck" rule — no roster change needed. Adding a unique verb is a **roster decision** that touches `CHARACTER_ROSTER_LONGTERM.md`, needs its own C# row, and (per **C42**) must still resolve through the deterministic event-stream or get an architecture pass first. Don't let a new gear-card proposal quietly grow into a "well, what if only Juggernaut gets it" unique-verb proposal without recognizing that's a different, bigger decision (§5.2 option C, explicitly **not** recommended without a human amendment to C18).
+
+---
+
 ## 6. In-match economy (OPEN #3)
 
 Until this is confirmed, do not build draw RNG into Program HUD.
@@ -123,6 +165,21 @@ Until this is confirmed, do not build draw RNG into Program HUD.
 **Adrenaline special case:** already specified as **Execute-only**, **1/match**, not Program-armed. Whatever economy ships must keep that split or explicitly rewrite PLAYBACK_CONTRACT.
 
 **Time Card relation:** spending gear still burns **Time Resource** inside round **N** (or a free Execute interrupt for Adrenaline — TBD). Gear must not invent a second budget without a C# row.
+
+---
+
+## 6A. Strawman charge table (numerics OPEN — not CONFIRMED)
+
+**Purpose:** a concrete starting point for the human §8 answers and for whoever eventually writes the `GhostResolver` resolve logic — not a locked spec. Every number below is a placeholder pulled from the same numeric family as existing verbs (GDD §6), marked **OPEN**.
+
+| Gear | Phase (locked) | Time Resource cost (strawman) | Charges / match (strawman) | Cooldown | Resolve note |
+|---|---|---|---|---|---|
+| **Bandage** | Program | **3s** (~1.5× Snap Shot) | **1 per Character per match** | n/a | Heals Wounded → Healthy; must land before the *next* round starts (§4.2). Full bleed/surcharge system is separate future scope (**C46**, GDD §5 note) — do not build that alongside this strawman. |
+| **Flashbang** | Program | **2s** (~1× Snap Shot) | **2 per match** | n/a | Soft control/vision — blast radius, duration, and what "soft control" *does* mechanically are all OPEN, not just the cost. Needs its own effect design, not only a numeric. |
+| **Interact-as-card** | Program | **2–4s**, same family as Door's Strength-scaled open/close (GDD §6) | Unlimited **uses**, gated by a legal target existing (mirrors Door's `InteractRadius` gate, **C39**) | n/a | Closest to an existing resolve shape (Door) — lowest design risk of the four. Needs a real target (vent/monitor/station) to exist before it does anything; **not** meaningful until those exist per §4.4. |
+| **Adrenaline** | **Execute only** (locked, not OPEN — GDD/`PLAYBACK_CONTRACT`) | Not time-budgeted the same way — it's a mid-cinema interrupt, not a Program-armed cost | **1 per match** (locked — GDD §4.2, `PLAYBACK_CONTRACT` §4) | n/a | Effect itself is **stub** today (`AdrenalineUsed` event, no mechanical change). Any real effect needs the explicit redesign `PLAYBACK_CONTRACT` §2 rule 5 requires before it can do more than log an event — this is a bigger question than "what number," flagged separately in §8 Q6. |
+
+**What's locked vs open in this table:** the *phase* column (Program vs Execute-only) and Adrenaline's 1×/match cap are already decided (GDD, `PLAYBACK_CONTRACT`). Everything else — costs, charge counts, Flashbang's actual effect, Bandage's heal timing edge cases — is this doc's strawman guess, explicitly awaiting the human §8 answers (particularly Q1 catalog scope and Q6 Adrenaline effect design) before anyone treats it as buildable.
 
 ---
 
@@ -203,6 +260,20 @@ Until overridden:
 - **Unique roster power:** verbs (Bomber / Time Player), not exclusive gear.
 
 This strawman is **still not CONFIRMED**.
+
+---
+
+## 11. Recommended first-ship sequence (proposal only)
+
+If/when the human confirms a first gear wave (§8 Q1), this is the suggested **build order**, ranked by resolve risk and reuse of existing shapes — not by "most exciting first":
+
+1. **Interact-as-card** — reuses the Door contextual-action resolve shape almost exactly (`TryGetNearestDoor`-style radius gate, GDD §4/§6A above). Lowest new-mechanic risk. **Caveat:** per §4.4/§8 Q5, it isn't meaningful without a real target (vent/monitor/station) to interact with — may need to ship *after* a station exists, not before, despite being mechanically simplest.
+2. **Bandage** — new state mutation (Wounded → Healthy) but on the existing wound ladder (GDD §5), Program-armed like Move/Shoot, no new targeting model. Second-lowest risk.
+3. **Flashbang** — needs an actual new effect (soft control / vision), not just a state flip. Higher design risk than Bandage because "what does soft control do" is still an open mechanical question, not only a numeric one (§6A).
+4. **Adrenaline (real effect)** — stays **stub** until last. It's Execute-only, mid-cinema, and `PLAYBACK_CONTRACT` §2 rule 5 requires an explicit redesign (tape branch or second resolve) before it can be more than a logged event. Building this before the other three establishes conventions risks having to redo it.
+5. **Otherwise library** — treat as its own project after all four named cards, not a fifth card. It's a family (§4.3), and today's simplified "stop before block" behavior already covers the ship's actual need.
+
+This sequence is **not confirmed** and assumes the §10 strawman defaults (catalog = the four named cards, same gear deck, full-hand economy). If the human answers §8 differently — e.g. picks pre-match loadouts (§6 model 3) instead of full-hand — this ordering may need to change, since loadout UI would become a prerequisite for shipping *any* of the four rather than an independent step.
 
 ---
 
