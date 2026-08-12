@@ -1,36 +1,29 @@
 # Core / Integrator — STATUS
 
-**Wave / Day:** Phase 5 look-and-feel — door open presentation fix (2026-08-12)
-**Branch / worktree:** `master` (main tree `D:\projects\Game\logiCard`)
-**Last cross-reviewed:** 2026-08-12 — batchmode green; awaiting human sighted door check
+**Wave / Day:** Phase 5 — door look + fog/mist (2026-08-12)
+**Branch / worktree:** `master` @ `c940e79`
+**Last cross-reviewed:** 2026-08-12 — hour push done; slots free
 
 ## Owned files (this wave)
 
-- `Assets/_Project/Board/DoorLeafFitter.cs` (new)
-- `Assets/_Project/Board/BoardView.cs` (PlaceDoorMesh fit path)
-- `Assets/_Project/Art/Editor/InteriorPackImportTool.cs` (`NormalizeDoorPivotAndScale` axis fix)
-- `Assets/_Project/Tests/EditMode/DoorLeafFitterTests.cs` (new)
-- `docs/DRAFT_HANDOFF.md`, `docs/departments/INDEX.md`, `docs/contracts/CURRENT.md`
+- `DoorLeafFitter` / `BoardView` door fit + casing/tint/thickness
+- `BoardWeatherPocket` fog/mist + `WeatherPackImportTool` catalog
+- `BoardSurfaceMaterials` Yard/Flank tile bump
+- Integrator docs
 
 ## Done
 
-- Pruned merged worktrees (3 removed; 2 orphan dirs locked on disk).
-- Door leaf hinge fit implemented + EditMode/PlayMode green (**136/136**, **44/44**).
+- `4895e4a` hinge fit (animation human-OK)
+- `c940e79` mesh look + fog/mist + tile — EditMode 136 / PlayMode 44 on disposable verify
 
 ## In progress
 
-- Nothing coding-side. Waiting on human Play confirmation that Open reads as a hinged door.
+- Nothing. Awaiting human Play on Unmonitored 1–3.
 
 ## Blocked
 
-- Visual sign-off cannot come from batchmode.
-- Lighting/ground wire blocked on human buy-vs-use-now.
-- No worker spawn until Day 13 findings exist or human unlocks lighting wire.
-
-## Depends on
-
-- Human sighted pass on door Open during Playback.
+- Visual sign-off. Poly Haven 2K/4K download not attempted successfully this session.
 
 ## Offers
 
-- Merge authority for worker branches (human still approves).
+- Merge authority. Safe next worker: PH 2K/4K BoardSurfaces swap (assets-only) after human OK, or Day 13 triage when findings exist.

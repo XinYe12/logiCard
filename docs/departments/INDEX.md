@@ -1,6 +1,6 @@
 # Departments — Active Index
 
-**Updated:** 2026-08-12 — Integrator session: stale worktrees pruned; door leaf hinge fit batchmode-green, awaiting human sight.
+**Updated:** 2026-08-12 — door hinge + mesh look + fog/mist landed on `master` (`4895e4a`, `c940e79`).
 **Ops constitution:** [`../PARALLEL_OPS.md`](../PARALLEL_OPS.md) · human-side playbook: [`../DIRECTING_AGENTS.md`](../DIRECTING_AGENTS.md)
 **Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md)
 **Human rollup:** [`../DRAFT_HANDOFF.md`](../DRAFT_HANDOFF.md)
@@ -11,14 +11,14 @@ Integrator + up to **2** coding workers — **0 of 2 in use.**
 
 ## Active agents / worktrees
 
-- **Integrator (main `logiCard`, `master`)** — door open presentation (`DoorLeafFitter` + `BoardView` leaf fit). No worker wave claimed (lighting/ground still human buy-vs-use-now; Day 13 findings file still empty).
-- Orphan dirs on disk (git worktrees already pruned; Windows file lock): `logiCard-lighting-ground-assets`, `logiCard-map-bottom-click` — delete when nothing holds them.
+- **Integrator (main `logiCard`, `master`)** — Phase 5 presentation push complete for this hour; awaiting human sighted pass on door mesh / fog / Yard tile.
+- No coding workers. Next free slices: Poly Haven 2K/4K drop-in (docs-guided), or Day 13 findings triage once the human fills the template.
 
 ## Ownership matrix (write locks)
 
 | Path / concern | Owner now |
 |----------------|-----------|
-| `Assets/_Project/Board/BoardView.cs`, `DoorLeafFitter.cs`, door import normalize | Integrator |
+| (none contested — slots free) | — |
 | `docs/DRAFT_HANDOFF.md`, `PRODUCT_MEMORY.md`, `contracts/CURRENT.md`, this INDEX | Integrator |
 | `docs/departments/<dept>/STATUS.md` | That dept only |
 
