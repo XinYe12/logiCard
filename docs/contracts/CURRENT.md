@@ -18,13 +18,13 @@ change — root-caused directly (probe `clearFlags` never set, rendering the wro
 **Clouds**: replaced primitive spheres with real textured particle clouds (Kenney CC0 sprite atlas). Both
 worker slots closed again after C60/C61 (2026-08-11). **Still open:** human sighted pass on C60 vibrancy
 (runtime grade actually warm now) + C61 scroll zoom feel + earlier reflection/clouds/Scout outfit items.
-**Updated:** 2026-08-11 by Integrator (C60/C61 merge).
+**Updated:** 2026-08-12 by Integrator (door leaf fit in progress on main tree; no worker contract).
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
 
-_(none currently open — `Assets/_Project/UI/**` closed out, next slice not yet assigned)_
+_(none currently open — no worker assigned. Integrator owns `BoardView` / `DoorLeafFitter` door fit on main tree.)_
 
 ## Closed contracts (reference)
 
@@ -53,12 +53,10 @@ _(none currently open — `Assets/_Project/UI/**` closed out, next slice not yet
 
 ## Ownership reminders this wave
 
-- `Assets/_Project/Board/**`, `PrimitiveMaterialFactory.cs`, `Assets/_Project/Art/**`: environment worker only
-  (`feat/env-lookfeel-overhaul`, still active).
-- `Assets/_Project/UI/**`: closed out — `feat/ui-component-system` merged, no worker currently assigned.
-- `Assets/_Project/Boot/GameBootstrap.cs`: Integrator-only edit target; the env worker may still need
-  lighting/weather tuning wired in.
-- `Sim/`, `Net/`, `Timeline/`, `GhostResolver`: untouched by this wave — core gameplay is paused.
+- `Assets/_Project/Board/BoardView.cs`, `DoorLeafFitter.cs`, door import normalize: **Integrator** (door fit).
+- `Assets/_Project/UI/**`: closed out — no worker assigned.
+- `Assets/_Project/Boot/GameBootstrap.cs`: Integrator-only unless a brief assigns a line.
+- `Sim/`, `Net/`, `Timeline/`, `GhostResolver`: core gameplay/networking paused (map/terrain exception already shipped).
 
 ## Closed contracts (reference)
 

@@ -1,33 +1,31 @@
 # Departments — Active Index
 
-**Updated:** 2026-08-11 — image-14 wave merged (Integrator bugs + lighting research + map-bottom-click).
+**Updated:** 2026-08-12 — Integrator session: stale worktrees pruned; door leaf hinge fit batchmode-green, awaiting human sight.
 **Ops constitution:** [`../PARALLEL_OPS.md`](../PARALLEL_OPS.md) · human-side playbook: [`../DIRECTING_AGENTS.md`](../DIRECTING_AGENTS.md)
 **Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md)
 **Human rollup:** [`../DRAFT_HANDOFF.md`](../DRAFT_HANDOFF.md)
 
 ## Capacity
 
-Integrator + up to **2** coding workers — **0 of 2 in use.** Stale worktrees from prior waves
-still listed in `git worktree list` pending removal (not counted).
+Integrator + up to **2** coding workers — **0 of 2 in use.**
 
 ## Active agents / worktrees
 
-- **Integrator (main `logiCard`, `master`)** — merge authority / docs; no coding wave claimed.
-- **`logiCard-lighting-ground-assets` / `logiCard-map-bottom-click`** — merged (`71174a7` /
-  `5971f23`); worktrees pending removal.
+- **Integrator (main `logiCard`, `master`)** — door open presentation (`DoorLeafFitter` + `BoardView` leaf fit). No worker wave claimed (lighting/ground still human buy-vs-use-now; Day 13 findings file still empty).
+- Orphan dirs on disk (git worktrees already pruned; Windows file lock): `logiCard-lighting-ground-assets`, `logiCard-map-bottom-click` — delete when nothing holds them.
 
 ## Ownership matrix (write locks)
 
 | Path / concern | Owner now |
 |----------------|-----------|
-| (none contested — slots free) | — |
+| `Assets/_Project/Board/BoardView.cs`, `DoorLeafFitter.cs`, door import normalize | Integrator |
 | `docs/DRAFT_HANDOFF.md`, `PRODUCT_MEMORY.md`, `contracts/CURRENT.md`, this INDEX | Integrator |
 | `docs/departments/<dept>/STATUS.md` | That dept only |
 
 ## Cross-review checklist (session start)
 
-- [ ] Read DRAFT_HANDOFF
-- [ ] Read this INDEX
-- [ ] Read peer STATUS for every **In progress** row above
-- [ ] Read contracts/CURRENT
-- [ ] Confirm no file overlap before editing
+- [x] Read DRAFT_HANDOFF
+- [x] Read this INDEX
+- [x] Read peer STATUS for every **In progress** row above
+- [x] Read contracts/CURRENT
+- [x] Confirm no file overlap before editing

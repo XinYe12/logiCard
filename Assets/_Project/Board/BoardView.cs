@@ -441,8 +441,9 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Quaternius door mesh fitted to the wall-segment gap. Open/closed still uses the standing
-        /// green/red state tint (playtest 2026-08-07) plus a hinge swing so the leaf clears the gap.
+        /// Door leaf fitted to the wall-segment gap. Open/closed still uses the standing green/red
+        /// state tint (playtest 2026-08-07) plus a Y-hinge swing. Mesh fit goes through
+        /// <see cref="DoorLeafFitter"/> so nappin width-on-Z leaves hinge correctly.
         /// </summary>
         private DoorVisual PlaceDoorMesh(string name, Door door)
         {
@@ -469,6 +470,9 @@ namespace LogiCard.Board
             hinge.transform.SetParent(root.transform, false);
             hinge.transform.localPosition = new Vector3(-length * 0.5f * WorldScale, 0f, 0f);
 
+            float leafWidth = length * WorldScale;
+            float leafThickness = SegmentThickness * WorldScale;
+
             GameObject prefab = Resources.Load<GameObject>("Interior/Door");
             Transform leaf;
             MeshRenderer[] renderers;
@@ -477,10 +481,10 @@ namespace LogiCard.Board
             {
                 GameObject leafGo = Object.Instantiate(prefab, hinge.transform, false);
                 leafGo.name = "Leaf";
-                // Prefab is unit width/height with pivot at bottom-center — shift so the hinge edge
-                // sits on the hinge origin (left edge = −0.5 before scale).
-                leafGo.transform.localPosition = new Vector3(length * 0.5f * WorldScale, 0f, 0f);
-                leafGo.transform.localScale = new Vector3(length * WorldScale, height, 1f);
+                // Runtime bounds fit — nappin (Prb)Door is width-on-Z; import normalize alone used to
+                // treat thickness as width and the leaf spun like a cabinet (image-14 playtest).
+                DoorLeafFitter.FitUnderHinge(
+                    hinge.transform, leafGo.transform, leafWidth, height, leafThickness);
                 leaf = leafGo.transform;
                 renderers = leafGo.GetComponentsInChildren<MeshRenderer>();
                 originalColors = CaptureRendererColors(renderers);
@@ -493,7 +497,7 @@ namespace LogiCard.Board
                 box.name = "LeafFallback";
                 box.transform.SetParent(hinge.transform, false);
                 box.transform.localPosition = new Vector3(length * 0.5f * WorldScale, height * 0.5f, 0f);
-                box.transform.localScale = new Vector3(length * WorldScale, height, SegmentThickness * WorldScale);
+                box.transform.localScale = new Vector3(leafWidth, height, leafThickness);
                 StripCollider(box);
                 leaf = box.transform;
                 renderers = new[] { box.GetComponent<MeshRenderer>() };

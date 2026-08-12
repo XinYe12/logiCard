@@ -1,32 +1,35 @@
 # Core / Integrator — STATUS
 
-**Wave / Day:** none active — reset 2026-08-08 for the **C46** scope pivot. Wave 1 + Wave 2 (Day 9-11 work:
-stepped motion, VFX, Foley wiring, Ship docs) fully delivered and merged; see git history (commits `d60f01d`,
-`fc32a2d`, `a57d095`, `04f9191`, `950ff63`) or prior versions of this file for the full record.
-**Branch / worktree:** `master` (main tree)
-**Last cross-reviewed:** 2026-08-08 — reset alongside `departments/INDEX.md` and `contracts/CURRENT.md`
+**Wave / Day:** Phase 5 look-and-feel — door open presentation fix (2026-08-12)
+**Branch / worktree:** `master` (main tree `D:\projects\Game\logiCard`)
+**Last cross-reviewed:** 2026-08-12 — batchmode green; awaiting human sighted door check
 
 ## Owned files (this wave)
 
-*(populate when the next wave starts — see `docs/departments/INDEX.md`'s ownership matrix for the evergreen
-rows that don't change per-wave)*
+- `Assets/_Project/Board/DoorLeafFitter.cs` (new)
+- `Assets/_Project/Board/BoardView.cs` (PlaceDoorMesh fit path)
+- `Assets/_Project/Art/Editor/InteriorPackImportTool.cs` (`NormalizeDoorPivotAndScale` axis fix)
+- `Assets/_Project/Tests/EditMode/DoorLeafFitterTests.cs` (new)
+- `docs/DRAFT_HANDOFF.md`, `docs/departments/INDEX.md`, `docs/contracts/CURRENT.md`
 
 ## Done
 
-*(pre-pivot record lives in git history / prior file versions, not restated here)*
+- Pruned merged worktrees (3 removed; 2 orphan dirs locked on disk).
+- Door leaf hinge fit implemented + EditMode/PlayMode green (**136/136**, **44/44**).
 
 ## In progress
 
-- Nothing as of this reset. Next Integrator work follows `docs/SCHEDULE.md`'s phase table (Phase 0 Pivot Lock
-  is closing out as this reset lands; Phase 1/2/5 are parallelizable next).
+- Nothing coding-side. Waiting on human Play confirmation that Open reads as a hinged door.
 
 ## Blocked
 
-- Nothing outstanding.
+- Visual sign-off cannot come from batchmode.
+- Lighting/ground wire blocked on human buy-vs-use-now.
+- No worker spawn until Day 13 findings exist or human unlocks lighting wire.
 
 ## Depends on
 
-- `docs/PRODUCT_MEMORY.md` C46–C51, `docs/SCHEDULE.md`'s phase table.
+- Human sighted pass on door Open during Playback.
 
 ## Offers
 

@@ -545,7 +545,8 @@ namespace LogiCard.Art.Editor
 
         /// <summary>
         /// Door leaf: width on local X ≈ 1, height on Y ≈ 1, pivot at bottom-center.
-        /// BoardView scales (length, height, 1) to fit the wall segment.
+        /// BoardView still runtime-fits via <c>DoorLeafFitter</c>; this keeps reimported prefabs
+        /// honest so a raw unit-scale preview isn't width-on-Z (nappin <c>(Prb)Door</c>).
         /// </summary>
         private static void NormalizeDoorPivotAndScale(GameObject root)
         {
@@ -555,7 +556,6 @@ namespace LogiCard.Art.Editor
                 return;
             }
 
-            Vector3 offset = new Vector3(-local.center.x, -local.min.y, -local.center.z);
             var wrap = new GameObject("Mesh");
             wrap.transform.SetParent(root.transform, false);
 
@@ -569,18 +569,28 @@ namespace LogiCard.Art.Editor
                 }
             }
 
+            // Orient node carries any width-Z → width-X yaw so Wrap can keep identity rotation
+            // while holding the non-uniform unit scale (Unity TRS would shear if both lived here).
+            var orient = new GameObject("Orient");
+            orient.transform.SetParent(wrap.transform, false);
             foreach (Transform child in children)
             {
-                child.SetParent(wrap.transform, true);
+                child.SetParent(orient.transform, true);
             }
 
-            wrap.transform.localPosition += offset;
+            if (local.size.z > local.size.x + 1e-4f)
+            {
+                orient.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            }
+
+            Bounds centered = CalculateLocalBounds(root);
+            wrap.transform.localPosition = new Vector3(-centered.center.x, -centered.min.y, -centered.center.z);
 
             Bounds fitted = CalculateLocalBounds(root);
             float sx = fitted.size.x > 1e-4f ? 1f / fitted.size.x : 1f;
             float sy = fitted.size.y > 1e-4f ? 1f / fitted.size.y : 1f;
-            float sz = Mathf.Min(sx, sy);
-            wrap.transform.localScale = Vector3.Scale(wrap.transform.localScale, new Vector3(sx, sy, sz));
+            // Same thickness convention as the pre-nappin normalize: scale.z = min(sx, sy).
+            wrap.transform.localScale = new Vector3(sx, sy, Mathf.Min(sx, sy));
         }
 
         private static void NormalizePropPivot(GameObject root)

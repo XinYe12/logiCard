@@ -16,7 +16,9 @@
 
 ## In progress
 
-- Nothing. Awaiting human screenshot confirmation that C60 reads vibrant and C61 zoom feels right.
+- Nothing assigned to Presentation workers. Integrator holds door leaf fit on main tree
+  (`DoorLeafFitter` / `BoardView`). Still awaiting human screenshot confirmation that C60 reads
+  vibrant, C61 zoom feels right, and (new) door Open reads as a hinge, not a cabinet.
 
 ## Blocked
 
