@@ -9,7 +9,8 @@ Phase 5 art / presentation still top priority (`SCHEDULE.md`); core Net paused.
 1. **Door hinge fit** (`4895e4a`) — nappin width-on-Z leaf reoriented via `DoorLeafFitter`. **Human: animation fine.**
 2. **Door mesh look** (this commit) — soft state tint `0.72 → 0.22`, thicker leaf `0.28`, static wood jambs+lintel casing so openings read as doorways not red pillars / paper planes (screenshot `image copy.png`).
 3. **Use-now fog/mist** — `PF_Fog_Ground` + `PF_RainMist` copied into `Resources/Weather`, wired in `BoardWeatherPocket.PlaceFogMist` (ART_PACK_RESEARCH use-now #2). Catalog updated in `WeatherPackImportTool`.
-4. **Yard/Flank tile** — asphalt tile `2.2/2.0 → 3.4/3.2` so 1K maps show grain at ortho 2.6–3.4 (stopgap until 2K/4K re-fetch).
+4. **Yard/Flank tile** — asphalt tile `2.2/2.0 → 3.4/3.2` for closer ortho grain.
+5. **Poly Haven 2K re-fetch** — all 12 `Resources/BoardSurfaces/*` JPGs upgraded 1K→2K (CC0, same assets).
 
 **Ops:** disposable verify `logiCard-verify-doorlook` used (main Editor was open). Stale orphan dirs may still exist on disk.
 
@@ -22,7 +23,7 @@ Phase 5 art / presentation still top priority (`SCHEDULE.md`); core Net paused.
 ## Still unfinished
 
 - **Door mesh** — casing/tint/thickness landed; may still want real nappin frame mesh or DoorAlt after sighted pass.
-- **Poly Haven 2K/4K re-fetch** — not downloaded this hour (tile bump only). Still the #1 use-now ground fix in research.
+- **Poly Haven 4K** — optional further upgrade; 2K landed.
 - **Clouds** — deferred (human).
 - **Buy list** — RekindledFX etc. still human call if fog+tile still flat.
 - Days 10–14 schedule ticks; Phase 2 Net paused.

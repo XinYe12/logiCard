@@ -11,10 +11,11 @@ must stay traceable.
 
 - **Author / source:** Poly Haven (polyhaven.com) — individual texture assets listed below
 - **License:** CC0 1.0 (per https://polyhaven.com/license)
-- **Date sourced:** 2026-08-10
-- **Status:** Downloaded at 1K JPG (diff / nor_gl / rough) and wired into runtime board surfaces
-  via `BoardSurfaceMaterials` + `Resources/BoardSurfaces/`. Used to translate the reference's wet
-  asphalt / masonry / wood material language onto the indoor facility without transplanting a city.
+- **Date sourced:** 2026-08-10; **runtime re-fetch 2K:** 2026-08-12 (ART_PACK_RESEARCH Lighting+Ground use-now #1)
+- **Status:** Runtime `Resources/BoardSurfaces/` holds **2K** JPG (diff / nor_gl / rough), wired via
+  `BoardSurfaceMaterials`. Used to translate the reference's wet asphalt / masonry / wood material
+  language onto the indoor facility without transplanting a city. 1K copies kept locally under
+  `Textures/_1k_backup_2026-08-12/` (not required in git).
 - **Assets in use:**
   | Runtime name | Poly Haven asset | URL |
   |---|---|---|
@@ -22,7 +23,7 @@ must stay traceable.
   | `concrete_*` | Concrete Floor | https://polyhaven.com/a/concrete_floor |
   | `brick_*` | Brick Wall 02 | https://polyhaven.com/a/brick_wall_02 |
   | `wood_*` | Wood Planks | https://polyhaven.com/a/wood_planks |
-- **On disk:** originals under `Textures/<asset>/`; runtime copies under `Resources/BoardSurfaces/`.
+- **On disk:** originals under `Textures/<asset>/`; runtime copies under `Resources/BoardSurfaces/` (**2K**).
 
 ---
 
