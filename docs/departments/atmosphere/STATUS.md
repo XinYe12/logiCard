@@ -2,7 +2,7 @@
 
 **Wave / Day:** Permanent department seat (GDD §11 / PARALLEL_OPS) — **In progress** 2026-08-12
 **Branch / worktree:** `feat/atmosphere-stylized` @ `D:\projects\Game\logiCard-atmosphere-stylized` (canonical migrate to `logiCard-atmosphere` when Integrator says)
-**Last cross-reviewed:** 2026-08-12 — rebased onto master `de5e4fe` (includes merged `5b2ee7c`); image-copy-12 polish commit pending Integrator
+**Last cross-reviewed:** 2026-08-12 — on master `de5e4fe`; polish commit `083d50f` ready for Integrator
 
 ## Owned files (this seat / this slice)
 
