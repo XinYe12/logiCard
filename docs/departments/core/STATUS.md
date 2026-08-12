@@ -1,29 +1,34 @@
-# Core / Integrator — STATUS
+﻿# Core / Integrator — STATUS
 
-**Wave / Day:** Phase 5 — door look + fog/mist (2026-08-12)
-**Branch / worktree:** `master` @ `c940e79`
-**Last cross-reviewed:** 2026-08-12 — hour push done; slots free
+**Wave / Day:** Phase 5 — Integrator session 2026-08-12 (post atmosphere merge)
+**Branch / worktree:** `master` @ `5b2ee7c` + dirty rematch/floors/lighting/GDD
+**Last cross-reviewed:** 2026-08-12 — merged `feat/atmosphere-stylized` (`0acd909` → `5b2ee7c`)
 
 ## Owned files (this wave)
 
-- `DoorLeafFitter` / `BoardView` door fit + casing/tint/thickness
-- `BoardWeatherPocket` fog/mist + `WeatherPackImportTool` catalog
-- `BoardSurfaceMaterials` Yard/Flank tile bump
-- Integrator docs
+- Dirty: `GameBootstrap`, `RoundPlayback`, `MatchClock`, `BoardSurfaceMaterials`, `BoardReflectionProbes`, `BoardView` (comment), GDD/ART framing, tests for Reset/FreshMatch
+- Docs: `DRAFT_HANDOFF`, dept INDEX
+- **Reclaimed:** weather / `BoardWeatherPocket` / `Resources/Weather/**`
 
 ## Done
 
-- `4895e4a` hinge fit (animation human-OK)
-- `c940e79` mesh look + fog/mist + tile — EditMode 136 / PlayMode 44 on disposable verify
+- Merged LA CloudAtlas atmosphere (`5b2ee7c`); noted image-12 follow-ups in presentation STATUS
+- Rematch reset + urban floors + bright lighting + void restore + GDD §8 framing (uncommitted)
+- Merged map + UI research docs earlier
+- Spun char-select + modal UI workers (both green, await Play)
 
 ## In progress
 
-- Nothing. Awaiting human Play on Unmonitored 1–3.
+- Dirty rematch/floors/lighting still uncommitted — commit when human asks
+- UI merges gated on human Play (`b5d7c77`, `492b8fe`)
+- Coding slots **0/2**
 
 ## Blocked
 
-- Visual sign-off. Poly Haven 2K/4K download not attempted successfully this session.
+- Editor lock for batchmode on main path
 
 ## Offers
 
-- Merge authority. Safe next worker: PH 2K/4K BoardSurfaces swap (assets-only) after human OK, or Day 13 triage when findings exist.
+- Merge UI branches after human clears Play
+- Optional atmosphere follow-up worktree (variation / 3D / edge tones)
+- Remove `logiCard-atmosphere-stylized` worktree when human confirms clean

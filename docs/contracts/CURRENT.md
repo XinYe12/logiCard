@@ -18,7 +18,7 @@ change — root-caused directly (probe `clearFlags` never set, rendering the wro
 **Clouds**: replaced primitive spheres with real textured particle clouds (Kenney CC0 sprite atlas). Both
 worker slots closed again after C60/C61 (2026-08-11). **Still open:** human sighted pass on C60 vibrancy
 (runtime grade actually warm now) + C61 scroll zoom feel + earlier reflection/clouds/Scout outfit items.
-**Updated:** 2026-08-12 by Integrator (door look + fog/mist + PH 2K landed; no worker contract).
+**Updated:** 2026-08-12 by Integrator — `feat/atmosphere-stylized` merged (`5b2ee7c` / LA CloudAtlas + rim mist). UI char-select + modal still on side branches awaiting Play. No open worker contract.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
