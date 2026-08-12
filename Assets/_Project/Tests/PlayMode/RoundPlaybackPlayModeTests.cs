@@ -227,5 +227,80 @@ namespace LogiCard.Tests.PlayMode
 
             Assert.That(Phase.Phase, Is.EqualTo(RoundPhase.Execute), "Lock In never reached Execute.");
         }
+
+        /// <summary>
+        /// Playtest 2026-08-12: door opens all finished at end of reveal because every ApplyTime
+        /// restarted the hinge swing. Spam scrubber ticks after DoorOpened — arc must keep progressing.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator DoorSwingKeepsProgressingAcrossPlaybackTicks()
+        {
+            ArmWithAttackerMoveTo(AmbushPoint);
+
+            TapeEvent? opened = FirstEventOfType(Playback.Tape, TapeEventType.DoorOpened);
+            Assert.That(opened.HasValue, Is.True, "Defender script must open a door.");
+
+            Transform hinge = FindDoorHingeNear(opened.Value.Position);
+            Assert.That(hinge, Is.Not.Null, "No Door_*/Hinge near the DoorOpened event.");
+
+            Clock.SetSeconds(0f);
+            yield return null;
+            Assert.That(AbsYawDegrees(hinge.localEulerAngles.y), Is.LessThan(5f), "Closed at t=0.");
+
+            Clock.SetSeconds(opened.Value.Seconds);
+            yield return null;
+
+            for (int i = 0; i < 12; i++)
+            {
+                Clock.SetSeconds(opened.Value.Seconds + (0.02f * i));
+                yield return null;
+            }
+
+            yield return new WaitForSecondsRealtime(0.28f);
+
+            Assert.That(
+                AbsYawDegrees(hinge.localEulerAngles.y),
+                Is.GreaterThan(25f),
+                "Hinge yaw must advance under scrubber spam; restarting the swing each tick left doors closed until playback ended.");
+        }
+
+        private static float AbsYawDegrees(float eulerY)
+        {
+            float y = eulerY;
+            if (y > 180f)
+            {
+                y -= 360f;
+            }
+
+            return Mathf.Abs(y);
+        }
+
+        private static Transform FindDoorHingeNear(PlanarPosition doorMid)
+        {
+            Vector3 world = new Vector3(doorMid.X, 0f, doorMid.Y);
+            Transform best = null;
+            float bestDist = float.MaxValue;
+
+            Transform[] hinges = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None);
+            for (int i = 0; i < hinges.Length; i++)
+            {
+                Transform t = hinges[i];
+                if (t == null || t.name != "Hinge" || t.parent == null || !t.parent.name.StartsWith("Door_"))
+                {
+                    continue;
+                }
+
+                float dist = Vector3.Distance(
+                    new Vector3(t.parent.position.x, 0f, t.parent.position.z),
+                    world);
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    best = t;
+                }
+            }
+
+            return bestDist < 1.5f ? best : null;
+        }
     }
 }

@@ -350,27 +350,28 @@ namespace LogiCard.Board
         /// </summary>
         private void PlaceFogMist(float width, float depth)
         {
+            // Playtest 2026-08-12: first wire was invisible at play distance — denser/warmer/larger.
             PlaceBoardScaledFog(
                 ref _fogGroundPrefab,
                 FogGroundResourcePath,
                 "FogGround",
-                localY: 0.35f,
-                width * 1.05f,
-                depth * 1.05f,
-                rateOverTime: 18f,
-                startSize: new ParticleSystem.MinMaxCurve(1.8f, 3.2f),
-                startColor: new Color(0.62f, 0.58f, 0.52f, 0.22f));
+                localY: 0.45f,
+                width * 1.15f,
+                depth * 1.15f,
+                rateOverTime: 55f,
+                startSize: new ParticleSystem.MinMaxCurve(2.8f, 4.5f),
+                startColor: new Color(0.72f, 0.66f, 0.55f, 0.42f));
 
             PlaceBoardScaledFog(
                 ref _rainMistPrefab,
                 RainMistResourcePath,
                 "RainMist",
-                localY: 1.1f,
-                width * 0.95f,
-                depth * 0.95f,
-                rateOverTime: 28f,
-                startSize: new ParticleSystem.MinMaxCurve(0.9f, 1.6f),
-                startColor: new Color(0.70f, 0.74f, 0.80f, 0.18f));
+                localY: 0.85f,
+                width * 1.05f,
+                depth * 1.05f,
+                rateOverTime: 70f,
+                startSize: new ParticleSystem.MinMaxCurve(1.6f, 2.8f),
+                startColor: new Color(0.78f, 0.82f, 0.88f, 0.35f));
         }
 
         private void PlaceBoardScaledFog(

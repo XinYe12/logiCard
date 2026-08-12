@@ -313,6 +313,8 @@ namespace LogiCard.Boot
                 }
             }
 
+            // BoardView.ApplyDoorVisualState ignores same-state refreshes so the hinge swing is not
+            // restarted every ApplyTime tick (playtest 2026-08-12: all opens finished at reveal end).
             _board.RefreshDoorVisuals();
             _doorsSyncedToSeconds = seconds;
         }

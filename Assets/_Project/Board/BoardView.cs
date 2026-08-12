@@ -612,21 +612,26 @@ namespace LogiCard.Board
         private void ApplyDoorVisualState(DoorVisual visual, DoorState state, bool animate)
         {
             bool open = state == DoorState.Open;
+            Quaternion target = Quaternion.Euler(0f, open ? DoorOpenYawDegrees : 0f, 0f);
+
+            // Playback calls RefreshDoorVisuals every ApplyTime tick. If we restart the swing whenever
+            // SwingRoutine != null, every door's arc resets continuously and only finishes when the
+            // scrubber stops at the end of reveal (playtest 2026-08-12). Same state = leave alone.
+            if (visual.DisplayedState == state)
+            {
+                if (visual.Hinge != null && visual.SwingRoutine == null)
+                {
+                    visual.Hinge.localRotation = target;
+                }
+
+                return;
+            }
+
             ApplyDoorTint(visual, open ? DoorOpenColor : DoorClosedColor);
 
             if (visual.Hinge == null)
             {
                 visual.DisplayedState = state;
-                return;
-            }
-
-            Quaternion target = Quaternion.Euler(0f, open ? DoorOpenYawDegrees : 0f, 0f);
-
-            // Same state already shown (and not mid-swing) — scrubber/refresh spam must not restart
-            // the arc every tick.
-            if (visual.DisplayedState == state && visual.SwingRoutine == null)
-            {
-                visual.Hinge.localRotation = target;
                 return;
             }
 
