@@ -12,19 +12,17 @@ namespace LogiCard.Board
     /// Clouds, rain, rim mist, and lightning are real scene geometry sized to the board footprint so
     /// weather reads as sitting on the diorama, matching the locked reference's "sky pocket over the chunk."
     ///
-    /// 2026-08-12 atmosphere stylized pass: cloud bank = soft circular CloudAtlas discs (LA pillow
-    /// aim; Additive blend, few large overlapping masses). Pack <c>PF_CloudLayer</c> demoted.
-    /// Soft atmosphere is rim-only Kenney/soft-atlas mist + optional pack <c>PF_Fog_Main</c>/
-    /// <c>PF_Fog_Distant</c> at the board edge so the playable center stays readable.
-    /// Rain stays pack <c>PF_RainSystem</c>; lightning stays Zap <c>VFX_Zap_White</c>.
-    /// Prefab copies land via <see cref="LogiCard.Art.Editor.WeatherPackImportTool"/>.
-    /// Human Play <c>image copy 10</c>: Kenney whitePuff atlas rejected (dark rims / broken cloth);
-    /// atlas regenerated soft + bank retuned toward glued Link's Awakening pillows.
+    /// Cloud bank (2026-08-12 <c>image copy 13</c>): Link's Awakening-style <b>clay sphere lobes</b> —
+    /// opaque URP Lit meshes glued into masses (true 3D volume under ortho/rotate). Billboard
+    /// CloudAtlas discs were rejected as too 2D/cheap with dark alpha 边缘. Soft atlas retained for
+    /// subtle rim mist only. Pack <c>PF_CloudLayer</c> demoted. Rain = <c>PF_RainSystem</c>; Zap =
+    /// <c>VFX_Zap_White</c>. Prefabs via <see cref="LogiCard.Art.Editor.WeatherPackImportTool"/>.
     /// </summary>
     public sealed class BoardWeatherPocket : MonoBehaviour
     {
-        private static Material _cloudMaterial;
+        private static Material _clayCloudMaterial;
         private static Material _mistMaterial;
+        private static Mesh _unitSphereMesh;
         private static GameObject _rainSystemPrefab;
         private static GameObject _fogMainPrefab;
         private static GameObject _fogDistantPrefab;
@@ -65,146 +63,177 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Cloud scale/height — contained shelf over the chunk. 1.15 sat too low on the board
-        /// (human Play <c>image copy 10</c>); 2.1 previously flew out of the ortho frustum
-        /// (<c>image copy 9</c>). 1.7 aims for LA backdrop height while staying in frame.
+        /// Cloud scale/height — contained shelf over the chunk. 1.7 kept after human height notes
+        /// (<c>image copy 10</c>–<c>12</c>).
         /// </summary>
         private const float InterimCloudScale = 0.9f;
         private const float InterimCloudHeightBoost = 1.7f;
 
-        /// <summary>
-        /// Soft LA-style CloudAtlas (4x2): eight distinct silhouettes (raft / stack / comma / twins /
-        /// …) with brighter lobe tops + pale recess AO. Edge RGB lifted so 边缘 does not read deep
-        /// grey (<c>image copy 12</c>). Generator: <c>Tools/gen_soft_cloud_atlas.py</c>.
-        /// </summary>
-        private const int CloudAtlasColumns = 4;
-        private const int CloudAtlasRows = 2;
-        private const int CloudAtlasFrameCount = CloudAtlasColumns * CloudAtlasRows;
+        /// <summary>One clay lobe inside a mass — unit offsets in [-0.5,0.5] scaled by mass footprint.</summary>
+        private readonly struct ClayLobe
+        {
+            public readonly Vector3 UnitOffset;
+            public readonly float RadiusNorm;
+            public readonly bool Belly;
 
-        /// <summary>
-        /// Few large billboards per mass — LA clouds are big glued pillows, not particle confetti.
-        /// </summary>
-        private const float CloudParticleDensity = 0.12f;
-        private const int CloudParticlesMin = 2;
-        private const int CloudParticlesMax = 5;
+            public ClayLobe(float x, float y, float z, float radiusNorm, bool belly = false)
+            {
+                UnitOffset = new Vector3(x, y, z);
+                RadiusNorm = radiusNorm;
+                Belly = belly;
+            }
+        }
 
-        /// <summary>Not a real "infinite" lifetime (Unity has none) — long enough that a burst-spawned,
-        /// non-moving puff cluster never visibly expires during a play session.</summary>
-        private const float CloudParticleLifetimeSeconds = 9999f;
+        // Distinct glued silhouettes (LA Evil Eagle sky) — not one repeated billboard stamp.
+        private static readonly ClayLobe[] PatternRaft =
+        {
+            new ClayLobe(0f, 0.05f, 0f, 0.42f),
+            new ClayLobe(-0.28f, 0f, 0.06f, 0.30f),
+            new ClayLobe(0.30f, 0.02f, -0.04f, 0.31f),
+            new ClayLobe(-0.08f, 0.18f, -0.12f, 0.24f),
+            new ClayLobe(0.14f, 0.16f, 0.14f, 0.22f),
+            new ClayLobe(0.02f, -0.16f, 0.02f, 0.28f, belly: true),
+            new ClayLobe(-0.18f, -0.12f, -0.10f, 0.20f, belly: true),
+        };
+
+        private static readonly ClayLobe[] PatternStack =
+        {
+            new ClayLobe(0f, -0.08f, 0f, 0.34f, belly: true),
+            new ClayLobe(0f, 0.10f, 0.04f, 0.36f),
+            new ClayLobe(-0.16f, 0.22f, -0.02f, 0.26f),
+            new ClayLobe(0.18f, 0.20f, 0.06f, 0.25f),
+            new ClayLobe(0.02f, 0.34f, 0f, 0.20f),
+            new ClayLobe(-0.22f, 0.02f, 0.12f, 0.22f),
+        };
+
+        private static readonly ClayLobe[] PatternComma =
+        {
+            new ClayLobe(-0.12f, 0.02f, 0.04f, 0.36f),
+            new ClayLobe(0.16f, 0.08f, -0.06f, 0.30f),
+            new ClayLobe(0.28f, 0.20f, -0.14f, 0.20f),
+            new ClayLobe(-0.26f, 0.14f, 0.10f, 0.22f),
+            new ClayLobe(0.02f, -0.14f, 0.02f, 0.26f, belly: true),
+            new ClayLobe(0.10f, -0.06f, 0.16f, 0.18f, belly: true),
+        };
+
+        private static readonly ClayLobe[] PatternCrown =
+        {
+            new ClayLobe(0f, 0.06f, 0f, 0.32f),
+            new ClayLobe(-0.18f, 0.16f, 0.08f, 0.24f),
+            new ClayLobe(0.18f, 0.16f, -0.06f, 0.24f),
+            new ClayLobe(0f, 0.28f, 0.02f, 0.22f),
+            new ClayLobe(-0.10f, -0.10f, -0.08f, 0.20f, belly: true),
+            new ClayLobe(0.12f, -0.10f, 0.10f, 0.20f, belly: true),
+        };
 
         private void PlaceCloudBank(float width, float depth)
         {
             var root = new GameObject("CloudBank");
             root.transform.SetParent(transform, false);
 
-            // Each mass pins a different atlas-frame band so the bank doesn't read as one cloned puff
-            // (human Play image copy 12: "only one cloud model").
-            PlaceCloudPuff(root.transform, "Mass_Main",
+            // Opaque clay spheres — no alpha 边缘 rings. Desk-lamp Lit shading supplies the 3D read
+            // billboards never could (human Play image copy 13).
+            PlaceClayMass(root.transform, "Mass_Main",
                 new Vector3(0f, 3.9f * InterimCloudHeightBoost, 0.02f * depth),
-                new Vector3(width * 1.05f, 1.25f, depth * 0.85f) * InterimCloudScale,
-                new Color(1f, 1f, 1f, 1f),
-                frameMin: 0, frameMax: 2);
+                new Vector3(width * 1.05f, 1.35f, depth * 0.85f) * InterimCloudScale,
+                PatternRaft,
+                topTint: new Color(0.97f, 0.98f, 1f),
+                bellyTint: new Color(0.86f, 0.90f, 0.96f));
 
-            PlaceCloudPuff(root.transform, "Mass_NW",
-                new Vector3(-width * 0.26f, 3.7f * InterimCloudHeightBoost, depth * 0.18f),
-                new Vector3(width * 0.7f, 1.15f, depth * 0.58f) * InterimCloudScale,
-                new Color(0.97f, 0.98f, 1f, 1f),
-                frameMin: 3, frameMax: 5);
+            PlaceClayMass(root.transform, "Mass_NW",
+                new Vector3(-width * 0.26f, 3.75f * InterimCloudHeightBoost, depth * 0.18f),
+                new Vector3(width * 0.72f, 1.25f, depth * 0.58f) * InterimCloudScale,
+                PatternStack,
+                topTint: new Color(0.96f, 0.97f, 1f),
+                bellyTint: new Color(0.84f, 0.88f, 0.95f));
 
-            PlaceCloudPuff(root.transform, "Mass_SE",
-                new Vector3(width * 0.28f, 3.75f * InterimCloudHeightBoost, -depth * 0.16f),
-                new Vector3(width * 0.68f, 1.1f, depth * 0.55f) * InterimCloudScale,
-                new Color(1f, 0.99f, 0.96f, 1f),
-                frameMin: 5, frameMax: 7);
+            PlaceClayMass(root.transform, "Mass_SE",
+                new Vector3(width * 0.28f, 3.8f * InterimCloudHeightBoost, -depth * 0.16f),
+                new Vector3(width * 0.7f, 1.2f, depth * 0.55f) * InterimCloudScale,
+                PatternComma,
+                topTint: new Color(1f, 0.99f, 0.97f),
+                bellyTint: new Color(0.90f, 0.88f, 0.84f));
 
-            // Small high accent — different silhouette band, adds depth layering.
-            PlaceCloudPuff(root.transform, "Mass_High",
-                new Vector3(-width * 0.06f, 4.15f * InterimCloudHeightBoost, -depth * 0.08f),
-                new Vector3(width * 0.42f, 0.85f, depth * 0.36f) * InterimCloudScale,
-                new Color(1f, 1f, 1f, 1f),
-                frameMin: 1, frameMax: 4);
+            PlaceClayMass(root.transform, "Mass_High",
+                new Vector3(-width * 0.05f, 4.2f * InterimCloudHeightBoost, -depth * 0.06f),
+                new Vector3(width * 0.45f, 0.95f, depth * 0.38f) * InterimCloudScale,
+                PatternCrown,
+                topTint: new Color(1f, 1f, 1f),
+                bellyTint: new Color(0.88f, 0.91f, 0.97f));
         }
 
         /// <summary>
-        /// One coherent LA-style cloud mass. <paramref name="frameMin"/>/<paramref name="frameMax"/>
-        /// pin TextureSheet start frames so neighboring masses show different atlas shapes.
+        /// One LA-style cloud mass: overlapping opaque sphere meshes (clay pillows), not camera-facing
+        /// sprites. Mesh stolen once from a disposable Sphere primitive — never left in the scene as fog.
         /// </summary>
-        private static void PlaceCloudPuff(
+        private static void PlaceClayMass(
             Transform parent,
             string name,
             Vector3 localPosition,
-            Vector3 localScale,
-            Color tint,
-            int frameMin,
-            int frameMax)
+            Vector3 massScale,
+            ClayLobe[] pattern,
+            Color topTint,
+            Color bellyTint)
         {
-            var puff = new GameObject(name);
-            puff.transform.SetParent(parent, false);
-            puff.transform.localPosition = localPosition;
+            var mass = new GameObject(name);
+            mass.transform.SetParent(parent, false);
+            mass.transform.localPosition = localPosition;
 
-            var ps = puff.AddComponent<ParticleSystem>();
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            Mesh sphere = UnitSphereMesh();
+            Material clay = ClayCloudMaterial();
+            float footprint = Mathf.Max(massScale.x, massScale.z);
 
-            float footprint = Mathf.Max(0.01f, localScale.x * localScale.z);
-            int count = Mathf.Clamp(
-                Mathf.RoundToInt(footprint * CloudParticleDensity),
-                CloudParticlesMin,
-                CloudParticlesMax);
-            float baseSize = Mathf.Sqrt(footprint / count) * 3.55f;
+            for (int i = 0; i < pattern.Length; i++)
+            {
+                ClayLobe lobe = pattern[i];
+                var go = new GameObject($"Lobe_{i}");
+                go.transform.SetParent(mass.transform, false);
 
-            var main = ps.main;
-            main.loop = false;
-            main.playOnAwake = true;
-            main.duration = 1f;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(CloudParticleLifetimeSeconds);
-            main.startSpeed = 0f;
-            // Wider size range → nearer/farther lobes read more 3D inside one mass.
-            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.78f, baseSize * 1.28f);
-            main.startRotation = new ParticleSystem.MinMaxCurve(-25f * Mathf.Deg2Rad, 25f * Mathf.Deg2Rad);
-            main.startColor = new ParticleSystem.MinMaxGradient(
-                new Color(tint.r * 0.98f, tint.g * 0.98f, tint.b * 0.98f, 0.9f),
-                new Color(Mathf.Min(1f, tint.r * 1.02f), Mathf.Min(1f, tint.g * 1.02f), Mathf.Min(1f, tint.b * 1.02f), 0.98f));
-            main.maxParticles = Mathf.Max(count, 3);
-            main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            main.gravityModifier = 0f;
-            main.scalingMode = ParticleSystemScalingMode.Local;
+                Vector3 pos = new Vector3(
+                    lobe.UnitOffset.x * massScale.x,
+                    lobe.UnitOffset.y * massScale.y,
+                    lobe.UnitOffset.z * massScale.z);
+                go.transform.localPosition = pos;
 
-            var emission = ps.emission;
-            emission.enabled = true;
-            emission.rateOverTime = 0f;
-            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)count) });
+                float diameter = lobe.RadiusNorm * footprint * 2f;
+                go.transform.localScale = Vector3.one * diameter;
 
-            var shape = ps.shape;
-            shape.enabled = true;
-            shape.shapeType = ParticleSystemShapeType.Sphere;
-            float radius = 0.38f * Mathf.Max(localScale.x, localScale.z);
-            shape.radius = Mathf.Max(radius, 0.25f);
-            shape.radiusThickness = 1f;
-            shape.scale = new Vector3(1f, Mathf.Clamp(localScale.y / Mathf.Max(radius, 0.01f), 0.55f, 1.25f), 1f);
-            shape.position = Vector3.zero;
-            shape.rotation = Vector3.zero;
+                var filter = go.AddComponent<MeshFilter>();
+                filter.sharedMesh = sphere;
 
-            int lo = Mathf.Clamp(frameMin, 0, CloudAtlasFrameCount - 1);
-            int hi = Mathf.Clamp(frameMax, lo, CloudAtlasFrameCount - 1);
+                var renderer = go.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = clay;
+                renderer.shadowCastingMode = ShadowCastingMode.On;
+                renderer.receiveShadows = true;
 
-            var tsa = ps.textureSheetAnimation;
-            tsa.enabled = true;
-            tsa.mode = ParticleSystemAnimationMode.Grid;
-            tsa.numTilesX = CloudAtlasColumns;
-            tsa.numTilesY = CloudAtlasRows;
-            tsa.animation = ParticleSystemAnimationType.WholeSheet;
-            tsa.frameOverTime = new ParticleSystem.MinMaxCurve(0f);
-            tsa.startFrame = new ParticleSystem.MinMaxCurve(lo, hi);
-            tsa.cycleCount = 1;
+                var block = new MaterialPropertyBlock();
+                Color tint = lobe.Belly ? bellyTint : topTint;
+                block.SetColor("_BaseColor", tint);
+                block.SetColor("_Color", tint);
+                renderer.SetPropertyBlock(block);
+            }
+        }
 
-            var renderer = puff.GetComponent<ParticleSystemRenderer>();
-            renderer.renderMode = ParticleSystemRenderMode.Billboard;
-            renderer.sortMode = ParticleSystemSortMode.Distance;
-            renderer.sharedMaterial = CloudMaterial();
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
+        private static Mesh UnitSphereMesh()
+        {
+            if (_unitSphereMesh != null)
+            {
+                return _unitSphereMesh;
+            }
 
-            ps.Play(true);
+            // Borrow Unity's unit sphere mesh only — destroy the temp GO immediately (not scene fog).
+            var tmp = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            _unitSphereMesh = tmp.GetComponent<MeshFilter>().sharedMesh;
+            if (Application.isPlaying)
+            {
+                Object.Destroy(tmp);
+            }
+            else
+            {
+                Object.DestroyImmediate(tmp);
+            }
+
+            return _unitSphereMesh;
         }
 
         private void PlaceRain(float width, float depth)
@@ -342,109 +371,60 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Rim-only stylized mist — Kenney CloudAtlas billboards drift along the board edge, plus
-        /// lightly-tuned pack <c>PF_Fog_Main</c>/<c>PF_Fog_Distant</c> at the apron. Deliberately
-        /// does <b>not</b> cover the playable center (human rejected full-board fog white-out).
+        /// Soft CloudAtlas grid for rim mist billboards only (cloud bank is clay meshes now).
+        /// </summary>
+        private const int CloudAtlasColumns = 4;
+        private const int CloudAtlasRows = 2;
+
+        /// <summary>
+        /// Rim-only soft mist — very subtle. Human Play <c>image copy 13</c>: dense low billboards
+        /// read as cheap 2D clouds over the board; keep apron haze sparse so clay bank owns the look.
         /// </summary>
         private void PlaceFogMist(float width, float depth)
         {
             var root = new GameObject("RimMist");
             root.transform.SetParent(transform, false);
 
-            float rimX = width * 0.48f;
-            float rimZ = depth * 0.48f;
-            float edgeAlongX = width * 0.72f;
-            float edgeAlongZ = depth * 0.72f;
-            float rimThickness = Mathf.Max(width, depth) * 0.12f;
+            float rimX = width * 0.52f;
+            float rimZ = depth * 0.52f;
+            float rimThickness = Mathf.Max(width, depth) * 0.10f;
 
-            // Four edge midpoints — thin boxes that hug the apron, never the board center.
-            PlaceRimMistPuff(root.transform, "Mist_N",
-                new Vector3(0f, 0.55f, rimZ),
-                new Vector3(edgeAlongX, 0.55f, rimThickness),
-                new Color(0.78f, 0.74f, 0.62f, 0.38f),
-                driftX: new ParticleSystem.MinMaxCurve(-0.12f, 0.12f),
-                driftZ: new ParticleSystem.MinMaxCurve(-0.04f, 0.02f));
-
-            PlaceRimMistPuff(root.transform, "Mist_S",
-                new Vector3(0f, 0.48f, -rimZ),
-                new Vector3(edgeAlongX, 0.5f, rimThickness),
-                new Color(0.72f, 0.78f, 0.86f, 0.34f),
-                driftX: new ParticleSystem.MinMaxCurve(-0.12f, 0.12f),
-                driftZ: new ParticleSystem.MinMaxCurve(-0.02f, 0.04f));
-
-            PlaceRimMistPuff(root.transform, "Mist_E",
-                new Vector3(rimX, 0.52f, 0f),
-                new Vector3(rimThickness, 0.55f, edgeAlongZ),
-                new Color(0.76f, 0.72f, 0.64f, 0.36f),
-                driftX: new ParticleSystem.MinMaxCurve(-0.04f, 0.02f),
-                driftZ: new ParticleSystem.MinMaxCurve(-0.12f, 0.12f));
-
-            PlaceRimMistPuff(root.transform, "Mist_W",
-                new Vector3(-rimX, 0.5f, 0f),
-                new Vector3(rimThickness, 0.5f, edgeAlongZ),
-                new Color(0.70f, 0.76f, 0.84f, 0.32f),
-                driftX: new ParticleSystem.MinMaxCurve(-0.02f, 0.04f),
-                driftZ: new ParticleSystem.MinMaxCurve(-0.12f, 0.12f));
-
-            // Corner accents — slightly higher/warmer so the rim reads as volume, still off-center.
+            // Two far corners only — not four full edges (was skimming the playable face).
             PlaceRimMistPuff(root.transform, "Mist_NW",
-                new Vector3(-rimX * 0.92f, 0.72f, rimZ * 0.92f),
-                new Vector3(rimThickness * 1.4f, 0.65f, rimThickness * 1.4f),
-                new Color(0.80f, 0.74f, 0.58f, 0.40f),
-                driftX: new ParticleSystem.MinMaxCurve(0.02f, 0.10f),
-                driftZ: new ParticleSystem.MinMaxCurve(-0.10f, -0.02f));
+                new Vector3(-rimX * 0.95f, 0.55f, rimZ * 0.95f),
+                new Vector3(rimThickness * 1.2f, 0.45f, rimThickness * 1.2f),
+                new Color(0.92f, 0.90f, 0.86f, 0.18f),
+                driftX: new ParticleSystem.MinMaxCurve(0.02f, 0.08f),
+                driftZ: new ParticleSystem.MinMaxCurve(-0.08f, -0.02f));
 
             PlaceRimMistPuff(root.transform, "Mist_SE",
-                new Vector3(rimX * 0.92f, 0.68f, -rimZ * 0.92f),
-                new Vector3(rimThickness * 1.4f, 0.6f, rimThickness * 1.4f),
-                new Color(0.68f, 0.74f, 0.82f, 0.36f),
-                driftX: new ParticleSystem.MinMaxCurve(-0.10f, -0.02f),
-                driftZ: new ParticleSystem.MinMaxCurve(0.02f, 0.10f));
+                new Vector3(rimX * 0.95f, 0.5f, -rimZ * 0.95f),
+                new Vector3(rimThickness * 1.2f, 0.4f, rimThickness * 1.2f),
+                new Color(0.88f, 0.90f, 0.94f, 0.16f),
+                driftX: new ParticleSystem.MinMaxCurve(-0.08f, -0.02f),
+                driftZ: new ParticleSystem.MinMaxCurve(0.02f, 0.08f));
 
-            // Pack distant/main fog — rim apron only, low rate, never a full-board volume.
             PlaceRimPackFog(
                 ref _fogDistantPrefab,
                 FogDistantResourcePath,
                 "FogDistant_N",
-                new Vector3(0f, 1.1f, depth * 0.58f),
-                width * 0.85f,
-                rimThickness * 1.6f,
-                rateOverTime: 8f,
-                startSize: new ParticleSystem.MinMaxCurve(1.8f, 3.2f),
-                startColor: new Color(0.70f, 0.74f, 0.82f, 0.22f));
+                new Vector3(0f, 1.15f, depth * 0.62f),
+                width * 0.7f,
+                rimThickness * 1.4f,
+                rateOverTime: 4f,
+                startSize: new ParticleSystem.MinMaxCurve(1.5f, 2.6f),
+                startColor: new Color(0.82f, 0.84f, 0.90f, 0.12f));
 
             PlaceRimPackFog(
                 ref _fogDistantPrefab,
                 FogDistantResourcePath,
                 "FogDistant_S",
-                new Vector3(0f, 1.0f, -depth * 0.58f),
-                width * 0.85f,
-                rimThickness * 1.6f,
-                rateOverTime: 8f,
-                startSize: new ParticleSystem.MinMaxCurve(1.8f, 3.2f),
-                startColor: new Color(0.72f, 0.70f, 0.62f, 0.20f));
-
-            PlaceRimPackFog(
-                ref _fogMainPrefab,
-                FogMainResourcePath,
-                "FogMain_E",
-                new Vector3(width * 0.58f, 0.85f, 0f),
-                rimThickness * 1.5f,
-                depth * 0.7f,
-                rateOverTime: 6f,
-                startSize: new ParticleSystem.MinMaxCurve(1.4f, 2.4f),
-                startColor: new Color(0.74f, 0.70f, 0.58f, 0.18f));
-
-            PlaceRimPackFog(
-                ref _fogMainPrefab,
-                FogMainResourcePath,
-                "FogMain_W",
-                new Vector3(-width * 0.58f, 0.85f, 0f),
-                rimThickness * 1.5f,
-                depth * 0.7f,
-                rateOverTime: 6f,
-                startSize: new ParticleSystem.MinMaxCurve(1.4f, 2.4f),
-                startColor: new Color(0.68f, 0.74f, 0.80f, 0.18f));
+                new Vector3(0f, 1.05f, -depth * 0.62f),
+                width * 0.7f,
+                rimThickness * 1.4f,
+                rateOverTime: 4f,
+                startSize: new ParticleSystem.MinMaxCurve(1.5f, 2.6f),
+                startColor: new Color(0.86f, 0.84f, 0.78f, 0.10f));
         }
 
         /// <summary>
@@ -677,19 +657,39 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Shared CloudAtlas material for ceiling cloud puffs — Alpha blend so painted LA shading
-        /// (white tops / soft blue-grey undersides) survives. Soft edge RGB is near-white so the
-        /// fringe does not stroke a dark outline against the void.
+        /// Shared opaque URP Lit clay for sphere lobes — desk-lamp shading gives volume; no alpha
+        /// fringe, so no dark 边缘 rings (billboard failure mode on image copy 13).
         /// </summary>
-        private static Material CloudMaterial()
+        private static Material ClayCloudMaterial()
         {
-            if (_cloudMaterial != null)
+            if (_clayCloudMaterial != null)
             {
-                return _cloudMaterial;
+                return _clayCloudMaterial;
             }
 
-            _cloudMaterial = CreateAtlasParticleMaterial(new Color(1f, 1f, 1f, 1f), additive: false);
-            return _cloudMaterial;
+            var lit = Shader.Find("Universal Render Pipeline/Lit")
+                ?? Shader.Find("Universal Render Pipeline/Simple Lit")
+                ?? Shader.Find("Standard");
+            _clayCloudMaterial = new Material(lit);
+            var cream = new Color(0.97f, 0.98f, 1f, 1f);
+            _clayCloudMaterial.color = cream;
+            if (_clayCloudMaterial.HasProperty("_BaseColor"))
+            {
+                _clayCloudMaterial.SetColor("_BaseColor", cream);
+            }
+
+            if (_clayCloudMaterial.HasProperty("_Metallic"))
+            {
+                _clayCloudMaterial.SetFloat("_Metallic", 0f);
+            }
+
+            if (_clayCloudMaterial.HasProperty("_Smoothness"))
+            {
+                // Soft clay sheen — enough to read sphere volume under the desk lamp.
+                _clayCloudMaterial.SetFloat("_Smoothness", 0.42f);
+            }
+
+            return _clayCloudMaterial;
         }
 
         /// <summary>
