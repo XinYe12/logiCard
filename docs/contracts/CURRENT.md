@@ -18,13 +18,13 @@ change — root-caused directly (probe `clearFlags` never set, rendering the wro
 **Clouds**: replaced primitive spheres with real textured particle clouds (Kenney CC0 sprite atlas). Both
 worker slots closed again after C60/C61 (2026-08-11). **Still open:** human sighted pass on C60 vibrancy
 (runtime grade actually warm now) + C61 scroll zoom feel + earlier reflection/clouds/Scout outfit items.
-**Updated:** 2026-08-12 by Integrator (door leaf fit in progress on main tree; no worker contract).
+**Updated:** 2026-08-12 by Integrator (door look + fog/mist + PH 2K landed; no worker contract).
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
 
-_(none currently open — no worker assigned. Integrator owns `BoardView` / `DoorLeafFitter` door fit on main tree.)_
+_(none currently open — no worker assigned. Slots free after Integrator presentation push.)_
 
 ## Closed contracts (reference)
 
