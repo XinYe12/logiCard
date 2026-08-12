@@ -64,14 +64,12 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Cloud scale/height correction, tuned 2026-08-09 and carried forward through the
-        /// billboard-particle rework (2026-08-10) and pack rain/Zap wiring. Shrunk ~45% and pushed
-        /// further back/up after the HUD dock move (orthographicSize 9.0 -> 5.0). Orthogonal to the
-        /// rendering technique — puff positions/footprints below consume these factors so the
-        /// "contained pocket, not looming over the board" framing stays correct.
+        /// Cloud scale/height — kept as a contained shelf over the chunk (not open-world sky).
+        /// 2026-08-12 human Play (`image copy 9`): height boost 2.1 put the bank above the ortho
+        /// frustum so the pocket vanished against the void; lowered so the shelf sits in-frame.
         /// </summary>
-        private const float InterimCloudScale = 0.65f;
-        private const float InterimCloudHeightBoost = 2.1f;
+        private const float InterimCloudScale = 0.85f;
+        private const float InterimCloudHeightBoost = 1.15f;
 
         /// <summary>
         /// Cloud sprite atlas: 4x2 grid of Kenney "Smoke Particles" (CC0) puff silhouettes, composed
@@ -84,9 +82,9 @@ namespace LogiCard.Board
         /// <summary>Particle count scales with each puff's footprint (world-unit width * depth), clamped
         /// so tiny fringe puffs still read as a cluster and the wide ceiling shelf doesn't spawn a huge
         /// batch of overlapping billboards.</summary>
-        private const float CloudParticleDensity = 1.0f;
-        private const int CloudParticlesMin = 8;
-        private const int CloudParticlesMax = 22;
+        private const float CloudParticleDensity = 1.35f;
+        private const int CloudParticlesMin = 12;
+        private const int CloudParticlesMax = 28;
 
         /// <summary>Not a real "infinite" lifetime (Unity has none) — long enough that a burst-spawned,
         /// non-moving puff cluster never visibly expires during a play session.</summary>
@@ -98,35 +96,35 @@ namespace LogiCard.Board
             root.transform.SetParent(transform, false);
 
             // Dense ceiling layer — the solid cloud shelf the reference sits right above the chunk.
+            // Tints are mid/light gray (not near-black): dark storm colors vanish on SolidColor void.
             PlaceCloudPuff(root.transform, "Ceiling", new Vector3(0f, 3.6f * InterimCloudHeightBoost, 0f),
                 new Vector3(width * 1.15f, 0.85f, depth * 1.1f) * InterimCloudScale,
-                new Color(0.22f, 0.24f, 0.30f, 1f));
+                new Color(0.62f, 0.64f, 0.70f, 1f));
 
             // Mid puffs — break the silhouette so it reads as volume, not one flat slab.
             PlaceCloudPuff(root.transform, "Puff_NW", new Vector3(-width * 0.28f, 3.15f * InterimCloudHeightBoost, depth * 0.22f),
                 new Vector3(width * 0.55f, 0.7f, depth * 0.42f) * InterimCloudScale,
-                new Color(0.28f, 0.30f, 0.36f, 1f));
+                new Color(0.68f, 0.70f, 0.76f, 1f));
             PlaceCloudPuff(root.transform, "Puff_SE", new Vector3(width * 0.30f, 3.25f * InterimCloudHeightBoost, -depth * 0.20f),
                 new Vector3(width * 0.50f, 0.65f, depth * 0.45f) * InterimCloudScale,
-                new Color(0.26f, 0.28f, 0.34f, 1f));
+                new Color(0.66f, 0.68f, 0.74f, 1f));
             PlaceCloudPuff(root.transform, "Puff_NE", new Vector3(width * 0.22f, 3.55f * InterimCloudHeightBoost, depth * 0.28f),
                 new Vector3(width * 0.48f, 0.55f, depth * 0.38f) * InterimCloudScale,
-                new Color(0.20f, 0.22f, 0.28f, 1f));
+                new Color(0.58f, 0.60f, 0.66f, 1f));
             PlaceCloudPuff(root.transform, "Puff_SW", new Vector3(-width * 0.18f, 3.05f * InterimCloudHeightBoost, -depth * 0.26f),
                 new Vector3(width * 0.42f, 0.5f, depth * 0.36f) * InterimCloudScale,
-                new Color(0.30f, 0.32f, 0.38f, 1f));
+                new Color(0.70f, 0.72f, 0.78f, 1f));
             PlaceCloudPuff(root.transform, "Puff_Center", new Vector3(0.1f * width, 3.4f * InterimCloudHeightBoost, 0.05f * depth),
                 new Vector3(width * 0.62f, 0.75f, depth * 0.55f) * InterimCloudScale,
-                new Color(0.24f, 0.26f, 0.32f, 1f));
+                new Color(0.64f, 0.66f, 0.72f, 1f));
 
-            // Lower fringe — slightly warmer/lighter so the pocket catches a hint of ground bounce
-            // (the reference's under-lit cloud bellies) without needing streetlamps yet.
+            // Lower fringe — warmer under-lit bellies so the pocket catches ground bounce.
             PlaceCloudPuff(root.transform, "Fringe_A", new Vector3(-width * 0.35f, 2.7f * InterimCloudHeightBoost, 0.05f * depth),
                 new Vector3(width * 0.40f, 0.35f, depth * 0.30f) * InterimCloudScale,
-                new Color(0.34f, 0.32f, 0.30f, 1f));
+                new Color(0.78f, 0.74f, 0.66f, 1f));
             PlaceCloudPuff(root.transform, "Fringe_B", new Vector3(width * 0.32f, 2.75f * InterimCloudHeightBoost, depth * 0.10f),
                 new Vector3(width * 0.38f, 0.32f, depth * 0.28f) * InterimCloudScale,
-                new Color(0.32f, 0.30f, 0.28f, 1f));
+                new Color(0.76f, 0.72f, 0.64f, 1f));
         }
 
         /// <summary>
@@ -155,7 +153,7 @@ namespace LogiCard.Board
                 CloudParticlesMax);
             // Overlap factor > 1 so neighboring billboards blend into one mass rather than sitting as
             // visibly separate discs across the puff's footprint.
-            float baseSize = Mathf.Sqrt(footprint / count) * 1.35f;
+            float baseSize = Mathf.Sqrt(footprint / count) * 1.75f;
 
             var main = ps.main;
             main.loop = false;
@@ -163,11 +161,11 @@ namespace LogiCard.Board
             main.duration = 1f;
             main.startLifetime = new ParticleSystem.MinMaxCurve(CloudParticleLifetimeSeconds);
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.75f, baseSize * 1.35f);
+            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.85f, baseSize * 1.45f);
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f * Mathf.Deg2Rad);
             main.startColor = new ParticleSystem.MinMaxGradient(
-                new Color(tint.r * 0.85f, tint.g * 0.85f, tint.b * 0.85f, 0.85f),
-                new Color(Mathf.Min(1f, tint.r * 1.15f), Mathf.Min(1f, tint.g * 1.15f), Mathf.Min(1f, tint.b * 1.15f), 0.98f));
+                new Color(tint.r * 0.9f, tint.g * 0.9f, tint.b * 0.9f, 0.92f),
+                new Color(Mathf.Min(1f, tint.r * 1.12f), Mathf.Min(1f, tint.g * 1.12f), Mathf.Min(1f, tint.b * 1.12f), 1f));
             main.maxParticles = Mathf.Max(count, 4);
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
             main.gravityModifier = 0f;
@@ -181,9 +179,9 @@ namespace LogiCard.Board
             var shape = ps.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Box;
-            // Explicit full-volume fill (default box "emit from" can otherwise be shell-only) — puffs
-            // should scatter particles throughout the bounding box, not just its outer surface.
-            shape.boxThickness = Vector3.one;
+            // Thickness 0 = emit throughout the box volume. Vector3.one was wrong: on thin puff
+            // boxes it collapses the emit volume so the CloudBank looks empty in Play.
+            shape.boxThickness = Vector3.zero;
             shape.scale = new Vector3(
                 Mathf.Max(localScale.x, 0.05f),
                 Mathf.Max(localScale.y, 0.05f),
@@ -502,7 +500,7 @@ namespace LogiCard.Board
             var shape = ps.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Box;
-            shape.boxThickness = Vector3.one;
+            shape.boxThickness = Vector3.zero;
             shape.scale = new Vector3(
                 Mathf.Max(localScale.x, 0.05f),
                 Mathf.Max(localScale.y, 0.05f),
@@ -741,6 +739,7 @@ namespace LogiCard.Board
             }
 
             // new Material(URP Particles/Unlit) defaults Opaque — force transparent or atlas alpha is lost.
+            mat.SetOverrideTag("RenderType", "Transparent");
             if (mat.HasProperty("_Surface"))
             {
                 mat.SetFloat("_Surface", 1f);
@@ -766,7 +765,13 @@ namespace LogiCard.Board
                 mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
             }
 
+            if (mat.HasProperty("_AlphaClip"))
+            {
+                mat.SetFloat("_AlphaClip", 0f);
+            }
+
             mat.DisableKeyword("_ALPHATEST_ON");
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
             mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             mat.renderQueue = (int)RenderQueue.Transparent;
 

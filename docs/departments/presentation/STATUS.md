@@ -21,7 +21,7 @@
 3. **Rain + Zap:** Unchanged pack wiring kept.
 4. **Import tool:** Catalog adds `PF_Fog_Main` / `PF_Fog_Distant`; batchmode Run copied **7** prefabs.
 5. **Tests (this worktree):** EditMode **137/137**, PlayMode **48/48** (new smoke: CloudBank + RimMist + CloudAtlas texture on puff mats; asserts no FogGround/RainMist).
-6. **Visual:** Structural smoke green under `-nographics`. Ortho look / no white-out still needs human Play in this worktree Editor (screenshot optional).
+6. **Visual:** Structural smoke green under `-nographics`. Human Play (`image copy 9`) showed **no clouds** — Integrator fix pending commit: boxThickness volume emit + lower shelf height + brighter tints. Re-Play this worktree before merge.
 
 ## In progress
 
