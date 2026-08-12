@@ -73,19 +73,20 @@ namespace LogiCard.Board
         private const float InterimCloudHeightBoost = 1.7f;
 
         /// <summary>
-        /// Soft LA-style CloudAtlas (4x2): glued bulbous lobes with white tops + soft blue-grey
-        /// undersides (<c>Tools/gen_soft_cloud_atlas.py</c>; ref <c>image copy 11.png</c>). No dark
-        /// smoke rim. Kenney whitePuff frames kept under Textures/ for provenance only.
+        /// Soft LA-style CloudAtlas (4x2): eight distinct silhouettes (raft / stack / comma / twins /
+        /// …) with brighter lobe tops + pale recess AO. Edge RGB lifted so 边缘 does not read deep
+        /// grey (<c>image copy 12</c>). Generator: <c>Tools/gen_soft_cloud_atlas.py</c>.
         /// </summary>
         private const int CloudAtlasColumns = 4;
         private const int CloudAtlasRows = 2;
+        private const int CloudAtlasFrameCount = CloudAtlasColumns * CloudAtlasRows;
 
         /// <summary>
         /// Few large billboards per mass — LA clouds are big glued pillows, not particle confetti.
         /// </summary>
-        private const float CloudParticleDensity = 0.14f;
-        private const int CloudParticlesMin = 3;
-        private const int CloudParticlesMax = 6;
+        private const float CloudParticleDensity = 0.12f;
+        private const int CloudParticlesMin = 2;
+        private const int CloudParticlesMax = 5;
 
         /// <summary>Not a real "infinite" lifetime (Unity has none) — long enough that a burst-spawned,
         /// non-moving puff cluster never visibly expires during a play session.</summary>
@@ -96,32 +97,46 @@ namespace LogiCard.Board
             var root = new GameObject("CloudBank");
             root.transform.SetParent(transform, false);
 
-            // Three big overlapping masses high above the board — LA backdrop density, not a low fog lid.
+            // Each mass pins a different atlas-frame band so the bank doesn't read as one cloned puff
+            // (human Play image copy 12: "only one cloud model").
             PlaceCloudPuff(root.transform, "Mass_Main",
                 new Vector3(0f, 3.9f * InterimCloudHeightBoost, 0.02f * depth),
                 new Vector3(width * 1.05f, 1.25f, depth * 0.85f) * InterimCloudScale,
-                new Color(1f, 1f, 1f, 1f));
+                new Color(1f, 1f, 1f, 1f),
+                frameMin: 0, frameMax: 2);
 
             PlaceCloudPuff(root.transform, "Mass_NW",
                 new Vector3(-width * 0.26f, 3.7f * InterimCloudHeightBoost, depth * 0.18f),
                 new Vector3(width * 0.7f, 1.15f, depth * 0.58f) * InterimCloudScale,
-                new Color(0.98f, 0.99f, 1f, 1f));
+                new Color(0.97f, 0.98f, 1f, 1f),
+                frameMin: 3, frameMax: 5);
 
             PlaceCloudPuff(root.transform, "Mass_SE",
                 new Vector3(width * 0.28f, 3.75f * InterimCloudHeightBoost, -depth * 0.16f),
                 new Vector3(width * 0.68f, 1.1f, depth * 0.55f) * InterimCloudScale,
-                new Color(1f, 0.99f, 0.97f, 1f));
+                new Color(1f, 0.99f, 0.96f, 1f),
+                frameMin: 5, frameMax: 7);
+
+            // Small high accent — different silhouette band, adds depth layering.
+            PlaceCloudPuff(root.transform, "Mass_High",
+                new Vector3(-width * 0.06f, 4.15f * InterimCloudHeightBoost, -depth * 0.08f),
+                new Vector3(width * 0.42f, 0.85f, depth * 0.36f) * InterimCloudScale,
+                new Color(1f, 1f, 1f, 1f),
+                frameMin: 1, frameMax: 4);
         }
 
         /// <summary>
-        /// One coherent LA-style cloud mass: few large shaded-lobe billboards, heavily overlapped.
+        /// One coherent LA-style cloud mass. <paramref name="frameMin"/>/<paramref name="frameMax"/>
+        /// pin TextureSheet start frames so neighboring masses show different atlas shapes.
         /// </summary>
         private static void PlaceCloudPuff(
             Transform parent,
             string name,
             Vector3 localPosition,
             Vector3 localScale,
-            Color tint)
+            Color tint,
+            int frameMin,
+            int frameMax)
         {
             var puff = new GameObject(name);
             puff.transform.SetParent(parent, false);
@@ -135,8 +150,7 @@ namespace LogiCard.Board
                 Mathf.RoundToInt(footprint * CloudParticleDensity),
                 CloudParticlesMin,
                 CloudParticlesMax);
-            // Large discs — atlas already holds a glued multi-lobe pillow per frame.
-            float baseSize = Mathf.Sqrt(footprint / count) * 3.4f;
+            float baseSize = Mathf.Sqrt(footprint / count) * 3.55f;
 
             var main = ps.main;
             main.loop = false;
@@ -144,11 +158,11 @@ namespace LogiCard.Board
             main.duration = 1f;
             main.startLifetime = new ParticleSystem.MinMaxCurve(CloudParticleLifetimeSeconds);
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.95f, baseSize * 1.12f);
-            main.startRotation = new ParticleSystem.MinMaxCurve(-12f * Mathf.Deg2Rad, 12f * Mathf.Deg2Rad);
-            // Near-opaque so painted blue-grey undersides read (Additive washed that shading away).
+            // Wider size range → nearer/farther lobes read more 3D inside one mass.
+            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.78f, baseSize * 1.28f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(-25f * Mathf.Deg2Rad, 25f * Mathf.Deg2Rad);
             main.startColor = new ParticleSystem.MinMaxGradient(
-                new Color(tint.r * 0.98f, tint.g * 0.98f, tint.b * 0.98f, 0.88f),
+                new Color(tint.r * 0.98f, tint.g * 0.98f, tint.b * 0.98f, 0.9f),
                 new Color(Mathf.Min(1f, tint.r * 1.02f), Mathf.Min(1f, tint.g * 1.02f), Mathf.Min(1f, tint.b * 1.02f), 0.98f));
             main.maxParticles = Mathf.Max(count, 3);
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
@@ -163,12 +177,15 @@ namespace LogiCard.Board
             var shape = ps.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Sphere;
-            float radius = 0.42f * Mathf.Max(localScale.x, localScale.z);
+            float radius = 0.38f * Mathf.Max(localScale.x, localScale.z);
             shape.radius = Mathf.Max(radius, 0.25f);
             shape.radiusThickness = 1f;
-            shape.scale = new Vector3(1f, Mathf.Clamp(localScale.y / Mathf.Max(radius, 0.01f), 0.5f, 1.2f), 1f);
+            shape.scale = new Vector3(1f, Mathf.Clamp(localScale.y / Mathf.Max(radius, 0.01f), 0.55f, 1.25f), 1f);
             shape.position = Vector3.zero;
             shape.rotation = Vector3.zero;
+
+            int lo = Mathf.Clamp(frameMin, 0, CloudAtlasFrameCount - 1);
+            int hi = Mathf.Clamp(frameMax, lo, CloudAtlasFrameCount - 1);
 
             var tsa = ps.textureSheetAnimation;
             tsa.enabled = true;
@@ -177,7 +194,7 @@ namespace LogiCard.Board
             tsa.numTilesY = CloudAtlasRows;
             tsa.animation = ParticleSystemAnimationType.WholeSheet;
             tsa.frameOverTime = new ParticleSystem.MinMaxCurve(0f);
-            tsa.startFrame = new ParticleSystem.MinMaxCurve(0f, CloudAtlasColumns * CloudAtlasRows - 1);
+            tsa.startFrame = new ParticleSystem.MinMaxCurve(lo, hi);
             tsa.cycleCount = 1;
 
             var renderer = puff.GetComponent<ParticleSystemRenderer>();

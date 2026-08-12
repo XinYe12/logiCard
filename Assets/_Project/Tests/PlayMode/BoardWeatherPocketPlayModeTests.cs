@@ -21,8 +21,8 @@ namespace LogiCard.Tests.PlayMode
 
             Transform cloudBank = weather.transform.Find("CloudBank");
             Assert.That(cloudBank, Is.Not.Null, "Expected CloudBank child.");
-            Assert.That(cloudBank.childCount, Is.GreaterThanOrEqualTo(3),
-                "CloudAtlas bank should place a few coherent LA-style masses.");
+            Assert.That(cloudBank.childCount, Is.GreaterThanOrEqualTo(4),
+                "CloudAtlas bank should place several coherent masses with varied frames.");
 
             Transform rimMist = weather.transform.Find("RimMist");
             Assert.That(rimMist, Is.Not.Null, "Expected RimMist child (rim-only Kenney mist).");
