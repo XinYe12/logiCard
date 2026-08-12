@@ -7,6 +7,7 @@ namespace LogiCard.UI
     /// <summary>
     /// Generic confirmation / popup: title, body, 1–2 action buttons over a dimmed full-screen blocker.
     /// Reusable for Quit confirms, future matchmaking errors, etc. — not one-off per call site.
+    /// Visual language: warm cardstock on a deep dimmer (ART_DIRECTION Desk-Lamp / UI_TOOLS stub 5).
     /// </summary>
     public sealed class ModalDialog
     {
@@ -62,23 +63,40 @@ namespace LogiCard.UI
 
             // Centered ~40%×40% card — the old 56%×44% band stretched unreadably on ultrawide and
             // left title/body/buttons floating in a wide empty panel at 16:9.
-            RectTransform card = ui.CreatePanel(dimmer, "DialogCard", UiStyle.Card,
-                new Vector2(0.28f, 0.28f), new Vector2(0.72f, 0.72f), UiStyle.RoundSprite, Image.Type.Sliced);
+            Vector2 cardMin = new Vector2(0.28f, 0.28f);
+            Vector2 cardMax = new Vector2(0.72f, 0.72f);
 
-            Text titleText = ui.CreateText(card, "Title", title ?? string.Empty, 34, TextAnchor.MiddleCenter, UiStyle.Ink,
+            // Soft shadow: same footprint as the card, nudged down-right and slightly larger.
+            RectTransform shadow = ui.CreatePanel(dimmer, "DialogShadow", UiStyle.ModalShadow,
+                cardMin, cardMax, UiStyle.RoundSprite, Image.Type.Sliced);
+            shadow.offsetMin = new Vector2(-10f, -18f);
+            shadow.offsetMax = new Vector2(14f, -6f);
+            shadow.GetComponent<Image>().raycastTarget = false;
+
+            // Paper rim under the face (thin warm edge without a sprite pack).
+            RectTransform border = ui.CreatePanel(dimmer, "DialogBorder", UiStyle.ModalCardBorder,
+                cardMin, cardMax, UiStyle.RoundSprite, Image.Type.Sliced);
+            border.offsetMin = new Vector2(-4f, -4f);
+            border.offsetMax = new Vector2(4f, 4f);
+            border.GetComponent<Image>().raycastTarget = false;
+
+            RectTransform card = ui.CreatePanel(dimmer, "DialogCard", UiStyle.ModalCard,
+                cardMin, cardMax, UiStyle.RoundSprite, Image.Type.Sliced);
+
+            Text titleText = ui.CreateText(card, "Title", title ?? string.Empty, 34, TextAnchor.MiddleCenter, UiStyle.ModalInk,
                 UiTextOverflow.SingleLine);
             titleText.fontStyle = FontStyle.Bold;
             UiFactory.Stretch(titleText.rectTransform, new Vector2(0.08f, 0.70f), new Vector2(0.92f, 0.92f));
 
-            Text bodyText = ui.CreateText(card, "Body", body ?? string.Empty, 22, TextAnchor.MiddleCenter, UiStyle.Ink);
+            Text bodyText = ui.CreateText(card, "Body", body ?? string.Empty, 22, TextAnchor.MiddleCenter, UiStyle.ModalInk);
             UiFactory.Stretch(bodyText.rectTransform, new Vector2(0.1f, 0.36f), new Vector2(0.9f, 0.68f));
 
-            ui.CreatePanel(card, "Divider", UiStyle.AccentDim, new Vector2(0.12f, 0.29f), new Vector2(0.88f, 0.31f), UiStyle.RoundSprite, Image.Type.Sliced);
+            ui.CreatePanel(card, "Divider", UiStyle.ModalDivider, new Vector2(0.12f, 0.29f), new Vector2(0.88f, 0.31f), UiStyle.RoundSprite, Image.Type.Sliced);
 
             bool hasSecondary = !string.IsNullOrEmpty(secondaryLabel);
             if (hasSecondary)
             {
-                Button secondary = ui.CreateButton(card, "ModalSecondary", secondaryLabel, UiStyle.SecondaryButton, UiStyle.Ink, 26,
+                Button secondary = ui.CreateButton(card, "ModalSecondary", secondaryLabel, UiStyle.ModalSecondaryButton, UiStyle.ModalInk, 26,
                     () =>
                     {
                         dialog.Close();
@@ -88,7 +106,7 @@ namespace LogiCard.UI
                 UiFactory.Stretch(secondary.GetComponent<RectTransform>(),
                     new Vector2(0.08f, 0.10f), new Vector2(0.46f, 0.30f));
 
-                Button primary = ui.CreateButton(card, "ModalPrimary", primaryLabel ?? "OK", UiStyle.PrimaryButton, UiStyle.PrimaryButtonText, 26,
+                Button primary = ui.CreateButton(card, "ModalPrimary", primaryLabel ?? "OK", UiStyle.ModalPrimaryButton, UiStyle.ModalPrimaryButtonText, 26,
                     () =>
                     {
                         dialog.Close();
@@ -100,7 +118,7 @@ namespace LogiCard.UI
             }
             else
             {
-                Button primary = ui.CreateButton(card, "ModalPrimary", primaryLabel ?? "OK", UiStyle.PrimaryButton, UiStyle.PrimaryButtonText, 28,
+                Button primary = ui.CreateButton(card, "ModalPrimary", primaryLabel ?? "OK", UiStyle.ModalPrimaryButton, UiStyle.ModalPrimaryButtonText, 28,
                     () =>
                     {
                         dialog.Close();
