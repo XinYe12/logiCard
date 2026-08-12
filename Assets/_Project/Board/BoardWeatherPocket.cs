@@ -137,34 +137,35 @@ namespace LogiCard.Board
                 new Vector3(0f, 3.9f * InterimCloudHeightBoost, 0.02f * depth),
                 new Vector3(width * 1.05f, 1.35f, depth * 0.85f) * InterimCloudScale,
                 PatternRaft,
-                topTint: new Color(0.97f, 0.98f, 1f),
-                bellyTint: new Color(0.86f, 0.90f, 0.96f));
+                topTint: new Color(1f, 1f, 1f),
+                bellyTint: new Color(0.94f, 0.96f, 1f));
 
             PlaceClayMass(root.transform, "Mass_NW",
                 new Vector3(-width * 0.26f, 3.75f * InterimCloudHeightBoost, depth * 0.18f),
                 new Vector3(width * 0.72f, 1.25f, depth * 0.58f) * InterimCloudScale,
                 PatternStack,
-                topTint: new Color(0.96f, 0.97f, 1f),
-                bellyTint: new Color(0.84f, 0.88f, 0.95f));
+                topTint: new Color(0.99f, 0.99f, 1f),
+                bellyTint: new Color(0.93f, 0.95f, 1f));
 
             PlaceClayMass(root.transform, "Mass_SE",
                 new Vector3(width * 0.28f, 3.8f * InterimCloudHeightBoost, -depth * 0.16f),
                 new Vector3(width * 0.7f, 1.2f, depth * 0.55f) * InterimCloudScale,
                 PatternComma,
-                topTint: new Color(1f, 0.99f, 0.97f),
-                bellyTint: new Color(0.90f, 0.88f, 0.84f));
+                topTint: new Color(1f, 0.99f, 0.98f),
+                bellyTint: new Color(0.96f, 0.95f, 0.93f));
 
             PlaceClayMass(root.transform, "Mass_High",
                 new Vector3(-width * 0.05f, 4.2f * InterimCloudHeightBoost, -depth * 0.06f),
                 new Vector3(width * 0.45f, 0.95f, depth * 0.38f) * InterimCloudScale,
                 PatternCrown,
                 topTint: new Color(1f, 1f, 1f),
-                bellyTint: new Color(0.88f, 0.91f, 0.97f));
+                bellyTint: new Color(0.95f, 0.96f, 1f));
         }
 
         /// <summary>
-        /// One LA-style cloud mass: overlapping opaque sphere meshes (clay pillows), not camera-facing
-        /// sprites. Mesh stolen once from a disposable Sphere primitive — never left in the scene as fog.
+        /// One LA-style cloud mass: overlapping opaque sphere meshes (clay pillows).
+        /// No cast shadows (image copy 14: shadow ate the board). No Lit terminator darkening —
+        /// Unlit + soft shade map keeps crowns bright and bellies pale, not mid-grey 边缘.
         /// </summary>
         private static void PlaceClayMass(
             Transform parent,
@@ -195,7 +196,8 @@ namespace LogiCard.Board
                     lobe.UnitOffset.z * massScale.z);
                 go.transform.localPosition = pos;
 
-                float diameter = lobe.RadiusNorm * footprint * 2f;
+                // Slightly oversized so lobes swallow each other (glued clay, not separate balls).
+                float diameter = lobe.RadiusNorm * footprint * 2.15f;
                 go.transform.localScale = Vector3.one * diameter;
 
                 var filter = go.AddComponent<MeshFilter>();
@@ -203,8 +205,10 @@ namespace LogiCard.Board
 
                 var renderer = go.AddComponent<MeshRenderer>();
                 renderer.sharedMaterial = clay;
-                renderer.shadowCastingMode = ShadowCastingMode.On;
-                renderer.receiveShadows = true;
+                // Shadows off — cast shadow blacked out the board (image copy 14); self-receive
+                // carved harsh crevices between lobes.
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
 
                 var block = new MaterialPropertyBlock();
                 Color tint = lobe.Belly ? bellyTint : topTint;
@@ -657,8 +661,9 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Shared opaque URP Lit clay for sphere lobes — desk-lamp shading gives volume; no alpha
-        /// fringe, so no dark 边缘 rings (billboard failure mode on image copy 13).
+        /// Soft Unlit clay for sphere lobes. Lit diffuse was darkening sphere limbs into mid-grey
+        /// "边缘" against the void (image copy 14). Painted vertical shade map = bright crown /
+        /// pale belly without a harsh terminator; no cast shadows so the board stays readable.
         /// </summary>
         private static Material ClayCloudMaterial()
         {
@@ -667,26 +672,26 @@ namespace LogiCard.Board
                 return _clayCloudMaterial;
             }
 
-            var lit = Shader.Find("Universal Render Pipeline/Lit")
-                ?? Shader.Find("Universal Render Pipeline/Simple Lit")
-                ?? Shader.Find("Standard");
-            _clayCloudMaterial = new Material(lit);
-            var cream = new Color(0.97f, 0.98f, 1f, 1f);
+            var unlit = Shader.Find("Universal Render Pipeline/Unlit")
+                ?? Shader.Find("Unlit/Color")
+                ?? Shader.Find("Sprites/Default");
+            _clayCloudMaterial = new Material(unlit);
+
+            Texture2D shade = Resources.Load<Texture2D>("Weather/ClaySphereShade");
+            if (shade != null)
+            {
+                _clayCloudMaterial.mainTexture = shade;
+                if (_clayCloudMaterial.HasProperty("_BaseMap"))
+                {
+                    _clayCloudMaterial.SetTexture("_BaseMap", shade);
+                }
+            }
+
+            var cream = new Color(1f, 1f, 1f, 1f);
             _clayCloudMaterial.color = cream;
             if (_clayCloudMaterial.HasProperty("_BaseColor"))
             {
                 _clayCloudMaterial.SetColor("_BaseColor", cream);
-            }
-
-            if (_clayCloudMaterial.HasProperty("_Metallic"))
-            {
-                _clayCloudMaterial.SetFloat("_Metallic", 0f);
-            }
-
-            if (_clayCloudMaterial.HasProperty("_Smoothness"))
-            {
-                // Soft clay sheen — enough to read sphere volume under the desk lamp.
-                _clayCloudMaterial.SetFloat("_Smoothness", 0.42f);
             }
 
             return _clayCloudMaterial;
