@@ -61,3 +61,6 @@ AssetStoreTools/
 
 _tmp_*/
 _tmp_*/**
+
+# Local 1K backup after 2K BoardSurfaces upgrade
+Assets/_Project/Art/Environment/Textures/_1k_backup_*/
