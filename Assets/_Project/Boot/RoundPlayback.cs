@@ -14,6 +14,11 @@ namespace LogiCard.Boot
     /// Local stand-in for the Host's authority loop (C23). At Lock In it collects every pawn's
     /// payload, resolves them into one <see cref="ReplayTape"/>, and from then on the Time Resource
     /// scrubber simply reads that tape. Between rounds it carries positions and wounds (C33).
+    ///
+    /// Presentation contract: <c>docs/PLAYBACK_CONTRACT.md</c>. Continuous state (pawn pose, doors,
+    /// tracers, muzzle, wound splats) is a pure function of scrubber seconds; one-shots (foley,
+    /// outcome banners) advance on the forward event cursor only. Do not restart timed FX on every
+    /// <see cref="ApplyTime"/> tick when tape-derived state is unchanged (door-bug class, 2026-08-12).
     /// </summary>
     public sealed class RoundPlayback : MonoBehaviour
     {
@@ -358,6 +363,11 @@ namespace LogiCard.Boot
             }
         }
 
+        /// <summary>
+        /// Scrub the armed tape to <paramref name="seconds"/> (Time Resource). Continuous presenters
+        /// re-derive visibility/state; one-shots only fire when the forward cursor crosses an event
+        /// (see PLAYBACK_CONTRACT §2).
+        /// </summary>
         private void ApplyTime(float seconds)
         {
             for (int i = 0; i < _pawns.Count; i++)
@@ -371,6 +381,7 @@ namespace LogiCard.Boot
                 return;
             }
 
+            // Build-once-at-arm + SetVisible from seconds — no coroutine restart (unlike the old door path).
             UpdateTracers(seconds);
             UpdateHitVfx(seconds);
             SyncDoorsToSeconds(seconds);

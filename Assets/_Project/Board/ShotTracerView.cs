@@ -57,5 +57,8 @@ namespace LogiCard.Board
                 _beam.gameObject.SetActive(visible);
             }
         }
+
+        /// <summary>Scrubber-derived visibility (PLAYBACK_CONTRACT continuous presenter).</summary>
+        public bool IsVisible => _beam != null && _beam.gameObject.activeSelf;
     }
 }

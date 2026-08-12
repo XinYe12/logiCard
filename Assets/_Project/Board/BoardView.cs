@@ -614,9 +614,8 @@ namespace LogiCard.Board
             bool open = state == DoorState.Open;
             Quaternion target = Quaternion.Euler(0f, open ? DoorOpenYawDegrees : 0f, 0f);
 
-            // Playback calls RefreshDoorVisuals every ApplyTime tick. If we restart the swing whenever
-            // SwingRoutine != null, every door's arc resets continuously and only finishes when the
-            // scrubber stops at the end of reveal (playtest 2026-08-12). Same state = leave alone.
+            // PLAYBACK_CONTRACT: same tape-derived state must not restart timed FX every ApplyTime
+            // tick (playtest 2026-08-12 — doors only finished when the Execute scrubber stopped).
             if (visual.DisplayedState == state)
             {
                 if (visual.Hinge != null && visual.SwingRoutine == null)

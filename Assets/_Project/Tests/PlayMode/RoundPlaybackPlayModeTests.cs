@@ -122,6 +122,100 @@ namespace LogiCard.Tests.PlayMode
                 "A Shoot must read differently from a Move on the board.");
         }
 
+        /// <summary>
+        /// PLAYBACK_CONTRACT: ShootFire continuous VFX are scrubber-faithful — absent just before
+        /// the aim window / fire second, present at the event, cleared on rewind.
+        /// </summary>
+        [Test]
+        public void ShootFireVfxFollowScrubberSeconds()
+        {
+            ArmWithAttackerMoveTo(AmbushPoint);
+
+            TapeEvent? fire = FirstEventOfType(Playback.Tape, TapeEventType.ShootFire);
+            Assert.That(fire.HasValue, Is.True, "Defender script must fire a shot.");
+
+            float beforeWindow = Mathf.Max(0f, fire.Value.WindowStartSeconds - 0.05f);
+            Clock.SetSeconds(beforeWindow);
+            Assert.That(AnyVisible(Object.FindObjectsByType<ShotTracerView>(FindObjectsSortMode.None)), Is.False,
+                "Tracer must not light before the shooter's aim/hold window.");
+            Assert.That(AnyVisible(Object.FindObjectsByType<MuzzleFlashView>(FindObjectsSortMode.None)), Is.False,
+                "Muzzle must not light before the fire second.");
+
+            Clock.SetSeconds(fire.Value.WindowStartSeconds);
+            Assert.That(AnyVisible(Object.FindObjectsByType<ShotTracerView>(FindObjectsSortMode.None)), Is.True,
+                "Tracer must light at WindowStartSeconds.");
+
+            Clock.SetSeconds(fire.Value.Seconds);
+            Assert.That(AnyVisible(Object.FindObjectsByType<MuzzleFlashView>(FindObjectsSortMode.None)), Is.True,
+                "Muzzle must light at the ShootFire completion second.");
+
+            Clock.SetSeconds(0f);
+            Assert.That(AnyVisible(Object.FindObjectsByType<ShotTracerView>(FindObjectsSortMode.None)), Is.False,
+                "Rewind must hide tracers.");
+            Assert.That(AnyVisible(Object.FindObjectsByType<MuzzleFlashView>(FindObjectsSortMode.None)), Is.False,
+                "Rewind must hide muzzle flashes.");
+        }
+
+        /// <summary>
+        /// PLAYBACK_CONTRACT: wound splat is continuous scrubber state (banner is one-shot separately).
+        /// </summary>
+        [Test]
+        public void WoundSplatFollowsScrubberSeconds()
+        {
+            ArmWithAttackerMoveTo(AmbushPoint);
+
+            TapeEvent? wound = FirstEventOfType(Playback.Tape, TapeEventType.Wounded);
+            Assert.That(wound.HasValue, Is.True);
+
+            Clock.SetSeconds(Mathf.Max(0f, wound.Value.Seconds - 0.05f));
+            Assert.That(AnyVisible(Object.FindObjectsByType<WoundSplatView>(FindObjectsSortMode.None)), Is.False);
+
+            Clock.SetSeconds(wound.Value.Seconds);
+            Assert.That(AnyVisible(Object.FindObjectsByType<WoundSplatView>(FindObjectsSortMode.None)), Is.True);
+
+            Clock.SetSeconds(0f);
+            Assert.That(AnyVisible(Object.FindObjectsByType<WoundSplatView>(FindObjectsSortMode.None)), Is.False);
+        }
+
+        private static bool AnyVisible(ShotTracerView[] views)
+        {
+            for (int i = 0; i < views.Length; i++)
+            {
+                if (views[i] != null && views[i].IsVisible)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool AnyVisible(MuzzleFlashView[] views)
+        {
+            for (int i = 0; i < views.Length; i++)
+            {
+                if (views[i] != null && views[i].IsVisible)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool AnyVisible(WoundSplatView[] views)
+        {
+            for (int i = 0; i < views.Length; i++)
+            {
+                if (views[i] != null && views[i].IsVisible)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         [Test]
         public void ReturningToAllotDropsTheTapeAndCarriesPawnPositions()
         {

@@ -2,6 +2,10 @@
 
 Continuous-space tactics prototype (Unity 6000.5.5f1). Turn-based programmed-movement combat: players draft a path/shoot/door program each round against a Time Resource budget, then it resolves and plays back deterministically. See `docs/GDD.md` and `docs/CORE_LOOP.md` for the design; `docs/DRAFT_HANDOFF.md` for the current session-to-session state (read it first in any new session — it's the running log of what's actually landed vs. still open, and is usually more current than any doc below it).
 
+## Before touching Playback / Execution / ReplayTape presentation
+
+**Read `docs/PLAYBACK_CONTRACT.md`.** Reveal (short face-up flash) ≠ Execution/Playback (tape cinema on the scrubber). Continuous presenters must be a pure function of scrubber seconds; do not restart timed FX every `ApplyTime` tick. New Program verbs emit tape events; mid-Playback interactions (Adrenaline today — effect stub) stay gated on Execute and must not silently desync the armed tape.
+
 ## Multi-agent / parallel work
 
 When more than one agent is in flight, also read `docs/PARALLEL_OPS.md` and `docs/departments/INDEX.md` at session start (then peer `STATUS.md` + `docs/contracts/CURRENT.md`). Never share a working tree with another agent; workers update only their own department STATUS; Integrator alone edits DRAFT_HANDOFF, SCHEDULE ticks, and contracts.

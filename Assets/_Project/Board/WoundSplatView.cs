@@ -62,6 +62,9 @@ namespace LogiCard.Board
             }
         }
 
+        /// <summary>Scrubber-derived visibility (PLAYBACK_CONTRACT continuous presenter).</summary>
+        public bool IsVisible => _root != null && _root.gameObject.activeSelf;
+
         private void AddLobe(Material material, string name, Vector3 localPosition, Vector3 localScale)
         {
             var lobe = GameObject.CreatePrimitive(PrimitiveType.Sphere);

@@ -103,5 +103,8 @@ namespace LogiCard.Board
                 _root.gameObject.SetActive(visible);
             }
         }
+
+        /// <summary>Scrubber-derived visibility (PLAYBACK_CONTRACT continuous presenter).</summary>
+        public bool IsVisible => _root != null && _root.gameObject.activeSelf;
     }
 }
