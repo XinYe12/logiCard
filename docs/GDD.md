@@ -1,8 +1,8 @@
 # D4: Game Design Document (v0.2) — Core Ruleset
 
 **Doc ID:** D4  
-**Status:** Revised 2026-08-08 — **C46 full scope pivot** (14-day-demo framing retired; this ruleset is now the shipping product's binding rules, unchanged in substance — see `PRODUCT_MEMORY.md` C46). Prior: 2026-08-03 continuous-space pivot (C35 promoted to demo scope + C39 technical decisions — see [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)); C21 amended; 2026-07-30 C34 Polished Core Demo (superseded).  
-**Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [CORE_LOOP.md](CORE_LOOP.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md), [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)
+**Status:** Revised 2026-08-12 — permanent **Atmosphere / Cards / Character / UI** department ownership (see §11); prior 2026-08-08 **C46** full scope pivot (14-day-demo framing retired). Earlier: continuous-space pivot (**C35/C39** — [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)); C21 amended; C34 Polished Core Demo (superseded).  
+**Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [CORE_LOOP.md](CORE_LOOP.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md), [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md), [PARALLEL_OPS.md](PARALLEL_OPS.md)
 
 **Scope note:** the board is **continuous position**, not a discrete grid (**C35/C39**, amended 2026-08-03 — this reverses an earlier "long-term only" framing after a cold-observer playtest). Distances/costs below still use the same numeric footprint and formulas the grid version used (`[0,4]×[0,4]`, `seconds = distance × BaseSecondsPerTile × StanceMult`) — only the underlying coordinate/LoS/pathfinding math changed, from tile-based to continuous. Full phased implementation: [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md). Destructible geometry, an asymmetric objective win, and a Downed+revive+Detonator system remain **long-term-only**, not part of this pivot — see `PRODUCT_MEMORY.md` **C36–C38**.
 
@@ -186,6 +186,16 @@ The ship must read as a **Desk-Lamp Diorama**, not a default Unity prototype. Bi
 - Stepped pawn motion; physical muzzle flash; clay wound splat.
 - Tactile foley for move, shot, Time Card, Lock In.
 
+### Camera framing — city chunk + tilt-shift focus (locked 2026-08-12)
+
+The playable board is a **city-like map chunk** held in the center of the camera. Focus is sold the *Link's Awakening* (2019) way:
+
+1. **Sharp** on the central board the player is fighting on.
+2. **Blur** the exterior rim around that chunk (tilt-shift / DoF) so the eye stays on the map.
+3. **No painted backdrop.** Do not use a solid sky / brand / UI color as `Camera.backgroundColor` to fake atmosphere. Outside the board stays a **dark void** (or future blurred city extension geometry) — never a flat colored clear. Weather and clouds are scene content above the board, not a camera clear.
+
+4. **Stylized atmosphere only.** Fog and clouds must read as *animated, artistic, noticeable* cotton/mist (toy-diorama / *Link's Awakening* language) — not realistic volumetric haze or heavy open-world cloud layers that burn fill-rate for little read. Prefer a few drifting soft puffs over pack fog systems.
+
 Full SSS, thumbprint maps, and bespoke character rigs are in scope for Phase 5 (Commercial Art Bar) — see `ART_DIRECTION.md` and `SCHEDULE.md`.
 
 ---
@@ -210,3 +220,22 @@ Full SSS, thumbprint maps, and bespoke character rigs are in scope for Phase 5 (
 6. **Windows build** is ship-stable (reliable for repeated full-match play).
 
 Scout vs Juggernaut feel different; cause/effect order remains readable even when Playback Duration compresses Time Resource.
+
+---
+
+## 11. Permanent product departments (continuous build)
+
+Four content pillars stay under **permanent** parallel ownership. Each department keeps its own git worktree folder and **continually** builds on its lane — this is not a one-shot Day-N temp worker model.
+
+| Department | Owns (product lane) | Permanent worktree folder |
+|------------|---------------------|---------------------------|
+| **Atmosphere** | Desk-lamp sky / clouds / mist / weather read above the board; void/framing mood that is scene content (not camera clear hacks) — see §8 | `logiCard-atmosphere` |
+| **Cards** | Gear catalog, in-match hand/economy, Time Card presentation as cardstock, collection/meta binder design — see deferred gear in §6 / `CARD_COLLECTION.md` | `logiCard-cards` |
+| **Character** | Character Cards (Scout / Juggernaut attrs), roster fantasy, pawn look / select motion, long-term unique-verb operators | `logiCard-character` |
+| **UI** | Shell + Program HUD chrome, modals, docks, selection grids, board-anchored prompts — readability and feel without rewriting resolve math | `logiCard-ui` |
+
+**Integrator is the ultimate boss.** The main-tree Integrator monitors every department worktree, freezes cross-dept contracts, merges to `master` only after human approval, and can pause, redirect, or reclaim any lane. Departments do **not** merge themselves, do **not** edit `DRAFT_HANDOFF` / `PRODUCT_MEMORY` / peer lanes without Integrator assignment, and escalate file conflicts upward.
+
+**Core loop authority stays Integrator / Core:** Match loop, Time Resource resolve, Move/Shoot/Door sim, Net/Timeline wiring — departments propose content against frozen contracts; they do not silently change Host math.
+
+Ops detail (capacity, STATUS, merge protocol): [`PARALLEL_OPS.md`](PARALLEL_OPS.md) · live seats: [`departments/INDEX.md`](departments/INDEX.md).

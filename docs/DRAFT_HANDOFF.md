@@ -1,7 +1,9 @@
 # Draft Handoff — 2026-08-12
 
 **Milestone:** Phase 5 Commercial Art Bar (active, top priority). Phase 2 Net paused.  
-**Tip:** `5b2ee7c` on `master` (ahead of origin) — **atmosphere merged** — + **dirty Integrator tree** (rematch/floors/lighting, not committed). Worker slots **0/2** coding. UI branches still awaiting Play+merge.  
+**Tip:** `de5e4fe` on `master` + dirty rematch/floors/lighting (**code uncommitted**).  
+**Live multi-root folders:** `logiCard` · `logiCard-atmosphere-stylized` · `logiCard-cards-collection` · `logiCard-char-select-motion` · `logiCard-modal-restyle` (canonical names in GDD §11 differ — migrate later).  
+**Permanent depts:** Atmosphere / Cards / Character / UI; **Integrator = ultimate boss**. Prefer ≤2 coding-hot.  
 **Read first next session:** this file → `docs/PLAYBACK_CONTRACT.md` → `docs/PARALLEL_OPS.md` → `docs/departments/INDEX.md`.
 
 ## Implemented
@@ -28,6 +30,10 @@
 **Docs cards collection (research — not coding slot):**
 - `logiCard-cards-collection` / `feat/cards-collection-docs` @ `d00acfc` — `docs/CARD_COLLECTION.md`.
 - Awaiting human answers in doc §8 before PRODUCT_MEMORY row.
+
+**Atmosphere follow-up (weather lock — do not reclaim yet):**
+- Live folder `logiCard-atmosphere-stylized` @ **`083d50f`** (varied atlas / stronger lobes / lighter edges) — awaiting dept report-back + look; then Integrator merges.
+- **Do not merge** Character/UI until human Play OK.
 
 ## Verification
 
