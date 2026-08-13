@@ -305,7 +305,7 @@ namespace LogiCard.Board
                     var filter = go.AddComponent<MeshFilter>();
                     // Kneaded per-lobe (2026-08-13) — no two lobes share a mesh anymore, each is its
                     // own dough-deformed copy of the base sphere. See KneadClayLobeMesh.
-                    filter.sharedMesh = KneadClayLobeMesh(sphere, intensity01: 0.24f, roundIterations: 3);
+                    filter.sharedMesh = KneadClayLobeMesh(sphere, intensity01: 0.15f, roundIterations: 4);
 
                     var renderer = go.AddComponent<MeshRenderer>();
                     renderer.sharedMaterial = clay;
@@ -472,13 +472,29 @@ namespace LogiCard.Board
         /// "round the edges... like a sandbag" — and a final uniform rescale corrects the size drift
         /// relaxation causes, so kneading never desyncs a lobe from its tuned on-screen <c>RadiusNorm</c>.
         /// One unique mesh per lobe (not shared) — see <see cref="DestroyKneadedLobeMeshes"/> for cleanup.
+        ///
+        /// First pass (<c>image copy 15</c>, intensity 0.24) read as "shattered glass," not dough. Two
+        /// causes, both fixed here: (1) UV stayed pinned to each vertex's pre-deform latitude while the
+        /// dents moved it well away from the height that latitude implied, so the posterized crown/belly
+        /// bands landed as scattered light/dark patches instead of a coherent gradient — UV.y is now
+        /// re-derived from each vertex's actual post-knead height. (2) Dents were too strong/sharp for
+        /// this mesh's resolution, creasing visibly — intensity dropped (0.24→0.15), falloffs widened,
+        /// and the round pass strengthened (3→4 iterations, 0.45→0.55 blend).
         /// </summary>
         private static Mesh KneadClayLobeMesh(Mesh baseMesh, float intensity01, int roundIterations)
         {
             Vector3[] baseVerts = baseMesh.vertices;
+            Vector2[] baseUV = baseMesh.uv;
             if (_sphereAdjacency == null)
             {
                 _sphereAdjacency = BuildVertexAdjacency(baseMesh);
+                _baseVMin = float.MaxValue;
+                _baseVMax = float.MinValue;
+                for (int i = 0; i < baseUV.Length; i++)
+                {
+                    _baseVMin = Mathf.Min(_baseVMin, baseUV[i].y);
+                    _baseVMax = Mathf.Max(_baseVMax, baseUV[i].y);
+                }
             }
 
             float targetAvgRadius = AverageRadius(baseVerts);
@@ -487,19 +503,21 @@ namespace LogiCard.Board
 
             // Squeeze — pinch two opposite sides inward; bulges the waist between them.
             Vector3 squeezeAxis = Random.onUnitSphere;
-            Dent(verts, baseVerts, squeezeAxis, -strength * Random.Range(0.5f, 0.9f), RandomFalloffAngle(50f, 80f));
-            Dent(verts, baseVerts, -squeezeAxis, -strength * Random.Range(0.5f, 0.9f), RandomFalloffAngle(50f, 80f));
+            Dent(verts, baseVerts, squeezeAxis, -strength * Random.Range(0.4f, 0.7f), RandomFalloffAngle(55f, 85f));
+            Dent(verts, baseVerts, -squeezeAxis, -strength * Random.Range(0.4f, 0.7f), RandomFalloffAngle(55f, 85f));
 
             // Press — one broad soft dent.
-            Dent(verts, baseVerts, Random.onUnitSphere, -strength * Random.Range(0.6f, 1f), RandomFalloffAngle(45f, 70f));
+            Dent(verts, baseVerts, Random.onUnitSphere, -strength * Random.Range(0.5f, 0.8f), RandomFalloffAngle(50f, 75f));
 
             // Push — one broad soft bulge.
-            Dent(verts, baseVerts, Random.onUnitSphere, strength * Random.Range(0.6f, 1f), RandomFalloffAngle(45f, 70f));
+            Dent(verts, baseVerts, Random.onUnitSphere, strength * Random.Range(0.5f, 0.8f), RandomFalloffAngle(50f, 75f));
 
             // Pound — one small, sharp dent (rounding below softens this into the "pointy edge").
-            Dent(verts, baseVerts, Random.onUnitSphere, -strength * Random.Range(1.0f, 1.4f), RandomFalloffAngle(22f, 36f));
+            Dent(verts, baseVerts, Random.onUnitSphere, -strength * Random.Range(0.7f, 1.0f), RandomFalloffAngle(30f, 45f));
 
-            // Round — partial relax (0.45, not full) so lumps survive; full Laplacian would erase them.
+            // Round — partial relax so lumps survive; full Laplacian would erase them. More iterations
+            // / stronger blend than the first pass (image copy 15 read as jagged shattered glass, not
+            // soft dough) to smooth the coarse-mesh creasing the dents leave behind.
             for (int s = 0; s < roundIterations; s++)
             {
                 var relaxed = new Vector3[verts.Length];
@@ -519,7 +537,7 @@ namespace LogiCard.Board
                     }
 
                     avg /= neighbors.Length;
-                    relaxed[i] = Vector3.Lerp(verts[i], avg, 0.45f);
+                    relaxed[i] = Vector3.Lerp(verts[i], avg, 0.55f);
                 }
 
                 verts = relaxed;
@@ -534,14 +552,38 @@ namespace LogiCard.Board
                 verts[i] *= correction;
             }
 
+            // Re-derive V (crown/belly band) from each vertex's ACTUAL post-knead height, not its
+            // pre-deform latitude. image copy 15's shattered-glass look was this: UV stayed pinned to
+            // the original sphere's latitude while kneading moved vertices well away from the height
+            // that latitude implied, so the posterized bands landed as scattered light/dark patches
+            // instead of a coherent crown-to-belly gradient over the new shape. U is left alone (the
+            // shade map only varies a little by U, for the edge vignette).
+            float minY = float.MaxValue;
+            float maxY = float.MinValue;
+            for (int i = 0; i < verts.Length; i++)
+            {
+                minY = Mathf.Min(minY, verts[i].y);
+                maxY = Mathf.Max(maxY, verts[i].y);
+            }
+
+            var uv = new Vector2[verts.Length];
+            for (int i = 0; i < verts.Length; i++)
+            {
+                float t = maxY > minY ? Mathf.InverseLerp(minY, maxY, verts[i].y) : 0.5f;
+                uv[i] = new Vector2(baseUV[i].x, Mathf.Lerp(_baseVMin, _baseVMax, t));
+            }
+
             var mesh = new Mesh { name = "ClayLobeDough" };
             mesh.vertices = verts;
             mesh.triangles = baseMesh.triangles;
-            mesh.uv = baseMesh.uv;
+            mesh.uv = uv;
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
             return mesh;
         }
+
+        private static float _baseVMin;
+        private static float _baseVMax;
 
         /// <summary>One radial displacement: vertices within <paramref name="falloffAngle"/> of
         /// <paramref name="center"/> (angular distance on the base sphere) move along their own base
