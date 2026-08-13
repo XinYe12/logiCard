@@ -197,7 +197,9 @@ namespace LogiCard.Board
                 go.transform.localPosition = pos;
 
                 // Slightly oversized so lobes swallow each other (glued clay, not separate balls).
-                float diameter = lobe.RadiusNorm * footprint * 2.15f;
+                // image copy 15: 2.15x + flat Unlit tint blew the raft into one board-wide white
+                // mass; back to 2.0x now that the shade map (below) carries the volume instead.
+                float diameter = lobe.RadiusNorm * footprint * 2.0f;
                 go.transform.localScale = Vector3.one * diameter;
 
                 var filter = go.AddComponent<MeshFilter>();
@@ -664,6 +666,9 @@ namespace LogiCard.Board
         /// Soft Unlit clay for sphere lobes. Lit diffuse was darkening sphere limbs into mid-grey
         /// "边缘" against the void (image copy 14). Painted vertical shade map = bright crown /
         /// pale belly without a harsh terminator; no cast shadows so the board stays readable.
+        /// The first Unlit pass (image copy 15) baked too weak a gradient (~231-254 of 255) — read
+        /// as one flat blown-out white mass with no per-lobe volume. Shade map redrawn with real
+        /// crown/belly contrast (~152-255) so overlapping lobes read as separate glued pillows again.
         /// </summary>
         private static Material ClayCloudMaterial()
         {
