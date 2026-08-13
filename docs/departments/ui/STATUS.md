@@ -17,12 +17,13 @@
 - Modal cardstock — human Play signed off.
 - C62 `GearHandView` scaffold — not dock-wired.
 - Stack: uGUI; Toolkit parked.
-- Collection process live. Catalogued: specials (holo ticket, glass, logo reveal), deck motion (wallet, comic hand), buttons (bubbles / glass pill / gradient pill), loader, **Iomanoid CC0 display font**, **normal-card** (bucket-2 candidate), **resource-bank-card-flip** (resource-card role).
+- Collection process live. Catalogued: specials, deck motion, buttons, loader, **Iomanoid CC0 display font**, **normal-card**, **resource-bank-card-flip**, first icon **`icon_bandage.png`**.
 
 ## In progress
 
 - Chrome collection — see gap matrix in `UI_CHROME_COLLECTION.md`.
-- **Still missing for stop bar:** icons (**5**), in-match HUD chrome (**7**), lobby/shell layout refs (**8**), body/companion font (display = Iomanoid only), warmer panel family if normal-card is kept.
+- **Icons (5) started** — bandage sets the clay style; still need Interact / Flashbang / Adrenaline / stance×3 / Snap·Hold / door / wound / Lock In.
+- **Still missing for stop bar:** rest of icons, in-match HUD chrome (**7**), lobby/shell layout refs (**8**), body font, warmer panel family if normal-card is kept.
 
 ## Blocked
 
