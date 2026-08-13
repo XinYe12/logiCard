@@ -3,8 +3,7 @@ using LogiCard.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using UnityEngine.UIElements;
-using Button = UnityEngine.UI.Button;
+using UnityEngine.UI;
 
 namespace LogiCard.Tests.PlayMode
 {
@@ -30,10 +29,9 @@ namespace LogiCard.Tests.PlayMode
             play.onClick.Invoke();
             Assert.That(flow.Current, Is.EqualTo(AppFlowController.Screen.CharacterSelect));
 
-            // Pick_Juggernaut is now a UI Toolkit VisualElement (Character Select's UI Toolkit pilot).
-            VisualElement juggernaut = FindVisualElement<VisualElement>("Pick_Juggernaut");
+            Button juggernaut = FindByName<Button>("Pick_Juggernaut");
             Assert.That(juggernaut, Is.Not.Null);
-            ClickVisualElement(juggernaut);
+            juggernaut.onClick.Invoke();
             Assert.That(flow.SelectedArchetype, Is.EqualTo("Juggernaut"));
 
             Button confirm = FindByName<Button>("ConfirmCharacter");
@@ -73,9 +71,9 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(flow.Current, Is.EqualTo(AppFlowController.Screen.CharacterSelect));
             Assert.That(flow.SelectedArchetype, Is.EqualTo("Scout"));
 
-            VisualElement next = FindVisualElement<VisualElement>("CharSelectNext");
+            Button next = FindByName<Button>("CharSelectNext");
             Assert.That(next, Is.Not.Null, "Character Select carousel needs CharSelectNext.");
-            ClickVisualElement(next);
+            next.onClick.Invoke();
             Assert.That(flow.SelectedArchetype, Is.EqualTo("Juggernaut"),
                 "Selection should update immediately on navigate.");
 

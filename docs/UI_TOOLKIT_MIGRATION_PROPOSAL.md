@@ -7,8 +7,17 @@ Integrator-facing writeup that request needs before it can be scheduled — see 
 ("Departments escalate blockers to Integrator; Integrator escalates product decisions to human").
 `docs/UI_TOOLS_RESEARCH.md` (2026-08-12) evaluated this same option ahead of time and recommended
 against it for that wave ("do not rewrite `Assets/_Project/UI/**` onto UI Toolkit"); this doc supersedes
-that verdict with real, not speculative, evidence — the pilot exists, compiles, and passes its PlayMode
-coverage (`Assets/_Project/UI/CharacterSelectView.cs` on `feat/char-select-motion`).
+that verdict with real, not speculative, evidence — the pilot existed, compiled, and passed its
+PlayMode coverage.
+
+**Update, same day:** the pilot code has since been **reverted** — it never had a human visual Play
+pass (no Editor was open on this worktree to drive one), and the first time the human actually saw it
+Play'd, the verdict was "it is still bad." Rather than keep iterating on an unverified rendering path,
+`CharacterSelectView.cs` went back to uGUI (now skinned with real Kenney CC0 art instead of flat
+color — see `Assets/_Project/Art/UI/THIRD_PARTY.md`). The pilot code and its fixes are preserved in
+git history at `2c99a08` on `feat/char-select-motion` if this gets revisited. **Everything below this
+point is unchanged** — the findings are real regardless of whether the pilot code is currently live,
+and remain the impact/risk data for whoever next considers this migration.
 
 ## Bottom line
 

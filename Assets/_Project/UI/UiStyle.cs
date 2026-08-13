@@ -67,8 +67,6 @@ namespace LogiCard.UI
         // Character Select carousel accents (desk-lamp warm family — do not collide with Modal* tokens).
         public static readonly Color CharSelectBgScout = new Color(0.42f, 0.28f, 0.14f, 0.97f);
         public static readonly Color CharSelectBgJuggernaut = new Color(0.28f, 0.18f, 0.12f, 0.97f);
-        public static readonly Color CharSelectCardScout = new Color(0.98f, 0.72f, 0.25f, 1f);
-        public static readonly Color CharSelectCardJuggernaut = new Color(0.78f, 0.42f, 0.22f, 1f);
         public static readonly Color CharSelectGhost = new Color(1f, 1f, 1f, 0.14f);
         public static readonly Color CharSelectGlowScout = new Color(0.98f, 0.72f, 0.25f, 1f);
         public static readonly Color CharSelectGlowJuggernaut = new Color(0.86f, 0.48f, 0.24f, 1f);
