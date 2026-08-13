@@ -1,8 +1,8 @@
 # Map Presentation Standard — vibrant/cute diorama target
 
 **Status:** Phase 1 (docs-only) — Map department, 2026-08-13.
-**Depends on:** [GDD.md](GDD.md) §8/§11, [ART_DIRECTION.md](ART_DIRECTION.md), [MAP_AUTHORING.md](MAP_AUTHORING.md),
-[ART_PACK_RESEARCH.md](ART_PACK_RESEARCH.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md) **C29 / C45 / C53 / C54 / C57 / C58 / C60**.
+**Depends on:** [GDD.md](../core/GDD.md) §8/§11, [ART_DIRECTION.md](../core/ART_DIRECTION.md), [MAP_AUTHORING.md](MAP_AUTHORING.md),
+[ART_PACK_RESEARCH.md](ART_PACK_RESEARCH.md), [PRODUCT_MEMORY.md](../core/PRODUCT_MEMORY.md) **C29 / C45 / C53 / C54 / C57 / C58 / C60**.
 **Does not amend** C57 (hand-authored map geometry) — see §0. **Proposes amending** C53's material-realism
 clause for board *surfaces* only — see §4, flagged for human confirm, not self-locked by this doc.
 
