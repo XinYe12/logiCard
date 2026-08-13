@@ -2,7 +2,7 @@
 
 **Wave / Day:** Permanent department seat (GDD §11 / PARALLEL_OPS) — **In progress** 2026-08-13
 **Branch / worktree:** `feat/atmosphere-stylized` @ `D:\projects\Game\logiCard-atmosphere-stylized`
-**Last cross-reviewed:** 2026-08-13 — fair signed off `af7b2e5`; storm committed `9f6c88d` for Integrator merge (storm look still awaiting human Re-Play)
+**Last cross-reviewed:** 2026-08-13 — storm Play: clouds too spread out; want centered bank + modular weather for cards; Zap White+Yellow only
 
 ## Owned files (this seat)
 
@@ -10,23 +10,20 @@
 
 ## Done
 
-- **Fair clay bank locked** (`af7b2e5`) — two-layer mound, yaw-only ellipsoids, mass-height tint, near-flat shade. `Build(board, BoardWeatherMood.Fair)` keeps that look.
+- Fair clay bank signed `af7b2e5`; storm mood landed `9f6c88d` (pre-center / pre-module).
 
-## In progress / just landed (unverified — see Blocked)
+## In progress / just landed (unverified)
 
-**Storm mood** (bootstrap default = `BoardWeatherMood.Storm`):
-
-1. Slate-grey clay tints on the same mound shapes (fair geometry preserved).
-2. Heavier pack rain (`PF_RainSystem`) + storm `PF_Fog_Main` / `PF_RainMist` volumes (rim-only mist still used; no FogGround slab).
-3. Cooler/dimmer ambient + directional lights.
-4. **LightningStorm** — 6 Vefects Zap rigs (`VFX_Zap_White` / `Blue` / `Yellow`) scattered over the board, ~0.9–2.8s intervals, ~55% double-strike. Import tool catalog updated for Blue/Yellow.
+1. **Centered cloud shelf** — mass X span ~±0.26 board width (was ±0.68–0.78); Fair + Storm share placement.
+2. **Modular weather API for cards** — `Build(board)` binds host; `ApplyWeather(Clear|Fair|Storm)` swaps a self-contained `Weather_*` child; `ClearWeather()` tears down + restores lighting. Bootstrap still mounts Storm for Play.
+3. **Storm Zap = Yellow only** — tip scale `StormZapVerticalScale` **0.52 → 0.34** after Re-Play still showed tip in the void above the bank.
 
 ## Blocked
 
-- Human Re-Play storm — say if grey is dark enough, lightning dense enough, or board too dim for readability.
+- Human Re-Play — confirm tip now inside the Storm clouds (not above).
 
 ## Offers
 
-- If Zap too sparse: raise `StormLightningRigCount` or tighten intervals.
-- If board unreadable: ease `ApplyStormLightingDim` (intensity multiply 0.62 → 0.75) before touching cloud tint.
-- Fair remains one call away: `Build(_board, BoardWeatherMood.Fair)`.
+- If tip still above: lower further (~0.28) or raise cloud shelf slightly.
+- If tip too short / buried: ease scale toward 0.40.
+- Card hook: `ApplyWeather(BoardWeatherMood.Storm)`.
