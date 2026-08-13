@@ -1,37 +1,36 @@
 # Cards — STATUS
 
-**Wave / Day:** Permanent seat — **C64 hybrid card-system promoted** (2026-08-13). Flashbang
-brief paused until re-derived against C64. Bandage C63 / Sim on master.
-**Branch / worktree:** `logiCard-cards-collection` / `feat/cards-collection-docs` @ `c307d77`
-(+ detail docs synced to main with C64 promote)
-**Last cross-reviewed:** 2026-08-13 — human menu closed; Integrator C64 in PRODUCT_MEMORY; detail
-doc `CARD_SYSTEM_MODEL_COMPARISON.md` on main
+**Wave / Day:** Permanent seat — **C64 landed**; catalog rewrite + OPEN menu drafted 2026-08-13 evening
+**Branch / worktree:** `logiCard-cards-collection` / `feat/cards-collection-docs` @ `dc631ce`+
+**Last cross-reviewed:** 2026-08-13 — rewrote `CARD_COLLECTION.md` for C64 dual-horizon; added
+`CARD_SYSTEM_OPENS.md` for live human answers
 
 ## Owned files (this seat)
 
-- `docs/CARD_SYSTEM_MODEL_COMPARISON.md` (conversation record; C64 source)
-- `docs/CARD_COLLECTION.md` (needs §5/§8/§10 rewrite against C64 — offer below)
-- `docs/GEAR_BANDAGE_AGENT_BRIEF.md` / `docs/GEAR_FLASHBANG_AGENT_BRIEF.md` (Flashbang **paused**)
+- `docs/CARD_COLLECTION.md` (C62 shipping + C64 long-term overlay)
+- `docs/CARD_SYSTEM_MODEL_COMPARISON.md` (conversation record)
+- `docs/CARD_SYSTEM_OPENS.md` (**new** — deck size / draw / signature / Reveal menu)
+- Gear briefs (Flashbang **paused**)
 - This STATUS
 
 ## Done
 
-- Designed hybrid model with human; §6D draft → **C64** promoted (amends C18/C62)
-- Bandage brief → C63 → Sim merged earlier
+- C64 hybrid designed + promoted
+- `CARD_COLLECTION.md` §1–§2 / §5 / §5A / §6 / §8 / §10–§12 aligned to C64 without erasing C62 history
+- `CARD_SYSTEM_OPENS.md` — Q1–Q8 ready for human letters
 
 ## In progress
 
-- None hot — seat free for C64 follow-up docs (catalog rewrite or Flashbang-as-library-tech brief)
-  when human/Integrator assigns
+- Waiting on human answers to `CARD_SYSTEM_OPENS.md` (or Integrator assign next)
 
 ## Blocked
 
-- Flashbang numerics brief — paused until re-framed as shared-library card under C64
-- Deckbuilder / signature UX — later systems layer (C64 sequencing)
-- Bomber signature-card implementation — C43 prereqs + Character briefs
+- Deckbuilder / signature UX code — OPENs + later systems layer
+- Flashbang effect brief — still paused (library-tech re-derive after effect Q1 or after OPEN menu)
+- Bandage HUD — UI seat
 
 ## Offers
 
-- Rewrite `CARD_COLLECTION.md` §5/§8/§10 (or split GEAR_CATALOG / CARD_ECONOMY) to match C64
-- Unpause and re-derive Flashbang brief as shared-library tech under C64
-- Thin Bomber signature-card ↔ verb docs spike (with Character seat) when wanted
+- After OPEN answers: draft Integrator C# follow-up (C65?) for deck size / hand rules
+- Re-derive Flashbang brief as shared-library card when human wants effect design
+- Sync `CARD_COLLECTION.md` + `CARD_SYSTEM_OPENS.md` to master when Integrator merges this branch

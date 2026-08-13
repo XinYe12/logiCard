@@ -245,13 +245,11 @@ Q4 already says the **hand/deck contents** stay hidden either way; Q3 is only ab
 
 ---
 
-## 6D. Proposed C# amend — for Integrator (Cards draft; not yet PRODUCT_MEMORY)
+## 6D. C# amend source text — **promoted as C64** (kept for provenance)
 
-Human confirmed in chat 2026-08-13 via `CARD_SYSTEM_MODEL_COMPARISON.md` §6A–§6C. **Cards does not edit PRODUCT_MEMORY.** Integrator should promote (or revise) something in this shape after review:
+Human confirmed in chat 2026-08-13. Integrator promoted **C64** into `PRODUCT_MEMORY.md` (`master` @ `dcffe23`). Sizing follow-ups → [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md).
 
-**Working title C64 (number Integrator's to assign):** Card-system model — hybrid deckbuilding + signature cards (amends **C18**, **C62**; sits beside **C42–C44**, **C47**).
-
-Proposed substance:
+**C64 substance (as drafted here):**
 
 1. **Long-term card system = hybrid:** Character-unique **signature** cards for identity + a **shared library** from which each player builds a **personal deck** before the match.
 2. **Same-match legality:** Players **may bring different cards** (Q3-a). C18's "same gear deck" reading is **amended** — Attack/Defend labels still don't lock kits, but Characters no longer share one universal in-match gear list; deck composition + signature gate access.
