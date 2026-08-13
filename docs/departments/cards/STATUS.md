@@ -1,49 +1,37 @@
 # Cards — STATUS
 
-**Wave / Day:** Permanent seat — research wave **merged** + **C62** promoted 2026-08-12; Bandage
-implementation brief drafted 2026-08-13
-**Branch / worktree:** `logiCard-cards-collection` / `feat/cards-collection-docs`, rebased onto master
-(`77831cf`) — no divergence, docs continue on this branch until next merge
-**Last cross-reviewed:** 2026-08-13 — wrote `GEAR_BANDAGE_AGENT_BRIEF.md`, cross-checked existing
-`Assets/_Project/Cards/*.asset` scaffolding against C62/§6A
+**Wave / Day:** Permanent seat — **hybrid card-system direction complete in conversation** (2026-08-13).
+Awaiting Integrator C# from §6D draft. Flashbang paused. Bandage C63 / Sim on master.
+**Branch / worktree:** `logiCard-cards-collection` / `feat/cards-collection-docs`
+**Last cross-reviewed:** 2026-08-13 — Q3-a recorded; proposed C# amend drafted in
+`CARD_SYSTEM_MODEL_COMPARISON.md` §6D
 
 ## Owned files (this seat)
 
-- `docs/CARD_COLLECTION.md` (on master; Cards may continue edits when INDEX assigns)
-- `docs/GEAR_BANDAGE_AGENT_BRIEF.md` (new — awaiting Integrator review)
+- `docs/CARD_SYSTEM_MODEL_COMPARISON.md` (answers closed; §6D ready for Integrator)
+- Gear briefs (Flashbang **paused** until post-C# numerics framing)
 - This STATUS
-- Future gear UI/data only when contracted
 
 ## Done
 
-- Expanded `CARD_COLLECTION.md` (glossary, charge strawman, C18 vs unique-verb boundary, §11 sequence)
-- Human §8 answers recorded (`68c48bb`)
-- Integrator promoted **C62**; OPEN #3 resolved; docs branch merged to master
-- Wrote `GEAR_BANDAGE_AGENT_BRIEF.md`: focused implementation brief for Bandage (first C62 first-wave
-  card). Docs-only, no Sim/resolve code. Surfaces that the existing `Assets/_Project/Cards/*.asset`
-  scaffolding is stale/pre-C62 (Interact.asset still describes migrating Door/Vent onto the hand, which
-  §8 Q5 explicitly forbids; Flashbang.asset's numbers diverge from §6A's strawman; `CardData.oncePerMatch`
-  is a bool that can't encode multi-charge cards) and that Bandage's own asset encodes an undocumented
-  "must be stationary" constraint that needs a real design answer, not an assumption.
+- Human menu closed: hybrid; signature = both (card wraps unique verb); **Q3-a** personal decks may
+  differ in-match; hands/decks hidden; library+signatures free; transitional A1 staples keep shipping
+- Drafted Integrator-facing C# proposal (§6D) amending C18/C62 — Cards does not write PRODUCT_MEMORY
 
 ## In progress
 
-- Brief awaiting Integrator review — five open questions in the brief's §3 (cost/charges, "stationary"
-  legality rule, per-match vs per-round charge persistence, already-Healthy legality, board-anchored-UI
-  applicability) need human/Integrator answers before a Sim/HUD contract can be frozen. Also needs the
-  standing core-gameplay/Sim pause (`SCHEDULE.md` Phase 2) explicitly carved out for gear work, same way
-  **C57** carved it out for map/terrain — not assumed lifted by this brief.
+- Waiting on Integrator to promote / revise §6D into PRODUCT_MEMORY
+- OPEN follow-ups listed in §6D (deck size, draw vs hand, signature always-in-hand, Reveal, etc.)
 
 ## Blocked
 
-- Gear Sim/HUD contract blocked on: (1) human answers to the brief's §3 open questions, (2) an explicit
-  pause carve-out for gear work. Interact-as-card additionally blocked on a station target existing;
-  Adrenaline real effect blocked on the PLAYBACK_CONTRACT tape-branch redesign (later, per C62/§11).
+- PRODUCT_MEMORY amend = Integrator-only
+- Flashbang brief / further gear-numerics framing until C# exists (so Flashbang knows it's library tech)
+- Deckbuilder / Bomber implementation — later systems + C43 prereqs
 
 ## Offers
 
-- Split `CARD_COLLECTION.md` → `GEAR_CATALOG.md` + `CARD_ECONOMY.md` if Integrator wants
-- Write the equivalent brief for Interact-as-card, Flashbang, or Adrenaline next, in §11's suggested order,
-  once Bandage's brief has been reviewed
-- Reconcile the stale `Assets/_Project/Cards/*.asset` scaffolding (Interact/Flashbang numbers, `oncePerMatch`
-  schema) if Integrator wants that done ahead of any card's actual contract
+- After C# lands: rewrite `CARD_COLLECTION.md` §5/§8/§10 to match hybrid (or split GEAR_CATALOG /
+  CARD_ECONOMY) under Integrator assign
+- Unpause Flashbang as a **shared-library** card brief once C# says so
+- Thin Bomber signature-card ↔ verb sketch (docs only) when wanted

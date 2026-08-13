@@ -1,9 +1,10 @@
 # Bandage — Gear Implementation Brief
 
-**Status:** Draft, docs-only, for Integrator review. Not a contract yet.
+**Status:** Closed 2026-08-13 via **C63** (human answered §3). Sim-side landed on `master` @ `4e6bb66`;
+HUD-side still open in `docs/contracts/CURRENT.md` (UI seat). Kept as pattern reference for later gear briefs.
 **Scope:** Bandage only — first of the C62 first-wave gear cards (Bandage, Interact-as-card, Flashbang,
-Adrenaline). Written so Integrator can open a frozen Sim/HUD contract **once the numerics below are
-greenlit by the human** — this brief does not greenlight them itself.
+Adrenaline). Originally written so Integrator could open a frozen Sim/HUD contract once the numerics
+below were greenlit — that happened as C63.
 **Depends on:** [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) **C62**, OPEN #16; [`CARD_COLLECTION.md`](CARD_COLLECTION.md)
 §4.2, §6A, §8 Q1–Q3; [`GDD.md`](GDD.md) §5 (wound ladder); [`PLAYBACK_CONTRACT.md`](PLAYBACK_CONTRACT.md).
 **Does not touch:** Flashbang, Interact-as-card, Adrenaline — each needs its own brief. No Sim/resolve
