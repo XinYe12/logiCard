@@ -2,69 +2,47 @@
 
 **Wave / Day:** Permanent seat — live `logiCard-char-select-motion`
 **Branch / worktree:** `feat/char-select-motion` @ `D:\projects\Game\logiCard-char-select-motion`
-**Last cross-reviewed:** 2026-08-13 — **mandate shift:** Character owns behavior/abilities (GDD attrs +
-long-term unique-verb operators); Character Select UI/motion handed to **UI** dept.
+**Last cross-reviewed:** 2026-08-13 — docs/concepts only (option C); concept backlog §3 items 1–8 filled.
 
-## Mandate (2026-08-13)
+## Mandate
 
-| Owns now | Does **not** own going forward |
-|----------|--------------------------------|
-| Scout/Juggernaut **attribute behavior** (Speed/Agility/Strength) | `CharacterSelectView.cs`, `CharSelect*` `UiStyle` tokens, Kenney char-select chrome, select motion/feel |
-| Long-term unique-verb operators (**C42–C44**) — briefs first; Sim only after Integrator carve-out | Map Select carousel (**C59** stays UI/Integrator) |
-| Character ability implementation briefs → future resolve tests against frozen contracts | Live `GhostResolver` edits while core Sim remains paused (except Integrator-granted carve-outs) |
+| Owns | Does not own |
+|------|----------------|
+| Character fantasy, attrs meaning, unique-verb concepts + impl briefs | Char Select UI → **UI** |
+| Joint boundary with Cards | Gear catalog → **Cards** |
+| Future resolve only after Integrator carve-out | Live Sim under general pause |
 
-**Integrator ask:** sync `docs/PARALLEL_OPS.md`, `docs/departments/INDEX.md`, and `GDD.md` §11 Character/UI
-rows to this split (Character worker does not edit those Integrator-owned org docs).
+**Mode:** Pre-code. See [`CHARACTER_PLAN.md`](../../CHARACTER_PLAN.md).
 
-## Owned files (this seat — behavior/docs)
+## Concept pack (complete for this wave)
 
-- `docs/CHARACTER_UNIQUE_VERB_OPERATORS_BRIEF.md` — **C42**
-- `docs/CHARACTER_BOMBER_AGENT_BRIEF.md` — **C43**
-- `docs/CHARACTER_TIME_PLAYER_AGENT_BRIEF.md` — **C44**
-- `docs/CHARACTER_ATTRS_SCOUT_JUGGERNAUT_BRIEF.md` — live cast attrs audit + wiring recommendation
-- `docs/CHARACTER_ROSTER_LONGTERM.md` — design source (cross-links to briefs)
-- `Assets/_Project/Characters/**` (`CharacterData`, Scout/Juggernaut assets) — attrs data authority
-- This STATUS
-
-## Handed to UI (do not touch from this seat)
-
-- `Assets/_Project/UI/CharacterSelectView.cs` (+ `.meta`)
-- `Assets/_Project/UI/UiMotion.cs` (if still only used by char-select; UI may reclaim or share)
-- `UiStyle` `CharSelect*` tokens
-- `Assets/_Project/Art/UI/**` Kenney CharSelect sprites / `UiKenneyImportTool` / `THIRD_PARTY.md` (char-select skin)
-- `PLAY_NOTES.md`, `CHAR_SELECT_MOTION_AGENT_BRIEF.md` — historical Play gate for the carousel branch tip
-- Prior carousel commits on this branch remain mergeable history; UI/Integrator decide merge vs re-home
-
-## Done (this session)
-
-- Committed dirty pickup STATUS note (`a707d9f`).
-- Left untracked `screenshots/image copy 13.png` (human keep/delete).
-- Wrote four implementation briefs (Bandage-shaped: locked / repo reality / open questions /
-  recommended resolve+HUD / contract split / non-goals). **No Sim/resolver code.**
-- Key finding in attrs brief: **C25 Agility penalties exist on `CharacterData` assets but are never
-  read by `PawnProgram`** — Speed/Door knobs partially wired; Agility unwired.
+| Doc | Role |
+|-----|------|
+| `CHARACTER_PLAN.md` | Roadmap + readiness checklist |
+| `CHARACTER_FANTASY.md` | Cast fantasy + roster growth rules |
+| `CHARACTER_CARDS_BOUNDARY.md` | Character↔Cards seam (Cards review ask) |
+| `CHARACTER_C36_DEPENDENCY.md` | What Character needs from Core/C36 |
+| `CHARACTER_TIME_PLAYER_EPISTEMICS.md` | C44 FF / blind-programming gate |
+| `CHARACTER_DETONATOR_VS_BOMBER.md` | C38 vs C43 split |
+| Four impl briefs (C42 / C43 / C44 / attrs) | Recommendation-not-contract |
+| `CHARACTER_ROSTER_LONGTERM.md` | Design source + links |
 
 ## In progress
 
-- Nothing coding-hot. Awaiting human answers on brief §3 questions (especially Time Player
-  fast-forward leak, Bomber walls-vs-floor, GDD §2 vs §6 speed framing) and Integrator org-doc sync +
-  any future Sim carve-out.
+- Nothing drafting. Waiting on **human design answers** and Integrator org sync — not more stub volume.
 
-## Blocked
+## Waiting on human (when ready)
 
-- Unique-verb Sim work blocked on: (1) long-term status / phase promotion, (2) C36 geometry-breach
-  primitives, (3) Bomber floor-drop → per-floor infra, (4) Time Player epistemic answer, (5) explicit
-  Sim pause carve-out.
-- Attrs Agility wiring blocked on Integrator carve-out (Sim/Timeline-adjacent) even though design is
-  already confirmed in **C25**.
-
-## Depends on
-
-- Integrator: update PARALLEL_OPS / INDEX / GDD §11 ownership; optionally merge or re-home
-  `feat/char-select-motion` UI commits under UI seat after human Play.
-- Human: greenlight open questions in the four briefs before any Character Sim contract opens.
+1. `CHARACTER_FANTASY.md` §6 — Scout/Jug pitches OK? Bomber wall-only name? Time Player rewind branding?
+2. `CHARACTER_TIME_PLAYER_EPISTEMICS.md` §4 — Option **A** (rewind only) vs **B** (FF, no preview) → PRODUCT_MEMORY
+3. Cards peer review of `CHARACTER_CARDS_BOUNDARY.md` (optional)
 
 ## Offers
 
-- Idle on code. Next useful Character slice when asked: deepen a single brief from human answers, or
-  (only with Sim carve-out) wire Scout/Juggernaut Agility per attrs brief recommendation.
+- Idle on new stubs unless you name a gap.
+- No code until you leave option C + Integrator contracts a slice.
+- Commit the uncommitted docs pack when you ask.
+
+## Integrator ask (unchanged)
+
+Sync PARALLEL_OPS / INDEX / GDD §11 for Char Select → UI handoff; sequence C36 before unique-verb Sim.

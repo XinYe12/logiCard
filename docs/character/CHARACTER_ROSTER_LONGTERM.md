@@ -12,6 +12,8 @@ only; nothing here is scheduled or implemented. See scope note below before assu
 - [CHARACTER_TIME_PLAYER_AGENT_BRIEF.md](CHARACTER_TIME_PLAYER_AGENT_BRIEF.md) — **C44**
 - Live cast attrs (Scout/Juggernaut, not unique-verb): [CHARACTER_ATTRS_SCOUT_JUGGERNAUT_BRIEF.md](CHARACTER_ATTRS_SCOUT_JUGGERNAUT_BRIEF.md)
 
+**Pre-code concept pack (2026-08-13):** [CHARACTER_PLAN.md](CHARACTER_PLAN.md) (roadmap) · [CHARACTER_FANTASY.md](CHARACTER_FANTASY.md) · [CHARACTER_CARDS_BOUNDARY.md](CHARACTER_CARDS_BOUNDARY.md) (joint Cards seam) · [CHARACTER_C36_DEPENDENCY.md](CHARACTER_C36_DEPENDENCY.md) · [CHARACTER_TIME_PLAYER_EPISTEMICS.md](CHARACTER_TIME_PLAYER_EPISTEMICS.md) · [CHARACTER_DETONATOR_VS_BOMBER.md](CHARACTER_DETONATOR_VS_BOMBER.md).
+
 ---
 
 ## Scope note — why this is future roadmap, not active build scope
