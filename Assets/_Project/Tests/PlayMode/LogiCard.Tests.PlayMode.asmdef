@@ -10,8 +10,7 @@
         "LogiCard.UI",
         "LogiCard.Boot",
         "UnityEngine.TestRunner",
-        "UnityEngine.UI",
-        "UnityEngine.UIElementsModule"
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

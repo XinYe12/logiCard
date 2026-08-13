@@ -8,8 +8,7 @@
         "LogiCard.Timeline",
         "LogiCard.Board",
         "LogiCard.Audio",
-        "UnityEngine.UI",
-        "UnityEngine.UIElementsModule"
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

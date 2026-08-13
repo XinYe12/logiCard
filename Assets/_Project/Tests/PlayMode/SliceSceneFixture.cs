@@ -6,7 +6,6 @@ using LogiCard.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UIElements;
 
 namespace LogiCard.Tests.PlayMode
 {
@@ -116,46 +115,6 @@ namespace LogiCard.Tests.PlayMode
             }
 
             return null;
-        }
-
-        /// <summary>
-        /// UI Toolkit analog of <see cref="FindByName{T}"/> — VisualElements aren't Components, so
-        /// they're queried through whichever <see cref="UIDocument"/>'s tree contains them.
-        /// </summary>
-        protected static T FindVisualElement<T>(string name) where T : VisualElement
-        {
-            foreach (UIDocument document in Object.FindObjectsByType<UIDocument>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            {
-                VisualElement root = document.rootVisualElement;
-                if (root == null)
-                {
-                    continue;
-                }
-
-                T found = root.Q<T>(name);
-                if (found != null)
-                {
-                    return found;
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Synthesizes a click on a UI Toolkit element — the closest analog to uGUI's
-        /// <c>Button.onClick.Invoke()</c> tests use elsewhere. Dispatched through the real event
-        /// pipeline (<see cref="VisualElement.SendEvent"/>) so any <c>RegisterCallback&lt;ClickEvent&gt;</c>
-        /// handler on the element fires, same as a real pointer click would.
-        /// </summary>
-        protected static void ClickVisualElement(VisualElement element)
-        {
-            Assert.That(element, Is.Not.Null, "ClickVisualElement called with a null element.");
-            using (ClickEvent evt = ClickEvent.GetPooled())
-            {
-                evt.target = element;
-                element.SendEvent(evt);
-            }
         }
     }
 }

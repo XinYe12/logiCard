@@ -1,15 +1,16 @@
 # Play Notes — Character Select Carousel
 
-**This screen changed rendering technology this session** — it's now built on Unity UI Toolkit
-(`UIDocument`/`VisualElement`) instead of uGUI, as a pilot for `docs/UI_TOOLKIT_MIGRATION_PROPOSAL.md`.
-It has **not** had a human visual check yet (no Editor was open on this worktree to Play it this
-session) — batchmode only confirms the wiring, not the pixels. Specifically worth checking that
-batchmode can't: **does all the text actually render?** Every batchmode run logs
-`No Theme Style Sheet set to PanelSettings , UI will not render properly` — this may be cosmetic
-(everything here is hand-styled inline, not relying on a default theme) or it may mean something is
-genuinely missing on screen. This is the single most important thing this Play pass needs to answer.
-Also worth a glance: does **CONFIRM** (still uGUI, unlike the carousel) draw on top of the carousel
-correctly, or does the cross-technology layering look wrong at the seam.
+**The cards and Prev/Next buttons now use real art, not flat-color rectangles** — Kenney "UI Pack -
+Adventure" (CC0) 9-slice sprites: Scout's card is a cream/parchment panel, Juggernaut's is a darker
+solid-brown variant, nav buttons are the matching wood-bordered button sprite. This replaces both the
+earlier flat-color cards *and* a same-session UI Toolkit rebuild that got reverted after visual
+feedback (`docs/UI_TOOLKIT_MIGRATION_PROPOSAL.md` has that history if it's ever relevant again — it's
+not live code anymore, this screen is back on plain uGUI). The main thing worth checking this pass:
+**does the Kenney wood/parchment look actually read well** against the ghost headline, the warm
+per-archetype background tint, and the halo glow — or does it clash/feel pasted-in. It's a deliberate
+compromise pick (fantasy-adventure styled art on a SWAT-tactics game) chosen for material/warmth fit
+over genre fit — see `Assets/_Project/Art/UI/THIRD_PARTY.md` for the other packs considered and why
+this one won.
 
 How to see it: Boot the game (Play), let it flow through to **Character Select**, then use
 **Next / Prev** or click the dimmed flank card. Only Scout and Juggernaut are in the roster.
@@ -17,7 +18,8 @@ How to see it: Boot the game (Play), let it flow through to **Character Select**
 What "good" looks like:
 
 - One character is always **center** — large, fully opaque, front. The other is the **flank** —
-  smaller and dimmed, off to the side.
+  smaller and dimmed, off to the side. Both cards are wood-bordered cardstock/parchment panels
+  (Kenney art), not flat colored rectangles — Scout reads lighter/cream, Juggernaut darker/solid-brown.
 - Clicking the flank card (or Next/Prev) swaps their roles over ~650ms: the flank scales up,
   brightens, and slides to center while the old center shrinks/dims/slides out — scale, opacity,
   and anchor position all move together, not staggered.

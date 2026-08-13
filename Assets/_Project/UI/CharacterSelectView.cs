@@ -1,31 +1,26 @@
 using System;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UIElements;
+using UnityEngine.UI;
 
 namespace LogiCard.UI
 {
     /// <summary>
-    /// PILOT — Character Select carousel rebuilt on Unity UI Toolkit (<see cref="UIDocument"/> /
-    /// <see cref="VisualElement"/>) instead of uGUI, to evaluate a full-game UI Toolkit migration.
-    /// See <c>docs/UI_TOOLKIT_MIGRATION_PROPOSAL.md</c> for the impact/risk/sequencing writeup this
-    /// pilot fed. Same behavior contract as the uGUI version it replaces: 2-item center/flank
-    /// crossfade (~650ms) via the same <see cref="UiMotion"/> helper, <c>Pick_Scout</c> /
-    /// <c>Pick_Juggernaut</c> hit targets, ghost archetype headline, per-archetype background tint,
-    /// halo glow. <c>ConfirmCharacter</c> stays a uGUI button built by <see cref="AppFlowController"/>
-    /// — this screen is a hybrid (Toolkit carousel + uGUI Confirm sibling), the coexistence shape
-    /// <c>docs/UI_TOOLS_RESEARCH.md</c> flagged as the realistic rollout path, not a green-field one.
+    /// Character Select carousel: 2-item center/flank role crossfade (~650ms) matching the
+    /// Reference 1 feel in <c>docs/UI_CHARACTER_SELECT_ANIMATION_REF.md</c> — not a React port.
+    /// Card hit targets keep PlayMode names <c>Pick_Scout</c> / <c>Pick_Juggernaut</c>.
+    /// Card and nav-button chrome is Kenney "UI Pack - Adventure" (CC0) 9-slice sprites, not
+    /// hand-drawn flat rects — see <c>Assets/_Project/Art/UI/THIRD_PARTY.md</c> for provenance/why.
     /// </summary>
     public sealed class CharacterSelectView : MonoBehaviour
     {
         private const float CrossfadeSeconds = UiMotion.DefaultDuration;
-        private const float CardAnchorY = 0.04f;
+        private const string SpriteResourceRoot = "CharSelect/";
 
-        private UIDocument _document;
-        private Font _font;
-        private VisualElement _bg;
-        private Label _ghost;
-        private Label _detail;
+        private UiFactory _ui;
+        private Image _bg;
+        private Text _ghost;
+        private Text _detail;
         private Card[] _cards;
         private GlowRing[] _glowRings;
         private int _activeIndex;
@@ -37,41 +32,6 @@ namespace LogiCard.UI
             : "Scout";
 
         public event Action<string> SelectionChanged;
-
-        private void OnEnable()
-        {
-            if (_bg != null)
-            {
-                _bg.style.display = DisplayStyle.Flex;
-            }
-        }
-
-        private void OnDisable()
-        {
-            if (_bg != null)
-            {
-                _bg.style.display = DisplayStyle.None;
-            }
-        }
-
-        /// <summary>
-        /// The Toolkit host lives at scene root (see <see cref="BuildChrome"/>) specifically so
-        /// nothing else's SetActive can reach it — which also means nothing else will ever destroy
-        /// it. Tear it down manually alongside this screen so repeated Boot→Bootstrap cycles (every
-        /// PlayMode test's SetUp/TearDown, or a real rematch-to-title loop) don't leave orphaned
-        /// UIDocuments behind that stale VisualElement queries could match instead of the live one.
-        /// </summary>
-        private void OnDestroy()
-        {
-            if (_document != null)
-            {
-                // Immediate, not deferred Destroy: this runs inside an active destroy cascade
-                // (screenRoot going down with it), including PlayMode tests' DestroyImmediate(Bootstrap)
-                // teardown — a deferred Destroy could still be pending, and thus still findable, when
-                // the next test's SetUp queries for UIDocuments a moment later.
-                DestroyImmediate(_document.gameObject);
-            }
-        }
 
         /// <summary>
         /// Builds the carousel under an existing Character Select screen root (full-bleed panel).
@@ -95,56 +55,39 @@ namespace LogiCard.UI
                 view = screenRoot.gameObject.AddComponent<CharacterSelectView>();
             }
 
-            view._font = ui.Font;
+            view._ui = ui;
+            view._bg = screenRoot.GetComponent<Image>();
             view.BuildChrome(screenRoot);
             view.ApplyRolesInstant();
             view.NotifySelection();
             return view;
         }
 
-        /// <summary>
-        /// Unity tears down and rebuilds an empty <see cref="UIDocument.rootVisualElement"/> on
-        /// every OnEnable/OnDisable — by design, not a bug (confirmed against Unity's own guidance:
-        /// treat re-enable as "rebuild", or avoid disabling the GameObject at all). AppFlowController
-        /// hides screens by disabling their GameObject wholesale, and also disables the whole AppFlow
-        /// shell (<c>_root</c>, this screen's own parent) whenever it leaves the pre-match shell
-        /// entirely (<c>Show(Screen.None)</c> — bypassed-to-match, tests' <c>BypassAppFlowForTests</c>).
-        /// Either would cascade-disable a UIDocument parented anywhere under this screen or its
-        /// ancestors and silently wipe the tree. So the UIDocument lives on its own GameObject at
-        /// scene root — parented under nothing AppFlowController ever touches — and
-        /// <see cref="OnEnable"/>/<see cref="OnDisable"/> below (fired by screenRoot's own
-        /// activation, since <see cref="CharacterSelectView"/> itself still lives there) translate
-        /// that into <c>rootVisualElement.style.display</c> instead — hide/show, never rebuild.
-        /// </summary>
         private void BuildChrome(RectTransform root)
         {
-            var hostGo = new GameObject("CharacterSelectToolkit");
-            _document = hostGo.AddComponent<UIDocument>();
-            _document.panelSettings = CreatePanelSettings();
+            Text brand = _ui.CreateText(root, "Brand", "LOGICARD", 18, TextAnchor.UpperLeft, UiStyle.Ink,
+                UiTextOverflow.SingleLine);
+            brand.fontStyle = FontStyle.Bold;
+            UiFactory.Stretch(brand.rectTransform, new Vector2(0.04f, 0.92f), new Vector2(0.4f, 0.98f));
 
-            VisualElement rootVe = _document.rootVisualElement;
-            rootVe.style.position = Position.Absolute;
-            rootVe.style.left = 0;
-            rootVe.style.right = 0;
-            rootVe.style.top = 0;
-            rootVe.style.bottom = 0;
-            // Starts hidden — screenRoot itself starts inactive (AppFlowController.CreateScreen),
-            // so this shouldn't paint until the first real Show(Screen.CharacterSelect) triggers
-            // OnEnable below.
-            rootVe.style.display = DisplayStyle.None;
-            _bg = rootVe;
+            Text title = _ui.CreateText(root, "Title", "CHARACTER SELECT", 28, TextAnchor.MiddleCenter, UiStyle.Ink,
+                UiTextOverflow.SingleLine);
+            title.fontStyle = FontStyle.Bold;
+            UiFactory.Stretch(title.rectTransform, new Vector2(0.2f, 0.88f), new Vector2(0.8f, 0.96f));
 
-            // Ghost headline first = furthest back, matching the uGUI version's explicit
-            // SetAsFirstSibling — everything else paints on top of it.
-            _ghost = CreateLabel(rootVe, "GhostHeadline", "SCOUT", 120, TextAnchor.MiddleCenter, UiStyle.CharSelectGhost, bold: true);
-            StretchVe(_ghost, 0.02f, 0.28f, 0.98f, 0.78f);
+            _ghost = _ui.CreateText(root, "GhostHeadline", "SCOUT", 120, TextAnchor.MiddleCenter, UiStyle.CharSelectGhost,
+                UiTextOverflow.SingleLine);
+            _ghost.fontStyle = FontStyle.Bold;
+            _ghost.raycastTarget = false;
+            UiFactory.Stretch(_ghost.rectTransform, new Vector2(0.02f, 0.28f), new Vector2(0.98f, 0.78f));
+            _ghost.transform.SetAsFirstSibling();
 
-            var stage = new VisualElement { name = "CarouselStage" };
-            StretchVe(stage, 0f, 0.18f, 1f, 0.88f);
-            rootVe.Add(stage);
+            RectTransform stage = _ui.CreatePanel(root, "CarouselStage", new Color(0f, 0f, 0f, 0f),
+                new Vector2(0f, 0.18f), new Vector2(1f, 0.88f));
+            stage.SetSiblingIndex(1);
 
-            // Glow rings sit behind both cards (added first = lowest in the paint order within
-            // stage) and always track whichever card is currently center.
+            // Glow rings sit behind both cards (created first = lowest sibling index in stage) and
+            // always track whichever card is currently the center, so the halo rides the crossfade.
             _glowRings = new[]
             {
                 CreateGlowRing(stage, "GlowOuter", padding: 60f, maxAlpha: 0.16f),
@@ -153,141 +96,92 @@ namespace LogiCard.UI
 
             _cards = new[]
             {
-                CreateCard(stage, "Scout", "SCOUT", UiStyle.CharSelectCardScout),
-                CreateCard(stage, "Juggernaut", "JUGGERNAUT", UiStyle.CharSelectCardJuggernaut),
+                CreateCard(stage, "Scout", "SCOUT"),
+                CreateCard(stage, "Juggernaut", "JUGGERNAUT"),
             };
 
-            Label brand = CreateLabel(rootVe, "Brand", "LOGICARD", 18, TextAnchor.UpperLeft, UiStyle.Ink, bold: true);
-            StretchVe(brand, 0.04f, 0.92f, 0.4f, 0.98f);
+            Sprite navSprite = LoadSprite("button_brown");
+            Button prev = _ui.CreateButton(root, "CharSelectPrev", "<", Color.white, UiStyle.InkDark, 36,
+                () => Navigate(-1), navSprite, Image.Type.Sliced);
+            UiFactory.Stretch(prev.GetComponent<RectTransform>(), new Vector2(0.06f, 0.28f), new Vector2(0.14f, 0.40f));
 
-            Label title = CreateLabel(rootVe, "Title", "CHARACTER SELECT", 28, TextAnchor.MiddleCenter, UiStyle.Ink, bold: true);
-            StretchVe(title, 0.2f, 0.88f, 0.8f, 0.96f);
+            Button next = _ui.CreateButton(root, "CharSelectNext", ">", Color.white, UiStyle.InkDark, 36,
+                () => Navigate(1), navSprite, Image.Type.Sliced);
+            UiFactory.Stretch(next.GetComponent<RectTransform>(), new Vector2(0.86f, 0.28f), new Vector2(0.94f, 0.40f));
 
-            CreateNavButton(rootVe, "CharSelectPrev", "<", () => Navigate(-1), 0.06f, 0.28f, 0.14f, 0.40f);
-            CreateNavButton(rootVe, "CharSelectNext", ">", () => Navigate(1), 0.86f, 0.28f, 0.94f, 0.40f);
-
-            _detail = CreateLabel(rootVe, "Detail", string.Empty, 22, TextAnchor.MiddleCenter, UiStyle.Ink, bold: false);
-            StretchVe(_detail, 0.12f, 0.14f, 0.88f, 0.24f);
+            _detail = _ui.CreateText(root, "Detail", string.Empty, 22, TextAnchor.MiddleCenter, UiStyle.Ink);
+            UiFactory.Stretch(_detail.rectTransform, new Vector2(0.12f, 0.14f), new Vector2(0.88f, 0.24f));
 
             _activeIndex = 0;
         }
 
-        private static PanelSettings CreatePanelSettings()
+        /// <summary>
+        /// Loads a Kenney "UI Pack - Adventure" sprite from <c>Resources/CharSelect/</c>. Cached per
+        /// name — cheap either way since <see cref="Resources.Load{T}(string)"/> itself caches, but
+        /// avoids repeat string concatenation across the handful of call sites.
+        /// </summary>
+        private static Sprite LoadSprite(string name) => Resources.Load<Sprite>(SpriteResourceRoot + name);
+
+        private static Sprite CardSpriteFor(string id) =>
+            LoadSprite(id == "Juggernaut" ? "panel_brown_dark" : "panel_brown");
+
+        private Card CreateCard(RectTransform stage, string id, string label)
         {
-            var settings = ScriptableObject.CreateInstance<PanelSettings>();
-            settings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-            settings.referenceResolution = new Vector2Int(
-                Mathf.RoundToInt(UiStyle.ReferenceResolution.x),
-                Mathf.RoundToInt(UiStyle.ReferenceResolution.y));
-            settings.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
-            settings.match = UiStyle.CanvasMatchWidthOrHeight;
-            // Above the uGUI Canvas's default sortingOrder (0) so this screen's Toolkit content
-            // composites in front of the leftover uGUI screen background (CreateScreen's Image) and
-            // the sibling ConfirmCharacter uGUI button stays readable as an overlay on top of it too
-            // — cross-technology sort order is real friction, flagged in the migration proposal.
-            settings.sortingOrder = 10f;
-            return settings;
-        }
+            var go = new GameObject($"Pick_{id}", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(Button));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(stage, false);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchorMin = new Vector2(0.5f, 0.04f);
+            rt.anchorMax = new Vector2(0.5f, 0.04f);
+            rt.sizeDelta = new Vector2(220f, 360f);
 
-        private Label CreateLabel(VisualElement parent, string name, string text, int fontSize, TextAnchor align, Color color, bool bold)
-        {
-            var label = new Label(text) { name = name };
-            label.style.color = color;
-            label.style.fontSize = fontSize;
-            label.style.unityTextAlign = align;
-            if (_font != null)
-            {
-                label.style.unityFontDefinition = FontDefinition.FromFont(_font);
-            }
+            var image = go.GetComponent<Image>();
+            image.color = Color.white;
+            image.sprite = CardSpriteFor(id);
+            image.type = Image.Type.Sliced;
 
-            if (bold)
-            {
-                label.style.unityFontStyleAndWeight = FontStyle.Bold;
-            }
+            var group = go.GetComponent<CanvasGroup>();
+            group.alpha = 1f;
 
-            label.pickingMode = PickingMode.Ignore;
-            parent.Add(label);
-            return label;
-        }
+            Text text = _ui.CreateText(rt, "Label", label, 34, TextAnchor.MiddleCenter, UiStyle.InkDark,
+                UiTextOverflow.Button);
+            text.fontStyle = FontStyle.Bold;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = 18;
+            text.resizeTextMaxSize = 40;
+            UiFactory.Stretch(text.rectTransform, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.92f));
 
-        private void CreateNavButton(VisualElement parent, string name, string label, Action onClick,
-            float xMin, float yMin, float xMax, float yMax)
-        {
-            var btn = new VisualElement { name = name };
-            StretchVe(btn, xMin, yMin, xMax, yMax);
-            btn.style.backgroundColor = new Color(1f, 1f, 1f, 0.14f);
-            btn.style.borderTopWidth = 1.5f;
-            btn.style.borderBottomWidth = 1.5f;
-            btn.style.borderLeftWidth = 1.5f;
-            btn.style.borderRightWidth = 1.5f;
-            Color border = new Color(1f, 1f, 1f, 0.85f);
-            btn.style.borderTopColor = border;
-            btn.style.borderBottomColor = border;
-            btn.style.borderLeftColor = border;
-            btn.style.borderRightColor = border;
-            SetCornerRadius(btn, 8f);
-            btn.pickingMode = PickingMode.Position;
-            btn.RegisterCallback<ClickEvent>(_ => onClick());
-            parent.Add(btn);
-
-            Label text = CreateLabel(btn, "Label", label, 36, TextAnchor.MiddleCenter, UiStyle.Ink, bold: true);
-            StretchVe(text, 0f, 0f, 1f, 1f);
-        }
-
-        private Card CreateCard(VisualElement stage, string id, string label, Color face)
-        {
-            var box = new VisualElement { name = $"Pick_{id}" };
-            box.style.position = Position.Absolute;
-            box.style.backgroundColor = face;
-            SetCornerRadius(box, 18f);
-            box.pickingMode = PickingMode.Position;
+            var button = go.GetComponent<Button>();
+            button.targetGraphic = image;
             string capturedId = id;
-            box.RegisterCallback<ClickEvent>(_ => OnCardClicked(capturedId));
-            stage.Add(box);
-
-            Label text = CreateLabel(box, "Label", label, 34, TextAnchor.MiddleCenter, UiStyle.InkDark, bold: true);
-            StretchVe(text, 0.08f, 0.08f, 0.92f, 0.92f);
+            button.onClick.AddListener(() => OnCardClicked(capturedId));
 
             return new Card
             {
                 Id = id,
                 Label = label,
-                Face = face,
-                Element = box,
+                Root = rt,
+                Group = group,
+                FaceImage = image,
             };
         }
 
-        private GlowRing CreateGlowRing(VisualElement stage, string name, float padding, float maxAlpha)
+        private GlowRing CreateGlowRing(RectTransform stage, string name, float padding, float maxAlpha)
         {
-            var el = new VisualElement { name = name };
-            el.style.position = Position.Absolute;
-            el.pickingMode = PickingMode.Ignore;
-            el.style.backgroundColor = new Color(1f, 1f, 1f, 0f);
-            SetCornerRadius(el, 28f);
-            stage.Add(el);
-            return new GlowRing(el, padding, maxAlpha);
-        }
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(stage, false);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchorMin = new Vector2(0.5f, 0.04f);
+            rt.anchorMax = new Vector2(0.5f, 0.04f);
 
-        private static void SetCornerRadius(VisualElement ve, float radius)
-        {
-            ve.style.borderTopLeftRadius = radius;
-            ve.style.borderTopRightRadius = radius;
-            ve.style.borderBottomLeftRadius = radius;
-            ve.style.borderBottomRightRadius = radius;
-        }
+            var image = go.GetComponent<Image>();
+            image.sprite = UiStyle.RoundSprite;
+            image.type = Image.Type.Sliced;
+            image.raycastTarget = false;
+            image.color = new Color(1f, 1f, 1f, 0f);
 
-        /// <summary>
-        /// Maps a uGUI-style stretch anchor box (min/max fractions of the parent, Y-up) onto USS
-        /// left/right/top/bottom percentages (Y-down) — the direct analog of
-        /// <c>UiFactory.Stretch</c>, kept so every layout number ported 1:1 from the uGUI version.
-        /// </summary>
-        private static void StretchVe(VisualElement ve, float xMin, float yMin, float xMax, float yMax)
-        {
-            ve.style.position = Position.Absolute;
-            ve.style.left = Length.Percent(xMin * 100f);
-            ve.style.right = Length.Percent((1f - xMax) * 100f);
-            ve.style.bottom = Length.Percent(yMin * 100f);
-            ve.style.top = Length.Percent((1f - yMax) * 100f);
+            return new GlowRing(rt, image, padding, maxAlpha);
         }
 
         private void OnCardClicked(string id)
@@ -347,11 +241,11 @@ namespace LogiCard.UI
             Role toCenter = Role.Center;
             Role toFlank = Role.Flank(flankAnchorX);
 
-            Color bgFrom = _bg.style.backgroundColor.value;
+            Color bgFrom = _bg != null ? _bg.color : UiStyle.PanelDark;
             Color bgTo = BackgroundFor(center.Id);
-            string ghostFrom = _ghost.text;
+            string ghostFrom = _ghost != null ? _ghost.text : center.Label;
             string ghostTo = center.Label;
-            float ghostAlphaFrom = _ghost.style.color.value.a;
+            float ghostAlphaFrom = _ghost != null ? _ghost.color.a : UiStyle.CharSelectGhost.a;
             float ghostAlphaTo = UiStyle.CharSelectGhost.a;
 
             yield return UiMotion.Animate(CrossfadeSeconds, t =>
@@ -360,38 +254,61 @@ namespace LogiCard.UI
                 ApplyRole(center, centerNow);
                 ApplyRole(flank, Role.Lerp(fromFlank, toFlank, t));
                 UpdateGlow(center, centerNow);
-                _bg.style.backgroundColor = Color.LerpUnclamped(bgFrom, bgTo, t);
-
-                Color c = UiStyle.CharSelectGhost;
-                // Soft label swap mid-crossfade.
-                if (t >= 0.45f)
+                if (_bg != null)
                 {
-                    c.a = Mathf.LerpUnclamped(0.2f, ghostAlphaTo, (t - 0.45f) / 0.55f);
-                    _ghost.text = ghostTo;
-                }
-                else
-                {
-                    c.a = Mathf.LerpUnclamped(ghostAlphaFrom, 0.2f, t / 0.45f);
-                    _ghost.text = ghostFrom;
+                    _bg.color = Color.LerpUnclamped(bgFrom, bgTo, t);
                 }
 
-                _ghost.style.color = c;
+                if (_ghost != null)
+                {
+                    Color c = UiStyle.CharSelectGhost;
+                    c.a = Mathf.LerpUnclamped(ghostAlphaFrom, ghostAlphaTo, t);
+                    // Soft label swap mid-crossfade.
+                    if (t >= 0.45f)
+                    {
+                        c.a = Mathf.LerpUnclamped(0.2f, ghostAlphaTo, (t - 0.45f) / 0.55f);
+                        _ghost.text = ghostTo;
+                    }
+                    else
+                    {
+                        c.a = Mathf.LerpUnclamped(ghostAlphaFrom, 0.2f, t / 0.45f);
+                        _ghost.text = ghostFrom;
+                    }
 
-                center.Element.BringToFront();
+                    _ghost.color = c;
+                }
+
+                center.Root.SetAsLastSibling();
             });
 
             ApplyRole(center, toCenter);
             ApplyRole(flank, toFlank);
             UpdateGlow(center, toCenter);
-            _bg.style.backgroundColor = bgTo;
-            _ghost.text = ghostTo;
-            _ghost.style.color = UiStyle.CharSelectGhost;
+            if (_bg != null)
+            {
+                _bg.color = bgTo;
+            }
+
+            if (_ghost != null)
+            {
+                _ghost.text = ghostTo;
+                _ghost.color = UiStyle.CharSelectGhost;
+            }
 
             _animating = false;
             _motion = null;
         }
 
-        private static Role CaptureRole(Card card) => card.Current;
+        private static Role CaptureRole(Card card)
+        {
+            float scale = card.Root.localScale.x;
+            return new Role(
+                card.Root.anchorMin.x,
+                card.Root.sizeDelta.x,
+                card.Root.sizeDelta.y,
+                scale,
+                card.Group.alpha);
+        }
 
         private void ApplyRolesInstant()
         {
@@ -405,11 +322,18 @@ namespace LogiCard.UI
             ApplyRole(center, Role.Center);
             ApplyRole(flank, Role.Flank(0.72f));
             UpdateGlow(center, Role.Center);
-            center.Element.BringToFront();
+            center.Root.SetAsLastSibling();
 
-            _bg.style.backgroundColor = BackgroundFor(center.Id);
-            _ghost.text = center.Label;
-            _ghost.style.color = UiStyle.CharSelectGhost;
+            if (_bg != null)
+            {
+                _bg.color = BackgroundFor(center.Id);
+            }
+
+            if (_ghost != null)
+            {
+                _ghost.text = center.Label;
+                _ghost.color = UiStyle.CharSelectGhost;
+            }
         }
 
         private void NotifySelection()
@@ -464,61 +388,54 @@ namespace LogiCard.UI
             for (int i = 0; i < _glowRings.Length; i++)
             {
                 GlowRing ring = _glowRings[i];
-                float w = role.Width + (ring.Padding * 2f);
-                float h = role.Height + (ring.Padding * 2f);
-
-                ring.Element.style.left = Length.Percent(role.AnchorX * 100f);
-                ring.Element.style.bottom = Length.Percent(CardAnchorY * 100f);
-                ring.Element.style.width = w;
-                ring.Element.style.height = h;
-                ring.Element.style.marginLeft = -w / 2f;
-                ring.Element.style.scale = new Scale(new Vector3(role.Scale, role.Scale, 1f));
-                ring.Element.style.transformOrigin = new TransformOrigin(Length.Percent(50f), Length.Percent(100f));
+                ring.Root.anchorMin = new Vector2(role.AnchorX, 0.04f);
+                ring.Root.anchorMax = new Vector2(role.AnchorX, 0.04f);
+                ring.Root.anchoredPosition = Vector2.zero;
+                ring.Root.sizeDelta = new Vector2(role.Width + (ring.Padding * 2f), role.Height + (ring.Padding * 2f));
+                ring.Root.localScale = new Vector3(role.Scale, role.Scale, 1f);
 
                 Color c = tint;
                 c.a = ring.MaxAlpha * strength;
-                ring.Element.style.backgroundColor = c;
+                ring.Image.color = c;
             }
         }
 
         private static void ApplyRole(Card card, Role role)
         {
-            card.Current = role;
+            card.Root.anchorMin = new Vector2(role.AnchorX, 0.04f);
+            card.Root.anchorMax = new Vector2(role.AnchorX, 0.04f);
+            card.Root.anchoredPosition = Vector2.zero;
+            card.Root.sizeDelta = new Vector2(role.Width, role.Height);
+            card.Root.localScale = new Vector3(role.Scale, role.Scale, 1f);
+            card.Group.alpha = role.Alpha;
 
-            VisualElement el = card.Element;
-            el.style.left = Length.Percent(role.AnchorX * 100f);
-            el.style.bottom = Length.Percent(CardAnchorY * 100f);
-            el.style.width = role.Width;
-            el.style.height = role.Height;
-            el.style.marginLeft = -role.Width / 2f;
-            el.style.scale = new Scale(new Vector3(role.Scale, role.Scale, 1f));
-            el.style.transformOrigin = new TransformOrigin(Length.Percent(50f), Length.Percent(100f));
-            el.style.opacity = role.Alpha;
-
-            Color face = card.Face;
-            // Dim flank faces slightly without a real blur pass.
+            // Dim flank faces slightly without a real blur pass — multiplies the sprite's own baked
+            // wood/parchment color toward grey rather than tinting a flat fill, so the flank still
+            // reads as "the same card, dimmer," not a different material.
             float mul = Mathf.Lerp(0.72f, 1f, Mathf.InverseLerp(0.75f, 1f, role.Alpha));
-            el.style.backgroundColor = new Color(face.r * mul, face.g * mul, face.b * mul, 1f);
+            card.FaceImage.color = new Color(mul, mul, mul, 1f);
         }
 
         private sealed class Card
         {
             public string Id;
             public string Label;
-            public Color Face;
-            public VisualElement Element;
-            public Role Current;
+            public RectTransform Root;
+            public CanvasGroup Group;
+            public Image FaceImage;
         }
 
         private readonly struct GlowRing
         {
-            public readonly VisualElement Element;
+            public readonly RectTransform Root;
+            public readonly Image Image;
             public readonly float Padding;
             public readonly float MaxAlpha;
 
-            public GlowRing(VisualElement element, float padding, float maxAlpha)
+            public GlowRing(RectTransform root, Image image, float padding, float maxAlpha)
             {
-                Element = element;
+                Root = root;
+                Image = image;
                 Padding = padding;
                 MaxAlpha = maxAlpha;
             }
