@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using LogiCard.Sim;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -48,7 +49,9 @@ namespace LogiCard.Board
         {
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
-                DestroyImmediate(transform.GetChild(i).gameObject);
+                GameObject child = transform.GetChild(i).gameObject;
+                DestroyKneadedLobeMeshes(child);
+                DestroyImmediate(child);
             }
 
             if (board == null || board.Model == null)
@@ -67,6 +70,22 @@ namespace LogiCard.Board
             PlaceRain(width, depth);
             PlaceFogMist(width, depth);
             PlaceLightning(width, depth);
+        }
+
+        /// <summary>Each clay lobe now gets its own kneaded (non-shared) mesh instance — unlike the
+        /// cached <see cref="_unitSphereMesh"/>, these must be explicitly destroyed on rebuild or they
+        /// leak (Unity meshes aren't GC'd just because their GameObject is destroyed).</summary>
+        private static void DestroyKneadedLobeMeshes(GameObject root)
+        {
+            var filters = root.GetComponentsInChildren<MeshFilter>(true);
+            for (int i = 0; i < filters.Length; i++)
+            {
+                Mesh mesh = filters[i].sharedMesh;
+                if (mesh != null && mesh != _unitSphereMesh)
+                {
+                    DestroyImmediate(mesh);
+                }
+            }
         }
 
         /// <summary>
@@ -284,7 +303,9 @@ namespace LogiCard.Board
                     go.transform.localScale = Vector3.one * diameter;
 
                     var filter = go.AddComponent<MeshFilter>();
-                    filter.sharedMesh = sphere;
+                    // Kneaded per-lobe (2026-08-13) — no two lobes share a mesh anymore, each is its
+                    // own dough-deformed copy of the base sphere. See KneadClayLobeMesh.
+                    filter.sharedMesh = KneadClayLobeMesh(sphere, intensity01: 0.24f, roundIterations: 3);
 
                     var renderer = go.AddComponent<MeshRenderer>();
                     renderer.sharedMaterial = clay;
@@ -433,6 +454,162 @@ namespace LogiCard.Board
             }
 
             return _unitSphereMesh;
+        }
+
+        /// <summary>Vertex adjacency (shared triangle topology, same for every kneaded lobe since they
+        /// all start from <see cref="UnitSphereMesh"/>) — built once, reused by every <see
+        /// cref="KneadClayLobeMesh"/> call for the rounding pass.</summary>
+        private static int[][] _sphereAdjacency;
+
+        /// <summary>
+        /// "揉面团" (kneading dough) — human 2026-08-13: the puffs were still reading as spheres even
+        /// after the triangular-formation pass, because every lobe literally *was* an unmodified sphere
+        /// primitive. This deforms a private copy of the base sphere per lobe: squeeze (pinch two
+        /// opposite sides — bulges the waist between them), press (one broad soft dent), push (one
+        /// broad soft bulge), pound (one small sharp dent — the "pointy edges"), all the same radial
+        /// "dent" primitive at different center-counts/radii/strengths. Then a rounding pass (partial
+        /// Laplacian relax over the shared topology) softens those sharp transitions into curves —
+        /// "round the edges... like a sandbag" — and a final uniform rescale corrects the size drift
+        /// relaxation causes, so kneading never desyncs a lobe from its tuned on-screen <c>RadiusNorm</c>.
+        /// One unique mesh per lobe (not shared) — see <see cref="DestroyKneadedLobeMeshes"/> for cleanup.
+        /// </summary>
+        private static Mesh KneadClayLobeMesh(Mesh baseMesh, float intensity01, int roundIterations)
+        {
+            Vector3[] baseVerts = baseMesh.vertices;
+            if (_sphereAdjacency == null)
+            {
+                _sphereAdjacency = BuildVertexAdjacency(baseMesh);
+            }
+
+            float targetAvgRadius = AverageRadius(baseVerts);
+            float strength = targetAvgRadius * intensity01;
+            Vector3[] verts = (Vector3[])baseVerts.Clone();
+
+            // Squeeze — pinch two opposite sides inward; bulges the waist between them.
+            Vector3 squeezeAxis = Random.onUnitSphere;
+            Dent(verts, baseVerts, squeezeAxis, -strength * Random.Range(0.5f, 0.9f), RandomFalloffAngle(50f, 80f));
+            Dent(verts, baseVerts, -squeezeAxis, -strength * Random.Range(0.5f, 0.9f), RandomFalloffAngle(50f, 80f));
+
+            // Press — one broad soft dent.
+            Dent(verts, baseVerts, Random.onUnitSphere, -strength * Random.Range(0.6f, 1f), RandomFalloffAngle(45f, 70f));
+
+            // Push — one broad soft bulge.
+            Dent(verts, baseVerts, Random.onUnitSphere, strength * Random.Range(0.6f, 1f), RandomFalloffAngle(45f, 70f));
+
+            // Pound — one small, sharp dent (rounding below softens this into the "pointy edge").
+            Dent(verts, baseVerts, Random.onUnitSphere, -strength * Random.Range(1.0f, 1.4f), RandomFalloffAngle(22f, 36f));
+
+            // Round — partial relax (0.45, not full) so lumps survive; full Laplacian would erase them.
+            for (int s = 0; s < roundIterations; s++)
+            {
+                var relaxed = new Vector3[verts.Length];
+                for (int i = 0; i < verts.Length; i++)
+                {
+                    int[] neighbors = _sphereAdjacency[i];
+                    if (neighbors.Length == 0)
+                    {
+                        relaxed[i] = verts[i];
+                        continue;
+                    }
+
+                    Vector3 avg = Vector3.zero;
+                    for (int n = 0; n < neighbors.Length; n++)
+                    {
+                        avg += verts[neighbors[n]];
+                    }
+
+                    avg /= neighbors.Length;
+                    relaxed[i] = Vector3.Lerp(verts[i], avg, 0.45f);
+                }
+
+                verts = relaxed;
+            }
+
+            // Relaxing shrinks a mesh toward its centroid — rescale back to the original average
+            // radius so the lobe's tuned RadiusNorm/diameter still lands on-screen as intended.
+            float currentAvgRadius = AverageRadius(verts);
+            float correction = currentAvgRadius > 0.0001f ? targetAvgRadius / currentAvgRadius : 1f;
+            for (int i = 0; i < verts.Length; i++)
+            {
+                verts[i] *= correction;
+            }
+
+            var mesh = new Mesh { name = "ClayLobeDough" };
+            mesh.vertices = verts;
+            mesh.triangles = baseMesh.triangles;
+            mesh.uv = baseMesh.uv;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        /// <summary>One radial displacement: vertices within <paramref name="falloffAngle"/> of
+        /// <paramref name="center"/> (angular distance on the base sphere) move along their own base
+        /// direction by <paramref name="strength"/>, smoothstep-falling to zero at the edge of influence.
+        /// Negative strength dents inward (squeeze/press/pound), positive bulges outward (push).</summary>
+        private static void Dent(Vector3[] verts, Vector3[] baseVerts, Vector3 center, float strength, float falloffAngle)
+        {
+            Vector3 axis = center.normalized;
+            for (int i = 0; i < verts.Length; i++)
+            {
+                Vector3 dir = baseVerts[i].normalized;
+                float angle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(dir, axis), -1f, 1f));
+                if (angle >= falloffAngle)
+                {
+                    continue;
+                }
+
+                float t = 1f - (angle / falloffAngle);
+                float falloff = t * t * (3f - 2f * t);
+                verts[i] += dir * strength * falloff;
+            }
+        }
+
+        private static float RandomFalloffAngle(float minDegrees, float maxDegrees) =>
+            Random.Range(minDegrees, maxDegrees) * Mathf.Deg2Rad;
+
+        private static float AverageRadius(Vector3[] verts)
+        {
+            float sum = 0f;
+            for (int i = 0; i < verts.Length; i++)
+            {
+                sum += verts[i].magnitude;
+            }
+
+            return verts.Length > 0 ? sum / verts.Length : 1f;
+        }
+
+        private static int[][] BuildVertexAdjacency(Mesh mesh)
+        {
+            Vector3[] verts = mesh.vertices;
+            int[] tris = mesh.triangles;
+            var neighborSets = new HashSet<int>[verts.Length];
+            for (int i = 0; i < verts.Length; i++)
+            {
+                neighborSets[i] = new HashSet<int>();
+            }
+
+            for (int t = 0; t < tris.Length; t += 3)
+            {
+                int a = tris[t];
+                int b = tris[t + 1];
+                int c = tris[t + 2];
+                neighborSets[a].Add(b);
+                neighborSets[a].Add(c);
+                neighborSets[b].Add(a);
+                neighborSets[b].Add(c);
+                neighborSets[c].Add(a);
+                neighborSets[c].Add(b);
+            }
+
+            var adjacency = new int[verts.Length][];
+            for (int i = 0; i < verts.Length; i++)
+            {
+                adjacency[i] = new int[neighborSets[i].Count];
+                neighborSets[i].CopyTo(adjacency[i]);
+            }
+
+            return adjacency;
         }
 
         private void PlaceRain(float width, float depth)

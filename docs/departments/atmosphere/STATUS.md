@@ -2,27 +2,26 @@
 
 **Wave / Day:** Permanent department seat (GDD §11 / PARALLEL_OPS) — **In progress** 2026-08-13
 **Branch / worktree:** `feat/atmosphere-stylized` @ `D:\projects\Game\logiCard-atmosphere-stylized`
-**Last cross-reviewed:** 2026-08-13 — human Play, fifth round: height/gluing now reading OK; two new asks from a wide shot + a close-up crop + a reference image: more stylized (close-up showed glossy render-ball highlights), and clouds should be built from small irregular pieces assembled into a triangular dense-middle/loose-edge shape (screenshots cleaned up after review, per this lane's pattern)
+**Last cross-reviewed:** 2026-08-13 — human Play, sixth round: triangular formation shape confirmed good ("that part you nailed it") — explicitly scoped this round to individual lobe shape only: every lobe is still a literal unmodified sphere primitive, and it shows (screenshot cleaned up after review, per this lane's pattern)
 
 ## Owned files (this seat)
 
 - `BoardWeatherPocket.cs`, `Resources/Weather/**`, `WeatherPackImportTool`, `Tools/gen_soft_cloud_atlas.py`, weather PlayMode smoke, this STATUS
 
-## Verdict (prior pass — height/gluing landed, shading/shape didn't go far enough)
+## Verdict (prior pass — formation shape confirmed, lobe shape is the remaining problem)
 
-Wide shot showed height and gluing both reading fine now (no further complaint on either). A close-up crop exposed the shading: the smooth continuous crown→belly gradient reads as a glossy 3D-render highlight at close range, not painted/stylized. And a reference image (anime sky, fluffy painted clouds) named the target composition directly: individual clouds should be visibly built from small irregular pieces, arranged dense/thick in the middle and loose/thin at the sides — "almost triangular," not a uniform cauliflower ball of same-size lobes (which is what the previous `GenerateCloudCluster` produced, even with the narrowed radius band).
+The triangular dense-middle/loose-edge formation assembly (`PlaceClayMass` Layer 2) is approved, unchanged this pass. Human was explicit: the remaining "looks like spheres" complaint is about each individual lobe's own geometry, not the macro arrangement. Asked for a "揉面团" (kneading dough) effect — squeeze/press/push/pound a sphere into an irregular lump, then round the result so it settles into a soft "sandbag," still roughly ball-shaped overall but no longer a sphere.
 
 ## In progress / just landed (this pass, unverified — see Blocked)
 
-1. **Two-layer cloud system, as requested.** `SpawnCloudPuff` (Layer 1) is the old cluster generator, renamed and now used at *puff* scale — 2-5 lobes, a small irregular chunk, not a whole cloud. `PlaceClayMass` (Layer 2) is new: it assembles 7-10 puffs per formation using `TriangularSample()` (symmetric triangular distribution, peaks at 0) along local X, so puffs land denser and bigger near the formation's center and sparser/smaller toward its edges — the "dense middle, loose sides, almost triangular" shape from the reference. Fringe puffs also drift slightly upward (wispy tendrils).
-2. **Posterized shading** — `ClaySphereShade.png` redrawn as 3 flat bands (crown/mid/belly) with a soft feather between them instead of one continuous gradient. Same color direction (human said they're happy with the color) — this only changes how the tone steps, from smooth/glossy to flat/painted.
+**`KneadClayLobeMesh`** — every lobe now gets its own deformed mesh (previously all lobes shared one `_unitSphereMesh` instance; that's why they all read as identical perfect spheres). Per lobe: clone the base sphere's vertices, apply 5 radial "dent" displacements (squeeze = two opposite-side pinches, press = one broad soft dent, push = one broad soft bulge, pound = one small sharp dent — the "pointy edges"), then a partial Laplacian relax (3 iterations) to round those sharp transitions into curves, then a uniform rescale back to the original average radius so relaxation's natural shrinkage doesn't desync the lobe from its tuned on-screen `RadiusNorm`/diameter. `intensity01: 0.24` is the overall knead strength knob. Non-shared meshes need explicit cleanup on rebuild — added `DestroyKneadedLobeMeshes`, called from `Build()` before the old children are destroyed, so repeated `Build()` calls (weather rebuilt between matches) don't leak `Mesh` objects.
 
 ## Blocked
 
-- Human Re-Play needed — untested since edit (Editor has this worktree open per `Assets/_Recovery` crash-snapshot, so no batchmode this pass either; this is a pure look call same as always). No screenshot yet.
+- Human Re-Play needed — untested since edit (Editor has this worktree open per `Assets/_Recovery` crash-snapshot, so no batchmode this pass either; this is a pure look call same as always). No screenshot yet. This is also the first pass that couldn't be sanity-checked by reasoning about screen-space size/position math the way height/spacing fixes could — mesh deformation only shows itself in a render, so there's more uncertainty than usual in how far off `intensity01`/dent-angle ranges might be.
 
 ## Offers
 
-- If puffs still read too uniform/round: narrow `puffMinR`/`puffMaxR` further or drop `puffLobes` at the fringe (currently lerps 5→2).
-- If the triangular shape isn't legible enough: strengthen the `puffScale` falloff (currently 1→0.4) or the `TriangularSample` peak (could exponentiate `u` for a sharper center bias).
-- If shading still doesn't read as "stylized" enough: the bands can be widened/narrowed or a fourth band added — `ClaySphereShade.png` generation is a short inline Python script, easy to re-tune blind next round too, but a real screenshot is the only way to know which direction to push.
+- If lobes read barely different from spheres: raise `intensity01` (currently 0.24) — I deliberately started conservative given no way to preview the result, to avoid folded/self-intersecting geometry from stacked dents on a moderate-resolution primitive sphere.
+- If lobes look broken/spiky/folded: lower `intensity01`, or raise `roundIterations` (currently 3) for a stronger relax pass.
+- If the dough look is right but the *pattern* per lobe feels repetitive: dent angle ranges (`RandomFalloffAngle` calls in `KneadClayLobeMesh`) are the next thing to randomize further.
