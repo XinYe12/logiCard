@@ -153,7 +153,7 @@ namespace LogiCard.Boot
             for (int i = 0; i < _pawns.Count; i++)
             {
                 PawnEntry pawn = _pawns[i];
-                _inputs.Add(new GhostInput(pawn.PawnId, pawn.CurrentPosition, pawn.BuildPayload(), pawn.Wounds));
+                _inputs.Add(new GhostInput(pawn.PawnId, pawn.CurrentPosition, pawn.BuildPayload(), pawn.Wounds, pawn.BandageCharge));
             }
 
             // A bare `yield return someEnumerator` does NOT drain it synchronously in Unity — it defers
@@ -244,6 +244,7 @@ namespace LogiCard.Boot
                 }
 
                 pawn.Wounds = _tape.WoundsFor(pawn.PawnId);
+                pawn.BandageCharge = _tape.BandageChargeFor(pawn.PawnId);
                 _pawns[i] = pawn;
             }
 
@@ -617,12 +618,17 @@ namespace LogiCard.Boot
 
             public int Wounds { get; set; }
 
+            /// <summary>C63 — 0 or 1, Bandage charges spent this match. Carried across rounds the
+            /// same way <see cref="Wounds"/> is (via GhostInput/ReplayTape).</summary>
+            public int BandageCharge { get; set; }
+
             public PawnEntry(int pawnId, PawnView view, PlanarPosition home, Func<TimelinePayload> payloadSource)
             {
                 PawnId = pawnId;
                 View = view;
                 CurrentPosition = home;
                 Wounds = 0;
+                BandageCharge = 0;
                 _payloadSource = payloadSource;
             }
 

@@ -11,6 +11,7 @@ namespace LogiCard.Net
     public sealed class ReplayTape
     {
         private static readonly IReadOnlyDictionary<int, int> NoWounds = new Dictionary<int, int>();
+        private static readonly IReadOnlyDictionary<int, int> NoBandageCharge = new Dictionary<int, int>();
 
         public IReadOnlyDictionary<int, ScheduledPath> Tracks { get; }
 
@@ -20,16 +21,22 @@ namespace LogiCard.Net
         /// <summary>Wound counts at end of resolve, including any StartingWounds carried in (C33).</summary>
         public IReadOnlyDictionary<int, int> EndWounds { get; }
 
+        /// <summary>Bandage charges spent (0 or 1) at end of resolve, including any StartingBandageCharge
+        /// carried in (C63). Mirrors <see cref="EndWounds"/>'s per-match carry-forward shape.</summary>
+        public IReadOnlyDictionary<int, int> EndBandageCharge { get; }
+
         public float EndSeconds { get; }
 
         public ReplayTape(
             IReadOnlyDictionary<int, ScheduledPath> tracks,
             IReadOnlyList<TapeEvent> events,
-            IReadOnlyDictionary<int, int> endWounds = null)
+            IReadOnlyDictionary<int, int> endWounds = null,
+            IReadOnlyDictionary<int, int> endBandageCharge = null)
         {
             Tracks = tracks ?? new Dictionary<int, ScheduledPath>();
             Events = events ?? new List<TapeEvent>();
             EndWounds = endWounds ?? NoWounds;
+            EndBandageCharge = endBandageCharge ?? NoBandageCharge;
 
             float end = 0f;
             foreach (KeyValuePair<int, ScheduledPath> track in Tracks)
@@ -67,6 +74,11 @@ namespace LogiCard.Net
         public int WoundsFor(int pawnId)
         {
             return EndWounds.TryGetValue(pawnId, out int wounds) ? wounds : 0;
+        }
+
+        public int BandageChargeFor(int pawnId)
+        {
+            return EndBandageCharge.TryGetValue(pawnId, out int charge) ? charge : 0;
         }
     }
 }

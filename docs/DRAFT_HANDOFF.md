@@ -1,72 +1,62 @@
-# Draft Handoff — 2026-08-12
+# Draft Handoff — 2026-08-13
 
-**Milestone:** Phase 5 Commercial Art Bar (active, top priority). Phase 2 Net paused.  
-**Tip:** `5b2ee7c` on `master` (ahead of origin) — **atmosphere merged** — + **dirty Integrator tree** (rematch/floors/lighting, not committed). Worker slots **0/2** coding. UI branches still awaiting Play+merge.  
-**Read first next session:** this file → `docs/PLAYBACK_CONTRACT.md` → `docs/PARALLEL_OPS.md` → `docs/departments/INDEX.md`.
+**Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (Bandage carve-out via C63).  
+**Tip:** `master` @ **`dcffe23`** (C64 hybrid card-system promoted + Cards detail docs on master). Prior combined batchmode green was at `7213d98` (EditMode 149/149, PlayMode 48/48) — **not re-run after `dcffe23`** (docs-only). Plus **dirty Integrator tree** (rematch/floors/lighting — uncommitted).  
+**Ops:** Atmosphere / Cards / Character / UI + Integrator (`PARALLEL_OPS.md`). Prefer ≤2 coding-hot.  
+**Read first next session:** this file → `PARALLEL_OPS.md` → `departments/INDEX.md` → `contracts/CURRENT.md` → `CARD_SYSTEM_MODEL_COMPARISON.md` / C64 → `PLAYBACK_CONTRACT.md` if touching Execute.
+
+## Live folders
+
+| Seat | Folder | Tip / state |
+|------|--------|-------------|
+| Integrator | `logiCard` | `master` @ `dcffe23` + dirty rematch/floors/lighting |
+| Atmosphere | `logiCard-atmosphere-stylized` | `feat/atmosphere-stylized` @ **`af7b2e5`** (fair clay cloud bank locked) + **dirty** polish tree |
+| Cards | `logiCard-cards-collection` | `feat/cards-collection-docs` @ **`dc631ce`** — C64 done; Flashbang paused; clean except stray screenshot |
+| Character | `logiCard-char-select-motion` | `feat/char-select-motion` @ `dec54e7` — 4 ability briefs; needs human answers |
+| UI | `logiCard-modal-restyle` | `feat/modal-restyle` @ **`8f4b406`** (font/UI catalog) + dirty STATUS / ui-collection refs — Bandage HUD **not** started |
+| (retire OK) | `logiCard-gear-bandage-sim` | merged @ `0b11031` |
 
 ## Implemented
 
-**Committed tip (`5b2ee7c` merge of `feat/atmosphere-stylized` @ `0acd909`):**
-- LA-style CloudAtlas bank + rim mist; FogGround/RainMist out of live pocket.
-- Soft bulbous atlas (white tops / blue-grey undersides); height boost; large masses; Alpha blend.
-- PlayMode weather smoke tests; `Tools/gen_soft_cloud_atlas.py`; THIRD_PARTY notes.
-- Human Play `image copy 12` cleared merge gate.
-
-**Earlier same day (still on master history):**
-- Docs research: `MAP_AUTHORING.md` + `UI_TOOLS_RESEARCH.md`.
-- Playback contract + door hinge/swing/look; PH BoardSurfaces 1K→2K.
-
-**Dirty on main (uncommitted):**
-- **Rematch / fresh match:** death+wounds clear on Rematch → Local Play (`MatchClock.Reset`, `RoundPlayback.ResetForNewMatch`, `GameBootstrap.BeginFreshMatch`).
-- **Urban floors** + brighter lighting + dark void; DoF aperture 2.6; GDD §8 / ART_DIRECTION framing.
-- Scratch cotton fog was rejected earlier; pack wiring restored before atmosphere worker landed the LA bank (now merged).
-
-**UI workers (Done — awaiting human Play + merge):**
-- `logiCard-char-select-motion` / `feat/char-select-motion` @ `b5d7c77` — EditMode 137 / PlayMode 48.
-- `logiCard-modal-restyle` / `feat/modal-restyle` @ `492b8fe` — EditMode 137 / PlayMode 47.
-
-**Docs cards collection (research — not coding slot):**
-- `logiCard-cards-collection` / `feat/cards-collection-docs` @ `d00acfc` — `docs/CARD_COLLECTION.md`.
-- Awaiting human answers in doc §8 before PRODUCT_MEMORY row.
+- **C62** first-wave gear rules; **C63** Bandage numerics (3s TR, 1×/Character/match, HUD-gated not-mid-Sprint).
+- **Bandage Sim-side** merged `4e6bb66` — `ActionVerb.Bandage`, `Healed`, `BandageCharge` carry; contract in `contracts/CURRENT.md`.
+- **UI modal + `GearHandView` scaffold** merged `7213d98` — **not wired into `ProgramHud`**.
+- **C64** (`dcffe23`): long-term card system = **hybrid** (signature cards + shared deckbuilding library). Amends C18/C62. Hands/decks hidden; library+signatures free (C47). Shipping staples stay on **transitional full-hand**. Detail: `docs/CARD_SYSTEM_MODEL_COMPARISON.md`. Cards branch conversation → `dc631ce`.
+- **Character mandate shift:** owns abilities/attrs (not Char Select UI). Four docs-only briefs at `dec54e7`. Finding: **C25 Agility penalties authored but unread by `PawnProgram`**.
+- **UI mandate:** owns all screen presentation; research mandate noted — human later preferred **Bandage HUD coding first** over a long research essay.
+- Atmosphere: fair clay weather look locked @ `af7b2e5` (not Integrator-reviewed for merge).
 
 ## Verification
 
-- Atmosphere branch pre-merge: structural EditMode/PlayMode green on worker tree; look cleared by human `image copy 12`.
-- Rematch / floor / lighting on main: **not** batchmode-green this session.
-- Char-select / modal: green on their worktrees; not yet merged.
-- Art look: batchmode never clears.
+- Combined master @ `7213d98`: EditMode 149/149, PlayMode 48/48 (ephemeral verify worktree; removed).
+- `dcffe23` C64/docs: **not** re-batchmoded (docs-only).
+- Rematch/floors dirty: **not** batchmode-green.
+- Atmosphere / UI tips moved past INDEX text — INDEX tips stale vs `af7b2e5` / `8f4b406` / `dc631ce` / `dcffe23`.
 
 ## Still unfinished
 
-- Post-atmosphere polish (non-blocking): more atlas variation, stronger 3D lobe shading, lighter edge tones — see presentation STATUS.
-- Unmonitored human passes below (door timeline; rematch; floors/lighting; UI branches).
-- Commit Integrator dirty tree when human asks (rematch + floors + lighting + GDD).
-- Merge UI workers when human clears Play.
-- Adrenaline effect resolve — UI stub only.
-- `DAY13_PLAYTEST_FINDINGS.md` empty.
-- Phase 2 Net paused.
-
-## ⚠️ Awaiting human review — unmonitored
-
-1. Door Open on tape second (fix `3018d83`) — Lock In → Execute
-2. Rematch after kill — pawns healthy at spawn (dirty fix)
-3. Urban floors + brighter lighting + dark void (dirty; not sky-blue)
-4. ~~Atmosphere~~ — **merged** (`5b2ee7c`); optional follow-up shading/variation
-5. Char-select carousel @ `b5d7c77` — Play `logiCard-char-select-motion`
-6. Modal cardstock @ `492b8fe` — Play Quit confirm on `logiCard-modal-restyle`
-7. Older polish: south-edge Move-click, zoom-fill, soft-rain, reflections/glass/Scout outfit, diorama arc
+- **Bandage HUD-side** (open contract): dock `GearHandView` → `ProgramHud`, timeline place, 3 legality gates. Natural UI job; human-directed **priority coding slice**.
+- **Healed presenter** (Integrator after HUD): `TapeEventType.Healed` in `RoundPlayback` + `PLAYBACK_CONTRACT` §3.
+- **Dirty rematch/floors/lighting** on main — commit when asked; includes `BandageCharge` reset fix.
+- **Atmosphere** merge after human look (`af7b2e5`+ dirty).
+- **Character** Sim contracts blocked on brief answers + explicit carve-out per ability.
+- **Cards thin follow-ups (optional):** rewrite `CARD_COLLECTION.md` for C64; or one-page C64 OPEN menu (deck size / draw / signature-in-hand / Reveal). Flashbang brief stays paused until re-derived as library tech.
+- Interact needs station; Adrenaline real effect needs PLAYBACK redesign; Phase 2 Net paused.
+- Older unmonitored: door tape Open second; south-edge Move-click; zoom-fill/soft-rain/reflections.
 
 ## Tomorrow
 
-1. Human Plays UI worktrees → Integrator merges `feat/char-select-motion` then `feat/modal-restyle` (watch `UiStyle` additive tokens).
-2. Human clears Unmonitored #1–3; Integrator commits dirty rematch/floors/lighting when asked.
-3. Optional atmosphere follow-up worktree (variation / 3D / edge tones).
-4. Card collection §8 answers → promote C# when ready.
+1. **UI codes Bandage HUD** against `contracts/CURRENT.md` (skip broad UI-framework essay unless blocked).
+2. Integrator: refresh INDEX tips; merge HUD when Ready → then Healed presenter; commit rematch/floors when asked.
+3. Atmosphere: human Play @ latest tip → merge when cleared (clean pack `.meta` noise first).
+4. Cards (docs-only if staffed): C64 catalog rewrite **or** short OPEN decision menu — not Flashbang architecture, not deckbuilder code.
+5. Character: idle until human answers the four briefs’ open questions.
 
 ## Blockers / notes
 
-- Main Editor on `D:/projects/Game/logiCard` — batchmode only in disposable worktrees.
-- Dirty/untracked noise: mats; `Assets/ExplosiveLLC/` (human keep/delete); screenshot churn; root archive deleted (lives under `docs/drafts/`); `_1k_backup_2026-08-12` gitignored.
-- Do not buy screen-space god-ray packs for ortho.
-- Intra-match wound carry across rounds remains correct (C33); only **new match** clears death.
-- Atmosphere worktree may be removed after human confirms no leftover edits.
+- Main Editor lock → batchmode on other worktrees; avoid multiple Unity instances (Package Manager contention).
+- Capacity ≤2 coding-hot (suggested: UI + Atmosphere if looking art).
+- C64 does **not** unlock deckbuilder coding yet — OPENs parked on C64 row.
+- Intra-match wound/charge carry (C33/C63); only **new match** clears death + BandageCharge (dirty rematch).
+- Untracked junk: `Assets/ExplosiveLLC/`, `docs/image.png`, screenshot copies — human keep/delete.
+- No push unless asked.
