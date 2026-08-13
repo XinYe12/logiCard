@@ -14,6 +14,9 @@ What "good" looks like:
   double-trigger the animation.
 - A large, low-contrast archetype-name headline sits behind the figures (mood text, not
   clickable).
+- The center card carries a soft warm halo (glow) behind it, tinted to the archetype's accent
+  color. It grows in and fades out in step with the crossfade — never a hard pop — and never sits
+  in front of a card or blocks a click.
 - The background panel tint crossfades toward a warm per-archetype accent as the center role
   changes — stays in the desk-lamp `UiStyle` palette, not a bright/pastel shift.
 - Confirming (`ConfirmCharacter`) still advances to **Map Select**, and Map Select is unchanged —

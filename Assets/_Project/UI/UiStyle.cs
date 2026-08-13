@@ -29,6 +29,8 @@ namespace LogiCard.UI
         public static readonly Color CharSelectCardScout = new Color(0.98f, 0.72f, 0.25f, 1f);
         public static readonly Color CharSelectCardJuggernaut = new Color(0.78f, 0.42f, 0.22f, 1f);
         public static readonly Color CharSelectGhost = new Color(1f, 1f, 1f, 0.14f);
+        public static readonly Color CharSelectGlowScout = new Color(0.98f, 0.72f, 0.25f, 1f);
+        public static readonly Color CharSelectGlowJuggernaut = new Color(0.86f, 0.48f, 0.24f, 1f);
 
         private static Sprite _roundSprite;
         private const int RoundSpriteSize = 32;
