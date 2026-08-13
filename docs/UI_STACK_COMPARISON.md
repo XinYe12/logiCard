@@ -85,14 +85,16 @@ Treat as **layers on top of a stack**, not a third stack:
 **Park UI Toolkit** until/unless human explicitly reopens it with: (1) checked-in default Theme Style Sheet, (2) a shell-only second pilot, (3) human Play before any further screens. Do not migrate the dock.  
 **Do not** buy or adopt a third-party UI framework; optional UI Extensions only for a named control gap.
 
-**One-liner for Integrator:** *uGUI + Kenney Adventure chrome + existing `UiMotion`; Toolkit parked post-revert; no new UI runtime.*
+**One-liner for Integrator:** *uGUI + existing `UiMotion`; Toolkit parked post-revert; no new UI runtime. Chrome art is **not** locked here — see [`UI_CHROME_COLLECTION.md`](UI_CHROME_COLLECTION.md).*
+
+**Chrome amendment (2026-08-13):** Human rejected the Kenney/Storybook/etc. browsing shortlist as the product direction. Runtime stack recommendation (uGUI) still stands; **look** is collected via human-supplied resources in `UI_CHROME_COLLECTION.md`.
 
 ---
 
-## Suggested next builds (after human confirms this doc)
+## Suggested next builds (after chrome collection completes)
 
-1. Inherit / merge Character Select (Kenney skin Play sign-off) onto the unified UI seat without stack thrash.  
-2. Extend Kenney Adventure (or matching parchment slices) to Modal / Map / Lobby / Time Card frames — chrome pass, not Toolkit.  
+1. Inherit / merge Character Select onto the unified UI seat without stack thrash.  
+2. First chrome pass from the collection catalog — lobby + HUD same family (not Toolkit).  
 3. Dock density + `GearHandView` parent into `ProgramHud` when OPEN #16 / Integrator brief allows.  
 4. TMP factory swap when overflow becomes a playtest blocker (orthogonal to A/B/C).
 

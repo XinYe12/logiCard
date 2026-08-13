@@ -21,6 +21,10 @@ When more than one agent is in flight, also read `docs/PARALLEL_OPS.md` and `doc
 
 If you're building this kind of control and haven't read that doc in this session, read it now, before writing code.
 
+## Before choosing or importing UI chrome / lobby+HUD look
+
+**Read `docs/UI_CHROME_COLLECTION.md`.** Human supplies resources/code; UI seat categorizes into the buckets there. Do not Asset-Store-shop a Link’s Awakening–like pack shortlist — keep collecting until that doc says the minimum bar is met. Target: same toy/diorama UI language for lobby shell and in-match HUD.
+
 ## Docs are the source of truth for *why*, not just *what*
 
 This project's `docs/` folder carries decisions and their reasoning (`CONTINUOUS_PIVOT_PLAN.md`, `PRODUCT_MEMORY.md`, `CORE_LOOP.md`, etc.) — when a change touches an area with a doc, check it before assuming the code alone tells the whole story. When you land a decision or convention future sessions need to follow (not just a one-off fix), write it into a doc under `docs/` and, if it's something every session should know before starting related work, add a pointer here. A doc nobody's told to read doesn't do anything — the pointer is not optional.

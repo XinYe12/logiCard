@@ -1,34 +1,34 @@
 # UI — STATUS
 
-**Wave / Day:** Full UI ownership — stack research (docs only)
+**Wave / Day:** Full UI ownership — chrome collection (docs memory)
 **Branch / worktree:** `feat/modal-restyle` @ `D:\projects\Game\logiCard-modal-restyle`
-**Mandate:** All UI surfaces (lobby, Character Select, Map Select, HUD/dock, modals). Research before new builds.
-**Last cross-reviewed:** 2026-08-13 — synced Character Select tip (`feat/char-select-motion` @ `a707d9f`)
+**Mandate:** All UI surfaces (lobby, Character Select, Map Select, HUD/dock, modals).
+**Last cross-reviewed:** 2026-08-13 — opened `UI_CHROME_COLLECTION.md` after human rejected pack shortlist
 
 ## Owned files (this seat)
 
 - Entire `Assets/_Project/UI/**` (once Integrator merges sibling branches) — currently on this branch: `ModalDialog`, `Modal*` tokens, `GearHandView`
-- `docs/UI_STACK_COMPARISON.md` (new — recommendation)
-- Mirrored for self-contained research: `docs/UI_TOOLKIT_MIGRATION_PROPOSAL.md`, `Assets/_Project/Art/UI/THIRD_PARTY.md` (sourced from Character seat; no sprite import on this branch yet)
+- `docs/UI_CHROME_COLLECTION.md` — **active catalog** (human delivers → we categorize)
+- `docs/UI_STACK_COMPARISON.md` — stack rec (uGUI backbone; Toolkit parked). Chrome *art* is decided via the collection doc, not that shortlist.
+- Mirrored research: `docs/UI_TOOLKIT_MIGRATION_PROPOSAL.md`, `Assets/_Project/Art/UI/THIRD_PARTY.md`
 - `docs/departments/ui/STATUS.md`
 
 ## Done
 
-- Modal cardstock restyle — human Play signed off (Match Over → Quit → confirm).
-- C62 `GearHandView` UI-only scaffold (`54ae286`) — not dock-wired.
-- **Stack comparison delivered** (`docs/UI_STACK_COMPARISON.md`): Toolkit vs continued uGUI vs third-party chrome/libs.
-  - **Recommendation:** stay on **uGUI**; expand **Kenney “UI Pack - Adventure”** (already chosen on Character branch); park Toolkit after failed visual pilot; no third-party UI runtime.
-- Synced Character latest: Toolkit pilot reverted (`a915bb7`); Kenney Adventure skin on uGUI carousel; awaiting human Play on parchment look; branch 5 ahead / 7 behind master.
+- Modal cardstock restyle — human Play signed off.
+- C62 `GearHandView` UI-only scaffold — not dock-wired.
+- Stack comparison: stay on uGUI; Toolkit parked.
+- **Collection memory landed:** `docs/UI_CHROME_COLLECTION.md` + `CLAUDE.md` pointer. Human rejected the prior pack browsing list; from now on human supplies resources/code, UI seat categorizes until the doc’s stop bar is met (buckets 2+3+5+6+7+8 + license).
 
 ## In progress
 
-- Nothing code-side. Waiting on human confirm of `UI_STACK_COMPARISON.md` recommendation before building.
+- Awaiting first human resource batch for the catalog log in `UI_CHROME_COLLECTION.md`.
 
 ## Blocked
 
-- Human: confirm or amend the stack recommendation.
-- Integrator: merge `feat/modal-restyle` + `feat/char-select-motion` (order TBD; both touch `UiStyle`) so this seat can inherit Character Select without dual ownership.
+- Chrome family not chosen — collection incomplete.
+- Integrator: merge `feat/modal-restyle` + `feat/char-select-motion` when ready (UiStyle overlap).
 
 ## Offers
 
-- After recommendation confirm: Kenney chrome pass on Modal/Lobby/Map, or dock-parent `GearHandView`, or TMP — whichever Integrator briefs first.
+- Categorize each delivery into the collection buckets immediately; no code/chrome import until “Collection complete for first chrome pass.”
