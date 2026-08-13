@@ -15,6 +15,11 @@ namespace LogiCard.Net
         Invalid = 4,
         DoorOpened = 5,
         DoorClosed = 6,
+
+        /// <summary>C63 — Bandage clears one Wounded stack. Presenter not wired yet (Integrator
+        /// follow-up per docs/contracts/CURRENT.md's Bandage contract); reserved in
+        /// TapeEventPlaybackCoverageTests until it lands.</summary>
+        Healed = 7,
     }
 
     /// <summary>

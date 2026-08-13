@@ -9,5 +9,6 @@ namespace LogiCard.Net
         Move,
         Shoot,
         Door,   // Day 7 — contextual map action, GDD §4. Not a gear card (C34).
+        Bandage, // C63 — first gear card. Self-targeting; clears one Wounded stack.
     }
 }
