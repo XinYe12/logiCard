@@ -83,7 +83,7 @@ Uiverse elements (via [uiverse-io/galaxy](https://github.com/uiverse-io/galaxy))
 | **2** panels | Partial | `normal-card` candidate; comic panel border; resource-bank (held role) | Warmer wood/parchment 9-slice or approve retint of normal-card |
 | **3** buttons | Partial | Bubbles / glass pill / gradient pill (motion refs) | One family matching chosen panels (primary + secondary + disabled) |
 | **4** wells | Partial | Wallet + comic hand = deck motion, not empty/selected/locked wells | Slot/well states if inventory/gear needs them |
-| **5** icons | **Empty** | — | Bandage, Interact, Flashbang, Adrenaline, stance, Snap/Hold, door, wound, Lock In |
+| **5** icons | **Deferred OK** | — | Bandage, Interact, Flashbang, Adrenaline, stance, Snap/Hold, door, wound, Lock In. **Later use:** same icons can skin gear-hand / resource **card faces** under `Assets/` once collected (UI chrome + card art share one set). Physical props (bandage roll, adrenaline syringe, flashbang can) are a **separate 3D art track**, not solved by 2D icons alone. |
 | **6** type | Partial | **Iomanoid** CC0 display (Front/Back/Shine) | Body/UI face for dense HUD; confirm Iomanoid for titles |
 | **7** HUD | **Empty** | — | Scrubber / chips / wound badge / Adrenaline primary in target look |
 | **8** lobby | Thin | Wallet as “your cards” metaphor only | Boot / Char / Map / Lobby / Match Over layout refs |
