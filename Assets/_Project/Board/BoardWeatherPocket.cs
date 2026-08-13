@@ -14,8 +14,11 @@ namespace LogiCard.Board
     ///
     /// Cloud bank (2026-08-12 <c>image copy 13</c>): Link's Awakening-style <b>clay sphere lobes</b> —
     /// opaque URP Lit meshes glued into masses (true 3D volume under ortho/rotate). Billboard
-    /// CloudAtlas discs were rejected as too 2D/cheap with dark alpha 边缘. Soft atlas retained for
-    /// subtle rim mist only. Pack <c>PF_CloudLayer</c> demoted. Rain = <c>PF_RainSystem</c>; Zap =
+    /// CloudAtlas discs were rejected as too 2D/cheap with dark alpha 边缘 <b>as the primary cloud
+    /// read</b>. Soft atlas is still used, now for two things: subtle rim mist at the board's far
+    /// corners, and (2026-08-13) a thin billboard haze fringe hugging each clay mass's envelope so
+    /// the opaque mesh's hard silhouette blurs into the void instead of cutting sharp. Pack
+    /// <c>PF_CloudLayer</c> demoted. Rain = <c>PF_RainSystem</c>; Zap =
     /// <c>VFX_Zap_White</c>. Prefabs via <see cref="LogiCard.Art.Editor.WeatherPackImportTool"/>.
     /// </summary>
     public sealed class BoardWeatherPocket : MonoBehaviour
@@ -126,41 +129,87 @@ namespace LogiCard.Board
             new ClayLobe(0.12f, -0.10f, 0.10f, 0.20f, belly: true),
         };
 
+        /// <summary>Flat wide shelf — one dominant low lobe, not a tall stack (2026-08-13 variety pass).</summary>
+        private static readonly ClayLobe[] PatternAnvil =
+        {
+            new ClayLobe(0f, -0.02f, 0f, 0.40f),
+            new ClayLobe(-0.34f, -0.06f, 0.04f, 0.26f),
+            new ClayLobe(0.34f, -0.04f, -0.02f, 0.27f),
+            new ClayLobe(-0.10f, 0.10f, -0.10f, 0.20f),
+            new ClayLobe(0.12f, 0.08f, 0.08f, 0.19f),
+            new ClayLobe(0f, -0.20f, 0f, 0.24f, belly: true),
+        };
+
+        /// <summary>Loose scattered cluster — smaller, more separated lobes (2026-08-13 variety pass).</summary>
+        private static readonly ClayLobe[] PatternDrift =
+        {
+            new ClayLobe(-0.20f, 0.04f, 0.10f, 0.26f),
+            new ClayLobe(0.10f, 0.10f, -0.06f, 0.30f),
+            new ClayLobe(0.30f, -0.02f, 0.10f, 0.20f),
+            new ClayLobe(-0.34f, -0.08f, -0.08f, 0.18f),
+            new ClayLobe(0.02f, 0.24f, 0.04f, 0.18f),
+            new ClayLobe(-0.06f, -0.16f, 0.14f, 0.22f, belly: true),
+            new ClayLobe(0.20f, -0.14f, -0.12f, 0.18f, belly: true),
+        };
+
+        /// <summary>
+        /// Pattern vocabulary for random per-build assignment — six distinct silhouettes so repeat
+        /// matches don't show the identical cloud arrangement (human ask 2026-08-13).
+        /// </summary>
+        private static readonly ClayLobe[][] PatternPool =
+        {
+            PatternRaft, PatternStack, PatternComma, PatternCrown, PatternAnvil, PatternDrift,
+        };
+
         private void PlaceCloudBank(float width, float depth)
         {
             var root = new GameObject("CloudBank");
             root.transform.SetParent(transform, false);
 
+            // Shuffle the pattern pool so the four mass slots below (fixed position/size/tint —
+            // that composition is Play-approved, image copy 15) get a random distinct silhouette
+            // each Build() instead of the same four shapes every match.
+            var patterns = (ClayLobe[][])PatternPool.Clone();
+            for (int i = patterns.Length - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                (patterns[i], patterns[j]) = (patterns[j], patterns[i]);
+            }
+
             // Opaque clay spheres — no alpha 边缘 rings. Desk-lamp Lit shading supplies the 3D read
-            // billboards never could (human Play image copy 13).
-            PlaceClayMass(root.transform, "Mass_Main",
-                new Vector3(0f, 3.9f * InterimCloudHeightBoost, 0.02f * depth),
-                new Vector3(width * 1.05f, 1.35f, depth * 0.85f) * InterimCloudScale,
-                PatternRaft,
-                topTint: new Color(1f, 1f, 1f),
-                bellyTint: new Color(0.94f, 0.96f, 1f));
+            // billboards never could (human Play image copy 13). Soft CloudAtlas haze fringes each
+            // mass's envelope so the mesh's hard silhouette blurs into the void (human ask 2026-08-13).
+            Vector3 posMain = new Vector3(0f, 3.9f * InterimCloudHeightBoost, 0.02f * depth);
+            Vector3 scaleMain = new Vector3(width * 1.05f, 1.35f, depth * 0.85f) * InterimCloudScale;
+            Color topMain = new Color(1f, 1f, 1f);
+            Color bellyMain = new Color(0.94f, 0.96f, 1f);
+            PlaceClayMass(root.transform, "Mass_Main", posMain, scaleMain, patterns[0], RandomMassYaw(), topMain, bellyMain);
+            PlaceCloudEdgeHaze(root.transform, "Haze_Main", posMain, scaleMain, topMain);
 
-            PlaceClayMass(root.transform, "Mass_NW",
-                new Vector3(-width * 0.26f, 3.75f * InterimCloudHeightBoost, depth * 0.18f),
-                new Vector3(width * 0.72f, 1.25f, depth * 0.58f) * InterimCloudScale,
-                PatternStack,
-                topTint: new Color(0.99f, 0.99f, 1f),
-                bellyTint: new Color(0.93f, 0.95f, 1f));
+            Vector3 posNW = new Vector3(-width * 0.26f, 3.75f * InterimCloudHeightBoost, depth * 0.18f);
+            Vector3 scaleNW = new Vector3(width * 0.72f, 1.25f, depth * 0.58f) * InterimCloudScale;
+            Color topNW = new Color(0.99f, 0.99f, 1f);
+            Color bellyNW = new Color(0.93f, 0.95f, 1f);
+            PlaceClayMass(root.transform, "Mass_NW", posNW, scaleNW, patterns[1], RandomMassYaw(), topNW, bellyNW);
+            PlaceCloudEdgeHaze(root.transform, "Haze_NW", posNW, scaleNW, topNW);
 
-            PlaceClayMass(root.transform, "Mass_SE",
-                new Vector3(width * 0.28f, 3.8f * InterimCloudHeightBoost, -depth * 0.16f),
-                new Vector3(width * 0.7f, 1.2f, depth * 0.55f) * InterimCloudScale,
-                PatternComma,
-                topTint: new Color(1f, 0.99f, 0.98f),
-                bellyTint: new Color(0.96f, 0.95f, 0.93f));
+            Vector3 posSE = new Vector3(width * 0.28f, 3.8f * InterimCloudHeightBoost, -depth * 0.16f);
+            Vector3 scaleSE = new Vector3(width * 0.7f, 1.2f, depth * 0.55f) * InterimCloudScale;
+            Color topSE = new Color(1f, 0.99f, 0.98f);
+            Color bellySE = new Color(0.96f, 0.95f, 0.93f);
+            PlaceClayMass(root.transform, "Mass_SE", posSE, scaleSE, patterns[2], RandomMassYaw(), topSE, bellySE);
+            PlaceCloudEdgeHaze(root.transform, "Haze_SE", posSE, scaleSE, topSE);
 
-            PlaceClayMass(root.transform, "Mass_High",
-                new Vector3(-width * 0.05f, 4.2f * InterimCloudHeightBoost, -depth * 0.06f),
-                new Vector3(width * 0.45f, 0.95f, depth * 0.38f) * InterimCloudScale,
-                PatternCrown,
-                topTint: new Color(1f, 1f, 1f),
-                bellyTint: new Color(0.95f, 0.96f, 1f));
+            Vector3 posHigh = new Vector3(-width * 0.05f, 4.2f * InterimCloudHeightBoost, -depth * 0.06f);
+            Vector3 scaleHigh = new Vector3(width * 0.45f, 0.95f, depth * 0.38f) * InterimCloudScale;
+            Color topHigh = new Color(1f, 1f, 1f);
+            Color bellyHigh = new Color(0.95f, 0.96f, 1f);
+            PlaceClayMass(root.transform, "Mass_High", posHigh, scaleHigh, patterns[3], RandomMassYaw(), topHigh, bellyHigh);
+            PlaceCloudEdgeHaze(root.transform, "Haze_High", posHigh, scaleHigh, topHigh);
         }
+
+        /// <summary>Mild random spin per mass so the same pattern doesn't always face the same way.</summary>
+        private static float RandomMassYaw() => Random.Range(0f, 360f);
 
         /// <summary>
         /// One LA-style cloud mass: overlapping opaque sphere meshes (clay pillows).
@@ -173,12 +222,14 @@ namespace LogiCard.Board
             Vector3 localPosition,
             Vector3 massScale,
             ClayLobe[] pattern,
+            float yawDegrees,
             Color topTint,
             Color bellyTint)
         {
             var mass = new GameObject(name);
             mass.transform.SetParent(parent, false);
             mass.transform.localPosition = localPosition;
+            mass.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
 
             Mesh sphere = UnitSphereMesh();
             Material clay = ClayCloudMaterial();
@@ -218,6 +269,115 @@ namespace LogiCard.Board
                 block.SetColor("_Color", tint);
                 renderer.SetPropertyBlock(block);
             }
+        }
+
+        /// <summary>
+        /// Soft CloudAtlas billboard fringe riding the outer envelope of one clay mass. The opaque
+        /// Unlit spheres have a hard mesh-edge silhouette with no built-in softness (no Fresnel/rim
+        /// alpha available without a custom shader); this reuses the already-proven rim-mist billboard
+        /// technique (<see cref="PlaceRimMistPuff"/>) — camera-facing puffs with baked alpha falloff —
+        /// so the silhouette blurs into the void instead of cutting hard (human ask 2026-08-13).
+        /// Depth-tested against the opaque core (material/queue unchanged from <see cref="MistMaterial"/>),
+        /// so haze never shows through a mass onto the board.
+        /// </summary>
+        private static void PlaceCloudEdgeHaze(
+            Transform parent,
+            string name,
+            Vector3 localPosition,
+            Vector3 massScale,
+            Color tint)
+        {
+            var puff = new GameObject(name);
+            puff.transform.SetParent(parent, false);
+            puff.transform.localPosition = localPosition;
+
+            var ps = puff.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            // Just outside the opaque lobe cluster, not inside it.
+            Vector3 envelope = massScale * 1.1f;
+            float footprint = Mathf.Max(0.01f, envelope.x * envelope.z);
+            int maxCount = Mathf.Clamp(Mathf.RoundToInt(footprint * 0.7f), 14, 28);
+            float baseSize = Mathf.Sqrt(footprint / maxCount) * 2.0f;
+
+            var main = ps.main;
+            main.loop = true;
+            main.playOnAwake = true;
+            main.prewarm = true;
+            main.duration = 8f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(6f, 9.5f);
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.75f, baseSize * 1.25f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f * Mathf.Deg2Rad);
+            main.startColor = new ParticleSystem.MinMaxGradient(
+                new Color(tint.r, tint.g, tint.b, 0.14f),
+                new Color(tint.r, tint.g, tint.b, 0.30f));
+            main.maxParticles = maxCount;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.gravityModifier = 0f;
+            main.scalingMode = ParticleSystemScalingMode.Local;
+
+            var emission = ps.emission;
+            emission.enabled = true;
+            emission.rateOverTime = Mathf.Clamp(maxCount / 6f, 1.5f, 3.5f);
+
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = envelope;
+            // Shell only — haze rides the mass envelope surface, not its interior (would hide
+            // behind the opaque core and waste particles).
+            shape.boxThickness = Vector3.zero;
+            shape.position = Vector3.zero;
+            shape.rotation = Vector3.zero;
+
+            var velocity = ps.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = new ParticleSystem.MinMaxCurve(-0.03f, 0.03f);
+            velocity.y = new ParticleSystem.MinMaxCurve(-0.02f, 0.02f);
+            velocity.z = new ParticleSystem.MinMaxCurve(-0.03f, 0.03f);
+
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(Color.white, 0f),
+                    new GradientColorKey(Color.white, 1f),
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(1f, 0.25f),
+                    new GradientAlphaKey(0.8f, 0.75f),
+                    new GradientAlphaKey(0f, 1f),
+                });
+            colorOverLifetime.color = gradient;
+
+            var rotation = ps.rotationOverLifetime;
+            rotation.enabled = true;
+            rotation.z = new ParticleSystem.MinMaxCurve(-0.08f, 0.08f);
+
+            var tsa = ps.textureSheetAnimation;
+            tsa.enabled = true;
+            tsa.mode = ParticleSystemAnimationMode.Grid;
+            tsa.numTilesX = CloudAtlasColumns;
+            tsa.numTilesY = CloudAtlasRows;
+            tsa.animation = ParticleSystemAnimationType.WholeSheet;
+            tsa.frameOverTime = new ParticleSystem.MinMaxCurve(0f);
+            tsa.startFrame = new ParticleSystem.MinMaxCurve(0f, CloudAtlasColumns * CloudAtlasRows - 1);
+            tsa.cycleCount = 1;
+
+            var renderer = puff.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sortMode = ParticleSystemSortMode.Distance;
+            renderer.sharedMaterial = MistMaterial();
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            ps.Play(true);
         }
 
         private static Mesh UnitSphereMesh()
