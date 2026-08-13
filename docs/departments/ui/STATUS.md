@@ -1,7 +1,7 @@
 # UI — STATUS
 
 **Wave / Day:** C62 gear-hand scaffold (UI-only) — **Done on branch, awaiting Integrator wire + human modal Play**
-**Branch / worktree:** `feat/modal-restyle` @ (see latest commit) (`D:\projects\Game\logiCard-modal-restyle`)
+**Branch / worktree:** `feat/modal-restyle` @ `54ae286` (`D:\projects\Game\logiCard-modal-restyle`)
 **Brief:** Queued while modal restyle awaits human Play (Match Over → Quit → confirm). Scope: layout/presentation only; numerics OPEN #16.
 **Last cross-reviewed:** 2026-08-13 — C62 gear-hand scaffold landed on branch
 
