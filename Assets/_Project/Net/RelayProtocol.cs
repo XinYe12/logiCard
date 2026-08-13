@@ -218,6 +218,9 @@ namespace LogiCard.Net
 
         public int StartingWounds { get; set; }
 
+        /// <summary>C63 — mirrors <see cref="GhostInput.StartingBandageCharge"/> for the wire.</summary>
+        public int StartingBandageCharge { get; set; }
+
         public static GhostInputDto[] FromDomain(IReadOnlyList<GhostInput> inputs)
         {
             if (inputs == null || inputs.Count == 0)
@@ -244,6 +247,7 @@ namespace LogiCard.Net
                     StartFloor = (int)input.Start.Floor,
                     Nodes = nodeDtos,
                     StartingWounds = input.StartingWounds,
+                    StartingBandageCharge = input.StartingBandageCharge,
                 };
             }
 
@@ -265,7 +269,8 @@ namespace LogiCard.Net
                 PawnId,
                 new PlanarPosition(StartX, StartY, (Floor)StartFloor),
                 new TimelinePayload(nodes),
-                StartingWounds);
+                StartingWounds,
+                StartingBandageCharge);
         }
     }
 
@@ -324,6 +329,9 @@ namespace LogiCard.Net
 
         public WoundDto[] EndWounds { get; set; }
 
+        /// <summary>C63 — mirrors <see cref="ReplayTape.EndBandageCharge"/> for the wire.</summary>
+        public BandageChargeDto[] EndBandageCharge { get; set; }
+
         public static ReplayTapeDto FromDomain(ReplayTape tape)
         {
             if (tape == null)
@@ -353,11 +361,20 @@ namespace LogiCard.Net
 
             wounds.Sort((a, b) => a.PawnId.CompareTo(b.PawnId));
 
+            var bandageCharges = new List<BandageChargeDto>();
+            foreach (KeyValuePair<int, int> entry in tape.EndBandageCharge)
+            {
+                bandageCharges.Add(new BandageChargeDto { PawnId = entry.Key, Charge = entry.Value });
+            }
+
+            bandageCharges.Sort((a, b) => a.PawnId.CompareTo(b.PawnId));
+
             return new ReplayTapeDto
             {
                 Tracks = tracks.ToArray(),
                 Events = events,
                 EndWounds = wounds.ToArray(),
+                EndBandageCharge = bandageCharges.ToArray(),
             };
         }
 
@@ -391,7 +408,16 @@ namespace LogiCard.Net
                 }
             }
 
-            return new ReplayTape(tracks, events, endWounds);
+            var endBandageCharge = new Dictionary<int, int>();
+            if (EndBandageCharge != null)
+            {
+                for (int i = 0; i < EndBandageCharge.Length; i++)
+                {
+                    endBandageCharge[EndBandageCharge[i].PawnId] = EndBandageCharge[i].Charge;
+                }
+            }
+
+            return new ReplayTape(tracks, events, endWounds, endBandageCharge);
         }
     }
 
@@ -499,5 +525,13 @@ namespace LogiCard.Net
         public int PawnId { get; set; }
 
         public int Wounds { get; set; }
+    }
+
+    /// <summary>C63 — wire shape for a per-pawn Bandage charge count, mirrors <see cref="WoundDto"/>.</summary>
+    public sealed class BandageChargeDto
+    {
+        public int PawnId { get; set; }
+
+        public int Charge { get; set; }
     }
 }
