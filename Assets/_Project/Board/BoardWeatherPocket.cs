@@ -86,79 +86,42 @@ namespace LogiCard.Board
             }
         }
 
-        // Distinct glued silhouettes (LA Evil Eagle sky) — not one repeated billboard stamp.
-        private static readonly ClayLobe[] PatternRaft =
-        {
-            new ClayLobe(0f, 0.05f, 0f, 0.42f),
-            new ClayLobe(-0.28f, 0f, 0.06f, 0.30f),
-            new ClayLobe(0.30f, 0.02f, -0.04f, 0.31f),
-            new ClayLobe(-0.08f, 0.18f, -0.12f, 0.24f),
-            new ClayLobe(0.14f, 0.16f, 0.14f, 0.22f),
-            new ClayLobe(0.02f, -0.16f, 0.02f, 0.28f, belly: true),
-            new ClayLobe(-0.18f, -0.12f, -0.10f, 0.20f, belly: true),
-        };
-
-        private static readonly ClayLobe[] PatternStack =
-        {
-            new ClayLobe(0f, -0.08f, 0f, 0.34f, belly: true),
-            new ClayLobe(0f, 0.10f, 0.04f, 0.36f),
-            new ClayLobe(-0.16f, 0.22f, -0.02f, 0.26f),
-            new ClayLobe(0.18f, 0.20f, 0.06f, 0.25f),
-            new ClayLobe(0.02f, 0.34f, 0f, 0.20f),
-            new ClayLobe(-0.22f, 0.02f, 0.12f, 0.22f),
-        };
-
-        private static readonly ClayLobe[] PatternComma =
-        {
-            new ClayLobe(-0.12f, 0.02f, 0.04f, 0.36f),
-            new ClayLobe(0.16f, 0.08f, -0.06f, 0.30f),
-            new ClayLobe(0.28f, 0.20f, -0.14f, 0.20f),
-            new ClayLobe(-0.26f, 0.14f, 0.10f, 0.22f),
-            new ClayLobe(0.02f, -0.14f, 0.02f, 0.26f, belly: true),
-            new ClayLobe(0.10f, -0.06f, 0.16f, 0.18f, belly: true),
-        };
-
-        private static readonly ClayLobe[] PatternCrown =
-        {
-            new ClayLobe(0f, 0.06f, 0f, 0.32f),
-            new ClayLobe(-0.18f, 0.16f, 0.08f, 0.24f),
-            new ClayLobe(0.18f, 0.16f, -0.06f, 0.24f),
-            new ClayLobe(0f, 0.28f, 0.02f, 0.22f),
-            new ClayLobe(-0.10f, -0.10f, -0.08f, 0.20f, belly: true),
-            new ClayLobe(0.12f, -0.10f, 0.10f, 0.20f, belly: true),
-        };
-
-        /// <summary>Flat wide shelf — one dominant low lobe, not a tall stack (2026-08-13 variety pass).</summary>
-        private static readonly ClayLobe[] PatternAnvil =
-        {
-            new ClayLobe(0f, -0.02f, 0f, 0.40f),
-            new ClayLobe(-0.34f, -0.06f, 0.04f, 0.26f),
-            new ClayLobe(0.34f, -0.04f, -0.02f, 0.27f),
-            new ClayLobe(-0.10f, 0.10f, -0.10f, 0.20f),
-            new ClayLobe(0.12f, 0.08f, 0.08f, 0.19f),
-            new ClayLobe(0f, -0.20f, 0f, 0.24f, belly: true),
-        };
-
-        /// <summary>Loose scattered cluster — smaller, more separated lobes (2026-08-13 variety pass).</summary>
-        private static readonly ClayLobe[] PatternDrift =
-        {
-            new ClayLobe(-0.20f, 0.04f, 0.10f, 0.26f),
-            new ClayLobe(0.10f, 0.10f, -0.06f, 0.30f),
-            new ClayLobe(0.30f, -0.02f, 0.10f, 0.20f),
-            new ClayLobe(-0.34f, -0.08f, -0.08f, 0.18f),
-            new ClayLobe(0.02f, 0.24f, 0.04f, 0.18f),
-            new ClayLobe(-0.06f, -0.16f, 0.14f, 0.22f, belly: true),
-            new ClayLobe(0.20f, -0.14f, -0.12f, 0.18f, belly: true),
-        };
-
         /// <summary>
-        /// Pattern vocabulary for random per-build assignment — six distinct silhouettes so repeat
-        /// matches don't show the identical cloud arrangement (human ask 2026-08-13).
+        /// Procedural lobe cluster — replaces the six hand-authored patterns (Raft/Stack/Comma/Crown/
+        /// Anvil/Drift, 2026-08-12/13). All six shared the same flaw: one dominant lobe (RadiusNorm up
+        /// to 0.42) against several much smaller ones, so every mass read as "a big sphere with pimples"
+        /// — human 2026-08-13: "I can see you're using a big spherical model... doesn't look like a big
+        /// white ball?" A sunflower/golden-angle disk fill with a <b>narrow, near-uniform radius band</b>
+        /// (no single lobe more than ~35% bigger than the smallest) and a higher lobe count reads as a
+        /// glued cauliflower cluster instead — many similar pillows, no dominant sphere. Dome-biased Y
+        /// (center lobes higher/crown, rim lobes lower/belly) keeps the silhouette rounded-on-top without
+        /// a flat disk of same-height balls. Random per call, so every mass (and every <c>Build()</c>) is
+        /// a fresh cluster — no fixed pool needed for variety anymore.
         /// </summary>
-        private static readonly ClayLobe[][] PatternPool =
+        private static ClayLobe[] GenerateCloudCluster(int lobeCount, float minRadiusNorm, float maxRadiusNorm)
         {
-            PatternRaft, PatternStack, PatternComma, PatternCrown, PatternAnvil, PatternDrift,
-        };
+            const float goldenAngle = 137.50776f * Mathf.Deg2Rad;
+            const float maxDiskRadius = 0.40f;
+            var lobes = new ClayLobe[lobeCount];
+
+            for (int i = 0; i < lobeCount; i++)
+            {
+                float t = (i + 0.5f) / lobeCount;
+                float diskRadius = Mathf.Sqrt(t) * maxDiskRadius;
+                float theta = i * goldenAngle;
+                float x = diskRadius * Mathf.Cos(theta);
+                float z = diskRadius * Mathf.Sin(theta);
+
+                // Dome bias: center (small diskRadius) sits high/crown, rim sits lower/belly.
+                float domeT = diskRadius / maxDiskRadius;
+                float y = Mathf.Lerp(0.14f, -0.08f, domeT) + Random.Range(-0.03f, 0.03f);
+
+                float radiusNorm = Random.Range(minRadiusNorm, maxRadiusNorm);
+                lobes[i] = new ClayLobe(x, y, z, radiusNorm, belly: y < -0.01f);
+            }
+
+            return lobes;
+        }
 
         /// <summary>One cloud mass's placement/size/tint — factors are relative to board width/depth
         /// (X/Z) or absolute world units scaled by <see cref="InterimCloudHeightBoost"/> (height).</summary>
@@ -191,27 +154,29 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// More, smaller masses spread across the full board width (2026-08-13: "single cloud size is
-        /// too big" — a few large blobs read as separate objects; this replaces them with seven smaller
-        /// ones spanning roughly -0.85..+0.85 of board width so the bank reads as one continuous cloud
-        /// layer instead of discrete chunks). Biggest single lobe is now ~0.4x board width vs. the old
-        /// ~0.85x. Depth/height range kept close to the prior Play-approved framing.
+        /// Masses spread across the full board width (2026-08-13: "single cloud size is too big" — a
+        /// few large blobs read as separate objects; replaced with seven smaller ones so the bank reads
+        /// as one continuous cloud layer instead of discrete chunks). X spacing between adjacent masses
+        /// is tighter than <c>ScaleXFactor</c> half-widths sum to (deliberate overlap margin) so
+        /// neighboring masses' silhouettes visually touch instead of leaving a void gap between them
+        /// (human ask 2026-08-13: "clouds need to be more glued together"). Height bumped ~45% from the
+        /// prior pass (still not high enough per human Play — "still needs to be higher").
         /// </summary>
         private static readonly CloudMassSpec[] CloudMasses =
         {
-            new CloudMassSpec("Mass_W2", -0.82f, 0.10f, 3.9f, 0.34f, 0.85f, 0.30f,
+            new CloudMassSpec("Mass_W2", -0.68f, 0.10f, 5.6f, 0.34f, 0.85f, 0.30f,
                 new Color(0.99f, 0.98f, 0.97f), new Color(0.90f, 0.90f, 0.92f)),
-            new CloudMassSpec("Mass_NW", -0.48f, 0.20f, 3.75f, 0.40f, 0.95f, 0.34f,
+            new CloudMassSpec("Mass_NW", -0.38f, 0.20f, 5.4f, 0.40f, 0.95f, 0.34f,
                 new Color(0.99f, 0.99f, 1f), new Color(0.93f, 0.95f, 1f)),
-            new CloudMassSpec("Mass_Main", 0f, 0.04f, 3.95f, 0.46f, 1.05f, 0.36f,
+            new CloudMassSpec("Mass_Main", 0f, 0.04f, 5.7f, 0.46f, 1.05f, 0.36f,
                 new Color(1f, 1f, 1f), new Color(0.94f, 0.96f, 1f)),
-            new CloudMassSpec("Mass_NE", 0.30f, 0.14f, 3.85f, 0.36f, 0.9f, 0.30f,
+            new CloudMassSpec("Mass_NE", 0.32f, 0.14f, 5.5f, 0.36f, 0.9f, 0.30f,
                 new Color(0.98f, 0.99f, 1f), new Color(0.92f, 0.94f, 0.99f)),
-            new CloudMassSpec("Mass_SE", 0.58f, -0.12f, 3.8f, 0.38f, 0.9f, 0.32f,
+            new CloudMassSpec("Mass_SE", 0.56f, -0.12f, 5.45f, 0.38f, 0.9f, 0.32f,
                 new Color(1f, 0.99f, 0.98f), new Color(0.96f, 0.95f, 0.93f)),
-            new CloudMassSpec("Mass_E2", 0.84f, 0.06f, 4.0f, 0.30f, 0.8f, 0.26f,
+            new CloudMassSpec("Mass_E2", 0.78f, 0.06f, 5.75f, 0.30f, 0.8f, 0.26f,
                 new Color(0.99f, 0.97f, 0.95f), new Color(0.89f, 0.88f, 0.90f)),
-            new CloudMassSpec("Mass_High", -0.10f, -0.10f, 4.3f, 0.24f, 0.7f, 0.22f,
+            new CloudMassSpec("Mass_High", -0.10f, -0.10f, 6.1f, 0.24f, 0.7f, 0.22f,
                 new Color(1f, 1f, 1f), new Color(0.95f, 0.96f, 1f)),
         };
 
@@ -223,7 +188,6 @@ namespace LogiCard.Board
             // Opaque clay spheres — no alpha 边缘 rings. Desk-lamp Lit shading supplies the 3D read
             // billboards never could (human Play image copy 13). Soft CloudAtlas haze fringes each
             // mass's envelope so the mesh's hard silhouette blurs into the void (human ask 2026-08-13).
-            ClayLobe[][] patterns = ShuffledPatternCycle(CloudMasses.Length);
             for (int i = 0; i < CloudMasses.Length; i++)
             {
                 CloudMassSpec spec = CloudMasses[i];
@@ -233,32 +197,15 @@ namespace LogiCard.Board
                     spec.PosZFactor * depth);
                 Vector3 scale = new Vector3(spec.ScaleXFactor * width, spec.ScaleYUnits, spec.ScaleZFactor * depth);
 
-                PlaceClayMass(root.transform, spec.Name, pos, scale, patterns[i], RandomMassYaw(), spec.TopTint, spec.BellyTint);
+                // 9-12 similar-size lobes per mass — dense enough to glue, narrow radius band so no
+                // lobe reads as "the" sphere (see GenerateCloudCluster doc for the human complaint).
+                ClayLobe[] cluster = GenerateCloudCluster(Random.Range(9, 13), minRadiusNorm: 0.19f, maxRadiusNorm: 0.25f);
+                PlaceClayMass(root.transform, spec.Name, pos, scale, cluster, RandomMassYaw(), spec.TopTint, spec.BellyTint);
                 PlaceCloudEdgeHaze(root.transform, "Haze_" + spec.Name, pos, scale, spec.TopTint);
             }
         }
 
-        /// <summary>Shuffled pool, repeated (wrapped) to cover <paramref name="count"/> masses — every
-        /// run through the six-pattern pool is distinct before any repeat.</summary>
-        private static ClayLobe[][] ShuffledPatternCycle(int count)
-        {
-            var pool = (ClayLobe[][])PatternPool.Clone();
-            for (int i = pool.Length - 1; i > 0; i--)
-            {
-                int j = Random.Range(0, i + 1);
-                (pool[i], pool[j]) = (pool[j], pool[i]);
-            }
-
-            var result = new ClayLobe[count][];
-            for (int i = 0; i < count; i++)
-            {
-                result[i] = pool[i % pool.Length];
-            }
-
-            return result;
-        }
-
-        /// <summary>Mild random spin per mass so the same pattern doesn't always face the same way.</summary>
+        /// <summary>Mild random spin per mass so the same cluster doesn't always face the same way.</summary>
         private static float RandomMassYaw() => Random.Range(0f, 360f);
 
         /// <summary>
@@ -464,9 +411,10 @@ namespace LogiCard.Board
 
             var instance = Instantiate(prefab, transform);
             instance.name = "Rain";
-            // Emit just under the cloud shelf so streaks read as falling out of the pocket. Same height
-            // this file's rain has used since the 2026-08-09/10 framing fix.
-            instance.transform.localPosition = new Vector3(0f, 2.85f * InterimCloudHeightBoost, 0f);
+            // Emit just under the cloud shelf so streaks read as falling out of the pocket. Bumped
+            // from 2.85 with the 2026-08-13 cloud-height raise (masses now sit at 5.4-6.1 units,
+            // was 3.75-4.3) so rain still starts close under the clouds instead of from a bare gap.
+            instance.transform.localPosition = new Vector3(0f, 4.6f * InterimCloudHeightBoost, 0f);
             instance.transform.localRotation = Quaternion.identity;
             instance.transform.localScale = Vector3.one;
 

@@ -2,18 +2,21 @@
 
 **Wave / Day:** Permanent department seat (GDD §11 / PARALLEL_OPS) — **In progress** 2026-08-13
 **Branch / worktree:** `feat/atmosphere-stylized` @ `D:\projects\Game\logiCard-atmosphere-stylized`
-**Last cross-reviewed:** 2026-08-13 — human Play, third `image copy 15` re-take: shade-contrast + haze direction both confirmed good; asked for smaller/more/wider-spread masses and denser haze (screenshot cleaned up after review, per this lane's pattern)
+**Last cross-reviewed:** 2026-08-13 — human Play, fourth `image copy 15` re-take: "clouds need to be more glued together, higher, still needs to be higher... blur the model so it doesn't look like a big white ball" (screenshot cleaned up after review, per this lane's pattern)
 
 ## Owned files (this seat)
 
 - `BoardWeatherPocket.cs`, `Resources/Weather/**`, `WeatherPackImportTool`, `Tools/gen_soft_cloud_atlas.py`, weather PlayMode smoke, this STATUS
 
-## Verdict (prior pass, confirmed)
+## Verdict (prior pass — mixed)
 
-Shade-contrast fix and the first edge-haze pass both landed well: lobes read as separate glued pillows, haze direction liked. Two refinements asked from that round, both landed this pass (unverified — see Blocked):
+7-mass spread and denser haze read fine in the screenshot, but exposed the real problem underneath: every one of the 6 hand-authored lobe patterns (Raft/Stack/Comma/Crown/Anvil/Drift, all the way back to the original clay pivot) had one dominant lobe (RadiusNorm up to 0.42) against several much smaller ones — so each mass, however small or numerous, still read as "a big sphere with pimples," not a cloud. Human named this directly this round. Also: masses weren't overlapping enough to look glued, and height (raised once already, `755fb21`) is still not enough.
 
-1. **Smaller, more, wider-spread masses** — `CloudMasses` replaced the old 4 hand-placed masses (one ~0.85x-board-width lobe) with a data-driven `CloudMassSpec[]` of 7 smaller masses spanning roughly -0.85..+0.85 of board width (added `Mass_W2`/`Mass_NE`/`Mass_E2`). Biggest single lobe is now ~0.4x board width. `InterimCloudScale` (the old single global size knob) is gone — each mass's scale factors are explicit in its spec now, since a shared multiplier doesn't work once masses have deliberately different sizes. Pattern assignment now cycles the shuffled 6-pattern pool (`ShuffledPatternCycle`) to cover 7 masses without immediate repeats.
-2. **Denser haze** — `PlaceCloudEdgeHaze` startColor alpha raised 0.14-0.30 → 0.34-0.58, envelope multiplier tightened 1.1x → 1.05x (less "floating separate dot" look, more hugging the mass), particle count/size bumped slightly for tighter coverage on the now-smaller masses.
+## In progress / just landed (this pass, unverified — see Blocked)
+
+1. **No more "ball" lobes** — replaced all 6 hand-authored patterns with `GenerateCloudCluster`: a sunflower/golden-angle disk fill, 9-12 lobes per mass, radius band narrowed to 0.19-0.25 (was up to 0.42) so no single lobe dominates. Dome-biased Y keeps a rounded-on-top silhouette without a flat disk of same-height balls. Called fresh (`Random`) per mass per `Build()`, so the old fixed pattern pool is gone — variety now comes from randomness + each mass's own aspect ratio, not named shapes.
+2. **More glued together** — tightened `CloudMasses` X spacing so adjacent masses' `ScaleXFactor` half-widths deliberately overlap (was leaving the NW-Main pair with a bare gap) instead of just touching.
+3. **Higher** — `HeightUnits` raised ~45% again (was 3.75-4.3, now 5.4-6.1) after `755fb21`'s smaller bump wasn't enough. Rain emit height bumped to match (`2.85` → `4.6`, still "just under the shelf").
 
 ## Blocked
 
@@ -21,6 +24,5 @@ Shade-contrast fix and the first edge-haze pass both landed well: lobes read as 
 
 ## Offers
 
-- If 7 masses still don't read as "continuous," add more (the spec array is now trivial to extend) rather than growing individual masses back up.
-- If haze is now too heavy/foggy: pull the new 0.58 alpha ceiling back down before touching count/size.
-- Composition (X/Z spread, depth/height per mass) is a first pass at "spread wide" — likely needs another iteration once seen in Play.
+- If height is *still* not enough after this: the height fix has been incremental twice now and missed both times — worth asking whether clouds should scale with `BoardCameraRig.OrthographicSize` (the zoom level) instead of a fixed world height, since a human playing more zoomed-in would see any fixed-height cloud cover more of the frame. That's a bigger change (weather has never referenced the camera) — flag before implementing blind a third time.
+- If lobes still read spherical: narrow `GenerateCloudCluster`'s radius band further (currently 0.19-0.25) or raise lobe count above 12.
