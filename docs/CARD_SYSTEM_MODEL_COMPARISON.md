@@ -1,7 +1,7 @@
 # Card-System Model Comparison — Design Conversation
 
-**Status:** Live answers in progress (2026-08-13) — provisional direction recorded in §6A.
-**Not yet PRODUCT_MEMORY.** Hybrid + signature-as-both **contradicts C18/C62** until Integrator writes a C# row after Q3 closes.
+**Status:** Human answers closed 2026-08-13 — **promoted as C64** in `PRODUCT_MEMORY.md` (amends C18/C62).
+§6A–§6D remain the conversation record; C64 is save-file truth.
 **Date:** 2026-08-13  
 **Worktree:** `logiCard-cards-collection` / `feat/cards-collection-docs`  
 **Pauses:** Flashbang numerics / effect brief (`GEAR_FLASHBANG_AGENT_BRIEF.md`) — foundational model first.  
@@ -203,7 +203,7 @@ Human answered the three-family prompt as **hybrid** (Model C), not menu letter 
 | **Q5** | Cards dept call (human deferred) | **Ship transitional A1 staples now; lock hybrid as documented long-term direction; do not freeze Bandage HUD / C63.** Deckbuilder + signature-card UX are a later systems layer after a C# row. Don't open Flashbang numerics until Q3 + C# shape are clear enough that Flashbang knows whether it's a universal staple or a deck-tech include. |
 | **Q6** | **Yes** — entire gameplay library + signatures free forever; only skins sell | Aligns with **C47**; must travel with any C18/C62 amend. |
 
-**Still not done:** Integrator C# amending C18/C62 (and C62 economy / "verbs not exclusive gear packs" / "no pre-match loadout" / "full hand" wording) from the proposed text in §6D → only then is this product truth. Q3 is closed (a).
+**Promoted:** Integrator wrote **C64** from §6D (2026-08-13). Q3 is closed (a). OPEN follow-ups stay in C64's parking list / §6D.
 
 ---
 
