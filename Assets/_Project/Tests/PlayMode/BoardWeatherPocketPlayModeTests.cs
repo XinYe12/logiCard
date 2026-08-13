@@ -39,9 +39,8 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(rimMist.childCount, Is.GreaterThanOrEqualTo(2),
                 "Rim mist should place at least corner apron haze.");
 
-            // No full-board FogGround / RainMist volumes from the prior pack wire.
+            // No legacy full-board FogGround node. Storm may place RainMist_Storm / FogMain_Storm.
             Assert.That(weather.transform.Find("FogGround"), Is.Null);
-            Assert.That(weather.transform.Find("RainMist"), Is.Null);
 
             yield return null;
         }

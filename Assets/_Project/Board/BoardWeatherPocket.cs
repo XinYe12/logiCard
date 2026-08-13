@@ -23,8 +23,17 @@ namespace LogiCard.Board
     /// profile into a rounded mound — spherical but not entirely. Lobes are ellipsoid-squashed (not
     /// mesh-kneaded — that pass shattered shade UVs). Shading is a posterized crown/belly map.
     /// Pack <c>PF_CloudLayer</c> demoted. Rain = <c>PF_RainSystem</c>; Zap =
-    /// <c>VFX_Zap_White</c>. Prefabs via <see cref="LogiCard.Art.Editor.WeatherPackImportTool"/>.
+    /// <c>VFX_Zap_White</c> (+ Blue/Yellow when imported). Prefabs via
+    /// <see cref="LogiCard.Art.Editor.WeatherPackImportTool"/>.
+    /// Fair clay bank human-signed 2026-08-13; <see cref="BoardWeatherMood.Storm"/> is the active
+    /// darker grey + dense Zap pass.
     /// </summary>
+    public enum BoardWeatherMood
+    {
+        Fair,
+        Storm,
+    }
+
     public sealed class BoardWeatherPocket : MonoBehaviour
     {
         private static Material _clayCloudMaterial;
@@ -33,18 +42,30 @@ namespace LogiCard.Board
         private static GameObject _rainSystemPrefab;
         private static GameObject _fogMainPrefab;
         private static GameObject _fogDistantPrefab;
-        private static GameObject _lightningPrefab;
+        private static GameObject _rainMistPrefab;
+        private static GameObject _lightningWhitePrefab;
+        private static GameObject _lightningBluePrefab;
+        private static GameObject _lightningYellowPrefab;
 
         private const string RainSystemResourcePath = "Weather/PF_RainSystem";
         private const string FogMainResourcePath = "Weather/PF_Fog_Main";
         private const string FogDistantResourcePath = "Weather/PF_Fog_Distant";
-        private const string LightningResourcePath = "Weather/VFX_Zap_White";
+        private const string RainMistResourcePath = "Weather/PF_RainMist";
+        private const string LightningWhiteResourcePath = "Weather/VFX_Zap_White";
+        private const string LightningBlueResourcePath = "Weather/VFX_Zap_Blue";
+        private const string LightningYellowResourcePath = "Weather/VFX_Zap_Yellow";
+
+        private BoardWeatherMood _mood = BoardWeatherMood.Fair;
 
         /// <summary>
         /// Build (or rebuild) the weather pocket over <paramref name="board"/>. Safe to call once from
-        /// bootstrap after the board exists; destroys prior children first.
+        /// bootstrap after the board exists; destroys prior children first. Defaults to
+        /// <see cref="BoardWeatherMood.Storm"/> while the storm look is under human Play iteration;
+        /// pass <see cref="BoardWeatherMood.Fair"/> for the signed-off regular bank.
         /// </summary>
-        public void Build(BoardView board)
+        public void Build(BoardView board) => Build(board, BoardWeatherMood.Storm);
+
+        public void Build(BoardView board, BoardWeatherMood mood)
         {
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
@@ -56,6 +77,8 @@ namespace LogiCard.Board
                 return;
             }
 
+            _mood = mood;
+
             ArenaBoard model = board.Model;
             float width = (model.MaxX - model.MinX) * board.WorldScale;
             float depth = (model.MaxY - model.MinY) * board.WorldScale;
@@ -66,6 +89,12 @@ namespace LogiCard.Board
             PlaceCloudBank(width, depth);
             PlaceRain(width, depth);
             PlaceFogMist(width, depth);
+            if (_mood == BoardWeatherMood.Storm)
+            {
+                PlaceStormVolumeFog(width, depth);
+                ApplyStormLightingDim();
+            }
+
             PlaceLightning(width, depth);
         }
 
@@ -199,6 +228,8 @@ namespace LogiCard.Board
             for (int i = 0; i < CloudMasses.Length; i++)
             {
                 CloudMassSpec spec = CloudMasses[i];
+                Color topTint = _mood == BoardWeatherMood.Storm ? StormTopTint(spec.TopTint) : spec.TopTint;
+                Color bellyTint = _mood == BoardWeatherMood.Storm ? StormBellyTint(spec.BellyTint) : spec.BellyTint;
                 Vector3 pos = new Vector3(
                     spec.PosXFactor * width,
                     spec.HeightUnits * InterimCloudHeightBoost,
@@ -207,10 +238,18 @@ namespace LogiCard.Board
 
                 // 7-10 puffs per formation, each its own small Layer-1 puff — see PlaceClayMass for
                 // the triangular dense-middle/loose-edges assembly (human ask 2026-08-13).
-                PlaceClayMass(root.transform, spec.Name, pos, scale, Random.Range(7, 11), RandomMassYaw(), spec.TopTint, spec.BellyTint);
-                PlaceCloudEdgeHaze(root.transform, "Haze_" + spec.Name, pos, scale, spec.TopTint);
+                PlaceClayMass(root.transform, spec.Name, pos, scale, Random.Range(7, 11), RandomMassYaw(), topTint, bellyTint);
+                PlaceCloudEdgeHaze(root.transform, "Haze_" + spec.Name, pos, scale, topTint);
             }
         }
+
+        /// <summary>Storm clay — same mound shapes as fair, pulled toward slate grey so the bank
+        /// reads as weather, not bright fair-weather pillows (human 2026-08-13).</summary>
+        private static Color StormTopTint(Color fair) =>
+            Color.Lerp(fair, new Color(0.52f, 0.56f, 0.64f, 1f), 0.78f);
+
+        private static Color StormBellyTint(Color fair) =>
+            Color.Lerp(fair, new Color(0.30f, 0.33f, 0.40f, 1f), 0.85f);
 
         /// <summary>Mild random spin per mass so the same cluster doesn't always face the same way.</summary>
         private static float RandomMassYaw() => Random.Range(0f, 360f);
@@ -487,13 +526,14 @@ namespace LogiCard.Board
             shape.position = Vector3.zero;
             shape.rotation = new Vector3(180f, 0f, 0f);
 
+            bool storm = _mood == BoardWeatherMood.Storm;
             var emission = ps.emission;
-            emission.rateOverTime = 700f;
+            emission.rateOverTime = storm ? 1600f : 700f;
 
             var main = ps.main;
             main.prewarm = true;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 2500;
+            main.maxParticles = storm ? 4500 : 2500;
             main.startSpeed = new ParticleSystem.MinMaxCurve(5.5f, 7.5f);
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.55f, 0.85f);
             main.startSize3D = true;
@@ -510,7 +550,9 @@ namespace LogiCard.Board
                 psRenderer.sharedMaterial = SoftRainMaterial(psRenderer.sharedMaterial);
             }
 
-            main.startColor = new Color(0.72f, 0.78f, 0.88f, 0.42f);
+            main.startColor = storm
+                ? new Color(0.55f, 0.60f, 0.70f, 0.55f)
+                : new Color(0.72f, 0.78f, 0.88f, 0.42f);
             main.gravityModifier = 0.35f;
 
             var colorOverLifetime = ps.colorOverLifetime;
@@ -827,51 +869,200 @@ namespace LogiCard.Board
             }
         }
 
-        /// <summary>Randomized interval between flashes — modest and occasional, not constant storm
-        /// strobing.</summary>
-        private const float LightningIntervalMinSeconds = 12f;
-        private const float LightningIntervalMaxSeconds = 22f;
+        /// <summary>Fair weather — occasional single strike.</summary>
+        private const float FairLightningIntervalMinSeconds = 12f;
+        private const float FairLightningIntervalMaxSeconds = 22f;
+
+        /// <summary>Storm — many more pack Zap plays (human 2026-08-13).</summary>
+        private const float StormLightningIntervalMinSeconds = 0.9f;
+        private const float StormLightningIntervalMaxSeconds = 2.8f;
+        private const int StormLightningRigCount = 6;
 
         private void PlaceLightning(float width, float depth)
         {
-            GameObject prefab = LoadPrefab(ref _lightningPrefab, LightningResourcePath);
+            if (_mood == BoardWeatherMood.Storm)
+            {
+                PlaceStormLightning(width, depth);
+                return;
+            }
+
+            GameObject prefab = LoadPrefab(ref _lightningWhitePrefab, LightningWhiteResourcePath);
             if (prefab == null)
             {
                 return;
             }
 
-            var instance = Instantiate(prefab, transform);
-            instance.name = "Lightning";
-            // Ground strike — playtest 2026-08-11: anchor at board floor with slight off-center XZ.
-            instance.transform.localPosition = new Vector3(width * 0.18f, 0.05f, -depth * 0.12f);
-            instance.transform.localRotation = Quaternion.identity;
-            instance.transform.localScale = Vector3.one;
-
-            var ps = instance.GetComponent<ParticleSystem>();
-            if (ps == null)
+            ParticleSystem ps = SpawnZapRig(prefab, "Lightning", new Vector3(width * 0.18f, 0.05f, -depth * 0.12f));
+            if (ps != null)
             {
-                return;
+                StartCoroutine(LightningLoop(ps, FairLightningIntervalMinSeconds, FairLightningIntervalMaxSeconds, doubleStrikeChance: 0f));
             }
-
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-
-            StartCoroutine(LightningLoop(ps));
         }
 
         /// <summary>
-        /// Re-triggers the (one-shot, non-looping) Zap rig on a randomized interval.
+        /// Dense storm Zap field — multiple Vefects <c>VFX_Zap_*</c> rigs scattered over the board,
+        /// short intervals, frequent double-strikes. Uses White always; Blue/Yellow when present under
+        /// Resources (import tool catalog).
         /// </summary>
-        private static IEnumerator LightningLoop(ParticleSystem rig)
+        private void PlaceStormLightning(float width, float depth)
         {
-            while (rig != null)
+            var root = new GameObject("LightningStorm");
+            root.transform.SetParent(transform, false);
+
+            GameObject[] prefabs =
             {
-                yield return new WaitForSeconds(Random.Range(LightningIntervalMinSeconds, LightningIntervalMaxSeconds));
-                if (rig == null)
+                LoadPrefab(ref _lightningWhitePrefab, LightningWhiteResourcePath),
+                LoadPrefab(ref _lightningBluePrefab, LightningBlueResourcePath),
+                LoadPrefab(ref _lightningYellowPrefab, LightningYellowResourcePath),
+            };
+
+            int placed = 0;
+            for (int i = 0; i < StormLightningRigCount; i++)
+            {
+                GameObject prefab = null;
+                for (int attempt = 0; attempt < prefabs.Length; attempt++)
                 {
-                    yield break;
+                    GameObject candidate = prefabs[(i + attempt) % prefabs.Length];
+                    if (candidate != null)
+                    {
+                        prefab = candidate;
+                        break;
+                    }
                 }
 
+                if (prefab == null)
+                {
+                    break;
+                }
+
+                float x = Random.Range(-0.42f, 0.42f) * width;
+                float z = Random.Range(-0.42f, 0.42f) * depth;
+                ParticleSystem ps = SpawnZapRig(prefab, $"Zap_{i}", new Vector3(x, 0.05f, z));
+                if (ps == null)
+                {
+                    continue;
+                }
+
+                ps.transform.SetParent(root.transform, true);
+                StartCoroutine(LightningLoop(
+                    ps,
+                    StormLightningIntervalMinSeconds,
+                    StormLightningIntervalMaxSeconds,
+                    doubleStrikeChance: 0.55f));
+                placed++;
+            }
+
+            if (placed == 0)
+            {
+                Debug.LogWarning(
+                    "BoardWeatherPocket: no Zap prefabs under Resources/Weather — run " +
+                    "Tools > LogiCard > Import Weather Pack Prefabs.");
+            }
+        }
+
+        private ParticleSystem SpawnZapRig(GameObject prefab, string name, Vector3 localPosition)
+        {
+            var instance = Instantiate(prefab, transform);
+            instance.name = name;
+            instance.transform.localPosition = localPosition;
+            instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale = Vector3.one;
+
+            var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                systems[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+
+            return instance.GetComponent<ParticleSystem>() ?? (systems.Length > 0 ? systems[0] : null);
+        }
+
+        /// <summary>
+        /// Re-triggers the (one-shot, non-looping) Zap rig on a randomized interval. Storm passes a
+        /// high <paramref name="doubleStrikeChance"/> so flashes cluster like real lightning.
+        /// </summary>
+        private static IEnumerator LightningLoop(
+            ParticleSystem rig,
+            float intervalMin,
+            float intervalMax,
+            float doubleStrikeChance)
+        {
+            // Stagger first strike so six storm rigs don't sync on frame 0.
+            yield return new WaitForSeconds(Random.Range(0.05f, intervalMax));
+
+            while (rig != null)
+            {
                 rig.Play(true);
+                if (doubleStrikeChance > 0f && Random.value < doubleStrikeChance)
+                {
+                    yield return new WaitForSeconds(Random.Range(0.06f, 0.18f));
+                    if (rig == null)
+                    {
+                        yield break;
+                    }
+
+                    rig.Play(true);
+                }
+
+                yield return new WaitForSeconds(Random.Range(intervalMin, intervalMax));
+            }
+        }
+
+        /// <summary>
+        /// Pack fog volumes for storm only — denser apron without a full-board fog slab. Fair weather
+        /// keeps rim-only mist (PlayMode smoke asserts no FogGround/RainMist there).
+        /// </summary>
+        private void PlaceStormVolumeFog(float width, float depth)
+        {
+            PlaceRimPackFog(
+                ref _fogMainPrefab,
+                FogMainResourcePath,
+                "FogMain_Storm",
+                new Vector3(0f, 1.4f, depth * 0.35f),
+                width * 0.85f,
+                depth * 0.35f,
+                rateOverTime: 10f,
+                startSize: new ParticleSystem.MinMaxCurve(2.0f, 3.4f),
+                startColor: new Color(0.45f, 0.48f, 0.55f, 0.22f));
+
+            PlaceRimPackFog(
+                ref _rainMistPrefab,
+                RainMistResourcePath,
+                "RainMist_Storm",
+                new Vector3(0f, 0.85f, 0f),
+                width * 0.9f,
+                depth * 0.9f,
+                rateOverTime: 8f,
+                startSize: new ParticleSystem.MinMaxCurve(1.2f, 2.2f),
+                startColor: new Color(0.50f, 0.54f, 0.60f, 0.16f));
+        }
+
+        /// <summary>
+        /// Cool + dim the existing diorama lights so the board reads under a storm shelf without
+        /// replacing <see cref="LogiCard.Boot.GameBootstrap"/>'s light rig. Fair builds skip this.
+        /// </summary>
+        private static void ApplyStormLightingDim()
+        {
+            RenderSettings.ambientLight = new Color(0.16f, 0.18f, 0.22f);
+
+            Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
+            for (int i = 0; i < lights.Length; i++)
+            {
+                Light light = lights[i];
+                if (light == null || !light.enabled)
+                {
+                    continue;
+                }
+
+                if (light.type == LightType.Directional)
+                {
+                    light.intensity *= 0.62f;
+                    light.color = Color.Lerp(light.color, new Color(0.70f, 0.76f, 0.88f), 0.55f);
+                }
+                else if (light.type == LightType.Point)
+                {
+                    light.intensity *= 0.85f;
+                }
             }
         }
 

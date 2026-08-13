@@ -39,6 +39,9 @@ namespace LogiCard.Art.Editor
             ("Assets/RainSnowCloudEffect/Prefabs/PF_Fog_Main.prefab", "PF_Fog_Main"),
             ("Assets/RainSnowCloudEffect/Prefabs/PF_Fog_Distant.prefab", "PF_Fog_Distant"),
             ("Assets/Vefects/Zap VFX URP/VFX/Zap/Particles/VFX_Zap_06_White.prefab", "VFX_Zap_White"),
+            // Storm variety — denser multi-color Zap field (BoardWeatherPocket storm mood).
+            ("Assets/Vefects/Zap VFX URP/VFX/Zap/Particles/VFX_Zap_02_Blue.prefab", "VFX_Zap_Blue"),
+            ("Assets/Vefects/Zap VFX URP/VFX/Zap/Particles/VFX_Zap_03_Yellow.prefab", "VFX_Zap_Yellow"),
         };
 
         public static void Run()
