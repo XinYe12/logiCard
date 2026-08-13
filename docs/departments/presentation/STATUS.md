@@ -1,29 +1,30 @@
 # Presentation — STATUS
 
-**Wave / Day:** C60 vibrancy + C61 camera zoom — **merged 2026-08-11**, slots closed.
-**Branch / worktree:** none active (`feat/vibrancy-relight`, `feat/camera-zoom` merged)
-**Brief:** n/a — see `PRODUCT_MEMORY.md` C60/C61 and `DRAFT_HANDOFF.md` top entry
-**Last cross-reviewed:** 2026-08-11 — Integrator resume after prior-session limit stall
+**Wave / Day:** Atmosphere stylized — **Merged** 2026-08-12 (`5b2ee7c` / `0acd909`)
+**Branch / worktree:** was `feat/atmosphere-stylized` @ `D:\projects\Game\logiCard-atmosphere-stylized` — weather reclaimable on main
+**Last cross-reviewed:** 2026-08-12 — Integrator merged after human Ready
 
 ## Owned files (this wave)
 
-*(none — wave closed)*
+- _(none — wave closed; weather files back to Integrator / next brief)_
 
 ## Done
 
-- C60 runtime vibrancy (grade/lighting/surfaces/floor retint) — merged
-- C61 scroll-wheel orthographic zoom on `BoardCameraRig` — merged
+- CloudAtlas LA bank + rim mist + rain/Zap; soft bulbous atlas
+- Height boost / large masses / Alpha blend
+- Human Play `image copy 12` cleared merge gate
+- Merged to `master` as `5b2ee7c`
 
-## In progress
+## Follow-up (do not block — next atmosphere slice)
 
-- Nothing assigned to Presentation workers. Integrator holds door leaf fit on main tree
-  (`DoorLeafFitter` / `BoardView`). Still awaiting human screenshot confirmation that C60 reads
-  vibrant, C61 zoom feels right, and (new) door Open reads as a hinge, not a cabinet.
+- More cloud **variation** (atlas frames still samey)
+- Stronger **3D** lobe shading
+- Softer **edge** tones (边缘 still a bit deep / grey)
 
 ## Blocked
 
-- Visual sign-off cannot come from batchmode.
+- None
 
-## Depends on
+## Offers
 
-- Human Play-mode look / screenshot after Editor recompiles the merged `master` changes.
+- Optional follow-up worktree for atlas variation / shading / edge tones when human asks

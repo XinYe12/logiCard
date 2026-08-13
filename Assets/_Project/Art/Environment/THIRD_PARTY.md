@@ -67,36 +67,17 @@ must stay traceable.
 
 ---
 
-## Kenney "Smoke Particles" — SELECTED for cloud-bank particle sprites (in repo)
+## CloudAtlas — soft stylized discs (Link's Awakening pillow aim)
 
-- **Author / source:** Kenney Vleugels (www.kenney.nl)
-  - Pack page: https://kenney.nl/assets/smoke-particles
-- **License:** CC0 1.0 Universal (public domain dedication,
-  http://creativecommons.org/publicdomain/zero/1.0/) — attribution appreciated, not required.
-  Also evaluated Kenney's broader "Particle Pack" (https://kenney.nl/assets/particle-pack, same CC0
-  license, 80 sprites) as an alternate source; not used — its `smoke_*` sprites read more like
-  campfire/explosion smoke wisps than storm cumulus, "White puff" from Smoke Particles was the closer
-  silhouette match for a cloud bank.
-- **Date sourced:** 2026-08-10
-- **Status:** Replaces the primitive-sphere cloud puffs in `BoardWeatherPocket.PlaceCloudPuff` (C53
-  "clouds don't read as real weather" callout — the most-cited unrealistic element in a playtest
-  screenshot). 8 frames from the pack's "White puff" set (`whitePuff00/03/05/09/12/15/18/21.png`,
-  chosen for silhouette variety across the 25 available) were composed into one 4x2 grid atlas
-  (`Assets/_Project/Art/Environment/Resources/Weather/CloudAtlas.png`, 1024x512, alpha preserved,
-  8px transparent padding per cell to avoid `TextureSheetAnimation` bleeding between tiles). Each
-  cloud "puff" is now a burst-spawned, non-moving `ParticleSystem` cluster of billboarded, randomly
-  per-particle-framed atlas sprites within the puff's original bounding box, tinted per-particle via
-  `startColor` (reusing the original per-layer tint values) rather than one flat-shaded sphere —
-  the wispy alpha silhouette reads as soft volumetric mass instead of a hard primitive outline.
-  `PlaceRain` / the rain particle system were **not** touched (already read fine per the human's
-  prior feedback).
-- **On disk:** curated originals (8 `whitePuff*.png` frames + `license.txt`) under
-  `Textures/kenney_smoke_particles/`; composed runtime atlas under
-  `Resources/Weather/CloudAtlas.png` (not a raw copy of a single source file — a derived composite,
-  documented here since it doesn't fit the "originals under Textures/, runtime copies under
-  Resources/" 1:1 pattern the Poly Haven entry above uses).
-- **Not imported:** the other categories in the pack (Black smoke, Explosion, Fart, Flash) and the
-  full 25-frame White puff set — only the 8 frames actually baked into the atlas.
+- **Date:** 2026-08-12 (supersedes the Kenney whitePuff composite for the *cloud bank*)
+- **Status:** `Resources/Weather/CloudAtlas.png` is now a generated 4x2 atlas of soft circular
+  cream discs (`Tools/gen_soft_cloud_atlas.py`) — smooth alpha falloff, near-white RGB at edges
+  (no dark smoke rim). Human Play `image copy 10` rejected the Kenney "White puff" atlas: jagged
+  silhouettes + grey/black fringe read as outlined "broken cloth," not glued LA-style pillows.
+  `BoardWeatherPocket` cloud bank uses Additive particle blend + few large overlapping masses.
+- **Kenney Smoke Particles (CC0):** originals still under `Textures/kenney_smoke_particles/` for
+  provenance; rim mist may still share the soft atlas. Kenney pack page:
+  https://kenney.nl/assets/smoke-particles (CC0 1.0).
 
 ---
 

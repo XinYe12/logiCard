@@ -1,53 +1,62 @@
 # Draft Handoff — 2026-08-13
 
-**Seat / tree:** UI @ `feat/modal-restyle` (`D:\projects\Game\logiCard-modal-restyle`), tip ~`8f4b406`.  
-**Schedule:** Phase 5 commercial art bar still active/top priority; Phase 2 Net paused. This seat owns all UI (lobby + HUD + modals) and is mid chrome-collection, not shipping chrome code yet.
+**Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (Bandage carve-out via C63).  
+**Tip:** `master` @ **`dcffe23`** (C64 hybrid card-system promoted + Cards detail docs on master). Prior combined batchmode green was at `7213d98` (EditMode 149/149, PlayMode 48/48) — **not re-run after `dcffe23`** (docs-only). Plus **dirty Integrator tree** (rematch/floors/lighting — uncommitted).  
+**Ops:** Atmosphere / Cards / Character / UI + Integrator (`PARALLEL_OPS.md`). Prefer ≤2 coding-hot.  
+**Read first next session:** this file → `PARALLEL_OPS.md` → `departments/INDEX.md` → `contracts/CURRENT.md` → `CARD_SYSTEM_MODEL_COMPARISON.md` / C64 → `PLAYBACK_CONTRACT.md` if touching Execute.
+
+## Live folders
+
+| Seat | Folder | Tip / state |
+|------|--------|-------------|
+| Integrator | `logiCard` | `master` @ `dcffe23` + dirty rematch/floors/lighting |
+| Atmosphere | `logiCard-atmosphere-stylized` | `feat/atmosphere-stylized` @ **`af7b2e5`** (fair clay cloud bank locked) + **dirty** polish tree |
+| Cards | `logiCard-cards-collection` | `feat/cards-collection-docs` @ **`dc631ce`** — C64 done; Flashbang paused; clean except stray screenshot |
+| Character | `logiCard-char-select-motion` | `feat/char-select-motion` @ `dec54e7` — 4 ability briefs; needs human answers |
+| UI | `logiCard-modal-restyle` | `feat/modal-restyle` @ **`8f4b406`** (font/UI catalog) + dirty STATUS / ui-collection refs — Bandage HUD **not** started |
+| (retire OK) | `logiCard-gear-bandage-sim` | merged @ `0b11031` |
 
 ## Implemented
 
-**Modal restyle (merge-ready visually):**
-- Warm cardstock `ModalDialog` + `Modal*` `UiStyle` tokens (`492b8fe`). Human Play signed off (Match Over → Quit → confirm).
-
-**C62 gear hand (UI-only):**
-- `GearHandView` + EditMode tests (`54ae286`) — Bandage / Interact / Flashbang / Adrenaline strip, Program vs Execute gating, `TR —` placeholders. **Not** parented into `ProgramHud`.
-
-**Stack decision (docs):**
-- `docs/UI_STACK_COMPARISON.md` — stay on **uGUI**; Toolkit parked after Character’s reverted pilot + “still bad” Play. Chrome art is **not** Kenney-by-default.
-
-**Chrome collection (active):**
-- Process + buckets: `docs/UI_CHROME_COLLECTION.md` (+ `CLAUDE.md` pointer). Human rejected Asset Store shortlist; human supplies resources → UI categorizes until stop bar (2+3+5+6+7+8 + license).
-- Held motion/special CSS under `docs/ui-collection/` (holographic ticket, glass card, logo reveal, wallet stack, square loader, comic hand-strip, several buttons).
-- **Iomanoid** CC0 display font collected (`docs/ui-collection/fonts/iomanoid/`) — first real type hit; not in Unity yet.
-- `normal-card` (bucket-2 candidate) + `resource-bank-card-flip` (resource-card role) catalogued under `docs/ui-collection/`.
-- Coverage gap matrix in `UI_CHROME_COLLECTION.md` — **5 icons** and **7 HUD** still empty.
-
-**Sibling (not this tree):** `feat/char-select-motion` — Kenney Adventure Char Select after Toolkit revert; awaiting human parchment Play; merge will collide on `UiStyle`.
+- **C62** first-wave gear rules; **C63** Bandage numerics (3s TR, 1×/Character/match, HUD-gated not-mid-Sprint).
+- **Bandage Sim-side** merged `4e6bb66` — `ActionVerb.Bandage`, `Healed`, `BandageCharge` carry; contract in `contracts/CURRENT.md`.
+- **UI modal + `GearHandView` scaffold** merged `7213d98` — **not wired into `ProgramHud`**.
+- **C64** (`dcffe23`): long-term card system = **hybrid** (signature cards + shared deckbuilding library). Amends C18/C62. Hands/decks hidden; library+signatures free (C47). Shipping staples stay on **transitional full-hand**. Detail: `docs/CARD_SYSTEM_MODEL_COMPARISON.md`. Cards branch conversation → `dc631ce`.
+- **Character mandate shift:** owns abilities/attrs (not Char Select UI). Four docs-only briefs at `dec54e7`. Finding: **C25 Agility penalties authored but unread by `PawnProgram`**.
+- **UI mandate:** owns all screen presentation; research mandate noted — human later preferred **Bandage HUD coding first** over a long research essay.
+- Atmosphere: fair clay weather look locked @ `af7b2e5` (not Integrator-reviewed for merge).
 
 ## Verification
 
-- Modal restyle: earlier batchmode EditMode 137 / PlayMode 47 on this worktree (prior wave). Human visual sign-off today.
-- C62 / collection: no fresh Unity batchmode this session (Editor binary not on this machine path). EditMode tests authored for `GearHandView` only.
-- Uiverse items: MIT per galaxy collection; strip third-party brand marks before any ship.
+- Combined master @ `7213d98`: EditMode 149/149, PlayMode 48/48 (ephemeral verify worktree; removed).
+- `dcffe23` C64/docs: **not** re-batchmoded (docs-only).
+- Rematch/floors dirty: **not** batchmode-green.
+- Atmosphere / UI tips moved past INDEX text — INDEX tips stale vs `af7b2e5` / `8f4b406` / `dc631ce` / `dcffe23`.
 
 ## Still unfinished
 
-**UI seat**
-- Chrome collection incomplete — still need icons (**5**), more HUD pieces (**7**), lobby layout refs (**8**), body font companion to Iomanoid, and a locked panel family from **2** (normal-card is only a candidate).
-- `GearHandView` dock wire + OPEN #16 numerics.
-- Inherit Character Select after sibling merge; unify chrome.
-**Carryover from 2026-08-12 (product / Phase 5 — not owned by this seat)**
-- Fog/mist sighted pass; optional PH 4K; clouds deferred.
-- Door swing on timeline re-check; south-edge Move / zoom-fill / C60 / soft-rain / reflections / Scout checkpoint arc.
-- Day 13 findings empty. Adrenaline **effect** resolve still stub. Phase 2 Net paused.
+- **Bandage HUD-side** (open contract): dock `GearHandView` → `ProgramHud`, timeline place, 3 legality gates. Natural UI job; human-directed **priority coding slice**.
+- **Healed presenter** (Integrator after HUD): `TapeEventType.Healed` in `RoundPlayback` + `PLAYBACK_CONTRACT` §3.
+- **Dirty rematch/floors/lighting** on main — commit when asked; includes `BandageCharge` reset fix.
+- **Atmosphere** merge after human look (`af7b2e5`+ dirty).
+- **Character** Sim contracts blocked on brief answers + explicit carve-out per ability.
+- **Cards thin follow-ups (optional):** rewrite `CARD_COLLECTION.md` for C64; or one-page C64 OPEN menu (deck size / draw / signature-in-hand / Reveal). Flashbang brief stays paused until re-derived as library tech.
+- Interact needs station; Adrenaline real effect needs PLAYBACK redesign; Phase 2 Net paused.
+- Older unmonitored: door tape Open second; south-edge Move-click; zoom-fill/soft-rain/reflections.
 
 ## Tomorrow
 
-1. Human: send **icons (5)** and **HUD chrome (7)** next — biggest stop-bar holes; then lobby layouts (**8**) / body font.
-2. Keep categorizing into `UI_CHROME_COLLECTION.md` (no Unity chrome import until “Collection complete”).
-3. Integrator: merge `feat/modal-restyle` (modal signed off) and reconcile with `feat/char-select-motion`.
+1. **UI codes Bandage HUD** against `contracts/CURRENT.md` (skip broad UI-framework essay unless blocked).
+2. Integrator: refresh INDEX tips; merge HUD when Ready → then Healed presenter; commit rematch/floors when asked.
+3. Atmosphere: human Play @ latest tip → merge when cleared (clean pack `.meta` noise first).
+4. Cards (docs-only if staffed): C64 catalog rewrite **or** short OPEN decision menu — not Flashbang architecture, not deckbuilder code.
+5. Character: idle until human answers the four briefs’ open questions.
 
 ## Blockers / notes
 
-- Collection not complete → no chrome implementation yet.
-- Unity Editor often open on main path — verify in disposable worktree.
-- Integrator-only docs (`PRODUCT_MEMORY`, `contracts/CURRENT`, INDEX) may be stale vs this seat’s STATUS.
+- Main Editor lock → batchmode on other worktrees; avoid multiple Unity instances (Package Manager contention).
+- Capacity ≤2 coding-hot (suggested: UI + Atmosphere if looking art).
+- C64 does **not** unlock deckbuilder coding yet — OPENs parked on C64 row.
+- Intra-match wound/charge carry (C33/C63); only **new match** clears death + BandageCharge (dirty rematch).
+- Untracked junk: `Assets/ExplosiveLLC/`, `docs/image.png`, screenshot copies — human keep/delete.
+- No push unless asked.

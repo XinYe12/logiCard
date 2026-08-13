@@ -19,12 +19,16 @@ namespace LogiCard.Net
         /// <summary>Wounds carried in from prior rounds (C33). Zero on the first round.</summary>
         public int StartingWounds { get; }
 
-        public GhostInput(int pawnId, PlanarPosition start, TimelinePayload payload, int startingWounds = 0)
+        /// <summary>Bandage charges already spent this match (C63). 0 or 1 — Bandage is 1×/match.</summary>
+        public int StartingBandageCharge { get; }
+
+        public GhostInput(int pawnId, PlanarPosition start, TimelinePayload payload, int startingWounds = 0, int startingBandageCharge = 0)
         {
             PawnId = pawnId;
             Start = start;
             Payload = payload;
             StartingWounds = startingWounds < 0 ? 0 : startingWounds;
+            StartingBandageCharge = startingBandageCharge < 0 ? 0 : startingBandageCharge;
         }
     }
 
@@ -79,6 +83,7 @@ namespace LogiCard.Net
             var payloadNodes = new Dictionary<int, List<ActionNode>>();
             var startPositions = new Dictionary<int, PlanarPosition>();
             var startingWoundsByPawn = new Dictionary<int, int>();
+            var startingBandageChargeByPawn = new Dictionary<int, int>();
             var events = new List<TapeEvent>();
 
             if (inputs != null)
@@ -92,6 +97,7 @@ namespace LogiCard.Net
                     payloadNodes[input.PawnId] = ordered;
                     startPositions[input.PawnId] = input.Start;
                     startingWoundsByPawn[input.PawnId] = input.StartingWounds;
+                    startingBandageChargeByPawn[input.PawnId] = input.StartingBandageCharge;
                     order.Add(input.PawnId);
                 }
             }
@@ -111,7 +117,7 @@ namespace LogiCard.Net
                 int pawnId = order[i];
                 tracks[pawnId] = CompileTrack(
                     pawnId, startPositions[pawnId], payloadNodes[pawnId], startingWoundsByPawn[pawnId],
-                    doorTransitions, events);
+                    startingBandageChargeByPawn[pawnId], doorTransitions, events);
             }
 
             ResolveShots(tracks, order, events);
@@ -120,14 +126,16 @@ namespace LogiCard.Net
 
             var paths = new Dictionary<int, ScheduledPath>();
             var endWounds = new Dictionary<int, int>();
+            var endBandageCharge = new Dictionary<int, int>();
             for (int i = 0; i < order.Count; i++)
             {
                 int pawnId = order[i];
                 paths[pawnId] = tracks[pawnId].Path;
                 endWounds[pawnId] = tracks[pawnId].Wounds;
+                endBandageCharge[pawnId] = tracks[pawnId].BandageChargeUsed;
             }
 
-            return new ReplayTape(paths, events, endWounds);
+            return new ReplayTape(paths, events, endWounds, endBandageCharge);
         }
 
         /// <summary>
@@ -298,7 +306,7 @@ namespace LogiCard.Net
         }
 
         private GhostTrack CompileTrack(
-            int pawnId, PlanarPosition start, List<ActionNode> ordered, int startingWounds,
+            int pawnId, PlanarPosition start, List<ActionNode> ordered, int startingWounds, int startingBandageCharge,
             List<DoorTransition> doorTransitions, List<TapeEvent> events)
         {
             var waypoints = new List<PlanarPosition> { start };
@@ -306,6 +314,8 @@ namespace LogiCard.Net
             var surviving = new List<ActionNode>();
             PlanarPosition current = start;
             float currentTime = 0f;
+            int wounds = startingWounds;
+            int bandageChargeUsed = startingBandageCharge;
 
             for (int i = 0; i < ordered.Count; i++)
             {
@@ -324,12 +334,26 @@ namespace LogiCard.Net
                         waypoints.Add(blockPoint);
                         arrivals.Add(blockTime);
                         events.Add(new TapeEvent(blockTime, pawnId, TapeEventType.MoveArrive, blockPoint));
-                        return new GhostTrack(ScheduledPath.FromTimedWaypoints(waypoints, arrivals), surviving, startingWounds);
+                        return new GhostTrack(ScheduledPath.FromTimedWaypoints(waypoints, arrivals), surviving, wounds, bandageChargeUsed);
                     }
 
                     current = node.Position;
                     currentTime = node.ExecuteTime;
                     events.Add(new TapeEvent(node.ExecuteTime, pawnId, TapeEventType.MoveArrive, current));
+                }
+                else if (node.Verb == ActionVerb.Bandage)
+                {
+                    // C63 — self-targeting, no movement. Resolver stays permissive (does not
+                    // re-check Sprint/stance or already-Healthy) — those are HUD-side gates per
+                    // docs/contracts/CURRENT.md's Bandage contract; do not "fix" this into a
+                    // resolver-side rejection.
+                    currentTime = node.ExecuteTime;
+                    if (bandageChargeUsed < 1)
+                    {
+                        wounds = wounds > 0 ? wounds - 1 : 0;
+                        bandageChargeUsed = 1;
+                        events.Add(new TapeEvent(node.ExecuteTime, pawnId, TapeEventType.Healed, current));
+                    }
                 }
                 else
                 {
@@ -341,7 +365,7 @@ namespace LogiCard.Net
                 surviving.Add(node);
             }
 
-            return new GhostTrack(ScheduledPath.FromTimedWaypoints(waypoints, arrivals), surviving, startingWounds);
+            return new GhostTrack(ScheduledPath.FromTimedWaypoints(waypoints, arrivals), surviving, wounds, bandageChargeUsed);
         }
 
         private void ResolveShots(Dictionary<int, GhostTrack> tracks, List<int> order, List<TapeEvent> events)
@@ -838,11 +862,12 @@ namespace LogiCard.Net
 
         private sealed class GhostTrack
         {
-            public GhostTrack(ScheduledPath path, IReadOnlyList<ActionNode> nodes, int startingWounds)
+            public GhostTrack(ScheduledPath path, IReadOnlyList<ActionNode> nodes, int startingWounds, int startingBandageChargeUsed = 0)
             {
                 Path = path;
                 Nodes = nodes;
                 Wounds = startingWounds < 0 ? 0 : startingWounds;
+                BandageChargeUsed = startingBandageChargeUsed < 0 ? 0 : startingBandageChargeUsed;
             }
 
             public ScheduledPath Path { get; }
@@ -850,6 +875,9 @@ namespace LogiCard.Net
             public IReadOnlyList<ActionNode> Nodes { get; }
 
             public int Wounds { get; set; }
+
+            /// <summary>C63 — 0 or 1, Bandage is 1×/match.</summary>
+            public int BandageChargeUsed { get; set; }
 
             public PlanarPosition PositionAt(float seconds)
             {

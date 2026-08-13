@@ -79,7 +79,7 @@ The bot **must** resolve through the same deterministic event-stream / host-auth
 2. Authority (`GhostResolver` or its networked successor) ghost-sims bot + human payloads together.
 3. Outcomes arrive only as `ReplayTape` events — never as bot-side wound RPCs.
 
-This is the same discipline [CHARACTER_ROSTER_LONGTERM.md](CHARACTER_ROSTER_LONGTERM.md) states for unique verbs, and the same "Host never trusts client math, only tape events" invariant in [TDD.md](TDD.md) / [NETWORKING_DESIGN.md](NETWORKING_DESIGN.md).
+This is the same discipline [CHARACTER_ROSTER_LONGTERM.md](../character/CHARACTER_ROSTER_LONGTERM.md) states for unique verbs, and the same "Host never trusts client math, only tape events" invariant in [TDD.md](TDD.md) / [NETWORKING_DESIGN.md](NETWORKING_DESIGN.md).
 
 **A bot that special-cases outside that pipeline** (applies damage directly, skips LoS, mutates board state without a tape event) is a hard reject — it would break determinism, desync replay, and make host-integrity auditing impossible.
 

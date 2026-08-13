@@ -29,11 +29,15 @@ namespace LogiCard.Art.Editor
 
         private static readonly (string source, string destName)[] Catalog =
         {
+            // Kept for provenance / optional reuse — BoardWeatherPocket no longer loads CloudLayer
+            // (open-world scale; stylized CloudAtlas bank restored 2026-08-12).
             ("Assets/RainSnowCloudEffect/Prefabs/PF_CloudLayer.prefab", "PF_CloudLayer"),
             ("Assets/RainSnowCloudEffect/Prefabs/PF_RainSystem.prefab", "PF_RainSystem"),
-            // Soft atmosphere — ART_PACK_RESEARCH use-now #2 (2026-08-11); rain alone never sold lamp pockets.
+            // Soft atmosphere — ART_PACK_RESEARCH use-now #2; rim mist uses Main/Distant (2026-08-12).
             ("Assets/RainSnowCloudEffect/Prefabs/PF_Fog_Ground.prefab", "PF_Fog_Ground"),
             ("Assets/RainSnowCloudEffect/Prefabs/PF_RainMist.prefab", "PF_RainMist"),
+            ("Assets/RainSnowCloudEffect/Prefabs/PF_Fog_Main.prefab", "PF_Fog_Main"),
+            ("Assets/RainSnowCloudEffect/Prefabs/PF_Fog_Distant.prefab", "PF_Fog_Distant"),
             ("Assets/Vefects/Zap VFX URP/VFX/Zap/Particles/VFX_Zap_06_White.prefab", "VFX_Zap_White"),
         };
 

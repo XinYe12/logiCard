@@ -1,29 +1,59 @@
 # Parallel Ops — Multi-Agent Constitution
 
-**Status:** Active 2026-08-07. Permanent operating system for concurrent agents on logiCard.  
-**Product truth stays elsewhere:** `PRODUCT_MEMORY.md`, `ART_DIRECTION.md`, `SCHEDULE.md`, `DRAFT_HANDOFF.md`. This file and `docs/departments/` track **who owns what and how to stay consistent**, not design decisions.  
+**Status:** Active 2026-08-12 — permanent **Atmosphere / Cards / Character / UI** department worktrees under Integrator authority.  
+**Product truth stays elsewhere:** `PRODUCT_MEMORY.md`, `ART_DIRECTION.md`, `GDD.md` §11, `SCHEDULE.md`, `DRAFT_HANDOFF.md`. This file and `docs/departments/` track **who owns what and how to stay consistent**, not design decisions.  
 **This doc is the agent-side rulebook.** For the human's side — how to review reports, when a delegation is real vs. rework, what to check before approving a merge — see `docs/DIRECTING_AGENTS.md`.
 
 ## Locked defaults
 
-- **Capacity:** 3 agents max on a normal day — 1 **Integrator** (main tree) + 2 **Workers** (separate worktrees). Do not run 4+ without a fourth human-only merge seat.
+- **Permanent departments (4):** **Atmosphere**, **Cards**, **Character**, **UI** — each **permanently owns** a sibling worktree folder and may continually develop inside it. Canonical paths (Windows):
+  - `D:\projects\Game\logiCard-atmosphere`
+  - `D:\projects\Game\logiCard-cards`
+  - `D:\projects\Game\logiCard-character`
+  - `D:\projects\Game\logiCard-ui`
+- **Integrator = ultimate boss:** sits on main `D:\projects\Game\logiCard` (`master`). Monitors every department worktree (STATUS, contracts, diffs, batchmode). Departments never outrank Integrator. Integrator may pause a lane, reclaim files, reject a merge, or reassign scope.
+- **Merge authority:** human approves; only Integrator merges to `master` (agents never merge unprompted — see `.claude/skills/parallel-development/SKILL.md`).
 - **Hard rule:** never two agents on the same working tree. Worktrees only see **committed** history — dirty main-tree work is invisible to peers.
-- **Merge authority:** human approves; agents never merge to `master` unprompted (see `.claude/skills/parallel-development/SKILL.md`).
-- **Scope knife:** human (C34). Integrator may propose cuts; only human freezes.
+- **Concurrent coding capacity:** prefer ≤ **1 Integrator + 2 active coding departments** in a normal day so contracts stay reviewable. The other permanent worktrees may idle or do docs-only. Do **not** run all four coding hot at once without Integrator explicitly opening contracts for each and a human merge seat.
+- **Ephemeral slices:** disposable `logiCard-<slice>` / `logiCard-verify-*` worktrees remain allowed for one-off fixes; fold lasting work back into the matching permanent department when done.
+- **Scope knife:** human. Integrator may propose cuts; only human freezes → `PRODUCT_MEMORY` C# when design locks.
 
 ## Departments
 
+### Permanent product departments (continual build)
+
+| Dept | Role | Owns (write, typical) | Must not touch | Worktree |
+|------|------|----------------------|----------------|----------|
+| **Atmosphere** | Sky / clouds / mist / weather pocket; diorama air above the board | `BoardWeatherPocket.cs`, `Resources/Weather/**`, weather import tools, related PlayMode smoke, atmosphere STATUS | `GhostResolver`, gear resolve, HUD allot math, Character Select | `logiCard-atmosphere` |
+| **Cards** | Gear catalog, hand/economy, collection binder, Time Card *presentation* as cardstock | `docs/CARD_COLLECTION.md` (until promoted), future gear UI/data as contracted, cards STATUS | Host resolve tape mutation without PLAYBACK_CONTRACT redesign; Character unique verbs | `logiCard-cards` |
+| **Character** | Character Cards, roster, pawn look, Character Select motion/feel | Character Select views, pawn art/outfit pipelines as briefed, roster docs, character STATUS | Map Select carousel (**C59**), modal chrome owned by UI, weather | `logiCard-character` |
+| **UI** | Shell + HUD chrome, modals, docks, selection grids, board-anchored prompts | `Assets/_Project/UI/**` (except Character Select when Character dept owns that slice), `UiStyle` tokens prefixed per contract, ui STATUS | Sim/Net resolve; weather; pawn meshes | `logiCard-ui` |
+
+### Authority + support seats
+
 | Dept | Role | Owns (write) | Must not touch | Worktree habit |
 |------|------|--------------|----------------|----------------|
-| **Core / Integrator** | Merge authority, wiring, bugfixes, schedule ticks | `Boot/`, `Net/`, `Timeline/`, `Sim/` when fixing resolve, `docs/DRAFT_HANDOFF.md`, `docs/SCHEDULE.md` ticks, `docs/contracts/CURRENT.md` after merge | Worker presentation/audio new files until merge | Main: `/Users/xuxinye/Documents/projects/Game/LogiCard` |
-| **Presentation** | Motion, VFX, board look, playback readability | `Board/*View.cs` (new + assigned), materials/VFX under `Art/` as briefed | `GhostResolver`, `PawnProgram`, HUD allot logic | `logiCard-<slice>` worktree |
-| **Audio** | Foley + UI feedback sounds | New `Assets/_Project/Audio/**`, sound hooks only where contract lists | Sim/Net resolve math; art materials | Own worktree |
-| **Ship** | Windows candidate notes, README, capture checklist | `docs/` ship pages (`SHIP_README_DRAFT.md`, `CAPTURE_CHECKLIST.md`), build/player settings **only when briefed**, `screenshots/` | Gameplay code unless Integrator assigns a hotfix | Own worktree; docs-only slices need no Unity Editor |
+| **Core / Integrator** | **Ultimate boss** — monitors all permanent worktrees; merge; wiring; bugfixes; schedule ticks | `Boot/`, `Net/`, `Timeline/`, `Sim/` when fixing resolve; `docs/DRAFT_HANDOFF.md`, `docs/SCHEDULE.md` ticks, `docs/contracts/CURRENT.md` after merge; may reclaim any dept path | Blind edits inside a live dept lane without reclaiming ownership in INDEX first | Main: `D:\projects\Game\logiCard` |
+| **Audio** | Foley + UI feedback sounds (support; not one of the four permanent product seats) | New `Assets/_Project/Audio/**`, sound hooks only where contract lists | Sim/Net resolve math; art materials | Ephemeral or shared when briefed |
+| **Ship** | Windows candidate notes, README, capture checklist | Ship docs, build/player settings **only when briefed**, `screenshots/` when assigned | Gameplay code unless Integrator assigns a hotfix | Own worktree; docs-only OK without Unity |
 | **Verify** (ephemeral) | Batchmode green checks | None (read-only except local TestResults/logs) | Never commit from verify trees | Disposable `logiCard-verify-*`; delete after |
 
 Live snapshot of who is active: [`departments/INDEX.md`](departments/INDEX.md).  
-Per-dept progress: `departments/<dept>/STATUS.md`.  
-Frozen cross-dept APIs this wave: [`contracts/CURRENT.md`](contracts/CURRENT.md).
+Per-dept progress: `departments/<dept>/STATUS.md` (`atmosphere`, `cards`, `character`, `ui`, plus `core`).  
+Frozen cross-dept APIs this wave: [`contracts/CURRENT.md`](contracts/CURRENT.md).  
+Product framing of the four pillars: [`GDD.md`](core/GDD.md) §11.
+
+## Integrator monitoring duties
+
+Every Integrator session:
+
+1. Read each permanent dept `STATUS.md` + INDEX ownership matrix.  
+2. Confirm no file overlap across active coding depts; open/refresh contracts before parallel hot work.  
+3. Review report-backs; batchmode-verify when code lands; merge only after human sign-off.  
+4. Update `DRAFT_HANDOFF.md`, INDEX, and `contracts/CURRENT.md` after merges.  
+5. Reclaim a dept’s files into main (and note in INDEX) when that lane is idle/merged and Integrator must edit them.
+
+Departments escalate blockers to Integrator; Integrator escalates product decisions to human (save-file rule).
 
 ## Session start (every agent)
 
@@ -42,83 +72,59 @@ Then update **your** STATUS to In progress. If a file you need is owned by anoth
 |------|-----|-------|--------|
 | Session start | Every agent | DRAFT_HANDOFF → INDEX → peer STATUS → contracts/CURRENT | Own STATUS “In progress” |
 | Before claiming a file | Every agent | INDEX ownership | Stop if contested; escalate to Integrator |
-| Before merge request | Worker | Own STATUS complete; Integrator STATUS not conflicting | Report-back in brief + STATUS |
+| Before merge request | Dept worker | Own STATUS complete; Integrator STATUS not conflicting | Report-back in brief + STATUS |
 | After merge to master | Integrator | — | Update DRAFT_HANDOFF, INDEX, tick SCHEDULE only when DoD met, refresh `contracts/CURRENT.md` |
 | End of session | Every agent | Peer STATUS for drift | Own STATUS “Last cross-reviewed” |
 
-**Conflict rule:** If two STATUS docs disagree on an API or art decision, **Integrator + human** win; workers amend to match. Product decisions still require human confirm → C# row in PRODUCT_MEMORY (save-file rule).
+**Conflict rule:** If two STATUS docs disagree on an API or art decision, **Integrator + human** win; departments amend to match. Product decisions still require human confirm → C# row in PRODUCT_MEMORY (save-file rule).
 
 ## Doc write ownership
 
 - Only **Integrator** edits `DRAFT_HANDOFF.md` and SCHEDULE checkboxes  
 - Only **Integrator** edits `contracts/CURRENT.md` after a merge  
-- Workers edit **only their** `departments/<dept>/STATUS.md` plus files listed in their AGENT_BRIEF  
-- Terminology / ART_DIRECTION / PRODUCT_MEMORY changes: Integrator-only unless the brief explicitly assigns a one-line sync  
+- Departments edit **only their** `departments/<dept>/STATUS.md` plus files listed in INDEX / brief  
+- Terminology / ART_DIRECTION / PRODUCT_MEMORY / GDD binding rules: Integrator-only unless the brief explicitly assigns a one-line sync  
 
-## Operating loop (per wave)
+## Operating loop
 
-1. **Integrator** picks ≤2 safe slices (no file overlap), checkpoints commit if workers need dirty work, runs PARALLEL DEVELOPMENT → worktrees + briefs.  
-2. **Workers** open only their worktree path; follow brief; update STATUS; never push/merge.  
+1. **Integrator** keeps the four permanent worktrees healthy (branch tips, ownership, contracts). Opens ≤2 coding-hot departments unless human expands capacity.  
+2. **Departments** work only in their permanent folder; follow contracts; update STATUS; never push/merge to `master`.  
 3. **Verify** (or Integrator) runs suite on disposable worktree — do **not** pass `-quit` with `-runTests`; use `-acceptSoftwareTermsForThisRunOnly`.  
-4. **Human** reviews look/feel when art/audio; Integrator merges.  
-5. Integrator wires contracts, updates glue docs, starts next wave.
+4. **Human** reviews look/feel when art/UI; Integrator merges.  
+5. Integrator wires contracts, updates glue docs, continues monitoring.
 
 ## What NOT to parallelize
 
-- Two agents editing `GameBootstrap` / `RoundPlayback` / `ProgramHud` in the same wave  
+- Two agents editing `GameBootstrap` / `RoundPlayback` / `ProgramHud` in the same wave without an Integrator-owned split  
 - Two agents editing `DRAFT_HANDOFF` or ART_DIRECTION terminology  
+- Atmosphere + board-surface lighting fights without a contract (Integrator mediates)  
+- Character Select owned by Character **and** UI at once — pick one owner in INDEX  
 - Verify on the same path as an open Editor  
-- Unprompted board/path art restarts after Day 9 human sign-off (schedule > polish unless human reopens)
+- Unprompted board/path art restarts after human sign-off (schedule > polish unless human reopens)
 
-## Starting a new worktree — quick reference
-
-The full mechanics live in `.claude/skills/parallel-development/SKILL.md` (invoke with `/parallel-development` or
-by saying "parallel development" — an agent will pick a slice, set this up, and hand you a paste-ready command
-for the other agent). This is the condensed version, for doing it by hand or when no agent is available to run
-the skill:
+## Starting / refreshing a permanent department worktree
 
 ```bash
-# 1. From the main tree (/Users/xuxinye/Documents/projects/Game/LogiCard), create the worktree.
-#    Name the branch/directory after the SLICE, not "agent2" — e.g. a Day 13 wall-clip fix:
-git worktree add -b feat/day13-wall-clip-fix ../logiCard-day13-wall-clip-fix master
-
-# 2. Write a self-contained brief at the worktree ROOT (not the main tree):
-#    <SLICE_NAME>_AGENT_BRIEF.md — where/why, the job (concrete paths/signatures), tests to run,
-#    boundary (files NOT to touch and why), why the split is safe, how to report back.
-#    See DAY10_HIT_VFX_AGENT_BRIEF.md / DAY11_AUDIO_STUB_AGENT_BRIEF.md / SHIP_DOCS_AGENT_BRIEF.md
-#    in git history (git show <branch>:<BRIEF_FILE>) as worked examples if those worktrees are gone.
-
-# 3. Hand this to the other agent/session, unchanged:
-cd /Users/xuxinye/Documents/projects/Game/logiCard-day13-wall-clip-fix
-# open this path in a second Cursor/Claude session, then:
-# Read <SLICE_NAME>_AGENT_BRIEF.md first, then do what it says.
+# From main tree D:/projects/Game/logiCard — create once; keep forever (or recreate if removed).
+git worktree add -b dept/atmosphere ../logiCard-atmosphere master
+git worktree add -b dept/cards ../logiCard-cards master
+git worktree add -b dept/character ../logiCard-character master
+git worktree add -b dept/ui ../logiCard-ui master
 ```
 
-When the worker reports back (commit on their branch, never pushed/merged by them): review the diff and
-boundary, batchmode-verify in a **disposable** worktree if it touches code (`git worktree add -d
-../logiCard-verify-<x> master`, copy the changed files in since worktrees only see committed history, run
-EditMode + PlayMode, remove the worktree after), then `git merge --no-ff <branch>` from the main tree once you
-and the human are satisfied — never merge unprompted. Update `contracts/CURRENT.md` / `DRAFT_HANDOFF.md` /
-`departments/INDEX.md` after, per the doc-ownership rules above.
+Each department keeps a living brief or STATUS at `docs/departments/<dept>/STATUS.md` on **its** branch/worktree. Slice-specific `*_AGENT_BRIEF.md` files may still live at the worktree root for a focused job inside that permanent lane.
 
-To remove a worktree once its branch is fully merged: `git worktree remove ../logiCard-<slice-name>` (add
-`--force` only if you've confirmed there's nothing valuable left uncommitted in it — `git stash` first if unsure,
-stashes survive worktree removal and are recoverable with `git stash list` / `git stash pop` from any worktree of
-the repo).
+When a department reports back (commit on its branch only): Integrator reviews diff + boundary, verifies, merges with human approval, updates contracts / DRAFT_HANDOFF / INDEX.
 
-## Days 10–14 wave map (summary)
+Ephemeral verify:
 
-- ~~**Wave 1 (Day 10):** Integrator = stepped motion + VFX wire; Presentation = muzzle/wound views; Audio = `FoleyPlayer` stub (new files only).~~ **Done** (2026-08-07) — `d60f01d`, `fc32a2d`, `a57d095`.
-- ~~**Wave 2 (Day 11):** Integrator = wire audio into playback/HUD; Ship = README draft + capture checklist; Verify = full suite.~~ **Done** (2026-08-07) — `ef6e3f5`/`7e08aba`, `04f9191`, `950ff63`.
-- **Wave 3 (Days 12–14):** in progress. Day 12's Windows candidate is being built natively on the human's own Windows machine — **not an agent task**, that build doesn't happen through this repo's worktree workflow. Everything else in Wave 3 is gated on the human sign-off below; there is nothing safe to delegate to a fresh worker until it's done.
+```bash
+git worktree add -d ../logiCard-verify-<x> master
+# run EditMode + PlayMode, then remove
+```
 
-### Wave 3 kickoff — read this before spawning anything for Days 12–14
+Do **not** delete a permanent department worktree after a merge unless the human is retiring that seat — permanent folders are meant to continue development.
 
-1. **Human sign-off first, blocks everything else.** Play a round in the Editor (or the Windows build once it exists) and fill in `docs/DAY13_PLAYTEST_FINDINGS.md` — Day 10 visuals (stepped motion, muzzle flash, wound splat) and Day 11 audio (the four Foley sounds). That file has the exact repro steps and a triage key. Nothing below this point should start before real findings exist there — spawning a "fix it" worker off a vague verbal note instead of a written finding is exactly the kind of bad split the `/parallel-development` skill warns against.
-2. **Integrator triages each finding** using the key in that file: ship-as-is (note it, move on), quick fix (same-session, no worktree), real fix (`/parallel-development` a worker slice — same pattern as the Day 10/11 VFX/Audio splits: new worktree, frozen contract in `contracts/CURRENT.md`, brief at the worktree root), or defer (log under Known Issues in `DRAFT_HANDOFF.md`). Respect the capacity cap — 1 Integrator + 2 Workers max, no two workers on `RoundPlayback`/`GameBootstrap`/`ProgramHud` in the same wave (same rule that governed Wave 1/2).
-3. **Tick Day 10 and Day 11 on `SCHEDULE.md`** once their findings are triaged (fixes landed or explicitly deferred) — don't wait for Day 12+ to close those out.
-4. **Day 12 (Windows candidate):** human builds on their own Windows machine directly. Once it exists, Integrator ticks Day 12 and notes the build location/version in `DRAFT_HANDOFF.md`. (A Mac-side batchmode build was attempted 2026-08-07 and abandoned — see that date's entry in `DRAFT_HANDOFF.md` for why, and what to check first — Sentis dependency — if a Mac build is ever needed again.)
-5. **Day 13 (playtest / presentation bugfix):** same findings file, same triage loop as step 2 — this is the "three written findings" playtest `SCHEDULE.md`'s cadence rule asks for.
-6. **Day 14 (Ship):** once the Windows build and capture footage/screenshots exist (`docs/CAPTURE_CHECKLIST.md`), spin a fresh `feat/ship-docs`-style worktree with a brief to embed the video link + stills into `SHIP_README_DRAFT.md` and promote it to root `README.md`. Not before — the draft is intentionally incomplete without real media.
+## Historical wave notes (Days 10–14)
 
-Detail and merge order live in department STATUS + `contracts/CURRENT.md`.
+Days 10–11 waves are **done**. Wave 3 / Phase 5 work now runs through the **permanent four** + Integrator rather than ad-hoc Day-named worktrees. Playtest findings still gate triage via `docs/DAY13_PLAYTEST_FINDINGS.md` when filled. Detail and merge order live in department STATUS + `contracts/CURRENT.md`.

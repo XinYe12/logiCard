@@ -1,10 +1,14 @@
 # logiCard — Agent Instructions
 
-Continuous-space tactics prototype (Unity 6000.5.5f1). Turn-based programmed-movement combat: players draft a path/shoot/door program each round against a Time Resource budget, then it resolves and plays back deterministically. See `docs/GDD.md` and `docs/CORE_LOOP.md` for the design; `docs/DRAFT_HANDOFF.md` for the current session-to-session state (read it first in any new session — it's the running log of what's actually landed vs. still open, and is usually more current than any doc below it).
+Continuous-space tactics prototype (Unity 6000.5.5f1). Turn-based programmed-movement combat: players draft a path/shoot/door program each round against a Time Resource budget, then it resolves and plays back deterministically. See `docs/core/GDD.md` and `docs/core/CORE_LOOP.md` for the design; `docs/DRAFT_HANDOFF.md` for the current session-to-session state (read it first in any new session — it's the running log of what's actually landed vs. still open, and is usually more current than any doc below it).
+
+## Docs are organized by department — read here, write here
+
+`docs/` is sorted into `core/` (cross-cutting product/design truth — GDD, PRODUCT_MEMORY, VISION, etc.), `cards/`, `character/`, `map/`, `ui/`, `ship/` (department-owned content), plus `departments/`, `contracts/`, and a few root-level ops docs (`DRAFT_HANDOFF.md`, `PARALLEL_OPS.md`, `DIRECTING_AGENTS.md`). **A new doc belongs in its owning department's folder — never at `docs/` root.** Before writing any new doc, check whether an existing one already covers the topic (by department first, then `core/`) and extend that instead of creating a new file. Only create a new doc when nothing existing fits its scope.
 
 ## Before touching Playback / Execution / ReplayTape presentation
 
-**Read `docs/PLAYBACK_CONTRACT.md`.** Reveal (short face-up flash) ≠ Execution/Playback (tape cinema on the scrubber). Continuous presenters must be a pure function of scrubber seconds; do not restart timed FX every `ApplyTime` tick. New Program verbs emit tape events; mid-Playback interactions (Adrenaline today — effect stub) stay gated on Execute and must not silently desync the armed tape.
+**Read `docs/core/PLAYBACK_CONTRACT.md`.** Reveal (short face-up flash) ≠ Execution/Playback (tape cinema on the scrubber). Continuous presenters must be a pure function of scrubber seconds; do not restart timed FX every `ApplyTime` tick. New Program verbs emit tape events; mid-Playback interactions (Adrenaline today — effect stub) stay gated on Execute and must not silently desync the armed tape.
 
 ## Multi-agent / parallel work
 
@@ -14,7 +18,7 @@ When more than one agent is in flight, also read `docs/PARALLEL_OPS.md` and `doc
 
 ## Before touching UI that lets the player change a board object's state
 
-**Read `docs/UI_BOARD_ANCHORED_COMPONENTS.md` before writing or modifying any interaction control tied to a board object** — a door, a future power station/terminal/pickup, anything the player selects and then changes the state of. This covers two things, both mandatory, not optional style guidance:
+**Read `docs/ui/UI_BOARD_ANCHORED_COMPONENTS.md` before writing or modifying any interaction control tied to a board object** — a door, a future power station/terminal/pickup, anything the player selects and then changes the state of. This covers two things, both mandatory, not optional style guidance:
 
 1. **The content contract** — every such control must show identity (what you're acting on), live state (read from the authoritative model, never inferred from player input), and options (each its own labeled, explicit-confirm control). This project has already shipped bugs from skipping each leg of this once.
 2. **The positioning mechanics** — the world→screen→canvas-local conversion pipeline, and a specific anchor/pivot pitfall that silently mispositions a board-anchored element if you get it wrong (it did, once). Don't re-derive this from scratch; copy the reference implementation the doc points to.
