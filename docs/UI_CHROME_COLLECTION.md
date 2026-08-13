@@ -41,6 +41,7 @@ Items the human wants kept for a possible later role (event card, rare reward, T
 |----|------|--------|
 | `special-holographic-ticket` | [`ui-collection/special-holographic-ticket-card.css`](ui-collection/special-holographic-ticket-card.css) + [`.png`](ui-collection/special-holographic-ticket-card.png) | Perforated holographic ticket card; parked. Role TBD. |
 | `glass-effect-card` | [`ui-collection/glass-effect-card.css`](ui-collection/glass-effect-card.css) | Frosted glass panel (`backdrop-filter`); parked. Role TBD — may suit AR scrubber/overlay contrast more than wood/parchment cards. |
+| `special-card-logo-reveal` | [`ui-collection/special-card-logo-reveal.css`](ui-collection/special-card-logo-reveal.css) | Gold-on-charcoal logo expand + border unfold + letter-spacing reveal on hover; parked. Role TBD. |
 
 ## Catalog log
 
@@ -50,6 +51,7 @@ Append one row per human delivery. Do not delete rejected items — mark `Reject
 |------|----------------------|-----------|-------|---------|--------|
 | 2026-08-13 | Human CSS paste + `logiCard-cards-collection/screenshots/image copy 13.png` → `docs/ui-collection/special-holographic-ticket-card.{css,png}` | **10** (impl: CSS mask perforations, conic holographic foil, hover float), **9** (motion), **2** (ticket silhouette as panel shape — special only) | Keep as **special card**, not default chrome. Techniques: SVG `filter` bump, `mask-composite` notches/perfs, layered blend modes for foil. Fonts in sample (Inter/Impact) are demo-only — not adopted for product type (**6** still open). | **OPEN** — original author/URL not given | **Held** — special/parked |
 | 2026-08-13 | [Uiverse.io by joe-watson-sbf](https://uiverse.io) — glass effect cards → `docs/ui-collection/glass-effect-card.css` | **10** (impl: `backdrop-filter` blur, translucent fill, warm hover glow), **2** (panel chrome technique — glass, not wood), **9** (hover border/glow) | Human label: “glass effect cards.” Held — not default LA toy/wood family. Unity port note: uGUI has no CSS backdrop-filter; would need URP/fullscreen blur or fake frosted sprite if ever promoted. | Uiverse component (author credited); confirm license on reuse | **Held** — special/parked |
+| 2026-08-13 | Human CSS paste → `docs/ui-collection/special-card-logo-reveal.css` | **9** (motion: hover scale, border rotate→settle, logo width wipe, tracking reveal, trail gradient), **10** (impl), **2** (dark panel + gold rim — palette sample only) | Human label: “special card animation.” Warm gold `#bd9f67` on charcoal `#243137` is desk-lamp-adjacent; still **Held** until a role is assigned (brand splash / Character Select hover / rare card). SVG logo markup not included in paste — animation shell only. | **OPEN** — original author/URL not given | **Held** — special/parked |
 
 ## Stop collecting (minimum to build)
 
