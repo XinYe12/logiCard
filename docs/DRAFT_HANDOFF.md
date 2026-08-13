@@ -40,7 +40,7 @@
 - **Dirty rematch/floors/lighting** on main — commit when asked; includes `BandageCharge` reset fix.
 - **Atmosphere** merge after human look (`af7b2e5`+ dirty).
 - **Character** Sim contracts blocked on brief answers + explicit carve-out per ability.
-- **Cards:** `CARD_COLLECTION.md` rewritten for C64 dual-horizon (branch, not yet merged to master). Live menu: `CARD_SYSTEM_OPENS.md` (deck size / draw / signature / Reveal). Flashbang brief still paused.
+- **Cards thin follow-ups (optional):** rewrite `CARD_COLLECTION.md` for C64; or one-page C64 OPEN menu (deck size / draw / signature-in-hand / Reveal). Flashbang brief stays paused until re-derived as library tech.
 - Interact needs station; Adrenaline real effect needs PLAYBACK redesign; Phase 2 Net paused.
 - Older unmonitored: door tape Open second; south-edge Move-click; zoom-fill/soft-rain/reflections.
 

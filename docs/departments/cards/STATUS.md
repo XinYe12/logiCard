@@ -7,9 +7,9 @@
 
 ## Owned files (this seat)
 
-- `docs/CARD_COLLECTION.md` (C62 shipping + C64 long-term overlay)
-- `docs/CARD_SYSTEM_MODEL_COMPARISON.md` (conversation record)
-- `docs/CARD_SYSTEM_OPENS.md` (**new** — deck size / draw / signature / Reveal menu)
+- `docs/cards/CARD_COLLECTION.md` (C62 shipping + C64 long-term overlay)
+- `docs/cards/CARD_SYSTEM_MODEL_COMPARISON.md` (conversation record)
+- `docs/cards/CARD_SYSTEM_OPENS.md` (**new** — deck size / draw / signature / Reveal menu)
 - Gear briefs (Flashbang **paused**)
 - This STATUS
 

@@ -3,7 +3,7 @@
 **Status:** **C62** first-wave rules (2026-08-12) + **C64** long-term hybrid model (2026-08-13).  
 Shipping staples use **transitional full-hand** (C62/C63). Long-term target = personal decks from a shared library + Character **signature cards** (C64). Gear **numerics** (§6A, except Bandage/C63) and Adrenaline real-effect redesign remain OPEN. Deckbuilder sizing → [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md).  
 **Worktree:** `D:\projects\Game\logiCard-cards-collection` / `feat/cards-collection-docs`  
-**Depends on:** [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) **C15**, **C18** *(amended by C64)*, **C33**, **C42–C44**, **C47**, **C62**, **C63**, **C64**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`GDD.md`](GDD.md); [`CORE_LOOP.md`](CORE_LOOP.md); [`UI_FLOW.md`](UI_FLOW.md); [`MONETIZATION.md`](MONETIZATION.md); [`CHARACTER_ROSTER_LONGTERM.md`](CHARACTER_ROSTER_LONGTERM.md).
+**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C15**, **C18** *(amended by C64)*, **C33**, **C42–C44**, **C47**, **C62**, **C63**, **C64**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`GDD.md`](../core/GDD.md); [`CORE_LOOP.md`](../core/CORE_LOOP.md); [`UI_FLOW.md`](../ui/UI_FLOW.md); [`MONETIZATION.md`](../core/MONETIZATION.md); [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md).
 
 ---
 
@@ -278,10 +278,9 @@ Ranked by resolve risk for **library staples** under transitional full-hand (dec
 
 ## See also
 
-- [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) — C62, C63, **C64**, OPEN #16  
+- [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) — C62, C63, **C64**, OPEN #16  
 - [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md) — hybrid conversation  
 - [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) — live C64 sizing menu  
 - [`GEAR_BANDAGE_AGENT_BRIEF.md`](GEAR_BANDAGE_AGENT_BRIEF.md) / [`GEAR_FLASHBANG_AGENT_BRIEF.md`](GEAR_FLASHBANG_AGENT_BRIEF.md)  
-- [`GDD.md`](GDD.md) · [`UI_FLOW.md`](UI_FLOW.md) · [`PLAYBACK_CONTRACT.md`](PLAYBACK_CONTRACT.md) · [`MONETIZATION.md`](MONETIZATION.md)  
-- [`CHARACTER_ROSTER_LONGTERM.md`](CHARACTER_ROSTER_LONGTERM.md) — Bomber / Time Player  
-
+- [`GDD.md`](../core/GDD.md) · [`UI_FLOW.md`](../ui/UI_FLOW.md) · [`PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md) · [`MONETIZATION.md`](../core/MONETIZATION.md)  
+- [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md) — Bomber / Time Player  
