@@ -25,6 +25,12 @@ namespace LogiCard.Tests.EditMode
         private static readonly HashSet<TapeEventType> ReservedNoPresenterYet = new HashSet<TapeEventType>
         {
             TapeEventType.Invalid,
+
+            // C63 — Bandage resolve lands here; the Healed presenter (hide/restore the specific
+            // wound splat it clears) is an explicit Integrator follow-up per
+            // docs/contracts/CURRENT.md's Bandage contract, not part of this slot. Move to
+            // PresentedAtScrubber once RoundPlayback wires it.
+            TapeEventType.Healed,
         };
 
         [Test]

@@ -21,7 +21,26 @@ namespace LogiCard.UI
         public static readonly Color PrimaryButton = new Color(0.97f, 0.96f, 0.94f, 1f);
         public static readonly Color PrimaryButtonText = new Color(0.1f, 0.09f, 0.07f, 1f);
         public static readonly Color SecondaryButton = new Color(0.16f, 0.16f, 0.20f, 1f);
-        public static readonly Color ModalDimmer = new Color(0.02f, 0.02f, 0.03f, 0.72f);
+
+        // ModalDialog cardstock-on-dimmer (ART_DIRECTION §4 / UI_TOOLS stub 5). Prefixed so
+        // Character Select can add CharSelect* tokens without colliding with shell Card.
+        /// <summary>Deep warm black void behind the modal card.</summary>
+        public static readonly Color ModalDimmer = new Color(0.04f, 0.03f, 0.02f, 0.86f);
+        /// <summary>Warm paper face — matches Time Card cardstock read.</summary>
+        public static readonly Color ModalCard = new Color(0.93f, 0.88f, 0.78f, 1f);
+        /// <summary>Slightly deeper paper rim under the face.</summary>
+        public static readonly Color ModalCardBorder = new Color(0.78f, 0.70f, 0.55f, 1f);
+        /// <summary>Soft drop shadow under the card (procedural panel, not an asset).</summary>
+        public static readonly Color ModalShadow = new Color(0.04f, 0.03f, 0.02f, 0.55f);
+        /// <summary>Ink on paper for modal title/body.</summary>
+        public static readonly Color ModalInk = new Color(0.22f, 0.16f, 0.12f, 1f);
+        /// <summary>Hairline divider on cardstock.</summary>
+        public static readonly Color ModalDivider = new Color(0.62f, 0.52f, 0.38f, 0.85f);
+        /// <summary>High-contrast confirm on paper (dark ink fill).</summary>
+        public static readonly Color ModalPrimaryButton = new Color(0.18f, 0.14f, 0.10f, 1f);
+        public static readonly Color ModalPrimaryButtonText = new Color(0.96f, 0.93f, 0.86f, 1f);
+        /// <summary>Secondary / cancel — deeper paper chip, dark ink label.</summary>
+        public static readonly Color ModalSecondaryButton = new Color(0.86f, 0.78f, 0.64f, 1f);
 
         // Character Select carousel accents (desk-lamp warm family — do not collide with Modal* tokens).
         public static readonly Color CharSelectBgScout = new Color(0.42f, 0.28f, 0.14f, 0.97f);

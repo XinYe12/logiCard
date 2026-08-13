@@ -15,5 +15,5 @@ MonoBehaviour:
   cardId: 0
   displayName: Bandage
   timeResourceCostSeconds: 3
-  oncePerMatch: 0
-  effectSummary: Clear Wounded. Must be stationary.
+  oncePerMatch: 1
+  effectSummary: Clear Wounded. Not while Sprinting (C63).
