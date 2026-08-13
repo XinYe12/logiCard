@@ -8,15 +8,25 @@
 Prior note: 2026-08-16 Integrator pulled `CHARACTER_FANTASY.md` §4.1 InfoBar field sheet into
 master as part of the Match Shell Layout merge (docs only) — the carousel deliverable
 (`CharacterSelectView.cs`/`UiMotion.cs`) remained a separate, still-unmerged workstream at that
-time and stays unmerged now, just rebased forward.
+time and stays unmerged now, just rebased forward. (2026-08-13: a same-day UI Toolkit pilot rebuild
+of Character Select was tried and reverted back to uGUI after a human Play pass called it "still
+bad" — see `docs/UI_TOOLKIT_MIGRATION_PROPOSAL.md`; the deliverable stayed uGUI throughout.)
 
 ## Owned files (this seat)
 
-- `Assets/_Project/UI/CharacterSelectView.cs` (+ `.meta`) — 2-item center/flank carousel view
+- `Assets/_Project/UI/CharacterSelectView.cs` (+ `.meta`) — 2-item center/flank carousel view, now
+  built on Unity UI Toolkit (`UIDocument`/`VisualElement`) as a pilot — see below
 - `Assets/_Project/UI/UiMotion.cs` (+ `.meta`) — zero-dependency float/Color/Vector2 tween helper
+  (unmodified by the Toolkit pilot — it's UI-technology-agnostic)
 - `Assets/_Project/UI/UiStyle.cs` — extended with `CharSelect*`-prefixed tokens only
 - `Assets/_Project/UI/AppFlowController.cs` — `BuildCharacterSelect` path rewired to the new view
-- `Assets/Tests/PlayMode/AppFlowPlayModeTests.cs` — carousel coverage
+- `Assets/_Project/UI/LogiCard.UI.asmdef` — added `UnityEngine.UIElementsModule` reference for the pilot
+- `Assets/_Project/Tests/PlayMode/AppFlowPlayModeTests.cs` — carousel coverage
+- `Assets/_Project/Tests/PlayMode/SliceSceneFixture.cs` — additive only: `FindVisualElement<T>` /
+  `ClickVisualElement` helpers alongside the existing uGUI `FindByName<T>` (shared fixture used by
+  every PlayMode suite — touched carefully, other suites' uGUI lookups are untouched)
+- `Assets/_Project/Tests/PlayMode/LogiCard.Tests.PlayMode.asmdef` — same UIElements reference, test side
+- `docs/UI_TOOLKIT_MIGRATION_PROPOSAL.md` — new: the impact/risk/sequencing writeup this pilot fed
 - `PLAY_NOTES.md`, `CHAR_SELECT_MOTION_AGENT_BRIEF.md`, this STATUS
 
 ## Done
@@ -28,7 +38,8 @@ time and stays unmerged now, just rebased forward.
 - Map Select untouched — still the plain `SelectionGrid` (C59).
 - Deliverable `b5d7c77` — EditMode 137 / PlayMode 48, both green (pre-rebase baseline) — still on worktree, not yet merged to master.
 - Cleanup pass — reverted unrelated `ProjectSettings/ProjectSettings.asset` scripting-define churn and 6 accidental `ithappy`/`nappin` `.meta` deletions (none were part of this slice's scope); deleted local batchmode run noise — none committed. Landed at `25244d7`.
-- Selected-card highlight/glow polish (2026-08-13 session) — two soft rounded-rect halo rings (`GlowRing`, `CharacterSelectView.cs`) sit behind the carousel, always tracking whichever card is currently center. Ring alpha rides the same eased role lerp the card itself uses (`Mathf.InverseLerp` on `Role.Scale` between flank/center extremes, times the card's own crossfade alpha), so the halo grows in as a card scales up to center and fades as it demotes to flank — no separate timer, no snap. New tokens `CharSelectGlowScout` / `CharSelectGlowJuggernaut` in `UiStyle.cs` (RGB only; alpha is computed per-frame from ring padding/max-alpha constants local to the view, not baked into the token). Rings are `raycastTarget = false` and parented before the cards in `CarouselStage`, so they never intercept clicks and never draw on top. Rebased onto `master` @ `77831cf` at the time (docs-only conflict in this STATUS file, resolved keeping the "Permanent seat" framing). EditMode 137/137, PlayMode 49/49, both green (batchmode noise reverted before commit, per the standing cleanup pattern above).
+- Selected-card highlight/glow polish (2026-08-13 session) — two soft rounded-rect halo rings (`GlowRing`, `CharacterSelectView.cs`) sit behind the carousel, always tracking whichever card is currently center. Ring alpha rides the same eased role lerp the card itself uses (`Mathf.InverseLerp` on `Role.Scale` between flank/center extremes, times the card's own crossfade alpha), so the halo grows in as a card scales up to center and fades as it demotes to flank — no separate timer, no snap. New tokens `CharSelectGlowScout` / `CharSelectGlowJuggernaut` in `UiStyle.cs`.
+- **UI Toolkit pilot (2026-08-13, human-requested)** — rebuilt `CharacterSelectView.cs` on `UIDocument`/`VisualElement` instead of uGUI, at the human's ask for "an already mature game UI system... apply to the entire game UI." Scoped to a pilot + proposal (not a unilateral full-game migration — that's cross-department, routed through `docs/UI_TOOLKIT_MIGRATION_PROPOSAL.md` for Integrator/human review) since a full migration touches files this worktree doesn't own (`ModalDialog.cs`, `ProgramHud.cs`, Map Select, `GameBootstrap.cs`). Same behavior contract preserved (carousel feel, `Pick_Scout`/`Pick_Juggernaut` names, the glow polish above); `ConfirmCharacter` deliberately stays uGUI to prove the realistic hybrid-screen rollout shape. Hit and fixed three real integration bugs along the way (`UIDocument.rootVisualElement` wiped on every OnEnable/OnDisable; the fix's own host object needs to dodge every ancestor `AppFlowController` ever disables; that same host then needs explicit `OnDestroy` cleanup or stale instances leak across scene rebuilds) — all written up with the actual fixes in the proposal doc's Findings section, since that's the real cost data a full rollout needs. EditMode 137/137, PlayMode 49/49, both green. **Same day, reverted** back to uGUI after a human Play pass called it "still bad" — see `docs/UI_TOOLKIT_MIGRATION_PROPOSAL.md`'s "Update, same day" note. Findings/proposal doc preserved for future reference; pilot code preserved in git history at `2c99a08`.
 - **Match Shell Layout (2026-08-16, merged into master separately):** `CHARACTER_FANTASY.md` §4.1
   InfoBar field sheet — one combined bar (Attacker | Defender columns + shared phase/round/pool
   strip), wound ladder as Healthy/Wounded/Dead (not HP), signature/deck size marked OPEN pending
@@ -48,11 +59,11 @@ time and stays unmerged now, just rebased forward.
 
 ## In progress
 
-- Nothing. Awaiting the next human Play-mode pass before Integrator merges.
+- Nothing implementation-side. **Decision pending**, not polish: does this UI Toolkit pilot ship (merge as Character Select's new implementation), get reverted back to the uGUI version from earlier this session, or stay parked on this branch pending a wider Integrator/human call on `docs/UI_TOOLKIT_MIGRATION_PROPOSAL.md`? That call isn't mine to make unilaterally — see Blocked.
 
 ## Blocked
 
-- Merge is gated on a human Play pass (see `PLAY_NOTES.md` at worktree root for how to see it and what "good" looks like, updated this session for the glow) — visual/feel sign-off can't come from batchmode.
+- **Two separate sign-offs needed**, not one: (1) the routine human Play pass this worktree has always needed before merge (see `PLAY_NOTES.md`) — visual/feel sign-off can't come from batchmode, and this pilot specifically has *not* had an interactive/visual check yet (no Editor was open on this worktree this session; see the proposal doc's Verification section) — and (2) the UI Toolkit migration question itself, which is bigger than this screen and belongs with the Integrator per `docs/PARALLEL_OPS.md`'s escalation rule, not decided standing here.
 
 ## Depends on
 
