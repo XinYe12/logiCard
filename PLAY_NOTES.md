@@ -1,5 +1,16 @@
 # Play Notes — Character Select Carousel
 
+**This screen changed rendering technology this session** — it's now built on Unity UI Toolkit
+(`UIDocument`/`VisualElement`) instead of uGUI, as a pilot for `docs/UI_TOOLKIT_MIGRATION_PROPOSAL.md`.
+It has **not** had a human visual check yet (no Editor was open on this worktree to Play it this
+session) — batchmode only confirms the wiring, not the pixels. Specifically worth checking that
+batchmode can't: **does all the text actually render?** Every batchmode run logs
+`No Theme Style Sheet set to PanelSettings , UI will not render properly` — this may be cosmetic
+(everything here is hand-styled inline, not relying on a default theme) or it may mean something is
+genuinely missing on screen. This is the single most important thing this Play pass needs to answer.
+Also worth a glance: does **CONFIRM** (still uGUI, unlike the carousel) draw on top of the carousel
+correctly, or does the cross-technology layering look wrong at the seam.
+
 How to see it: Boot the game (Play), let it flow through to **Character Select**, then use
 **Next / Prev** or click the dimmed flank card. Only Scout and Juggernaut are in the roster.
 
