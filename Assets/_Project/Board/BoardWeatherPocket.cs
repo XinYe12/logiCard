@@ -13,12 +13,16 @@ namespace LogiCard.Board
     /// weather reads as sitting on the diorama, matching the locked reference's "sky pocket over the chunk."
     ///
     /// Cloud bank (2026-08-12 <c>image copy 13</c>): Link's Awakening-style <b>clay sphere lobes</b> —
-    /// opaque URP Lit meshes glued into masses (true 3D volume under ortho/rotate). Billboard
+    /// opaque URP Unlit meshes glued into masses (true 3D volume under ortho/rotate). Billboard
     /// CloudAtlas discs were rejected as too 2D/cheap with dark alpha 边缘 <b>as the primary cloud
     /// read</b>. Soft atlas is still used, now for two things: subtle rim mist at the board's far
-    /// corners, and (2026-08-13) a thin billboard haze fringe hugging each clay mass's envelope so
-    /// the opaque mesh's hard silhouette blurs into the void instead of cutting sharp. Pack
-    /// <c>PF_CloudLayer</c> demoted. Rain = <c>PF_RainSystem</c>; Zap =
+    /// corners, and a thin billboard haze fringe hugging each formation's envelope so the opaque
+    /// mesh's hard silhouette blurs into the void instead of cutting sharp. Each formation
+    /// (2026-08-13) is built two-layer: <see cref="SpawnCloudPuff"/> makes one small irregular puff,
+    /// <see cref="PlaceClayMass"/> assembles many puffs with a triangular dense-middle/loose-edge
+    /// profile — a real cloud shape built from small pieces, not a scaled-up single sphere. Shading is
+    /// a posterized (not smooth) crown/belly map so close range reads as painted, not a glossy render.
+    /// Pack <c>PF_CloudLayer</c> demoted. Rain = <c>PF_RainSystem</c>; Zap =
     /// <c>VFX_Zap_White</c>. Prefabs via <see cref="LogiCard.Art.Editor.WeatherPackImportTool"/>.
     /// </summary>
     public sealed class BoardWeatherPocket : MonoBehaviour
@@ -87,21 +91,17 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Procedural lobe cluster — replaces the six hand-authored patterns (Raft/Stack/Comma/Crown/
-        /// Anvil/Drift, 2026-08-12/13). All six shared the same flaw: one dominant lobe (RadiusNorm up
-        /// to 0.42) against several much smaller ones, so every mass read as "a big sphere with pimples"
-        /// — human 2026-08-13: "I can see you're using a big spherical model... doesn't look like a big
-        /// white ball?" A sunflower/golden-angle disk fill with a <b>narrow, near-uniform radius band</b>
-        /// (no single lobe more than ~35% bigger than the smallest) and a higher lobe count reads as a
-        /// glued cauliflower cluster instead — many similar pillows, no dominant sphere. Dome-biased Y
-        /// (center lobes higher/crown, rim lobes lower/belly) keeps the silhouette rounded-on-top without
-        /// a flat disk of same-height balls. Random per call, so every mass (and every <c>Build()</c>) is
-        /// a fresh cluster — no fixed pool needed for variety anymore.
+        /// Layer 1 — spawn function: one small, irregular cloud puff as a handful of glued lobes
+        /// (golden-angle sunflower disk fill so the puff's own silhouette is never a single dominant
+        /// sphere — same fix as the 2026-08-13 "big white ball" pass, just at puff scale now). Called
+        /// repeatedly by <see cref="PlaceClayMass"/> (Layer 2) to build up one formation. Random per
+        /// call, so every puff — and every formation — is a fresh arbitrary shape.
         /// </summary>
-        private static ClayLobe[] GenerateCloudCluster(int lobeCount, float minRadiusNorm, float maxRadiusNorm)
+        private static ClayLobe[] SpawnCloudPuff(int lobeCount, float minRadiusNorm, float maxRadiusNorm)
         {
             const float goldenAngle = 137.50776f * Mathf.Deg2Rad;
             const float maxDiskRadius = 0.40f;
+            lobeCount = Mathf.Max(1, lobeCount);
             var lobes = new ClayLobe[lobeCount];
 
             for (int i = 0; i < lobeCount; i++)
@@ -121,6 +121,14 @@ namespace LogiCard.Board
             }
 
             return lobes;
+        }
+
+        /// <summary>Symmetric triangular distribution on [-1, 1], peaked at 0 (inverse-CDF sampling).
+        /// Drives Layer 2's "dense/thick middle, loose/thin sides" placement.</summary>
+        private static float TriangularSample()
+        {
+            float u = Random.value;
+            return u < 0.5f ? Mathf.Sqrt(2f * u) - 1f : 1f - Mathf.Sqrt(2f * (1f - u));
         }
 
         /// <summary>One cloud mass's placement/size/tint — factors are relative to board width/depth
@@ -197,10 +205,9 @@ namespace LogiCard.Board
                     spec.PosZFactor * depth);
                 Vector3 scale = new Vector3(spec.ScaleXFactor * width, spec.ScaleYUnits, spec.ScaleZFactor * depth);
 
-                // 9-12 similar-size lobes per mass — dense enough to glue, narrow radius band so no
-                // lobe reads as "the" sphere (see GenerateCloudCluster doc for the human complaint).
-                ClayLobe[] cluster = GenerateCloudCluster(Random.Range(9, 13), minRadiusNorm: 0.19f, maxRadiusNorm: 0.25f);
-                PlaceClayMass(root.transform, spec.Name, pos, scale, cluster, RandomMassYaw(), spec.TopTint, spec.BellyTint);
+                // 7-10 puffs per formation, each its own small Layer-1 puff — see PlaceClayMass for
+                // the triangular dense-middle/loose-edges assembly (human ask 2026-08-13).
+                PlaceClayMass(root.transform, spec.Name, pos, scale, Random.Range(7, 11), RandomMassYaw(), spec.TopTint, spec.BellyTint);
                 PlaceCloudEdgeHaze(root.transform, "Haze_" + spec.Name, pos, scale, spec.TopTint);
             }
         }
@@ -209,16 +216,23 @@ namespace LogiCard.Board
         private static float RandomMassYaw() => Random.Range(0f, 360f);
 
         /// <summary>
-        /// One LA-style cloud mass: overlapping opaque sphere meshes (clay pillows).
+        /// Layer 2 — assembly: places <paramref name="puffCount"/> Layer-1 puffs (<see
+        /// cref="SpawnCloudPuff"/>) inside one formation using a <b>triangular density/size profile</b>
+        /// along the formation's local X — puffs land denser and bigger near the center
+        /// (<see cref="TriangularSample"/> peaks at 0) and sparser/smaller toward the fringe, with fringe
+        /// puffs drifting slightly upward. Reads as a rounded-triangle/pyramid cloud built from many
+        /// small irregular pieces, not a uniform ball of same-size lobes — human 2026-08-13, pointing at
+        /// a reference: "dense, thick in the middle, loose and thin at the sides... almost triangular."
         /// No cast shadows (image copy 14: shadow ate the board). No Lit terminator darkening —
-        /// Unlit + soft shade map keeps crowns bright and bellies pale, not mid-grey 边缘.
+        /// Unlit + posterized shade map keeps crowns bright and bellies pale without a glossy-render
+        /// gradient (image copy 16 close-up: "needs to be more stylized").
         /// </summary>
         private static void PlaceClayMass(
             Transform parent,
             string name,
             Vector3 localPosition,
             Vector3 massScale,
-            ClayLobe[] pattern,
+            int puffCount,
             float yawDegrees,
             Color topTint,
             Color bellyTint)
@@ -232,39 +246,59 @@ namespace LogiCard.Board
             Material clay = ClayCloudMaterial();
             float footprint = Mathf.Max(massScale.x, massScale.z);
 
-            for (int i = 0; i < pattern.Length; i++)
+            for (int p = 0; p < puffCount; p++)
             {
-                ClayLobe lobe = pattern[i];
-                var go = new GameObject($"Lobe_{i}");
-                go.transform.SetParent(mass.transform, false);
+                float u = TriangularSample(); // -1..1, peaked at 0 — formation's dense/thick core
+                float depthJitter = Random.Range(-0.5f, 0.5f);
+                float edgeT = Mathf.Abs(u); // 0 at core .. 1 at fringe
 
-                Vector3 pos = new Vector3(
-                    lobe.UnitOffset.x * massScale.x,
-                    lobe.UnitOffset.y * massScale.y,
-                    lobe.UnitOffset.z * massScale.z);
-                go.transform.localPosition = pos;
+                float puffScale = Mathf.Lerp(1f, 0.4f, edgeT); // core puffs big, fringe puffs small
+                int puffLobes = Mathf.RoundToInt(Mathf.Lerp(5f, 2f, edgeT)); // fringe puffs thinner too
+                float puffMinR = Mathf.Lerp(0.22f, 0.15f, edgeT);
+                float puffMaxR = Mathf.Lerp(0.30f, 0.21f, edgeT);
 
-                // Slightly oversized so lobes swallow each other (glued clay, not separate balls).
-                // image copy 15: 2.15x + flat Unlit tint blew the raft into one board-wide white
-                // mass; back to 2.0x now that the shade map (below) carries the volume instead.
-                float diameter = lobe.RadiusNorm * footprint * 2.0f;
-                go.transform.localScale = Vector3.one * diameter;
+                var puffGo = new GameObject($"Puff_{p}");
+                puffGo.transform.SetParent(mass.transform, false);
+                puffGo.transform.localPosition = new Vector3(
+                    u * massScale.x * 0.5f,
+                    Mathf.Lerp(0f, 0.18f, edgeT) * massScale.y, // fringe wisps drift up and out
+                    depthJitter * massScale.z * (1f - 0.3f * edgeT));
 
-                var filter = go.AddComponent<MeshFilter>();
-                filter.sharedMesh = sphere;
+                ClayLobe[] puff = SpawnCloudPuff(puffLobes, puffMinR, puffMaxR);
+                float puffFootprintXZ = footprint * puffScale * 0.55f;
+                float puffThicknessY = massScale.y * puffScale;
 
-                var renderer = go.AddComponent<MeshRenderer>();
-                renderer.sharedMaterial = clay;
-                // Shadows off — cast shadow blacked out the board (image copy 14); self-receive
-                // carved harsh crevices between lobes.
-                renderer.shadowCastingMode = ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
+                for (int i = 0; i < puff.Length; i++)
+                {
+                    ClayLobe lobe = puff[i];
+                    var go = new GameObject($"Lobe_{i}");
+                    go.transform.SetParent(puffGo.transform, false);
 
-                var block = new MaterialPropertyBlock();
-                Color tint = lobe.Belly ? bellyTint : topTint;
-                block.SetColor("_BaseColor", tint);
-                block.SetColor("_Color", tint);
-                renderer.SetPropertyBlock(block);
+                    go.transform.localPosition = new Vector3(
+                        lobe.UnitOffset.x * puffFootprintXZ,
+                        lobe.UnitOffset.y * puffThicknessY,
+                        lobe.UnitOffset.z * puffFootprintXZ);
+
+                    // Slightly oversized so lobes swallow each other (glued clay, not separate balls).
+                    float diameter = lobe.RadiusNorm * puffFootprintXZ * 2.0f;
+                    go.transform.localScale = Vector3.one * diameter;
+
+                    var filter = go.AddComponent<MeshFilter>();
+                    filter.sharedMesh = sphere;
+
+                    var renderer = go.AddComponent<MeshRenderer>();
+                    renderer.sharedMaterial = clay;
+                    // Shadows off — cast shadow blacked out the board (image copy 14); self-receive
+                    // carved harsh crevices between lobes.
+                    renderer.shadowCastingMode = ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+
+                    var block = new MaterialPropertyBlock();
+                    Color tint = lobe.Belly ? bellyTint : topTint;
+                    block.SetColor("_BaseColor", tint);
+                    block.SetColor("_Color", tint);
+                    renderer.SetPropertyBlock(block);
+                }
             }
         }
 
