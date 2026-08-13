@@ -3,7 +3,7 @@
 **Status:** Drafted 2026-08-06 — **long-term/future roadmap**, sequenced by **C50**'s phase model, not tied to
 a retired calendar (updated 2026-08-08 for the **C46** scope pivot — see `PRODUCT_MEMORY.md`). Design-phase
 only; nothing here is scheduled or implemented. See scope note below before assuming otherwise.
-**Depends on:** [VISION.md](VISION.md) (Long-Term Systems list), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md) **C36–C38** (existing long-term systems this roster builds on: destructible geometry, objective win, revive/martyr), **C42–C44** (the binding pointer entries for this doc), [MONETIZATION.md](MONETIZATION.md) (the guardrail below).
+**Depends on:** [VISION.md](../core/VISION.md) (Long-Term Systems list), [PRODUCT_MEMORY.md](../core/PRODUCT_MEMORY.md) **C36–C38** (existing long-term systems this roster builds on: destructible geometry, objective win, revive/martyr), **C42–C44** (the binding pointer entries for this doc), [MONETIZATION.md](../core/MONETIZATION.md) (the guardrail below).
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Doc ID:** D4  
 **Status:** Revised 2026-08-12 — permanent **Atmosphere / Cards / Character / UI** department ownership (see §11); prior 2026-08-08 **C46** full scope pivot (14-day-demo framing retired). Earlier: continuous-space pivot (**C35/C39** — [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md)); C21 amended; C34 Polished Core Demo (superseded).  
-**Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [CORE_LOOP.md](CORE_LOOP.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md), [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md), [PARALLEL_OPS.md](PARALLEL_OPS.md)
+**Depends on:** [VISION.md](VISION.md), [SCOPE.md](SCOPE.md), [CORE_LOOP.md](CORE_LOOP.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md), [ART_DIRECTION.md](ART_DIRECTION.md), [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md), [PARALLEL_OPS.md](../PARALLEL_OPS.md)
 
 **Scope note:** the board is **continuous position**, not a discrete grid (**C35/C39**, amended 2026-08-03 — this reverses an earlier "long-term only" framing after a cold-observer playtest). Distances/costs below still use the same numeric footprint and formulas the grid version used (`[0,4]×[0,4]`, `seconds = distance × BaseSecondsPerTile × StanceMult`) — only the underlying coordinate/LoS/pathfinding math changed, from tile-based to continuous. Full phased implementation: [CONTINUOUS_PIVOT_PLAN.md](CONTINUOUS_PIVOT_PLAN.md). Destructible geometry, an asymmetric objective win, and a Downed+revive+Detonator system remain **long-term-only**, not part of this pivot — see `PRODUCT_MEMORY.md` **C36–C38**.
 
@@ -75,7 +75,7 @@ There is **no Walk card**. Movement is built-in programming:
 
 ### 3.3 Collision
 - Closed door segment blocks movement across it (§4).
-- **Pawns do not block each other** (**C40**). Two pawns may occupy the same point or cross paths; contact is not a combat verb. Wounds come only from Shoot (`HitRadius` / `LaneHalfWidth` — **C39**). Matches the grid demo's actual behavior (the old "cannot share a tile" line was never enforced in digital code). Optional AV (slight offset when stacked) is presentation-only, not a gameplay rule. Tradeoff archive: [`docs/drafts/pawn-collision-tradeoff.md`](drafts/pawn-collision-tradeoff.md).
+- **Pawns do not block each other** (**C40**). Two pawns may occupy the same point or cross paths; contact is not a combat verb. Wounds come only from Shoot (`HitRadius` / `LaneHalfWidth` — **C39**). Matches the grid demo's actual behavior (the old "cannot share a tile" line was never enforced in digital code). Optional AV (slight offset when stacked) is presentation-only, not a gameplay rule. Tradeoff archive: [`docs/drafts/pawn-collision-tradeoff.md`](../drafts/pawn-collision-tradeoff.md).
 
 ---
 
@@ -166,7 +166,7 @@ Placeholder magnitudes — tune in playtest. "unit" = continuous board distance 
 
 ## 7. Map Elements
 
-See also: [`MAP_AUTHORING.md`](MAP_AUTHORING.md) (how to author additional maps under **C57**).
+See also: [`MAP_AUTHORING.md`](../map/MAP_AUTHORING.md) (how to author additional maps under **C57**).
 
 | Element | This ship |
 |---------|-------------|
@@ -238,4 +238,4 @@ Four content pillars stay under **permanent** parallel ownership. Each departmen
 
 **Core loop authority stays Integrator / Core:** Match loop, Time Resource resolve, Move/Shoot/Door sim, Net/Timeline wiring — departments propose content against frozen contracts; they do not silently change Host math.
 
-Ops detail (capacity, STATUS, merge protocol): [`PARALLEL_OPS.md`](PARALLEL_OPS.md) · live seats: [`departments/INDEX.md`](departments/INDEX.md).
+Ops detail (capacity, STATUS, merge protocol): [`PARALLEL_OPS.md`](../PARALLEL_OPS.md) · live seats: [`departments/INDEX.md`](../departments/INDEX.md).

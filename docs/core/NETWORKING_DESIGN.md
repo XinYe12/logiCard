@@ -40,7 +40,7 @@ Keep as-is:
 3. Authority runs ghost sim → emits immutable `ReplayTape`.
 4. Clients scrub / animate from tape only; they never apply their own wound math.
 
-Unique verbs (future roster) and the matchmaking-fallback bot (**C49**) must also emit programs through this same pipeline — see [CHARACTER_ROSTER_LONGTERM.md](CHARACTER_ROSTER_LONGTERM.md) and [AI_FALLBACK_BOT.md](AI_FALLBACK_BOT.md).
+Unique verbs (future roster) and the matchmaking-fallback bot (**C49**) must also emit programs through this same pipeline — see [CHARACTER_ROSTER_LONGTERM.md](../character/CHARACTER_ROSTER_LONGTERM.md) and [AI_FALLBACK_BOT.md](AI_FALLBACK_BOT.md).
 
 ---
 

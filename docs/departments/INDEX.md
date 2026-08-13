@@ -8,8 +8,8 @@ building. Cards' hybrid card-system model (**C64**) promoted to PRODUCT_MEMORY, 
 sign-off (`7213d98`)**, combined state batchmode-verified (EditMode 149/149, PlayMode 48/48). Bandage
 HUD-side slot open. Atmosphere has moved past its last-logged tip, not yet re-reviewed.
 **Ops constitution:** [`../PARALLEL_OPS.md`](../PARALLEL_OPS.md) · human-side playbook: [`../DIRECTING_AGENTS.md`](../DIRECTING_AGENTS.md)
-**Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md) · Playback: [`../PLAYBACK_CONTRACT.md`](../PLAYBACK_CONTRACT.md)
-**Human rollup:** [`../DRAFT_HANDOFF.md`](../DRAFT_HANDOFF.md) · pillars: [`../GDD.md`](../GDD.md) §11 · cards: [`../CARD_COLLECTION.md`](../CARD_COLLECTION.md) · card-system model: [`../CARD_SYSTEM_MODEL_COMPARISON.md`](../CARD_SYSTEM_MODEL_COMPARISON.md)
+**Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md) · Playback: [`../PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md)
+**Human rollup:** [`../DRAFT_HANDOFF.md`](../DRAFT_HANDOFF.md) · pillars: [`../GDD.md`](../core/GDD.md) §11 · cards: [`../CARD_COLLECTION.md`](../cards/CARD_COLLECTION.md) · card-system model: [`../CARD_SYSTEM_MODEL_COMPARISON.md`](../cards/CARD_SYSTEM_MODEL_COMPARISON.md)
 
 ## Capacity
 

@@ -5,8 +5,8 @@ HUD-side still open in `docs/contracts/CURRENT.md` (UI seat). Kept as pattern re
 **Scope:** Bandage only — first of the C62 first-wave gear cards (Bandage, Interact-as-card, Flashbang,
 Adrenaline). Originally written so Integrator could open a frozen Sim/HUD contract once the numerics
 below were greenlit — that happened as C63.
-**Depends on:** [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) **C62**, OPEN #16; [`CARD_COLLECTION.md`](CARD_COLLECTION.md)
-§4.2, §6A, §8 Q1–Q3; [`GDD.md`](GDD.md) §5 (wound ladder); [`PLAYBACK_CONTRACT.md`](PLAYBACK_CONTRACT.md).
+**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C62**, OPEN #16; [`CARD_COLLECTION.md`](CARD_COLLECTION.md)
+§4.2, §6A, §8 Q1–Q3; [`GDD.md`](../core/GDD.md) §5 (wound ladder); [`PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md).
 **Does not touch:** Flashbang, Interact-as-card, Adrenaline — each needs its own brief. No Sim/resolve
 code is written or proposed as final in this document.
 
@@ -180,13 +180,13 @@ once. **Before opening either slot, two gates need to clear, not one:**
 
 - [`CARD_COLLECTION.md`](CARD_COLLECTION.md) — §4.2, §6A, §8 (source of the confirmed direction this
   brief narrows to Bandage specifically)
-- [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) — **C62**, OPEN #16
-- [`PLAYBACK_CONTRACT.md`](PLAYBACK_CONTRACT.md) — §5 extension checklist, applies directly to any new
+- [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) — **C62**, OPEN #16
+- [`PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md) — §5 extension checklist, applies directly to any new
   `TapeEventType`
-- [`GDD.md`](GDD.md) §5 — wound ladder (Healthy/Wounded/Dead) Bandage operates on
-- [`docs/UI_BOARD_ANCHORED_COMPONENTS.md`](UI_BOARD_ANCHORED_COMPONENTS.md) — why its mandatory trigger
+- [`GDD.md`](../core/GDD.md) §5 — wound ladder (Healthy/Wounded/Dead) Bandage operates on
+- [`docs/UI_BOARD_ANCHORED_COMPONENTS.md`](../ui/UI_BOARD_ANCHORED_COMPONENTS.md) — why its mandatory trigger
   doesn't fire for Bandage's self-targeting UI, and why its content-contract spirit still applies (§5)
-- [`docs/contracts/CURRENT.md`](contracts/CURRENT.md) — where a real Bandage contract would be opened;
+- [`docs/contracts/CURRENT.md`](../contracts/CURRENT.md) — where a real Bandage contract would be opened;
   Integrator-only to edit
-- [`docs/departments/cards/STATUS.md`](departments/cards/STATUS.md) — Cards dept status, updated
+- [`docs/departments/cards/STATUS.md`](../departments/cards/STATUS.md) — Cards dept status, updated
   alongside this brief
