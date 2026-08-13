@@ -34,7 +34,7 @@
 
 ## In progress
 
-- Nothing. Awaiting the next human Play-mode pass — this is a real visual change (art asset swap on the cards/buttons) that needs eyes on it, same as every prior wave here.
+- Session pickup 2026-08-13: tip still `a915bb7` (Kenney skin + Toolkit revert). Branch is **5 ahead / 7 behind** `master` (master has modal restyle + Bandage/C63 merges). Untracked `screenshots/image copy 13.png` present — looks like a flat orange/yellow mock, not the Kenney parchment build; need human to confirm whether that's Play feedback / a new target, or unrelated. Otherwise still waiting on Play sign-off per `PLAY_NOTES.md`.
 
 ## Blocked
 
