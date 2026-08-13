@@ -22,7 +22,7 @@
 
 ## In progress
 
-- Awaiting first human resource batch for the catalog log in `UI_CHROME_COLLECTION.md`.
+- Chrome collection active. First held item: holographic ticket special card (`docs/ui-collection/special-holographic-ticket-card.*`) — not default chrome; role TBD. Still need core buckets 2–3–5–6–7–8.
 
 ## Blocked
 

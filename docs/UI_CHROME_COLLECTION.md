@@ -33,13 +33,21 @@ Human rejected the 2026-08-13 browsing shortlist (Kenney Adventure as *the* dire
 | **11** | Audio (optional) | Paper/wood UI clicks, soft open/close — only if human cares this wave. |
 | **12** | License / provenance | Source + license (CC0 / paid / owned) for **every** asset or borrowed code. Unknowns are not usable. |
 
+## Special / held (not default chrome)
+
+Items the human wants kept for a possible later role (event card, rare reward, Time Card flourish, etc.) — **do not** treat as the lobby+HUD family until explicitly promoted.
+
+| Id | Path | Intent |
+|----|------|--------|
+| `special-holographic-ticket` | [`ui-collection/special-holographic-ticket-card.css`](ui-collection/special-holographic-ticket-card.css) + [`.png`](ui-collection/special-holographic-ticket-card.png) | Perforated holographic ticket card; parked. Role TBD. |
+
 ## Catalog log
 
 Append one row per human delivery. Do not delete rejected items — mark `Rejected` with a one-line why.
 
 | Date | Source / link / path | Bucket(s) | Notes | License | Status |
 |------|----------------------|-----------|-------|---------|--------|
-| _(empty — awaiting first batch)_ | | | | | |
+| 2026-08-13 | Human CSS paste + `logiCard-cards-collection/screenshots/image copy 13.png` → `docs/ui-collection/special-holographic-ticket-card.{css,png}` | **10** (impl: CSS mask perforations, conic holographic foil, hover float), **9** (motion), **2** (ticket silhouette as panel shape — special only) | Keep as **special card**, not default chrome. Techniques: SVG `filter` bump, `mask-composite` notches/perfs, layered blend modes for foil. Fonts in sample (Inter/Impact) are demo-only — not adopted for product type (**6** still open). | **OPEN** — original author/URL not given | **Held** — special/parked |
 
 ## Stop collecting (minimum to build)
 
