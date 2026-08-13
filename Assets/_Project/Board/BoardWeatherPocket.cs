@@ -66,10 +66,9 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Cloud scale/height — contained shelf over the chunk. 1.7 kept after human height notes
+        /// Cloud height — contained shelf over the chunk. 1.7 kept after human height notes
         /// (<c>image copy 10</c>–<c>12</c>).
         /// </summary>
-        private const float InterimCloudScale = 0.9f;
         private const float InterimCloudHeightBoost = 1.7f;
 
         /// <summary>One clay lobe inside a mass — unit offsets in [-0.5,0.5] scaled by mass footprint.</summary>
@@ -161,51 +160,102 @@ namespace LogiCard.Board
             PatternRaft, PatternStack, PatternComma, PatternCrown, PatternAnvil, PatternDrift,
         };
 
+        /// <summary>One cloud mass's placement/size/tint — factors are relative to board width/depth
+        /// (X/Z) or absolute world units scaled by <see cref="InterimCloudHeightBoost"/> (height).</summary>
+        private readonly struct CloudMassSpec
+        {
+            public readonly string Name;
+            public readonly float PosXFactor;
+            public readonly float PosZFactor;
+            public readonly float HeightUnits;
+            public readonly float ScaleXFactor;
+            public readonly float ScaleYUnits;
+            public readonly float ScaleZFactor;
+            public readonly Color TopTint;
+            public readonly Color BellyTint;
+
+            public CloudMassSpec(
+                string name, float posX, float posZ, float heightUnits,
+                float scaleX, float scaleY, float scaleZ, Color topTint, Color bellyTint)
+            {
+                Name = name;
+                PosXFactor = posX;
+                PosZFactor = posZ;
+                HeightUnits = heightUnits;
+                ScaleXFactor = scaleX;
+                ScaleYUnits = scaleY;
+                ScaleZFactor = scaleZ;
+                TopTint = topTint;
+                BellyTint = bellyTint;
+            }
+        }
+
+        /// <summary>
+        /// More, smaller masses spread across the full board width (2026-08-13: "single cloud size is
+        /// too big" — a few large blobs read as separate objects; this replaces them with seven smaller
+        /// ones spanning roughly -0.85..+0.85 of board width so the bank reads as one continuous cloud
+        /// layer instead of discrete chunks). Biggest single lobe is now ~0.4x board width vs. the old
+        /// ~0.85x. Depth/height range kept close to the prior Play-approved framing.
+        /// </summary>
+        private static readonly CloudMassSpec[] CloudMasses =
+        {
+            new CloudMassSpec("Mass_W2", -0.82f, 0.10f, 3.9f, 0.34f, 0.85f, 0.30f,
+                new Color(0.99f, 0.98f, 0.97f), new Color(0.90f, 0.90f, 0.92f)),
+            new CloudMassSpec("Mass_NW", -0.48f, 0.20f, 3.75f, 0.40f, 0.95f, 0.34f,
+                new Color(0.99f, 0.99f, 1f), new Color(0.93f, 0.95f, 1f)),
+            new CloudMassSpec("Mass_Main", 0f, 0.04f, 3.95f, 0.46f, 1.05f, 0.36f,
+                new Color(1f, 1f, 1f), new Color(0.94f, 0.96f, 1f)),
+            new CloudMassSpec("Mass_NE", 0.30f, 0.14f, 3.85f, 0.36f, 0.9f, 0.30f,
+                new Color(0.98f, 0.99f, 1f), new Color(0.92f, 0.94f, 0.99f)),
+            new CloudMassSpec("Mass_SE", 0.58f, -0.12f, 3.8f, 0.38f, 0.9f, 0.32f,
+                new Color(1f, 0.99f, 0.98f), new Color(0.96f, 0.95f, 0.93f)),
+            new CloudMassSpec("Mass_E2", 0.84f, 0.06f, 4.0f, 0.30f, 0.8f, 0.26f,
+                new Color(0.99f, 0.97f, 0.95f), new Color(0.89f, 0.88f, 0.90f)),
+            new CloudMassSpec("Mass_High", -0.10f, -0.10f, 4.3f, 0.24f, 0.7f, 0.22f,
+                new Color(1f, 1f, 1f), new Color(0.95f, 0.96f, 1f)),
+        };
+
         private void PlaceCloudBank(float width, float depth)
         {
             var root = new GameObject("CloudBank");
             root.transform.SetParent(transform, false);
 
-            // Shuffle the pattern pool so the four mass slots below (fixed position/size/tint —
-            // that composition is Play-approved, image copy 15) get a random distinct silhouette
-            // each Build() instead of the same four shapes every match.
-            var patterns = (ClayLobe[][])PatternPool.Clone();
-            for (int i = patterns.Length - 1; i > 0; i--)
-            {
-                int j = Random.Range(0, i + 1);
-                (patterns[i], patterns[j]) = (patterns[j], patterns[i]);
-            }
-
             // Opaque clay spheres — no alpha 边缘 rings. Desk-lamp Lit shading supplies the 3D read
             // billboards never could (human Play image copy 13). Soft CloudAtlas haze fringes each
             // mass's envelope so the mesh's hard silhouette blurs into the void (human ask 2026-08-13).
-            Vector3 posMain = new Vector3(0f, 3.9f * InterimCloudHeightBoost, 0.02f * depth);
-            Vector3 scaleMain = new Vector3(width * 1.05f, 1.35f, depth * 0.85f) * InterimCloudScale;
-            Color topMain = new Color(1f, 1f, 1f);
-            Color bellyMain = new Color(0.94f, 0.96f, 1f);
-            PlaceClayMass(root.transform, "Mass_Main", posMain, scaleMain, patterns[0], RandomMassYaw(), topMain, bellyMain);
-            PlaceCloudEdgeHaze(root.transform, "Haze_Main", posMain, scaleMain, topMain);
+            ClayLobe[][] patterns = ShuffledPatternCycle(CloudMasses.Length);
+            for (int i = 0; i < CloudMasses.Length; i++)
+            {
+                CloudMassSpec spec = CloudMasses[i];
+                Vector3 pos = new Vector3(
+                    spec.PosXFactor * width,
+                    spec.HeightUnits * InterimCloudHeightBoost,
+                    spec.PosZFactor * depth);
+                Vector3 scale = new Vector3(spec.ScaleXFactor * width, spec.ScaleYUnits, spec.ScaleZFactor * depth);
 
-            Vector3 posNW = new Vector3(-width * 0.26f, 3.75f * InterimCloudHeightBoost, depth * 0.18f);
-            Vector3 scaleNW = new Vector3(width * 0.72f, 1.25f, depth * 0.58f) * InterimCloudScale;
-            Color topNW = new Color(0.99f, 0.99f, 1f);
-            Color bellyNW = new Color(0.93f, 0.95f, 1f);
-            PlaceClayMass(root.transform, "Mass_NW", posNW, scaleNW, patterns[1], RandomMassYaw(), topNW, bellyNW);
-            PlaceCloudEdgeHaze(root.transform, "Haze_NW", posNW, scaleNW, topNW);
+                PlaceClayMass(root.transform, spec.Name, pos, scale, patterns[i], RandomMassYaw(), spec.TopTint, spec.BellyTint);
+                PlaceCloudEdgeHaze(root.transform, "Haze_" + spec.Name, pos, scale, spec.TopTint);
+            }
+        }
 
-            Vector3 posSE = new Vector3(width * 0.28f, 3.8f * InterimCloudHeightBoost, -depth * 0.16f);
-            Vector3 scaleSE = new Vector3(width * 0.7f, 1.2f, depth * 0.55f) * InterimCloudScale;
-            Color topSE = new Color(1f, 0.99f, 0.98f);
-            Color bellySE = new Color(0.96f, 0.95f, 0.93f);
-            PlaceClayMass(root.transform, "Mass_SE", posSE, scaleSE, patterns[2], RandomMassYaw(), topSE, bellySE);
-            PlaceCloudEdgeHaze(root.transform, "Haze_SE", posSE, scaleSE, topSE);
+        /// <summary>Shuffled pool, repeated (wrapped) to cover <paramref name="count"/> masses — every
+        /// run through the six-pattern pool is distinct before any repeat.</summary>
+        private static ClayLobe[][] ShuffledPatternCycle(int count)
+        {
+            var pool = (ClayLobe[][])PatternPool.Clone();
+            for (int i = pool.Length - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                (pool[i], pool[j]) = (pool[j], pool[i]);
+            }
 
-            Vector3 posHigh = new Vector3(-width * 0.05f, 4.2f * InterimCloudHeightBoost, -depth * 0.06f);
-            Vector3 scaleHigh = new Vector3(width * 0.45f, 0.95f, depth * 0.38f) * InterimCloudScale;
-            Color topHigh = new Color(1f, 1f, 1f);
-            Color bellyHigh = new Color(0.95f, 0.96f, 1f);
-            PlaceClayMass(root.transform, "Mass_High", posHigh, scaleHigh, patterns[3], RandomMassYaw(), topHigh, bellyHigh);
-            PlaceCloudEdgeHaze(root.transform, "Haze_High", posHigh, scaleHigh, topHigh);
+            var result = new ClayLobe[count][];
+            for (int i = 0; i < count; i++)
+            {
+                result[i] = pool[i % pool.Length];
+            }
+
+            return result;
         }
 
         /// <summary>Mild random spin per mass so the same pattern doesn't always face the same way.</summary>
@@ -294,11 +344,12 @@ namespace LogiCard.Board
             var ps = puff.AddComponent<ParticleSystem>();
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
-            // Just outside the opaque lobe cluster, not inside it.
-            Vector3 envelope = massScale * 1.1f;
+            // Just outside the opaque lobe cluster, not inside it — tight enough that puffs read as
+            // a blurred extension of the mass rather than separate floating dots.
+            Vector3 envelope = massScale * 1.05f;
             float footprint = Mathf.Max(0.01f, envelope.x * envelope.z);
-            int maxCount = Mathf.Clamp(Mathf.RoundToInt(footprint * 0.7f), 14, 28);
-            float baseSize = Mathf.Sqrt(footprint / maxCount) * 2.0f;
+            int maxCount = Mathf.Clamp(Mathf.RoundToInt(footprint * 0.9f), 16, 30);
+            float baseSize = Mathf.Sqrt(footprint / maxCount) * 2.2f;
 
             var main = ps.main;
             main.loop = true;
@@ -309,9 +360,10 @@ namespace LogiCard.Board
             main.startSpeed = 0f;
             main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.75f, baseSize * 1.25f);
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f * Mathf.Deg2Rad);
+            // Denser than the first pass (0.14-0.30) — human 2026-08-13: haze read too see-through.
             main.startColor = new ParticleSystem.MinMaxGradient(
-                new Color(tint.r, tint.g, tint.b, 0.14f),
-                new Color(tint.r, tint.g, tint.b, 0.30f));
+                new Color(tint.r, tint.g, tint.b, 0.34f),
+                new Color(tint.r, tint.g, tint.b, 0.58f));
             main.maxParticles = maxCount;
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
             main.gravityModifier = 0f;
