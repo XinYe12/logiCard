@@ -5,7 +5,7 @@
 **Date:** 2026-08-13  
 **Worktree:** `logiCard-cards-collection` / `feat/cards-collection-docs`  
 **Pauses:** Flashbang numerics / effect brief (`GEAR_FLASHBANG_AGENT_BRIEF.md`) — foundational model first.  
-**Depends on:** [`CARD_COLLECTION.md`](CARD_COLLECTION.md) §5–§8; [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) **C15**, **C18**, **C42–C44**, **C47**, **C62**; [`CHARACTER_ROSTER_LONGTERM.md`](CHARACTER_ROSTER_LONGTERM.md); [`MONETIZATION.md`](MONETIZATION.md).
+**Depends on:** [`CARD_COLLECTION.md`](CARD_COLLECTION.md) §5–§8; [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C15**, **C18**, **C42–C44**, **C47**, **C62**; [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md); [`MONETIZATION.md`](../core/MONETIZATION.md).
 
 ---
 
@@ -277,7 +277,7 @@ Proposed substance:
 ## See also
 
 - [`CARD_COLLECTION.md`](CARD_COLLECTION.md) — §5 same-deck options, §5A gear vs verb, §6 economy, §8 answered menu (C62)  
-- [`CHARACTER_ROSTER_LONGTERM.md`](CHARACTER_ROSTER_LONGTERM.md) — Bomber / Time Player unique verbs  
+- [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md) — Bomber / Time Player unique verbs  
 - [`GEAR_FLASHBANG_AGENT_BRIEF.md`](GEAR_FLASHBANG_AGENT_BRIEF.md) — **paused** while this conversation is open  
 - [`GEAR_BANDAGE_AGENT_BRIEF.md`](GEAR_BANDAGE_AGENT_BRIEF.md) — closed via C63; still valid under transitional A1 staples  
-- [`docs/departments/cards/STATUS.md`](departments/cards/STATUS.md)
+- [`docs/departments/cards/STATUS.md`](../departments/cards/STATUS.md)

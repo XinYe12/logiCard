@@ -2,7 +2,7 @@
 
 **Status:** Research + **CONFIRMED** direction via **C62** (2026-08-12). §8 answers promoted to `PRODUCT_MEMORY.md`. Gear **numerics** (§6A) and Adrenaline real-effect redesign remain OPEN.  
 **Worktree:** `D:\projects\Game\logiCard-cards-collection` / `feat/cards-collection-docs`  
-**Depends on:** [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) **C15**, **C18**, **C33**, **C34**/**C46**, OPEN #3; [`GDD.md`](GDD.md) § deferred cards; [`CORE_LOOP.md`](CORE_LOOP.md); [`UI_FLOW.md`](UI_FLOW.md); [`MONETIZATION.md`](MONETIZATION.md) **C47**; [`CHARACTER_ROSTER_LONGTERM.md`](CHARACTER_ROSTER_LONGTERM.md).
+**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C15**, **C18**, **C33**, **C34**/**C46**, OPEN #3; [`GDD.md`](../core/GDD.md) § deferred cards; [`CORE_LOOP.md`](../core/CORE_LOOP.md); [`UI_FLOW.md`](../ui/UI_FLOW.md); [`MONETIZATION.md`](../core/MONETIZATION.md) **C47**; [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md).
 
 ---
 
@@ -269,10 +269,10 @@ This sequence is **not confirmed** and assumes the §10 strawman defaults (catal
 
 ## See also
 
-- [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) — C15, C18, OPEN #3  
-- [`GDD.md`](GDD.md) § deferred cards  
-- [`CORE_LOOP.md`](CORE_LOOP.md) — base verbs vs future cards  
-- [`UI_FLOW.md`](UI_FLOW.md) § Program / Execution card UX  
-- [`PLAYBACK_CONTRACT.md`](PLAYBACK_CONTRACT.md) — Adrenaline gate  
-- [`MONETIZATION.md`](MONETIZATION.md) — cosmetic Time Card backs; no pay-to-win gear  
-- [`CHARACTER_ROSTER_LONGTERM.md`](CHARACTER_ROSTER_LONGTERM.md) — unique verbs ≠ gear exclusives  
+- [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) — C15, C18, OPEN #3  
+- [`GDD.md`](../core/GDD.md) § deferred cards  
+- [`CORE_LOOP.md`](../core/CORE_LOOP.md) — base verbs vs future cards  
+- [`UI_FLOW.md`](../ui/UI_FLOW.md) § Program / Execution card UX  
+- [`PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md) — Adrenaline gate  
+- [`MONETIZATION.md`](../core/MONETIZATION.md) — cosmetic Time Card backs; no pay-to-win gear  
+- [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md) — unique verbs ≠ gear exclusives  

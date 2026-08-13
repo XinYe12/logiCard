@@ -41,7 +41,7 @@
 Live snapshot of who is active: [`departments/INDEX.md`](departments/INDEX.md).  
 Per-dept progress: `departments/<dept>/STATUS.md` (`atmosphere`, `cards`, `character`, `ui`, plus `core`).  
 Frozen cross-dept APIs this wave: [`contracts/CURRENT.md`](contracts/CURRENT.md).  
-Product framing of the four pillars: [`GDD.md`](GDD.md) §11.
+Product framing of the four pillars: [`GDD.md`](core/GDD.md) §11.
 
 ## Integrator monitoring duties
 

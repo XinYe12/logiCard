@@ -8,8 +8,8 @@ retained, not discarded.
 numerics; Sim-side Bandage is on `master` @ `4e6bb66`). Written so Integrator can open a frozen
 Sim/HUD contract **once the effect shape + numerics below are greenlit by the human** — this brief
 does not greenlight them itself.
-**Depends on:** [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) **C62**, OPEN #16; [`CARD_COLLECTION.md`](CARD_COLLECTION.md)
-§4.2, §6A, §8, §11; [`TDD.md`](TDD.md) §4 Card Effects; [`PLAYBACK_CONTRACT.md`](PLAYBACK_CONTRACT.md);
+**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C62**, OPEN #16; [`CARD_COLLECTION.md`](CARD_COLLECTION.md)
+§4.2, §6A, §8, §11; [`TDD.md`](../core/TDD.md) §4 Card Effects; [`PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md);
 [`GEAR_BANDAGE_AGENT_BRIEF.md`](GEAR_BANDAGE_AGENT_BRIEF.md) (closed via C63 — pattern reference).
 **Does not touch:** Interact-as-card (needs a station), Adrenaline real effect (PLAYBACK_CONTRACT tape
 branch), Bandage HUD-side (open contract for UI seat). No Sim/resolve code is written or proposed as
@@ -203,12 +203,12 @@ Mirror Bandage's Sim / HUD split in `docs/contracts/CURRENT.md`, but **gate the 
 - [`CARD_COLLECTION.md`](CARD_COLLECTION.md) — §4.2, §6A, §8, §11 (Flashbang = third in build-risk order;
   Interact is mechanically simpler but blocked on stations)
 - [`GEAR_BANDAGE_AGENT_BRIEF.md`](GEAR_BANDAGE_AGENT_BRIEF.md) — closed via **C63**; pattern reference
-- [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) — **C62**, OPEN #16 (Flashbang effect + numerics still OPEN;
+- [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) — **C62**, OPEN #16 (Flashbang effect + numerics still OPEN;
   C63 on Integrator dirty tree resolves Bandage only)
-- [`TDD.md`](TDD.md) §4 — schedule-stun sketch
-- [`DAY4_GHOST_RESOLVER_RESEARCH.md`](DAY4_GHOST_RESOLVER_RESEARCH.md) §E.5 — re-timing risk
-- [`PLAYBACK_CONTRACT.md`](PLAYBACK_CONTRACT.md) — §5 extension checklist
-- [`ART_DIRECTION.md`](ART_DIRECTION.md) — cotton smoke VFX (presentation only)
-- [`docs/contracts/CURRENT.md`](contracts/CURRENT.md) — Bandage contract (Integrator-owned); where a
+- [`TDD.md`](../core/TDD.md) §4 — schedule-stun sketch
+- [`DAY4_GHOST_RESOLVER_RESEARCH.md`](../core/DAY4_GHOST_RESOLVER_RESEARCH.md) §E.5 — re-timing risk
+- [`PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md) — §5 extension checklist
+- [`ART_DIRECTION.md`](../core/ART_DIRECTION.md) — cotton smoke VFX (presentation only)
+- [`docs/contracts/CURRENT.md`](../contracts/CURRENT.md) — Bandage contract (Integrator-owned); where a
   Flashbang contract would open
-- [`docs/departments/cards/STATUS.md`](departments/cards/STATUS.md) — Cards dept status
+- [`docs/departments/cards/STATUS.md`](../departments/cards/STATUS.md) — Cards dept status

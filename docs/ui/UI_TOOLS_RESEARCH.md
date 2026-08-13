@@ -3,7 +3,7 @@
 **Status:** Drafted 2026-08-12 — docs-only research on `feat/ui-tools-research`  
 **Audience:** Future implementer choosing tools / packs / stack moves without rediscovering the codebase.  
 **Not this slice:** No `Assets/_Project/UI/**` rewrite. Atmosphere / weather and map-authoring docs are owned elsewhere.  
-**Depends on:** [`UI_FLOW.md`](UI_FLOW.md), [`UI_BOARD_ANCHORED_COMPONENTS.md`](UI_BOARD_ANCHORED_COMPONENTS.md), [`UI_CHARACTER_SELECT_ANIMATION_REF.md`](UI_CHARACTER_SELECT_ANIMATION_REF.md), [`ART_DIRECTION.md`](ART_DIRECTION.md) §4, `PRODUCT_MEMORY` **C48** / **C59**, [`ART_PACK_RESEARCH.md`](ART_PACK_RESEARCH.md) (domain boundary note).
+**Depends on:** [`UI_FLOW.md`](UI_FLOW.md), [`UI_BOARD_ANCHORED_COMPONENTS.md`](UI_BOARD_ANCHORED_COMPONENTS.md), [`UI_CHARACTER_SELECT_ANIMATION_REF.md`](UI_CHARACTER_SELECT_ANIMATION_REF.md), [`ART_DIRECTION.md`](../core/ART_DIRECTION.md) §4, `PRODUCT_MEMORY` **C48** / **C59**, [`ART_PACK_RESEARCH.md`](../map/ART_PACK_RESEARCH.md) (domain boundary note).
 
 ---
 
@@ -82,7 +82,7 @@ Evidence-backed gaps vs docs + current code:
 
 ## 3. Tool / pack candidates (researched)
 
-Constraints honored for every option: landscape desktop-first (**C48**), Steam mouse+keyboard; keep `UiFactory` / dock↔camera contract valid; board-anchored checklist remains law; Character Select carousel = **feel** only (do not port React/GSAP); **do not** buy screen-space god-ray packs (wrong domain — [`ART_PACK_RESEARCH.md`](ART_PACK_RESEARCH.md) Explicit do-not-buy / orthographic note).
+Constraints honored for every option: landscape desktop-first (**C48**), Steam mouse+keyboard; keep `UiFactory` / dock↔camera contract valid; board-anchored checklist remains law; Character Select carousel = **feel** only (do not port React/GSAP); **do not** buy screen-space god-ray packs (wrong domain — [`ART_PACK_RESEARCH.md`](../map/ART_PACK_RESEARCH.md) Explicit do-not-buy / orthographic note).
 
 ### A. Stay on hand-rolled uGUI + light helpers *(recommended default)*
 
@@ -157,7 +157,7 @@ Can combine with **A** (and Kenney sprites) without choosing Toolkit.
 
 | Reject | Why |
 |--------|-----|
-| Screen-space god-ray / sun-shaft packs (Super Rays, LSPP, etc.) | Lighting VFX domain; ortho-fragile — [`ART_PACK_RESEARCH.md`](ART_PACK_RESEARCH.md). Not UI tools. |
+| Screen-space god-ray / sun-shaft packs (Super Rays, LSPP, etc.) | Lighting VFX domain; ortho-fragile — [`ART_PACK_RESEARCH.md`](../map/ART_PACK_RESEARCH.md). Not UI tools. |
 | Full UI Toolkit rewrite of `ProgramHud` this wave | High risk to dock↔camera + board-anchored + PlayMode names for little ship value. |
 | Porting React/Tailwind/GSAP Character Select literally | Forbidden by animation ref doc; feel only. |
 | Mobile-portrait UI kits as Steam default | **C48** supersedes **C30** for this product surface. |
@@ -228,4 +228,4 @@ Ready for Integrator to spin later — **docs/research only in this slice; no co
 - [`UI_FLOW.md`](UI_FLOW.md) — screen map / landscape HUD regions  
 - [`UI_BOARD_ANCHORED_COMPONENTS.md`](UI_BOARD_ANCHORED_COMPONENTS.md) — door-prompt contract  
 - [`UI_CHARACTER_SELECT_ANIMATION_REF.md`](UI_CHARACTER_SELECT_ANIMATION_REF.md) — motion feel only  
-- [`ART_PACK_RESEARCH.md`](ART_PACK_RESEARCH.md) — do not conflate lighting VFX packs with UI tools  
+- [`ART_PACK_RESEARCH.md`](../map/ART_PACK_RESEARCH.md) — do not conflate lighting VFX packs with UI tools  

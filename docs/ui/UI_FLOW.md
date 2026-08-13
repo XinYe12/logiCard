@@ -2,7 +2,7 @@
 
 **Doc ID:** D12  
 **Status:** Updated 2026-08-10 — landscape desktop-first (**C48**); matchmaking lobby (**C51** / **C49**); Map Select step added (**C59**)  
-**Depends on:** [GDD.md](GDD.md), [TDD.md](TDD.md), [ART_DIRECTION.md](ART_DIRECTION.md), [PRODUCT_MEMORY.md](PRODUCT_MEMORY.md)  
+**Depends on:** [GDD.md](../core/GDD.md), [TDD.md](../core/TDD.md), [ART_DIRECTION.md](../core/ART_DIRECTION.md), [PRODUCT_MEMORY.md](../core/PRODUCT_MEMORY.md)  
 **Platforms:** Windows (mouse + keyboard, landscape desktop) primary; Steam first; portrait/mobile deferred to a future, separate consideration (**C48**).
 
 Glossary (**C27**): **Time Resource** = budget scrubber; **Playback Duration** = cinema length; **Real-world** = wall-clock only (e.g. Program countdown).
@@ -147,7 +147,7 @@ Camera pan (optional drag) and keyboard shortcuts are welcome on desktop — two
 | Reach | Primary actions live in the HUD dock (side or bottom margin); board clicks are clear, forgiving targets |
 | Gestures | Mouse click for required actions; optional drag-to-pan camera; optional keyboard shortcuts |
 | Click targets | Standard desktop click-target sizing (comfortable hit areas for mouse; Lock In / Adrenaline remain large primary actions) |
-| Contrast | AR timeline readable on clay board ([ART_DIRECTION.md](ART_DIRECTION.md)) |
+| Contrast | AR timeline readable on clay board ([ART_DIRECTION.md](../core/ART_DIRECTION.md)) |
 | Feedback | Lock In = physical switch SFX; card select = paper shuffle |
 | Errors | Invalid path/budget → inline message, cannot Lock |
 
