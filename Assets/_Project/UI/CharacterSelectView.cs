@@ -19,6 +19,7 @@ namespace LogiCard.UI
         private Text _ghost;
         private Text _detail;
         private Card[] _cards;
+        private GlowRing[] _glowRings;
         private int _activeIndex;
         private bool _animating;
         private Coroutine _motion;
@@ -81,6 +82,14 @@ namespace LogiCard.UI
             RectTransform stage = _ui.CreatePanel(root, "CarouselStage", new Color(0f, 0f, 0f, 0f),
                 new Vector2(0f, 0.18f), new Vector2(1f, 0.88f));
             stage.SetSiblingIndex(1);
+
+            // Glow rings sit behind both cards (created first = lowest sibling index in stage) and
+            // always track whichever card is currently the center, so the halo rides the crossfade.
+            _glowRings = new[]
+            {
+                CreateGlowRing(stage, "GlowOuter", padding: 60f, maxAlpha: 0.16f),
+                CreateGlowRing(stage, "GlowInner", padding: 26f, maxAlpha: 0.30f),
+            };
 
             _cards = new[]
             {
@@ -159,6 +168,24 @@ namespace LogiCard.UI
             };
         }
 
+        private GlowRing CreateGlowRing(RectTransform stage, string name, float padding, float maxAlpha)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(stage, false);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchorMin = new Vector2(0.5f, 0.04f);
+            rt.anchorMax = new Vector2(0.5f, 0.04f);
+
+            var image = go.GetComponent<Image>();
+            image.sprite = UiStyle.RoundSprite;
+            image.type = Image.Type.Sliced;
+            image.raycastTarget = false;
+            image.color = new Color(1f, 1f, 1f, 0f);
+
+            return new GlowRing(rt, image, padding, maxAlpha);
+        }
+
         private void OnCardClicked(string id)
         {
             if (_animating || _cards == null)
@@ -225,8 +252,10 @@ namespace LogiCard.UI
 
             yield return UiMotion.Animate(CrossfadeSeconds, t =>
             {
-                ApplyRole(center, Role.Lerp(fromCenter, toCenter, t));
+                Role centerNow = Role.Lerp(fromCenter, toCenter, t);
+                ApplyRole(center, centerNow);
                 ApplyRole(flank, Role.Lerp(fromFlank, toFlank, t));
+                UpdateGlow(center, centerNow);
                 if (_bg != null)
                 {
                     _bg.color = Color.LerpUnclamped(bgFrom, bgTo, t);
@@ -256,6 +285,7 @@ namespace LogiCard.UI
 
             ApplyRole(center, toCenter);
             ApplyRole(flank, toFlank);
+            UpdateGlow(center, toCenter);
             if (_bg != null)
             {
                 _bg.color = bgTo;
@@ -293,6 +323,7 @@ namespace LogiCard.UI
             Card flank = _cards[OtherIndex(_activeIndex)];
             ApplyRole(center, Role.Center);
             ApplyRole(flank, Role.Flank(0.72f));
+            UpdateGlow(center, Role.Center);
             center.Root.SetAsLastSibling();
 
             if (_bg != null)
@@ -338,6 +369,39 @@ namespace LogiCard.UI
         private static Color BackgroundFor(string id) =>
             id == "Juggernaut" ? UiStyle.CharSelectBgJuggernaut : UiStyle.CharSelectBgScout;
 
+        private static Color GlowFor(string id) =>
+            id == "Juggernaut" ? UiStyle.CharSelectGlowJuggernaut : UiStyle.CharSelectGlowScout;
+
+        /// <summary>
+        /// Rides the same role lerp as the center card's own transform, so the halo grows/fades in
+        /// step with the crossfade rather than snapping in once the card settles.
+        /// </summary>
+        private void UpdateGlow(Card center, Role role)
+        {
+            if (_glowRings == null)
+            {
+                return;
+            }
+
+            float strength = Mathf.InverseLerp(Role.Flank(0f).Scale, Role.Center.Scale, role.Scale);
+            strength = Mathf.Clamp01(strength) * role.Alpha;
+            Color tint = GlowFor(center.Id);
+
+            for (int i = 0; i < _glowRings.Length; i++)
+            {
+                GlowRing ring = _glowRings[i];
+                ring.Root.anchorMin = new Vector2(role.AnchorX, 0.04f);
+                ring.Root.anchorMax = new Vector2(role.AnchorX, 0.04f);
+                ring.Root.anchoredPosition = Vector2.zero;
+                ring.Root.sizeDelta = new Vector2(role.Width + (ring.Padding * 2f), role.Height + (ring.Padding * 2f));
+                ring.Root.localScale = new Vector3(role.Scale, role.Scale, 1f);
+
+                Color c = tint;
+                c.a = ring.MaxAlpha * strength;
+                ring.Image.color = c;
+            }
+        }
+
         private static void ApplyRole(Card card, Role role)
         {
             card.Root.anchorMin = new Vector2(role.AnchorX, 0.04f);
@@ -362,6 +426,22 @@ namespace LogiCard.UI
             public RectTransform Root;
             public CanvasGroup Group;
             public Image FaceImage;
+        }
+
+        private readonly struct GlowRing
+        {
+            public readonly RectTransform Root;
+            public readonly Image Image;
+            public readonly float Padding;
+            public readonly float MaxAlpha;
+
+            public GlowRing(RectTransform root, Image image, float padding, float maxAlpha)
+            {
+                Root = root;
+                Image = image;
+                Padding = padding;
+                MaxAlpha = maxAlpha;
+            }
         }
 
         private readonly struct Role

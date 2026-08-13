@@ -28,7 +28,7 @@ time and stays unmerged now, just rebased forward.
 - Map Select untouched — still the plain `SelectionGrid` (C59).
 - Deliverable `b5d7c77` — EditMode 137 / PlayMode 48, both green (pre-rebase baseline) — still on worktree, not yet merged to master.
 - Cleanup pass — reverted unrelated `ProjectSettings/ProjectSettings.asset` scripting-define churn and 6 accidental `ithappy`/`nappin` `.meta` deletions (none were part of this slice's scope); deleted local batchmode run noise — none committed. Landed at `25244d7`.
-- Selected-card highlight/glow polish (2026-08-13 session).
+- Selected-card highlight/glow polish (2026-08-13 session) — two soft rounded-rect halo rings (`GlowRing`, `CharacterSelectView.cs`) sit behind the carousel, always tracking whichever card is currently center. Ring alpha rides the same eased role lerp the card itself uses (`Mathf.InverseLerp` on `Role.Scale` between flank/center extremes, times the card's own crossfade alpha), so the halo grows in as a card scales up to center and fades as it demotes to flank — no separate timer, no snap. New tokens `CharSelectGlowScout` / `CharSelectGlowJuggernaut` in `UiStyle.cs` (RGB only; alpha is computed per-frame from ring padding/max-alpha constants local to the view, not baked into the token). Rings are `raycastTarget = false` and parented before the cards in `CarouselStage`, so they never intercept clicks and never draw on top. Rebased onto `master` @ `77831cf` at the time (docs-only conflict in this STATUS file, resolved keeping the "Permanent seat" framing). EditMode 137/137, PlayMode 49/49, both green (batchmode noise reverted before commit, per the standing cleanup pattern above).
 - **Match Shell Layout (2026-08-16, merged into master separately):** `CHARACTER_FANTASY.md` §4.1
   InfoBar field sheet — one combined bar (Attacker | Defender columns + shared phase/round/pool
   strip), wound ladder as Healthy/Wounded/Dead (not HP), signature/deck size marked OPEN pending
@@ -52,7 +52,7 @@ time and stays unmerged now, just rebased forward.
 
 ## Blocked
 
-- Merge is gated on a human Play pass (see `PLAY_NOTES.md` at worktree root for how to see it and what "good" looks like) — visual/feel sign-off can't come from batchmode.
+- Merge is gated on a human Play pass (see `PLAY_NOTES.md` at worktree root for how to see it and what "good" looks like, updated this session for the glow) — visual/feel sign-off can't come from batchmode.
 
 ## Depends on
 
