@@ -1,47 +1,53 @@
-# Draft Handoff — 2026-08-12
+# Draft Handoff — 2026-08-13
+
+**Seat / tree:** UI @ `feat/modal-restyle` (`D:\projects\Game\logiCard-modal-restyle`), tip ~`8f4b406`.  
+**Schedule:** Phase 5 commercial art bar still active/top priority; Phase 2 Net paused. This seat owns all UI (lobby + HUD + modals) and is mid chrome-collection, not shipping chrome code yet.
 
 ## Implemented
 
-Phase 5 art / presentation still top priority (`SCHEDULE.md`); core Net paused.
+**Modal restyle (merge-ready visually):**
+- Warm cardstock `ModalDialog` + `Modal*` `UiStyle` tokens (`492b8fe`). Human Play signed off (Match Over → Quit → confirm).
 
-**Playback / Execution contract (this session):**
-- New `docs/PLAYBACK_CONTRACT.md` — Reveal ≠ Execute; tape scrub rules; mid-Playback interaction rules; extension checklist for new `TapeEventType`s / verbs.
-- Pointer in `CLAUDE.md`.
-- Audited `RoundPlayback` presenters: tracers / muzzle / wound already scrubber-derived `SetVisible` (no door-bug twins). Door same-state swing fix kept (`3018d83`).
-- Tests: `TapeEventPlaybackCoverageTests` (enum coverage), `ShootFireVfxFollowScrubberSeconds`, `WoundSplatFollowsScrubberSeconds`; door-swing regression retained.
-- Adrenaline remains ship mid-Playback control with **stub effect** — roadmap verbs (Bandage/Flashbang/tools/vent-as-card) must follow the contract when they land.
+**C62 gear hand (UI-only):**
+- `GearHandView` + EditMode tests (`54ae286`) — Bandage / Interact / Flashbang / Adrenaline strip, Program vs Execute gating, `TR —` placeholders. **Not** parented into `ProgramHud`.
 
-**Human play earlier (`image copy 2.png`):**
-1. Door mesh — **good**
-2. Fog/mist — **not seen** (density bumped; re-check)
-3. Yard 2K grain — **yep**
-4. Door swing all at end of reveal — **fixed** (`3018d83`); needs human re-check on timeline
+**Stack decision (docs):**
+- `docs/UI_STACK_COMPARISON.md` — stay on **uGUI**; Toolkit parked after Character’s reverted pilot + “still bad” Play. Chrome art is **not** Kenney-by-default.
+
+**Chrome collection (active):**
+- Process + buckets: `docs/UI_CHROME_COLLECTION.md` (+ `CLAUDE.md` pointer). Human rejected Asset Store shortlist; human supplies resources → UI categorizes until stop bar (2+3+5+6+7+8 + license).
+- Held motion/special CSS under `docs/ui-collection/` (holographic ticket, glass card, logo reveal, wallet stack, square loader, comic hand-strip, several buttons).
+- **Iomanoid** CC0 display font collected (`docs/ui-collection/fonts/iomanoid/`) — first real type hit; not in Unity yet.
+- `normal-card` (bucket-2 candidate) + `resource-bank-card-flip` (resource-card role) catalogued under `docs/ui-collection/`.
+- Coverage gap matrix in `UI_CHROME_COLLECTION.md` — **5 icons** and **7 HUD** still empty.
+
+**Sibling (not this tree):** `feat/char-select-motion` — Kenney Adventure Char Select after Toolkit revert; awaiting human parchment Play; merge will collide on `UiStyle`.
 
 ## Verification
 
-- Disposable `logiCard-verify-playback-contract`: **EditMode 137/137, PlayMode 47/47**
-  (enum coverage + ShootFire/WoundSplat scrubber timing + door-swing regression).
+- Modal restyle: earlier batchmode EditMode 137 / PlayMode 47 on this worktree (prior wave). Human visual sign-off today.
+- C62 / collection: no fresh Unity batchmode this session (Editor binary not on this machine path). EditMode tests authored for `GearHandView` only.
+- Uiverse items: MIT per galaxy collection; strip third-party brand marks before any ship.
 
 ## Still unfinished
 
-- Fog/mist sighted pass. Optional PH 4K. Clouds deferred.
-- Day 13 findings empty. Phase 2 Net paused.
-- Adrenaline **effect** resolve still deferred (UI gate only).
+**UI seat**
+- Chrome collection incomplete — still need icons (**5**), more HUD pieces (**7**), lobby layout refs (**8**), body font companion to Iomanoid, and a locked panel family from **2** (normal-card is only a candidate).
+- `GearHandView` dock wire + OPEN #16 numerics.
+- Inherit Character Select after sibling merge; unify chrome.
+**Carryover from 2026-08-12 (product / Phase 5 — not owned by this seat)**
+- Fog/mist sighted pass; optional PH 4K; clouds deferred.
+- Door swing on timeline re-check; south-edge Move / zoom-fill / C60 / soft-rain / reflections / Scout checkpoint arc.
+- Day 13 findings empty. Adrenaline **effect** resolve still stub. Phase 2 Net paused.
 
-## ⚠️ Awaiting human review — unmonitored
+## Tomorrow
 
-1. Door swing on timeline (Open at event second)
-2. Fog/mist denser pass
-3. South-edge Move-click, zoom-fill, C60, soft-rain, reflections/glass/Scout/checkpoint arc
-
-## Tomorrow / next
-
-1. Human: Lock In → Execute — doors/shoot VFX on tape seconds; glance fog.
-2. Any new verb → follow `PLAYBACK_CONTRACT.md` checklist.
-3. Day 13 findings when ready for worker waves.
+1. Human: send **icons (5)** and **HUD chrome (7)** next — biggest stop-bar holes; then lobby layouts (**8**) / body font.
+2. Keep categorizing into `UI_CHROME_COLLECTION.md` (no Unity chrome import until “Collection complete”).
+3. Integrator: merge `feat/modal-restyle` (modal signed off) and reconcile with `feat/char-select-motion`.
 
 ## Blockers / notes
 
-- Main Editor often open — verify in disposable worktree.
-- `Assets/ExplosiveLLC/` unexplained.
-- Local 1K BoardSurfaces backup gitignored under `Textures/_1k_backup_*/`.
+- Collection not complete → no chrome implementation yet.
+- Unity Editor often open on main path — verify in disposable worktree.
+- Integrator-only docs (`PRODUCT_MEMORY`, `contracts/CURRENT`, INDEX) may be stale vs this seat’s STATUS.

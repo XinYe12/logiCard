@@ -75,10 +75,29 @@ Append one row per human delivery. Do not delete rejected items — mark `Reject
 Uiverse elements (via [uiverse-io/galaxy](https://github.com/uiverse-io/galaxy)) are **MIT**: free for personal **and commercial** use, modify/ship OK. Keep the MIT copyright notice in a third-party attributions file when shipping substantial copies. Attribution to the author + Uiverse is requested by the community but not required by MIT.  
 **Separate caution:** demo content that includes real brand names/logos (Stripe, PayPal, etc.) is **not** cleared by MIT — replace with logiCard fiction before any player-facing ship. This is not legal advice; if a component page shows a different license, that page wins.
 
+## Coverage gap (push checklist)
+
+| Bucket | Status | What’s in hand | Still need from human |
+|--------|--------|----------------|------------------------|
+| **1** refs | Thin | Comic cream + Bangers vibe from hand-strip; no LA screenshot pack | Target lobby + HUD screens/clips |
+| **2** panels | Partial | `normal-card` candidate; comic panel border; resource-bank (held role) | Warmer wood/parchment 9-slice or approve retint of normal-card |
+| **3** buttons | Partial | Bubbles / glass pill / gradient pill (motion refs) | One family matching chosen panels (primary + secondary + disabled) |
+| **4** wells | Partial | Wallet + comic hand = deck motion, not empty/selected/locked wells | Slot/well states if inventory/gear needs them |
+| **5** icons | **Empty** | — | Bandage, Interact, Flashbang, Adrenaline, stance, Snap/Hold, door, wound, Lock In |
+| **6** type | Partial | **Iomanoid** CC0 display (Front/Back/Shine) | Body/UI face for dense HUD; confirm Iomanoid for titles |
+| **7** HUD | **Empty** | — | Scrubber / chips / wound badge / Adrenaline primary in target look |
+| **8** lobby | Thin | Wallet as “your cards” metaphor only | Boot / Char / Map / Lobby / Match Over layout refs |
+| **9** motion | Strong | Wallet fan, comic neighbor-scale, button presses, flips, loader | — optional more |
+| **10** code | Strong | Many Uiverse CSS/HTML samples | — optional Unity scraps |
+| **11** audio | Empty | — | Optional |
+| **12** license | Mixed | MIT (Uiverse) + CC0 (Iomanoid); some OPEN pastes | Source URLs for OPEN items if we promote them |
+
 ## Stop collecting (minimum to build)
 
 Enough of **2 + 3 + 5 + 6 + 7 + 8** that lobby and HUD can share one chrome family, and **12** clear on each item.  
 **1** and **9** sharpen taste; **4 / 10 / 11** fill gaps as they arrive.
+
+**Not complete yet** — **5** and **7** are empty; **8** and body type still thin. Keep collecting.
 
 When that bar is met, UI seat writes **“Collection complete for first chrome pass”** here and in `docs/departments/ui/STATUS.md`, then waits for human/Integrator brief before implementing.
 
