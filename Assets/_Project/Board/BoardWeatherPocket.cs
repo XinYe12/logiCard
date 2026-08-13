@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using LogiCard.Sim;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -13,7 +12,7 @@ namespace LogiCard.Board
     /// Clouds, rain, rim mist, and lightning are real scene geometry sized to the board footprint so
     /// weather reads as sitting on the diorama, matching the locked reference's "sky pocket over the chunk."
     ///
-    /// Cloud bank (2026-08-12 <c>image copy 13</c>): Link's Awakening-style <b>clay sphere lobes</b> —
+    /// Cloud bank (2026-08-12 <c>image copy 13</c>): Link's Awakening-style <b>clay lobes</b> —
     /// opaque URP Unlit meshes glued into masses (true 3D volume under ortho/rotate). Billboard
     /// CloudAtlas discs were rejected as too 2D/cheap with dark alpha 边缘 <b>as the primary cloud
     /// read</b>. Soft atlas is still used, now for two things: subtle rim mist at the board's far
@@ -21,8 +20,8 @@ namespace LogiCard.Board
     /// mesh's hard silhouette blurs into the void instead of cutting sharp. Each formation
     /// (2026-08-13) is built two-layer: <see cref="SpawnCloudPuff"/> makes one small irregular puff,
     /// <see cref="PlaceClayMass"/> assembles many puffs with a triangular dense-middle/loose-edge
-    /// profile — a real cloud shape built from small pieces, not a scaled-up single sphere. Shading is
-    /// a posterized (not smooth) crown/belly map so close range reads as painted, not a glossy render.
+    /// profile into a rounded mound — spherical but not entirely. Lobes are ellipsoid-squashed (not
+    /// mesh-kneaded — that pass shattered shade UVs). Shading is a posterized crown/belly map.
     /// Pack <c>PF_CloudLayer</c> demoted. Rain = <c>PF_RainSystem</c>; Zap =
     /// <c>VFX_Zap_White</c>. Prefabs via <see cref="LogiCard.Art.Editor.WeatherPackImportTool"/>.
     /// </summary>
@@ -49,9 +48,7 @@ namespace LogiCard.Board
         {
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
-                GameObject child = transform.GetChild(i).gameObject;
-                DestroyKneadedLobeMeshes(child);
-                DestroyImmediate(child);
+                DestroyImmediate(transform.GetChild(i).gameObject);
             }
 
             if (board == null || board.Model == null)
@@ -70,22 +67,6 @@ namespace LogiCard.Board
             PlaceRain(width, depth);
             PlaceFogMist(width, depth);
             PlaceLightning(width, depth);
-        }
-
-        /// <summary>Each clay lobe now gets its own kneaded (non-shared) mesh instance — unlike the
-        /// cached <see cref="_unitSphereMesh"/>, these must be explicitly destroyed on rebuild or they
-        /// leak (Unity meshes aren't GC'd just because their GameObject is destroyed).</summary>
-        private static void DestroyKneadedLobeMeshes(GameObject root)
-        {
-            var filters = root.GetComponentsInChildren<MeshFilter>(true);
-            for (int i = 0; i < filters.Length; i++)
-            {
-                Mesh mesh = filters[i].sharedMesh;
-                if (mesh != null && mesh != _unitSphereMesh)
-                {
-                    DestroyImmediate(mesh);
-                }
-            }
         }
 
         /// <summary>
@@ -245,6 +226,10 @@ namespace LogiCard.Board
         /// No cast shadows (image copy 14: shadow ate the board). No Lit terminator darkening —
         /// Unlit + posterized shade map keeps crowns bright and bellies pale without a glossy-render
         /// gradient (image copy 16 close-up: "needs to be more stylized").
+        /// Individual lobes are Y-squashed ellipsoids (yaw only — never pitch/roll). Full random
+        /// spin rotated the crown/belly shade map off-axis so every pillow self-lit (image copy 15
+        /// "lightings wrongly applied"). Volume read comes from mass-height tint + a near-flat
+        /// shade wash, not from each lobe's own highlight.
         /// </summary>
         private static void PlaceClayMass(
             Transform parent,
@@ -278,10 +263,14 @@ namespace LogiCard.Board
 
                 var puffGo = new GameObject($"Puff_{p}");
                 puffGo.transform.SetParent(mass.transform, false);
+                // Pull depth toward the core so the assembled mass reads as one rounded mound
+                // (spherical-but-not-entirely), not a flat raft of equal bubbles.
+                float depthSpread = massScale.z * (0.55f - 0.25f * edgeT);
+                float puffY = Mathf.Lerp(0.06f, 0.20f, edgeT) * massScale.y;
                 puffGo.transform.localPosition = new Vector3(
-                    u * massScale.x * 0.5f,
-                    Mathf.Lerp(0f, 0.18f, edgeT) * massScale.y, // fringe wisps drift up and out
-                    depthJitter * massScale.z * (1f - 0.3f * edgeT));
+                    u * massScale.x * 0.42f,
+                    puffY,
+                    depthJitter * depthSpread);
 
                 ClayLobe[] puff = SpawnCloudPuff(puffLobes, puffMinR, puffMaxR);
                 float puffFootprintXZ = footprint * puffScale * 0.55f;
@@ -293,19 +282,22 @@ namespace LogiCard.Board
                     var go = new GameObject($"Lobe_{i}");
                     go.transform.SetParent(puffGo.transform, false);
 
-                    go.transform.localPosition = new Vector3(
+                    Vector3 lobeLocal = new Vector3(
                         lobe.UnitOffset.x * puffFootprintXZ,
                         lobe.UnitOffset.y * puffThicknessY,
                         lobe.UnitOffset.z * puffFootprintXZ);
+                    go.transform.localPosition = lobeLocal;
 
-                    // Slightly oversized so lobes swallow each other (glued clay, not separate balls).
-                    float diameter = lobe.RadiusNorm * puffFootprintXZ * 2.0f;
-                    go.transform.localScale = Vector3.one * diameter;
+                    // Glue oversize + Y-squash ellipsoid. Yaw only — shade map crown stays world-up.
+                    float diameter = lobe.RadiusNorm * puffFootprintXZ * 2.35f;
+                    go.transform.localScale = new Vector3(
+                        diameter * Random.Range(0.88f, 1.18f),
+                        diameter * Random.Range(0.62f, 0.92f),
+                        diameter * Random.Range(0.88f, 1.18f));
+                    go.transform.localRotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
 
                     var filter = go.AddComponent<MeshFilter>();
-                    // Kneaded per-lobe (2026-08-13) — no two lobes share a mesh anymore, each is its
-                    // own dough-deformed copy of the base sphere. See KneadClayLobeMesh.
-                    filter.sharedMesh = KneadClayLobeMesh(sphere, intensity01: 0.15f, roundIterations: 4);
+                    filter.sharedMesh = sphere;
 
                     var renderer = go.AddComponent<MeshRenderer>();
                     renderer.sharedMaterial = clay;
@@ -314,8 +306,15 @@ namespace LogiCard.Board
                     renderer.shadowCastingMode = ShadowCastingMode.Off;
                     renderer.receiveShadows = false;
 
+                    // Mass-volume tint: brighter toward the mound crown, cooler toward belly/fringe.
+                    // Replaces per-lobe shade-map "each ball has its own sun" lighting.
+                    float height01 = Mathf.InverseLerp(
+                        -0.35f * massScale.y,
+                        0.55f * massScale.y,
+                        puffY + lobeLocal.y);
+                    Color tint = Color.Lerp(bellyTint, topTint, Mathf.Clamp01(height01));
+                    tint = Color.Lerp(tint, bellyTint, edgeT * 0.35f);
                     var block = new MaterialPropertyBlock();
-                    Color tint = lobe.Belly ? bellyTint : topTint;
                     block.SetColor("_BaseColor", tint);
                     block.SetColor("_Color", tint);
                     renderer.SetPropertyBlock(block);
@@ -346,12 +345,12 @@ namespace LogiCard.Board
             var ps = puff.AddComponent<ParticleSystem>();
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
-            // Just outside the opaque lobe cluster, not inside it — tight enough that puffs read as
-            // a blurred extension of the mass rather than separate floating dots.
-            Vector3 envelope = massScale * 1.05f;
+            // Thin silhouette softener only — heavy haze read as more floating glass bubbles on top
+            // of the clay (image copy 15). Keep fringe sparse/low-alpha so the two-layer clay mass owns the shape.
+            Vector3 envelope = massScale * 1.08f;
             float footprint = Mathf.Max(0.01f, envelope.x * envelope.z);
-            int maxCount = Mathf.Clamp(Mathf.RoundToInt(footprint * 0.9f), 16, 30);
-            float baseSize = Mathf.Sqrt(footprint / maxCount) * 2.2f;
+            int maxCount = Mathf.Clamp(Mathf.RoundToInt(footprint * 0.4f), 6, 14);
+            float baseSize = Mathf.Sqrt(footprint / maxCount) * 1.55f;
 
             var main = ps.main;
             main.loop = true;
@@ -360,12 +359,11 @@ namespace LogiCard.Board
             main.duration = 8f;
             main.startLifetime = new ParticleSystem.MinMaxCurve(6f, 9.5f);
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.75f, baseSize * 1.25f);
+            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.85f, baseSize * 1.35f);
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f * Mathf.Deg2Rad);
-            // Denser than the first pass (0.14-0.30) — human 2026-08-13: haze read too see-through.
             main.startColor = new ParticleSystem.MinMaxGradient(
-                new Color(tint.r, tint.g, tint.b, 0.34f),
-                new Color(tint.r, tint.g, tint.b, 0.58f));
+                new Color(tint.r, tint.g, tint.b, 0.16f),
+                new Color(tint.r, tint.g, tint.b, 0.30f));
             main.maxParticles = maxCount;
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
             main.gravityModifier = 0f;
@@ -454,204 +452,6 @@ namespace LogiCard.Board
             }
 
             return _unitSphereMesh;
-        }
-
-        /// <summary>Vertex adjacency (shared triangle topology, same for every kneaded lobe since they
-        /// all start from <see cref="UnitSphereMesh"/>) — built once, reused by every <see
-        /// cref="KneadClayLobeMesh"/> call for the rounding pass.</summary>
-        private static int[][] _sphereAdjacency;
-
-        /// <summary>
-        /// "揉面团" (kneading dough) — human 2026-08-13: the puffs were still reading as spheres even
-        /// after the triangular-formation pass, because every lobe literally *was* an unmodified sphere
-        /// primitive. This deforms a private copy of the base sphere per lobe: squeeze (pinch two
-        /// opposite sides — bulges the waist between them), press (one broad soft dent), push (one
-        /// broad soft bulge), pound (one small sharp dent — the "pointy edges"), all the same radial
-        /// "dent" primitive at different center-counts/radii/strengths. Then a rounding pass (partial
-        /// Laplacian relax over the shared topology) softens those sharp transitions into curves —
-        /// "round the edges... like a sandbag" — and a final uniform rescale corrects the size drift
-        /// relaxation causes, so kneading never desyncs a lobe from its tuned on-screen <c>RadiusNorm</c>.
-        /// One unique mesh per lobe (not shared) — see <see cref="DestroyKneadedLobeMeshes"/> for cleanup.
-        ///
-        /// First pass (<c>image copy 15</c>, intensity 0.24) read as "shattered glass," not dough. Two
-        /// causes, both fixed here: (1) UV stayed pinned to each vertex's pre-deform latitude while the
-        /// dents moved it well away from the height that latitude implied, so the posterized crown/belly
-        /// bands landed as scattered light/dark patches instead of a coherent gradient — UV.y is now
-        /// re-derived from each vertex's actual post-knead height. (2) Dents were too strong/sharp for
-        /// this mesh's resolution, creasing visibly — intensity dropped (0.24→0.15), falloffs widened,
-        /// and the round pass strengthened (3→4 iterations, 0.45→0.55 blend).
-        /// </summary>
-        private static Mesh KneadClayLobeMesh(Mesh baseMesh, float intensity01, int roundIterations)
-        {
-            Vector3[] baseVerts = baseMesh.vertices;
-            Vector2[] baseUV = baseMesh.uv;
-            if (_sphereAdjacency == null)
-            {
-                _sphereAdjacency = BuildVertexAdjacency(baseMesh);
-                _baseVMin = float.MaxValue;
-                _baseVMax = float.MinValue;
-                for (int i = 0; i < baseUV.Length; i++)
-                {
-                    _baseVMin = Mathf.Min(_baseVMin, baseUV[i].y);
-                    _baseVMax = Mathf.Max(_baseVMax, baseUV[i].y);
-                }
-            }
-
-            float targetAvgRadius = AverageRadius(baseVerts);
-            float strength = targetAvgRadius * intensity01;
-            Vector3[] verts = (Vector3[])baseVerts.Clone();
-
-            // Squeeze — pinch two opposite sides inward; bulges the waist between them.
-            Vector3 squeezeAxis = Random.onUnitSphere;
-            Dent(verts, baseVerts, squeezeAxis, -strength * Random.Range(0.4f, 0.7f), RandomFalloffAngle(55f, 85f));
-            Dent(verts, baseVerts, -squeezeAxis, -strength * Random.Range(0.4f, 0.7f), RandomFalloffAngle(55f, 85f));
-
-            // Press — one broad soft dent.
-            Dent(verts, baseVerts, Random.onUnitSphere, -strength * Random.Range(0.5f, 0.8f), RandomFalloffAngle(50f, 75f));
-
-            // Push — one broad soft bulge.
-            Dent(verts, baseVerts, Random.onUnitSphere, strength * Random.Range(0.5f, 0.8f), RandomFalloffAngle(50f, 75f));
-
-            // Pound — one small, sharp dent (rounding below softens this into the "pointy edge").
-            Dent(verts, baseVerts, Random.onUnitSphere, -strength * Random.Range(0.7f, 1.0f), RandomFalloffAngle(30f, 45f));
-
-            // Round — partial relax so lumps survive; full Laplacian would erase them. More iterations
-            // / stronger blend than the first pass (image copy 15 read as jagged shattered glass, not
-            // soft dough) to smooth the coarse-mesh creasing the dents leave behind.
-            for (int s = 0; s < roundIterations; s++)
-            {
-                var relaxed = new Vector3[verts.Length];
-                for (int i = 0; i < verts.Length; i++)
-                {
-                    int[] neighbors = _sphereAdjacency[i];
-                    if (neighbors.Length == 0)
-                    {
-                        relaxed[i] = verts[i];
-                        continue;
-                    }
-
-                    Vector3 avg = Vector3.zero;
-                    for (int n = 0; n < neighbors.Length; n++)
-                    {
-                        avg += verts[neighbors[n]];
-                    }
-
-                    avg /= neighbors.Length;
-                    relaxed[i] = Vector3.Lerp(verts[i], avg, 0.55f);
-                }
-
-                verts = relaxed;
-            }
-
-            // Relaxing shrinks a mesh toward its centroid — rescale back to the original average
-            // radius so the lobe's tuned RadiusNorm/diameter still lands on-screen as intended.
-            float currentAvgRadius = AverageRadius(verts);
-            float correction = currentAvgRadius > 0.0001f ? targetAvgRadius / currentAvgRadius : 1f;
-            for (int i = 0; i < verts.Length; i++)
-            {
-                verts[i] *= correction;
-            }
-
-            // Re-derive V (crown/belly band) from each vertex's ACTUAL post-knead height, not its
-            // pre-deform latitude. image copy 15's shattered-glass look was this: UV stayed pinned to
-            // the original sphere's latitude while kneading moved vertices well away from the height
-            // that latitude implied, so the posterized bands landed as scattered light/dark patches
-            // instead of a coherent crown-to-belly gradient over the new shape. U is left alone (the
-            // shade map only varies a little by U, for the edge vignette).
-            float minY = float.MaxValue;
-            float maxY = float.MinValue;
-            for (int i = 0; i < verts.Length; i++)
-            {
-                minY = Mathf.Min(minY, verts[i].y);
-                maxY = Mathf.Max(maxY, verts[i].y);
-            }
-
-            var uv = new Vector2[verts.Length];
-            for (int i = 0; i < verts.Length; i++)
-            {
-                float t = maxY > minY ? Mathf.InverseLerp(minY, maxY, verts[i].y) : 0.5f;
-                uv[i] = new Vector2(baseUV[i].x, Mathf.Lerp(_baseVMin, _baseVMax, t));
-            }
-
-            var mesh = new Mesh { name = "ClayLobeDough" };
-            mesh.vertices = verts;
-            mesh.triangles = baseMesh.triangles;
-            mesh.uv = uv;
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-            return mesh;
-        }
-
-        private static float _baseVMin;
-        private static float _baseVMax;
-
-        /// <summary>One radial displacement: vertices within <paramref name="falloffAngle"/> of
-        /// <paramref name="center"/> (angular distance on the base sphere) move along their own base
-        /// direction by <paramref name="strength"/>, smoothstep-falling to zero at the edge of influence.
-        /// Negative strength dents inward (squeeze/press/pound), positive bulges outward (push).</summary>
-        private static void Dent(Vector3[] verts, Vector3[] baseVerts, Vector3 center, float strength, float falloffAngle)
-        {
-            Vector3 axis = center.normalized;
-            for (int i = 0; i < verts.Length; i++)
-            {
-                Vector3 dir = baseVerts[i].normalized;
-                float angle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(dir, axis), -1f, 1f));
-                if (angle >= falloffAngle)
-                {
-                    continue;
-                }
-
-                float t = 1f - (angle / falloffAngle);
-                float falloff = t * t * (3f - 2f * t);
-                verts[i] += dir * strength * falloff;
-            }
-        }
-
-        private static float RandomFalloffAngle(float minDegrees, float maxDegrees) =>
-            Random.Range(minDegrees, maxDegrees) * Mathf.Deg2Rad;
-
-        private static float AverageRadius(Vector3[] verts)
-        {
-            float sum = 0f;
-            for (int i = 0; i < verts.Length; i++)
-            {
-                sum += verts[i].magnitude;
-            }
-
-            return verts.Length > 0 ? sum / verts.Length : 1f;
-        }
-
-        private static int[][] BuildVertexAdjacency(Mesh mesh)
-        {
-            Vector3[] verts = mesh.vertices;
-            int[] tris = mesh.triangles;
-            var neighborSets = new HashSet<int>[verts.Length];
-            for (int i = 0; i < verts.Length; i++)
-            {
-                neighborSets[i] = new HashSet<int>();
-            }
-
-            for (int t = 0; t < tris.Length; t += 3)
-            {
-                int a = tris[t];
-                int b = tris[t + 1];
-                int c = tris[t + 2];
-                neighborSets[a].Add(b);
-                neighborSets[a].Add(c);
-                neighborSets[b].Add(a);
-                neighborSets[b].Add(c);
-                neighborSets[c].Add(a);
-                neighborSets[c].Add(b);
-            }
-
-            var adjacency = new int[verts.Length][];
-            for (int i = 0; i < verts.Length; i++)
-            {
-                adjacency[i] = new int[neighborSets[i].Count];
-                neighborSets[i].CopyTo(adjacency[i]);
-            }
-
-            return adjacency;
         }
 
         private void PlaceRain(float width, float depth)
@@ -1077,11 +877,10 @@ namespace LogiCard.Board
 
         /// <summary>
         /// Soft Unlit clay for sphere lobes. Lit diffuse was darkening sphere limbs into mid-grey
-        /// "边缘" against the void (image copy 14). Painted vertical shade map = bright crown /
-        /// pale belly without a harsh terminator; no cast shadows so the board stays readable.
-        /// The first Unlit pass (image copy 15) baked too weak a gradient (~231-254 of 255) — read
-        /// as one flat blown-out white mass with no per-lobe volume. Shade map redrawn with real
-        /// crown/belly contrast (~152-255) so overlapping lobes read as separate glued pillows again.
+        /// "边缘" against the void (image copy 14). Shade map is a <b>near-flat</b> vertical wash —
+        /// strong per-lobe crown contrast read as individually lit bubbles under the top-down camera
+        /// (image copy 15). Mass-volume tint is applied in <see cref="PlaceClayMass"/> instead.
+        /// No cast shadows so the board stays readable.
         /// </summary>
         private static Material ClayCloudMaterial()
         {
