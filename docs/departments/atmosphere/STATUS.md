@@ -2,7 +2,7 @@
 
 **Wave / Day:** Permanent department seat (GDD §11 / PARALLEL_OPS) — **In progress** 2026-08-13
 **Branch / worktree:** `feat/atmosphere-stylized` @ `D:\projects\Game\logiCard-atmosphere-stylized`
-**Last cross-reviewed:** 2026-08-13 — human signed off **fair / regular clay clouds** → committed `af7b2e5`
+**Last cross-reviewed:** 2026-08-13 — fair signed off `af7b2e5`; storm committed `9f6c88d` for Integrator merge (storm look still awaiting human Re-Play)
 
 ## Owned files (this seat)
 
