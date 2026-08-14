@@ -126,6 +126,41 @@ namespace LogiCard.Boot
         }
 
         /// <summary>
+        /// Rematch / new Local Play after Match Over: clear carried wounds/positions back to spawn,
+        /// restore doors to each <see cref="Door.InitialState"/>, drop the armed tape and hit VFX.
+        /// Intra-match round carry (C33) stays on <see cref="CommitRoundState"/> — this is match-scoped.
+        /// </summary>
+        public void ResetForNewMatch()
+        {
+            _anyoneDead = false;
+            _doorStateAtArm.Clear();
+            _doorsSyncedToSeconds = float.NaN;
+
+            if (_board != null && _board.Model != null)
+            {
+                IReadOnlyList<Door> doors = _board.Model.Doors;
+                for (int i = 0; i < doors.Count; i++)
+                {
+                    Door door = doors[i];
+                    _board.Model.SetDoorState(door, door.InitialState);
+                }
+
+                _board.RefreshDoorVisuals();
+            }
+
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                PawnEntry pawn = _pawns[i];
+                pawn.CurrentPosition = pawn.HomePosition;
+                pawn.Wounds = 0;
+                pawn.BandageCharge = 0; // C63 — a fresh match resets gear charges too, not just wounds.
+                _pawns[i] = pawn;
+            }
+
+            Disarm();
+        }
+
+        /// <summary>
         /// Swaps the resolver used by the next <see cref="ResolveAndArm"/> — e.g. <c>GameBootstrap</c>
         /// wires this to <see cref="AppFlowController.EnteredMatch"/> so Local Play keeps
         /// <see cref="LocalMatchResolver"/> and Find Match switches to a networked resolver. Safe to
@@ -614,6 +649,9 @@ namespace LogiCard.Boot
 
             public PawnView View { get; }
 
+            /// <summary>Spawn for a fresh match (Rematch). Distinct from carried <see cref="CurrentPosition"/>.</summary>
+            public PlanarPosition HomePosition { get; }
+
             public PlanarPosition CurrentPosition { get; set; }
 
             public int Wounds { get; set; }
@@ -626,6 +664,7 @@ namespace LogiCard.Boot
             {
                 PawnId = pawnId;
                 View = view;
+                HomePosition = home;
                 CurrentPosition = home;
                 Wounds = 0;
                 BandageCharge = 0;

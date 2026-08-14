@@ -31,6 +31,7 @@ namespace LogiCard.Board
         // C60 vibrancy pass: kept in sync with ConfigureCamera's retuned backgroundColor
         // (0.035,0.04,0.055 -> 0.06,0.055,0.06) — leaving this stale would have reintroduced the exact
         // probe/camera mismatch the comment above describes, just with the new color.
+        // Kept in sync with GameBootstrap.ConfigureCamera backgroundColor (dark void — not a sky tint).
         private static readonly Color VoidBackgroundColor = new Color(0.06f, 0.055f, 0.06f);
 
         /// <summary>

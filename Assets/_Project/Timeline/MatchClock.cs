@@ -98,5 +98,17 @@ namespace LogiCard.Timeline
             RoundIndex++;
             CurrentChooser = CurrentChooser == MatchSide.Attacker ? MatchSide.Defender : MatchSide.Attacker;
         }
+
+        /// <summary>
+        /// Fresh match from the same pool/min settings (Rematch / Local Play again after Match Over).
+        /// Does not change <see cref="PoolSeconds"/> or <see cref="MinRoundSeconds"/>.
+        /// </summary>
+        public void Reset(MatchSide firstChooser = MatchSide.Attacker)
+        {
+            RemainingSeconds = PoolSeconds;
+            RoundAllotment = 0f;
+            RoundIndex = 1;
+            CurrentChooser = firstChooser;
+        }
     }
 }

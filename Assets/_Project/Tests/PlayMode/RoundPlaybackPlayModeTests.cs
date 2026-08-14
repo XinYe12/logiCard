@@ -396,5 +396,37 @@ namespace LogiCard.Tests.PlayMode
 
             return bestDist < 1.5f ? best : null;
         }
+
+
+        [Test]
+        public void FreshMatchClearsCarriedDeathAndReturnsPawnsToSpawn()
+        {
+            // Ambush wounds the attacker; Aftermath commits that carry (C33). Rematch must not
+            // reopen Program with a corpse still on the board (playtest 2026-08-12 image 4).
+            ArmWithAttackerMoveTo(AmbushPoint);
+            Assert.That(FirstEventOfType(Playback.Tape, TapeEventType.Wounded).HasValue
+                    || FirstEventOfType(Playback.Tape, TapeEventType.Killed).HasValue,
+                Is.True,
+                "Ambush arm should wound/kill so carry would otherwise stick.");
+
+            Phase.GoTo(RoundPhase.Aftermath);
+            Bootstrap.RequestNextRound();
+
+            PlanarPosition attackerHome = new PlanarPosition(4f, 0f);
+            PlanarPosition defenderHome = new PlanarPosition(4f, 6f);
+
+            Bootstrap.RequestFreshMatch();
+
+            Assert.That(Phase.Phase, Is.EqualTo(RoundPhase.Allot));
+            Assert.That(MatchClock.RoundIndex, Is.EqualTo(1));
+            Assert.That(MatchClock.RemainingSeconds, Is.EqualTo(Bootstrap.matchPoolSeconds).Within(0.0001f));
+            Assert.That(Playback.WoundsOf(GameBootstrap.AttackerPawnId), Is.EqualTo(0));
+            Assert.That(Playback.WoundsOf(GameBootstrap.DefenderPawnId), Is.EqualTo(0));
+            Assert.That(Playback.AnyoneDead, Is.False);
+            Assert.That(Playback.Tape, Is.Null);
+            Assert.That(Playback.PositionOf(GameBootstrap.AttackerPawnId).DistanceTo(attackerHome), Is.LessThan(0.0001f));
+            Assert.That(Playback.PositionOf(GameBootstrap.DefenderPawnId).DistanceTo(defenderHome), Is.LessThan(0.0001f));
+        }
+
     }
 }

@@ -1,22 +1,23 @@
 ﻿# Core / Integrator — STATUS
 
-**Wave / Day:** Phase 5 — Integrator 2026-08-12 evening
-**Branch / worktree:** `master` (cards merge `8b791d9` + C62 commit this pass) + dirty rematch/floors
-**Last cross-reviewed:** 2026-08-12 — accepted Character/UI/Cards report-backs; wrote **C62**; merged cards docs
+**Wave / Day:** Phase 5 — Integrator 2026-08-14
+**Branch / worktree:** `master` @ `e07be61` + dirty rematch/floors/lighting
+**Last cross-reviewed:** 2026-08-14 — opened Bandage HUD contract; staffed UI; refreshed INDEX/DRAFT_HANDOFF tips
 
 ## Done
 
-- **C62** gear collection rules; OPEN #3 → resolved; cursor rule synced
-- Merged `feat/cards-collection-docs`
-- Character + UI idle-ready tracked (Play gates stand)
-- Atmosphere Ready tip noted (`c3296dc`) — not merged yet
+- Opened **Bandage HUD-side** in `docs/contracts/CURRENT.md`
+- Wrote `BANDAGE_HUD_AGENT_BRIEF.md` into UI worktree (`logiCard-modal-restyle`)
+- Refreshed `departments/INDEX.md` + `DRAFT_HANDOFF.md` to live tips
 
 ## In progress
 
-- Monitor Play gates; weather still with Atmosphere
-- Rematch/floors dirty hold
+- Monitor UI Bandage HUD report-back
+- Hold dirty rematch/floors/lighting until human asks to commit
+- After HUD merge: Healed presenter (`PLAYBACK_CONTRACT` §3)
 
 ## Offers
 
-- Merge Character → UI → Atmosphere on human clear
-- Open gear implementation brief (post-C62) when human wants Sim/HUD work
+- Merge UI Bandage HUD when Ready + green
+- Merge Atmosphere after human Play clear
+- Commit rematch/floors when asked

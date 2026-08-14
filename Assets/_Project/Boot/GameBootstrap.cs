@@ -89,6 +89,13 @@ namespace LogiCard.Boot
             OnNextRoundRequested();
         }
 
+        /// <summary>Test helper: same path as AppFlow EnteredMatch after Rematch / Local Play.</summary>
+        public void RequestFreshMatch(bool viaRelay = false)
+        {
+            BeginFreshMatch(viaRelay);
+        }
+
+
         private void Awake()
         {
             _matchClock = new MatchClock(matchPoolSeconds, minRoundSeconds, MatchSide.Attacker);
@@ -107,15 +114,31 @@ namespace LogiCard.Boot
             _programHud.AppFlow.EnteredMatch += viaRelay =>
             {
                 EnsureMatchSceneBuilt();
-                _playback.SetMatchResolver(viaRelay
-                    ? (IMatchResolver)new RelayMatchResolver()
-                    : new LocalMatchResolver(new GhostResolver(_board.Model)));
+                BeginFreshMatch(viaRelay);
             };
 
             // Find Match -> C52's resolve relay; Local Play -> same-process (unchanged). Board layout
             // must match Relay/LogiCard.Relay/DemoArenaBoard.CreateDemo() for a two-Unity smoke test to
             // resolve identically. Host/port not yet configurable from the Lobby (real matchmaking is
             // still OPEN, NETWORKING_DESIGN.md) - both instances default to the same localhost port.
+        }
+
+        /// <summary>
+        /// Local Play / Find Match / Rematch entry: wipe prior-match carry (wounds, death, doors, tape)
+        /// and reopen Allot with a full Time Resource pool. Scene geometry is reused via
+        /// <see cref="EnsureMatchSceneBuilt"/>.
+        /// </summary>
+        private void BeginFreshMatch(bool viaRelay)
+        {
+            _matchClock.Reset(MatchSide.Attacker);
+            _playback.SetMatchResolver(viaRelay
+                ? (IMatchResolver)new RelayMatchResolver()
+                : new LocalMatchResolver(new GhostResolver(_board.Model)));
+            _playback.ResetForNewMatch();
+            _attackerInput.PrepareRound(_playback.PositionOf(AttackerPawnId), 0f);
+            _clock.ApplyBudget(0f);
+            _phase.GoTo(RoundPhase.Allot);
+            Debug.Log("[logiCard] Fresh match — pool reset, pawns at spawn, wounds cleared.");
         }
 
         private void OnTimeCardPlayed(float seconds)
@@ -653,12 +676,10 @@ namespace LogiCard.Boot
             // 3.4 so the board fills the play region by default; runtime zoom bounds (closer min) are
             // owned by BoardCameraRig / feat/camera-zoom-fill this wave, not this line.
             cam.orthographicSize = 3.4f;
-            // Solid-color void stays — C53 weather is a contained pocket above the board, not a skybox
-            // horizon; ART_DIRECTION's "diorama base + void outside board" doctrine wants the void to
-            // stay dark so the board reads as a lit stage. C60 vibrancy pass: was near-black-blue
-            // (0.035, 0.04, 0.055) — the cool tint was compounding the "cold/not vibrant" complaint even
-            // though the void isn't the board itself. Lifted slightly and de-blued to a warm-neutral
-            // near-black so it still frames the board as a dark void, just not an icy one.
+            // Dark void only — never a painted sky / brand color clear (playtest 2026-08-12: sky-blue
+            // clear looked like a UI backdrop). Focus comes from tilt-shift DoF on the board chunk
+            // (GDD §8 / ART_DIRECTION), not from the camera clear color. Weather stays a contained
+            // pocket above the board, not a skybox horizon.
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.06f, 0.055f, 0.06f);
 
@@ -701,39 +722,34 @@ namespace LogiCard.Boot
             // (0.58,0.66,0.82 -> 0.68,0.74,0.86, closer to neutral overcast than saturated blue) rather
             // than deleting the cool-key concept outright — still reads as a cool rim/accent, just no
             // longer the light that sets the scene's overall temperature.
-            var keyGo = new GameObject("Storm Key");
+            // 2026-08-12: bright midday toy-diorama key (human Zelda / Link's Awakening reference).
+            // Prior wet-dusk storm key crushed the board into farm-soil silhouettes.
+            var keyGo = new GameObject("Sun Key");
             keyGo.transform.SetParent(transform, false);
             var key = keyGo.AddComponent<Light>();
             key.type = LightType.Directional;
-            // image copy 13 (2026-08-11): still read as one harsh top light + crushed black shadows.
-            // Soften the key further (weaker intensity + much weaker shadows) so it rims rather than
-            // carving the board into black silhouettes.
-            key.color = new Color(0.72f, 0.76f, 0.88f);
-            key.intensity = 0.40f;
+            key.color = new Color(1f, 0.96f, 0.88f);
+            key.intensity = 1.35f;
             key.shadows = LightShadows.Soft;
-            key.shadowStrength = 0.28f;
-            key.transform.rotation = Quaternion.Euler(50f, -25f, 0f);
+            key.shadowStrength = 0.32f;
+            key.transform.rotation = Quaternion.Euler(52f, -35f, 0f);
 
-            // Warm fill stays the dominant temperature-setter; bumped again so lit faces stay readable
-            // when the key no longer punches hard shadows.
-            var fillGo = new GameObject("Warm Practical Fill");
+            var fillGo = new GameObject("Sky Fill");
             fillGo.transform.SetParent(transform, false);
             var fill = fillGo.AddComponent<Light>();
             fill.type = LightType.Directional;
-            fill.color = new Color(0.98f, 0.82f, 0.60f);
-            fill.intensity = 1.05f;
+            fill.color = new Color(0.72f, 0.84f, 1f);
+            fill.intensity = 0.70f;
             fill.shadows = LightShadows.None;
-            fill.transform.rotation = Quaternion.Euler(28f, 145f, 0f);
+            fill.transform.rotation = Quaternion.Euler(25f, 140f, 0f);
 
-            // Practical pools raised another notch — interior props were falling into silhouette.
-            PlacePracticalPoint("Hall Practical W", new PlanarPosition(2.2f, 5.5f), 0.7f, 3.2f, 2.0f);
-            PlacePracticalPoint("Hall Practical E", new PlanarPosition(5.8f, 5.5f), 0.7f, 3.2f, 2.0f);
-            PlacePracticalPoint("Vault Practical", new PlanarPosition(4f, 9.4f), 0.7f, 4.0f, 2.3f);
-            PlacePracticalPoint("Yard Spill", new PlanarPosition(4f, 2.2f), 0.55f, 3.5f, 1.2f);
+            PlacePracticalPoint("Hall Practical W", new PlanarPosition(2.2f, 5.5f), 0.7f, 3.2f, 1.6f);
+            PlacePracticalPoint("Hall Practical E", new PlanarPosition(5.8f, 5.5f), 0.7f, 3.2f, 1.6f);
+            PlacePracticalPoint("Vault Practical", new PlanarPosition(4f, 9.4f), 0.7f, 4.0f, 1.8f);
+            PlacePracticalPoint("Yard Spill", new PlanarPosition(4f, 2.2f), 0.55f, 3.5f, 1.1f);
 
-            // Ambient floor lifted hard — image 13's unlit sides were near-black despite C60's 0.20.
             RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.32f, 0.28f, 0.24f);
+            RenderSettings.ambientLight = new Color(0.58f, 0.62f, 0.70f);
 
             BuildDioramaVolume();
         }
@@ -799,16 +815,15 @@ namespace LogiCard.Boot
             var profile = ScriptableObject.CreateInstance<VolumeProfile>();
 
             var color = profile.Add<ColorAdjustments>(true);
-            // image 13: still underexposed with crushed shadow side — lift exposure, ease contrast
-            // so the warm fill/ambient actually show up instead of the grade re-crushing them.
+            // 2026-08-12: sunny toy grade toward human Zelda reference — brighter, more saturated.
             color.postExposure.overrideState = true;
-            color.postExposure.value = 0.35f;
+            color.postExposure.value = 0.55f;
             color.contrast.overrideState = true;
-            color.contrast.value = 6f;
+            color.contrast.value = 4f;
             color.colorFilter.overrideState = true;
-            color.colorFilter.value = new Color(1f, 0.95f, 0.88f);
+            color.colorFilter.value = new Color(1f, 0.98f, 0.94f);
             color.saturation.overrideState = true;
-            color.saturation.value = 22f;
+            color.saturation.value = 30f;
 
             var bloom = profile.Add<Bloom>(true);
             bloom.threshold.overrideState = true;
@@ -822,21 +837,21 @@ namespace LogiCard.Boot
             vignette.color.overrideState = true;
             vignette.color.value = new Color(0.08f, 0.07f, 0.09f);
             vignette.intensity.overrideState = true;
-            vignette.intensity.value = 0.15f;
+            vignette.intensity.value = 0.08f;
             vignette.smoothness.overrideState = true;
             vignette.smoothness.value = 0.7f;
 
-            // Tilt-shift DoF retained (C53 keeps the miniature framing). Focus distance matches
-            // ConfigureCamera's board-to-camera offset (14 world units). Aperture 3.5 (was 2.8)
-            // softens the miniature blur a notch so the first wet-dusk look can still answer the
-            // hero-shot-vs-readable-gameplay question without the board going mushy.
+            // Tilt-shift DoF = the exterior focus language (GDD §8): sharp board center, blur the
+            // near/far rim of the diorama chunk — Link's Awakening miniature read. Not a sky clear.
+            // Focus distance matches ConfigureCamera's board-to-camera offset (~14 world units).
+            // Aperture 2.6 (was 3.5): stronger rim blur after human rejected colored void as "focus."
             var dof = profile.Add<DepthOfField>(true);
             dof.mode.overrideState = true;
             dof.mode.value = DepthOfFieldMode.Bokeh;
             dof.focusDistance.overrideState = true;
             dof.focusDistance.value = 14f;
             dof.aperture.overrideState = true;
-            dof.aperture.value = 3.5f;
+            dof.aperture.value = 2.6f;
             dof.focalLength.overrideState = true;
             dof.focalLength.value = 135f;
             dof.bladeCount.overrideState = true;

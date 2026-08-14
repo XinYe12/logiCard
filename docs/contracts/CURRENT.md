@@ -18,13 +18,62 @@ change — root-caused directly (probe `clearFlags` never set, rendering the wro
 **Clouds**: replaced primitive spheres with real textured particle clouds (Kenney CC0 sprite atlas). Both
 worker slots closed again after C60/C61 (2026-08-11). **Still open:** human sighted pass on C60 vibrancy
 (runtime grade actually warm now) + C61 scroll zoom feel + earlier reflection/clouds/Scout outfit items.
-**Updated:** 2026-08-12 by Integrator — `feat/atmosphere-stylized` merged (`5b2ee7c` / LA CloudAtlas + rim mist). UI char-select + modal still on side branches awaiting Play. No open worker contract.
+**Updated:** 2026-08-14 by Integrator — Bandage HUD-side contract opened (C63). Sim-side already merged
+`4e6bb66`. Gear pause carve-out (C63) still applies; Net / non-gear Sim stay paused.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
 
-_(none currently open — no worker assigned. Slots free after Integrator presentation push.)_
+### Bandage HUD-side (open 2026-08-14 — **UI seat** on `logiCard-modal-restyle`; brief `BANDAGE_HUD_AGENT_BRIEF.md`)
+
+**Depends on:** C63; Sim-side closed below; `GearHandView` scaffold on master (`7213d98`);
+`UI_FLOW.md` §4 item 3; `PLAYBACK_CONTRACT.md` (Healed presenter is a **separate** Integrator follow-up
+after this HUD lands — do not invent FX here).
+
+**Frozen signatures**
+
+```csharp
+// Timeline — Program booking (gear carve-out). Cost locked by C63.
+public const float BandageSeconds = 3f; // on PawnProgram
+bool PawnProgram.TryQueueBandage(float executeTime, out string rejectionReason);
+bool PawnProgram.IsMidSprintAt(float seconds); // helper; used by TryQueueBandage
+
+// Boot — match-carry read for HUD gates (mirrors WoundsOf)
+int RoundPlayback.BandageChargeOf(int pawnId);
+
+// Board — place while Mode == ActionVerb.Bandage
+bool BoardInputController.TryQueueBandageAt(float executeTime, out string reason);
+```
+
+**HUD behavior (DoD)**
+
+1. Dock `GearHandView.Build(...)` into the Program HUD (queue column — do **not** grow
+   `ControlsColumnContentHeight` / break `ProgramHudLayoutTests`).
+2. **Arm:** Program-phase only. Bandage arms → `BoardInputController.Mode = ActionVerb.Bandage`.
+   Interact / Flashbang stay blocked (no contract). Adrenaline stays Execute-only via existing
+   `GearHandPhase` rules (dock may show it greyed in Program).
+3. **Place (timeline):** while Bandage is armed / Mode is Bandage —
+   - scrubber **click** places at the scrubber's current Time Resource seconds, or
+   - board tap near a booked Move node places at that node's `ExecuteTime`, else places at
+     `PawnProgram.UsedSeconds` (append / stationary at schedule tip).
+4. **Three legality gates** (Program-time; resolver stays permissive per Sim contract):
+   - **Wounded** — `RoundPlayback.WoundsOf(localPawn) > 0` (Healthy → cannot arm)
+   - **Charge** — match `BandageChargeOf == 0` and no Bandage node already in this Program
+   - **Not mid-Sprint** — `!IsMidSprintAt(executeTime)` (Walk micro-moves OK; C63)
+5. Cost label for Bandage = `"3s"` (C63). Other first-wave cards keep `"TR —"` placeholders.
+6. After a successful place: clear gear arm, return Mode to Move, refresh spent/blocked presentation.
+7. Tests: EditMode `PawnProgram` Bandage cases; PlayMode HUD arm→place smoke; update
+   `GearHandViewTests` so only Bandage may show a locked cost.
+
+**Out of scope:** `TapeEventType.Healed` presenter; Interact/Flashbang/Adrenaline resolve; deckbuilder
+(C64).
+
+### Bandage Sim-side (closed 2026-08-13 — reference)
+
+- `ActionVerb.Bandage`, `TapeEventType.Healed`, per-match `BandageCharge` through
+  `GhostInput` → `GhostResolver` → `ReplayTape` → `RoundPlayback`.
+- Resolver permissive (no Sprint / Healthy re-check). Merged `4e6bb66`.
 
 ## Closed contracts (reference)
 
