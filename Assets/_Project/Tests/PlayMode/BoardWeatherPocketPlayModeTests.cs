@@ -50,12 +50,38 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(lightningStorm.childCount, Is.GreaterThanOrEqualTo(1),
                 "Expected at least one Zap rig under LightningStorm.");
 
-            // Bolt height tracks cloud shelf: ConeVolume length ≈ ground→cloud-center rise.
+            Transform cloudEnergize = module.Find("CloudEnergize");
+            Assert.That(cloudEnergize, Is.Not.Null,
+                "Storm module should wrap tiny yellow Zap arcs around the clay (CloudEnergize).");
+            Assert.That(cloudEnergize.childCount, Is.GreaterThanOrEqualTo(6),
+                "Expected rim-chained energize arcs under CloudEnergize (Layer-2 envelope wrap).");
+
+            // Arcs should sit near the bank exterior, not deep in the volume core.
             Bounds cloudBounds = meshRenderers[0].bounds;
             for (int i = 1; i < meshRenderers.Length; i++)
             {
                 cloudBounds.Encapsulate(meshRenderers[i].bounds);
             }
+
+            int rimish = 0;
+            for (int i = 0; i < cloudEnergize.childCount; i++)
+            {
+                Vector3 p = cloudEnergize.GetChild(i).position;
+                Vector3 flat = p - cloudBounds.center;
+                flat.y = 0f;
+                float radial = new Vector2(flat.x / Mathf.Max(0.01f, cloudBounds.extents.x),
+                    flat.z / Mathf.Max(0.01f, cloudBounds.extents.z)).magnitude;
+                if (radial > 0.55f)
+                {
+                    rimish++;
+                }
+            }
+
+            Assert.That(rimish, Is.GreaterThanOrEqualTo(cloudEnergize.childCount / 2),
+                "Most energize arcs should lie on the exterior envelope rim, not the core.");
+
+            // Bolt height tracks cloud shelf: ConeVolume length ≈ ground→cloud-center rise.
+            // (reuse cloudBounds from above)
 
             const float footprintMargin = 1.5f;
             for (int i = 0; i < lightningStorm.childCount; i++)

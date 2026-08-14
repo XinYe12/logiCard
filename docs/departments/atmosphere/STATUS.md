@@ -1,19 +1,22 @@
 # Atmosphere — STATUS
 
-**Wave / Day:** Permanent department seat (GDD §11 / PARALLEL_OPS) — **In progress** 2026-08-14
+**Wave / Day:** Permanent department seat (GDD §11 / PARALLEL_OPS) — **Ready for Integrator merge** 2026-08-14
 **Branch / worktree:** `feat/atmosphere-stylized` @ `D:\projects\Game\logiCard-atmosphere-stylized`
-**Last cross-reviewed:** 2026-08-14 — thunder height is now dynamic off the cloud shelf: `shape.length = cloudRise` on ConeVolume bolt layers (`FitZapHeightToCloudRise`), tip Y = mass `center.y` from fixed `HeightUnits × InterimCloudHeightBoost` placement.
+**Last cross-reviewed:** 2026-08-14 — Zap tip signed (`b62b48a` / image copy 23). Cloud energize human-signed (“this is good”).
 
 ## Owned files (this seat)
 
-- `BoardWeatherPocket.cs`, `Resources/Weather/**`, `WeatherPackImportTool`, `Tools/gen_soft_cloud_atlas.py`, `Tools/gen_clay_sphere_shade.py`, weather PlayMode smoke, this STATUS
+- `BoardWeatherPocket.cs`, `Resources/Weather/**`, `WeatherPackImportTool`, weather PlayMode smoke, this STATUS
 
-## Dirty (uncommitted)
+## Committed
 
-1. **Centered cloud shelf** + **modular `ApplyWeather` API**.
-2. **Storm Zap height ↔ cloud height** — ground spawn, upright, scale 1. `StrikeTipWorldY` = mass bounds center (the fixed shelf Y). `FitZapHeightToCloudRise`: bolt Cone layers → `ConeVolume`, `shape.length = cloudRise`, stretch `lengthScale = 0.75` (prefab 2 overshot). `startSize` untouched. Fair unchanged.
-3. **PlayMode smoke** — ground spawn, upright, scale 1, ConeVolume length tracks cloud rise (not prefab 5).
+- Storm Zap tip ↔ cloud shelf height; Yellow-only; modular Storm host (`b62b48a`).
+- **Storm cloud energize** — Layer-2 envelope rim clusters (2–3 twisted chords per group); random group pulse every 1.8s with hard Stop/Play retrigger; scale ~0.28–0.42; PlayMode smoke for `CloudEnergize` + rim bias.
+
+## Dirty (uncommitted, out of seat / noise)
+
+- Floor/Glass mats, ProjectSettings, orphan pack `.meta` deletes, `Assets/_Recovery/`, debug screenshots — leave out of weather merge unless Integrator asks.
 
 ## Blocked
 
-- Human Re-Play — tip should sit in the clay and move with shelf height if that constant changes.
+- None for weather look — human signed tip + energize. Integrator merge when scheduled.

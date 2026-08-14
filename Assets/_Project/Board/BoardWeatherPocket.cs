@@ -73,6 +73,27 @@ namespace LogiCard.Board
         private bool _hasCloudBankBounds;
         private readonly List<Bounds> _cloudMassWorldBounds = new List<Bounds>();
 
+        /// <summary>Layer-2 formation envelopes (same shell <see cref="PlaceCloudEdgeHaze"/> uses) —
+        /// exterior rim samples for storm energize arcs.</summary>
+        private readonly List<CloudEnvelope> _cloudEnvelopes = new List<CloudEnvelope>();
+        /// <summary>Rim arc clusters (2–3 chords each); pulse picks one at random.</summary>
+        private readonly List<List<ParticleSystem>> _cloudEnergizeGroups = new List<List<ParticleSystem>>();
+
+        /// <summary>One Layer-2 mass envelope in world space — center, half-extents, yaw.</summary>
+        private readonly struct CloudEnvelope
+        {
+            public readonly Vector3 WorldCenter;
+            public readonly Vector3 Extents;
+            public readonly float YawDegrees;
+
+            public CloudEnvelope(Vector3 worldCenter, Vector3 extents, float yawDegrees)
+            {
+                WorldCenter = worldCenter;
+                Extents = extents;
+                YawDegrees = yawDegrees;
+            }
+        }
+
         /// <summary>Active weather module (Clear = no sky module).</summary>
         public BoardWeatherMood ActiveMood => _mood;
 
@@ -137,6 +158,7 @@ namespace LogiCard.Board
             PlaceFogMist(width, depth);
             if (mood == BoardWeatherMood.Storm)
             {
+                PlaceStormCloudEnergize();
                 PlaceStormVolumeFog(width, depth);
                 ApplyStormLightingDim();
             }
@@ -159,6 +181,8 @@ namespace LogiCard.Board
             _mood = BoardWeatherMood.Clear;
             _hasCloudBankBounds = false;
             _cloudMassWorldBounds.Clear();
+            _cloudEnvelopes.Clear();
+            _cloudEnergizeGroups.Clear();
         }
 
         private Transform ModuleParent => _moduleRoot != null ? _moduleRoot : transform;
@@ -283,6 +307,7 @@ namespace LogiCard.Board
             var root = new GameObject("CloudBank");
             root.transform.SetParent(ModuleParent, false);
             _cloudMassWorldBounds.Clear();
+            _cloudEnvelopes.Clear();
 
             // Opaque clay spheres — no alpha 边缘 rings. Desk-lamp Lit shading supplies the 3D read
             // billboards never could (human Play image copy 13). Soft CloudAtlas haze fringes each
@@ -300,8 +325,14 @@ namespace LogiCard.Board
 
                 // 7-10 puffs per formation, each its own small Layer-1 puff — see PlaceClayMass for
                 // the triangular dense-middle/loose-edges assembly (human ask 2026-08-13).
-                PlaceClayMass(root.transform, spec.Name, pos, scale, Random.Range(7, 11), RandomMassYaw(), topTint, bellyTint);
+                float yaw = RandomMassYaw();
+                PlaceClayMass(root.transform, spec.Name, pos, scale, Random.Range(7, 11), yaw, topTint, bellyTint);
                 PlaceCloudEdgeHaze(root.transform, "Haze_" + spec.Name, pos, scale, topTint);
+
+                // Same 1.08× envelope the edge-haze rides — exterior shell of this Layer-2 formation.
+                Vector3 worldCenter = ModuleParent.TransformPoint(pos);
+                Vector3 envelopeExtents = scale * (0.5f * 1.08f);
+                _cloudEnvelopes.Add(new CloudEnvelope(worldCenter, envelopeExtents, yaw));
 
                 // Per-mass bounds, not just the aggregate — masses sit at different heights (Mass_High
                 // is a full HeightUnits taller than the rest), so a strike's X/Z and its target tip
@@ -317,6 +348,246 @@ namespace LogiCard.Board
             // Aggregate kept too — used only as a last-resort fallback if per-mass placement ever fails.
             _cloudBankWorldBounds = ComputeWorldBounds(root.transform);
             _hasCloudBankBounds = _cloudBankWorldBounds.size.sqrMagnitude > 0f;
+        }
+
+        /// <summary>
+        /// Yellow Zap segments along Layer-2 envelopes so arcs <b>embrace the clay edge</b>.
+        /// Each rim step spawns a 2–3 chord twist as one pulse group; each tick picks a group
+        /// at random (<see cref="CloudEnergizeFrequencySeconds"/>). Fair skips.
+        /// </summary>
+        private const int CloudEnergizeRimSegmentsPerMass = 8;
+        private const int CloudEnergizeBankRimSegments = 12;
+        /// <summary>Uniform scale = bolt thickness. Length is fitted to the chord separately.</summary>
+        private const float CloudEnergizeScaleMin = 0.28f;
+        private const float CloudEnergizeScaleMax = 0.42f;
+        /// <summary>Quiet gap between group pulses (lower = more frequent).</summary>
+        private const float CloudEnergizeFrequencySeconds = 1.8f;
+
+        private void PlaceStormCloudEnergize()
+        {
+            GameObject prefab = LoadPrefab(ref _lightningYellowPrefab, LightningYellowResourcePath);
+            if (prefab == null)
+            {
+                return;
+            }
+
+            _cloudEnergizeGroups.Clear();
+
+            var root = new GameObject("CloudEnergize");
+            root.transform.SetParent(ModuleParent, false);
+
+            // Per-formation exterior: walk the same Layer-2 envelope ellipse the haze uses.
+            for (int e = 0; e < _cloudEnvelopes.Count; e++)
+            {
+                PlaceEnergizeRimLoop(
+                    root.transform,
+                    prefab,
+                    $"Mass{e}",
+                    _cloudEnvelopes[e],
+                    CloudEnergizeRimSegmentsPerMass);
+            }
+
+            // General cloud bank silhouette — one outer ring around the whole shelf.
+            if (_hasCloudBankBounds && _cloudBankWorldBounds.size.sqrMagnitude > 0f)
+            {
+                Bounds bank = _cloudBankWorldBounds;
+                var bankEnvelope = new CloudEnvelope(
+                    bank.center,
+                    bank.extents * 1.04f,
+                    yawDegrees: 0f);
+                PlaceEnergizeRimLoop(
+                    root.transform,
+                    prefab,
+                    "Bank",
+                    bankEnvelope,
+                    CloudEnergizeBankRimSegments);
+            }
+
+            if (_cloudEnergizeGroups.Count > 0)
+            {
+                StartCoroutine(CloudEnergizePulseLoop());
+            }
+        }
+
+        /// <summary>
+        /// One rim step = one pulse group: 2–3 short chords with radial zig-zag so the flash
+        /// reads as a twisted cluster hugging that clay edge (not scattered single sparks).
+        /// </summary>
+        private void PlaceEnergizeRimLoop(
+            Transform parent,
+            GameObject prefab,
+            string tag,
+            CloudEnvelope envelope,
+            int segments)
+        {
+            segments = Mathf.Max(4, segments);
+            float phase = tag.Length * 0.7f;
+
+            for (int i = 0; i < segments; i++)
+            {
+                float a0 = (i / (float)segments) * Mathf.PI * 2f;
+                float a1 = ((i + 1) / (float)segments) * Mathf.PI * 2f;
+                // Random 2 or 3 chords for this cluster.
+                int chordCount = Random.Range(2, 4);
+                var group = new List<ParticleSystem>(chordCount);
+
+                Vector3 prev = EnvelopeRimPoint(
+                    envelope, a0, RimYBias(a0, phase), radialBias: 1.12f);
+
+                for (int c = 1; c <= chordCount; c++)
+                {
+                    float t = c / (float)chordCount;
+                    float angle = Mathf.Lerp(a0, a1, t);
+                    // Alternate out / in / out so the polyline twists around the clay puff.
+                    float radial = (c % 2 == 1) ? 0.96f : 1.14f;
+                    float y = RimYBias(angle, phase + c * 0.85f);
+                    Vector3 next = EnvelopeRimPoint(envelope, angle, y, radialBias: radial);
+                    TrySpawnRimChord(parent, prefab, $"{tag}_{i}_{c}", prev, next, group);
+                    prev = next;
+                }
+
+                if (group.Count >= 2)
+                {
+                    _cloudEnergizeGroups.Add(group);
+                }
+                else if (group.Count == 1 && _cloudEnergizeGroups.Count > 0)
+                {
+                    _cloudEnergizeGroups[_cloudEnergizeGroups.Count - 1].Add(group[0]);
+                }
+            }
+        }
+
+        private static float RimYBias(float angleRad, float phase)
+        {
+            return 0.40f
+                + 0.32f * Mathf.Sin(angleRad * 2f + phase)
+                + 0.10f * Mathf.Sin(angleRad * 5f + phase * 1.3f);
+        }
+
+        /// <summary>World point on the Layer-2 envelope ellipse with circumferential puff undulation
+        /// (same shell family as <see cref="PlaceCloudEdgeHaze"/>).
+        /// <paramref name="radialBias"/> &gt; 1 pushes outside the clay, &lt; 1 tucks into creases.</summary>
+        private static Vector3 EnvelopeRimPoint(
+            CloudEnvelope envelope,
+            float angleRad,
+            float yBias01,
+            float radialBias = 1f)
+        {
+            float cos = Mathf.Cos(angleRad);
+            float sin = Mathf.Sin(angleRad);
+            // Stronger bumpy radius so the rim follows clay puffs instead of a perfect ellipse.
+            float puff = 1f
+                + 0.18f * Mathf.Sin(angleRad * 3f)
+                + 0.10f * Mathf.Cos(angleRad * 5f)
+                + 0.05f * Mathf.Sin(angleRad * 7f);
+            float r = puff * radialBias;
+            Vector3 local = new Vector3(
+                cos * envelope.Extents.x * r,
+                Mathf.Lerp(-envelope.Extents.y, envelope.Extents.y, Mathf.Clamp01(yBias01)),
+                sin * envelope.Extents.z * r);
+            return envelope.WorldCenter + Quaternion.Euler(0f, envelope.YawDegrees, 0f) * local;
+        }
+
+        private void TrySpawnRimChord(
+            Transform parent,
+            GameObject prefab,
+            string name,
+            Vector3 worldA,
+            Vector3 worldB,
+            List<ParticleSystem> rimArcs)
+        {
+            ParticleSystem ps = SpawnEnergizeArcAlongEdge(parent, prefab, name, worldA, worldB);
+            if (ps != null)
+            {
+                rimArcs.Add(ps);
+            }
+        }
+
+        private ParticleSystem SpawnEnergizeArcAlongEdge(
+            Transform parent,
+            GameObject prefab,
+            string name,
+            Vector3 worldA,
+            Vector3 worldB)
+        {
+            Vector3 delta = worldB - worldA;
+            float worldLen = delta.magnitude;
+            if (worldLen < 0.08f)
+            {
+                return null;
+            }
+
+            Vector3 along = delta / worldLen;
+            float scale = Random.Range(CloudEnergizeScaleMin, CloudEnergizeScaleMax);
+
+            var instance = Instantiate(prefab, parent);
+            instance.name = name;
+            // Prefab bolt fires along local +Y — park the origin on A and aim at B.
+            instance.transform.SetPositionAndRotation(
+                worldA,
+                Quaternion.FromToRotation(Vector3.up, along));
+            instance.transform.localScale = Vector3.one * scale;
+
+            DisableZapGroundDecals(instance);
+            // Fit length to the chord; scale only drives thickness.
+            FitZapHeightToCloudRise(instance, worldLen / scale);
+
+            var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
+            for (int s = 0; s < systems.Length; s++)
+            {
+                systems[s].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+
+            return instance.GetComponent<ParticleSystem>()
+                ?? (systems.Length > 0 ? systems[0] : null);
+        }
+
+        /// <summary>
+        /// Each tick picks one random 2–3 arc cluster and hard-retriggers every Zap in that group
+        /// together, then waits <see cref="CloudEnergizeFrequencySeconds"/>.
+        /// </summary>
+        private IEnumerator CloudEnergizePulseLoop()
+        {
+            yield return new WaitForSeconds(0.4f);
+
+            while (true)
+            {
+                if (_cloudEnergizeGroups.Count == 0)
+                {
+                    yield break;
+                }
+
+                int groupIndex = Random.Range(0, _cloudEnergizeGroups.Count);
+                List<ParticleSystem> group = _cloudEnergizeGroups[groupIndex];
+                for (int i = 0; i < group.Count; i++)
+                {
+                    ParticleSystem ps = group[i];
+                    if (ps == null)
+                    {
+                        continue;
+                    }
+
+                    // Hard retrigger — one-shot Zap needs Clear or a second Play can be a no-op flash.
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                    ps.Play(true);
+                }
+
+                yield return new WaitForSeconds(CloudEnergizeFrequencySeconds);
+            }
+        }
+
+        /// <summary>Hide scorch / floor-add so tiny surface arcs don't stamp the clay.</summary>
+        private static void DisableZapGroundDecals(GameObject zapRoot)
+        {
+            Transform t = zapRoot.transform;
+            for (int i = 0; i < t.childCount; i++)
+            {
+                Transform child = t.GetChild(i);
+                if (child.name == "Scorch" || child.name == "Zap Add Floor")
+                {
+                    child.gameObject.SetActive(false);
+                }
+            }
         }
 
         /// <summary>World-space bounds of every opaque clay mesh under <paramref name="root"/>,
