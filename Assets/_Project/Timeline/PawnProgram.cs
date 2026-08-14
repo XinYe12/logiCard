@@ -35,6 +35,15 @@ namespace LogiCard.Timeline
         /// <summary>Bandage Time Resource cost (C63, frozen by the Bandage HUD-side contract).</summary>
         public const float BandageSeconds = 3f;
 
+        /// <summary>
+        /// Storm Time Resource cost (C67). Cards' numerics recommendation is still an OPEN "TR —"
+        /// placeholder (same convention as Interact/Flashbang/Adrenaline) — 0f here is a
+        /// non-inventing default that keeps <see cref="TryQueueStorm"/> reserving against budget the
+        /// same shape as every other verb, not a locked balance number. Update when Cards/human
+        /// locks a real cost, same two-step shape C62→C63 used for Bandage.
+        /// </summary>
+        public const float StormSeconds = 0f;
+
         private readonly List<ActionNode> _nodes = new List<ActionNode>();
         private readonly List<PlanarPosition> _draftWaypoints = new List<PlanarPosition>();
         private readonly List<PlanarPosition> _pathBuffer = new List<PlanarPosition>();
@@ -489,6 +498,35 @@ namespace LogiCard.Timeline
 
             _committedStepHistory.Add(beforeReserve);
             _nodes.Add(new ActionNode(ActionVerb.Bandage, executeTime, PositionAtExecuteTime(executeTime), CurrentStance));
+            rejectionReason = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Books an <see cref="ActionVerb.Storm"/> node at an explicit <paramref name="executeTime"/>
+        /// (Storm contract, C67) — self-targeting like Bandage, but with no board-tap placement at
+        /// all (the scrubber-click path is the only path in; there is no board-tap counterpart to
+        /// resolve an executeTime from). Mirrors <see cref="TryQueueDoor"/>/<see cref="TryQueueShoot"/>'s
+        /// real guard-first shape (commit any pending Move draft before this verb's own checks) rather
+        /// than being built from scratch. No Sprint gate, no board position needed — Sim-side stays
+        /// fully permissive on once-per-match (that is a HUD-side gate, same shape as Bandage's
+        /// "already queued this Program" check).
+        /// </summary>
+        public bool TryQueueStorm(float executeTime, out string rejectionReason)
+        {
+            if (HasDraft && !TryCommitDraft(out rejectionReason))
+            {
+                return false;
+            }
+
+            var beforeReserve = new CommittedStepSnapshot(_nodes.Count, UsedSeconds, CurrentPosition, CurrentStance);
+            if (!TryReserve(StormSeconds, out rejectionReason))
+            {
+                return false;
+            }
+
+            _committedStepHistory.Add(beforeReserve);
+            _nodes.Add(new ActionNode(ActionVerb.Storm, executeTime, PositionAtExecuteTime(executeTime), CurrentStance));
             rejectionReason = null;
             return true;
         }

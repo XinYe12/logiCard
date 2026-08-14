@@ -459,6 +459,32 @@ namespace LogiCard.Board
         }
 
         /// <summary>
+        /// Places a Storm node at an explicit Time Resource instant (Storm contract, C67) — unlike
+        /// Bandage, Storm has no board-tap placement path at all (it is self-targeting with nothing
+        /// to aim at), so this scrubber-click path is the only way in. Mirrors
+        /// <see cref="TryQueueBandageAt"/>'s shape exactly.
+        /// </summary>
+        public bool TryQueueStormAt(float executeTime, out string reason)
+        {
+            if (_locked || Program == null)
+            {
+                reason = "Round is locked.";
+                ActionRejected?.Invoke(reason);
+                return false;
+            }
+
+            if (!Program.TryQueueStorm(executeTime, out reason))
+            {
+                ActionRejected?.Invoke(reason);
+                return false;
+            }
+
+            RefreshPreview();
+            QueueChanged?.Invoke(Program);
+            return true;
+        }
+
+        /// <summary>
         /// Board-tap placement (UI_FLOW §6 item 3 / Bandage HUD-side contract): snaps to the nearest
         /// already-booked Move node's arrival instant, or the schedule tip if none are booked yet.
         /// </summary>

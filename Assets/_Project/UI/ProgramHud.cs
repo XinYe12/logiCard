@@ -137,10 +137,12 @@ namespace LogiCard.UI
         private GameObject _shootModeControls;
         private GameObject _doorModeControls;
         private GameObject _bandageModeControls;
+        private GameObject _stormModeControls;
         private Text _stanceLabel;
         private Text _shootModeLabel;
         private Text _doorModeLabel;
         private Text _bandageModeLabel;
+        private Text _stormModeLabel;
         private GearHandView _gearHand;
         private Func<int> _woundsOf;
         private Func<int> _bandageChargeOf;
@@ -660,6 +662,18 @@ namespace LogiCard.UI
             _bandageModeLabel = _ui.CreateText(bandageRt, "BandageModeLabel", "BANDAGE", 18, TextAnchor.MiddleLeft, Ink);
             UiFactory.PlaceRow(_bandageModeLabel.rectTransform, ref bandageCursor, ContextLabelHeight, ContextLabelGap);
 
+            _stormModeControls = new GameObject("StormModeControls", typeof(RectTransform));
+            var stormRt = _stormModeControls.GetComponent<RectTransform>();
+            stormRt.SetParent(zone, false);
+            UiFactory.Stretch(stormRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            float stormCursor = rowTop;
+            // Arm happens on the Gear_Storm card, not a verb-row button (Storm contract, C67) —
+            // context/status only, same shape as Bandage's line above. Storm has no board-tap path
+            // at all (self-targeting, nothing to aim at), so the copy says "scrubber" only.
+            _stormModeLabel = _ui.CreateText(stormRt, "StormModeLabel", "STORM", 18, TextAnchor.MiddleLeft, Ink);
+            UiFactory.PlaceRow(_stormModeLabel.rectTransform, ref stormCursor, ContextLabelHeight, ContextLabelGap);
+
             // Move uses two control rows (stances + SET PATH); Shoot/Door share that taller envelope.
             cursor = rowTop
                 - ContextLabelHeight - ContextLabelGap
@@ -863,12 +877,14 @@ namespace LogiCard.UI
         /// </summary>
         private void OnGearCardArmed(CardId id)
         {
-            if (id != CardId.Bandage)
+            if (id == CardId.Bandage)
             {
-                return;
+                SetMode(ActionVerb.Bandage);
             }
-
-            SetMode(ActionVerb.Bandage);
+            else if (id == CardId.Storm)
+            {
+                SetMode(ActionVerb.Storm);
+            }
         }
 
         /// <summary>
@@ -878,7 +894,7 @@ namespace LogiCard.UI
         /// </summary>
         private void OnGearArmCleared()
         {
-            if (_input != null && _input.Mode == ActionVerb.Bandage)
+            if (_input != null && (_input.Mode == ActionVerb.Bandage || _input.Mode == ActionVerb.Storm))
             {
                 _input.Mode = ActionVerb.Move;
                 RefreshModeButtons();
@@ -899,22 +915,29 @@ namespace LogiCard.UI
                 return;
             }
 
-            bool legal = _woundsOf != null
+            bool bandageLegal = _woundsOf != null
                 && _bandageChargeOf != null
                 && _input?.Program != null
                 && _woundsOf() > 0
                 && _bandageChargeOf() == 0
-                && !HasBandageNodeQueued(_input.Program);
+                && !HasNodeQueued(_input.Program, ActionVerb.Bandage);
 
-            _gearHand.SetSpent(CardId.Bandage, !legal);
+            _gearHand.SetSpent(CardId.Bandage, !bandageLegal);
+
+            // Storm's Sim-side stays fully permissive on once-per-match (frozen contract, C67) — this
+            // "already queued this Program" dedup is the best gate achievable HUD-side without a
+            // cross-round counter (RoundPlayback has no StormCast-count reader the way it does
+            // BandageChargeOf). Flagged as a deviation: this is per-round, not true once-per-match.
+            bool stormLegal = _input?.Program != null && !HasNodeQueued(_input.Program, ActionVerb.Storm);
+            _gearHand.SetSpent(CardId.Storm, !stormLegal);
         }
 
-        private static bool HasBandageNodeQueued(PawnProgram program)
+        private static bool HasNodeQueued(PawnProgram program, ActionVerb verb)
         {
             IReadOnlyList<ActionNode> nodes = program.Nodes;
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (nodes[i].Verb == ActionVerb.Bandage)
+                if (nodes[i].Verb == verb)
                 {
                     return true;
                 }
@@ -993,6 +1016,11 @@ namespace LogiCard.UI
                 _bandageModeControls.SetActive(mode == ActionVerb.Bandage);
             }
 
+            if (_stormModeControls != null)
+            {
+                _stormModeControls.SetActive(mode == ActionVerb.Storm);
+            }
+
             // The floating door prompt only makes sense in Door mode — hide it unconditionally here
             // so leaving Door mode always clears it, regardless of which refresh path got here
             // (RefreshDoorModeControls only re-shows it when there's still something pending).
@@ -1013,6 +1041,10 @@ namespace LogiCard.UI
             {
                 RefreshBandageModeControls();
             }
+            else if (mode == ActionVerb.Storm)
+            {
+                RefreshStormModeControls();
+            }
             else
             {
                 RefreshStanceControls(program);
@@ -1027,6 +1059,18 @@ namespace LogiCard.UI
             }
 
             _bandageModeLabel.text = $"BANDAGE  {PawnProgram.BandageSeconds:0}s — tap board or scrubber to place";
+        }
+
+        private void RefreshStormModeControls()
+        {
+            if (_stormModeLabel == null)
+            {
+                return;
+            }
+
+            // No numeric cost shown — TR — is still OPEN (Cards' C67 recommendation), and there is no
+            // board-tap path to mention (self-targeting, nothing to aim at).
+            _stormModeLabel.text = "STORM — scrubber to place";
         }
 
         private void RefreshShootModeControls(PawnProgram program)
@@ -1252,13 +1296,17 @@ namespace LogiCard.UI
             RefreshUndoButton(program);
             RefreshScrubberMarkers(program);
 
-            // A Bandage node landing while still armed means TryQueueBandage just succeeded (armed
-            // Bandage is the only way one gets added to the tail) — clear arm / Mode here (DoD gate 6).
-            if (_gearHand != null && _gearHand.ArmedId == CardId.Bandage
-                && program.Nodes.Count > 0
-                && program.Nodes[program.Nodes.Count - 1].Verb == ActionVerb.Bandage)
+            // A Bandage/Storm node landing while still armed means TryQueueBandage/TryQueueStorm just
+            // succeeded (armed is the only way one gets added to the tail) — clear arm / Mode here
+            // (DoD gate 6, same shape for both cards).
+            if (_gearHand != null && program.Nodes.Count > 0)
             {
-                _gearHand.ClearArm();
+                ActionVerb lastVerb = program.Nodes[program.Nodes.Count - 1].Verb;
+                if ((_gearHand.ArmedId == CardId.Bandage && lastVerb == ActionVerb.Bandage)
+                    || (_gearHand.ArmedId == CardId.Storm && lastVerb == ActionVerb.Storm))
+                {
+                    _gearHand.ClearArm();
+                }
             }
 
             RefreshGearHandLegality();
@@ -1519,13 +1567,21 @@ namespace LogiCard.UI
             _clock.Pause();
             _clock.SetNormalized(value);
 
-            // Scrubber-click placement while Bandage is armed (Bandage HUD-side contract, item 3).
-            // Self-limiting against drag repeats: the first successful place clears the arm via
-            // OnQueueChanged, so later onValueChanged ticks in the same drag fall through to a plain
-            // scrub with no further placement attempt.
-            if (_gearHand != null && _gearHand.ArmedId == CardId.Bandage && _input != null)
+            // Scrubber-click placement while Bandage or Storm is armed (Bandage HUD-side contract item
+            // 3; Storm contract, C67, item 2 — Storm's only placement path). Self-limiting against
+            // drag repeats: the first successful place clears the arm via OnQueueChanged, so later
+            // onValueChanged ticks in the same drag fall through to a plain scrub with no further
+            // placement attempt.
+            if (_gearHand != null && _input != null)
             {
-                _input.TryQueueBandageAt(_clock.CurrentSeconds, out _);
+                if (_gearHand.ArmedId == CardId.Bandage)
+                {
+                    _input.TryQueueBandageAt(_clock.CurrentSeconds, out _);
+                }
+                else if (_gearHand.ArmedId == CardId.Storm)
+                {
+                    _input.TryQueueStormAt(_clock.CurrentSeconds, out _);
+                }
             }
         }
 

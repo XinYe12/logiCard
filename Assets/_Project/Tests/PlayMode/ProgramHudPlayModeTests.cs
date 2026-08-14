@@ -300,6 +300,34 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(bandage.interactable, Is.False, "Charge is spent — a Bandage node is already queued this Program.");
         }
 
+        /// <summary>
+        /// Storm contract (C67) arm → place smoke, same shape as Bandage's above: Gear_Storm arms,
+        /// placement succeeds, and the successful placement auto-clears the arm / drops Mode back to
+        /// Move and re-blocks the card (a Storm node is already queued this Program). Storm has no
+        /// board-tap path at all (self-targeting, nothing to aim at) — production places it via the
+        /// scrubber's OnScrubberMoved handler, so this exercises the same
+        /// <see cref="BoardInputController.TryQueueStormAt"/> entry point directly rather than a
+        /// simulated slider drag. Unlike Bandage, Storm needs no <see cref="ProgramHud.RegisterMatchState"/>
+        /// wound/charge injection — its only HUD-side gate is "not already queued this Program".
+        /// </summary>
+        [Test]
+        public void GearStormArmsThenScrubberPlacesAStormNode()
+        {
+            Button storm = FindByName<Button>(GearHandView.ButtonName(CardId.Storm));
+            Assert.That(storm, Is.Not.Null, "HUD has no Gear_Storm button.");
+            Assert.That(storm.interactable, Is.True, "Storm should be armable with none queued yet this Program.");
+
+            storm.onClick.Invoke();
+            Assert.That(AttackerInput.Mode, Is.EqualTo(ActionVerb.Storm));
+
+            Assert.That(AttackerInput.TryQueueStormAt(AttackerInput.Program.UsedSeconds, out string reason), Is.True, reason);
+            Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(1));
+            Assert.That(AttackerInput.Program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Storm));
+
+            Assert.That(AttackerInput.Mode, Is.EqualTo(ActionVerb.Move), "Placement must drop Mode back to Move.");
+            Assert.That(storm.interactable, Is.False, "A Storm node is already queued this Program.");
+        }
+
         [Test]
         public void PlaybackPlacesThePawnOnItsScheduledPointAtTheArrivalSecond()
         {

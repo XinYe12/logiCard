@@ -341,5 +341,54 @@ namespace LogiCard.Tests.EditMode
             Assert.That(program.Nodes.Count, Is.EqualTo(1), "Undo removes the Bandage step first.");
             Assert.That(program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Move));
         }
+
+        // ---------- Storm (C67 / Storm contract) ----------
+
+        [Test]
+        public void TryQueueStorm_AtScheduleTip_ReservesCostAndAddsNode()
+        {
+            var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+
+            bool ok = program.TryQueueStorm(program.UsedSeconds, out string reason);
+
+            Assert.That(ok, Is.True, reason);
+            Assert.That(program.Nodes.Count, Is.EqualTo(1));
+            Assert.That(program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Storm));
+            Assert.That(program.Nodes[0].ExecuteTime, Is.EqualTo(0f));
+            Assert.That(program.UsedSeconds, Is.EqualTo(PawnProgram.StormSeconds));
+        }
+
+        [Test]
+        public void TryQueueStorm_HasNoSprintGate_UnlikeBandage()
+        {
+            var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+            Assert.That(program.TryQueueMove(new PlanarPosition(3, 0), out _, StanceType.Sprint), Is.True);
+            float sprintArrival = program.Nodes[0].ExecuteTime;
+            Assert.That(program.IsMidSprintAt(sprintArrival / 2f), Is.True);
+
+            // Unlike TryQueueBandage_MidSprintLeg_IsRejectedButArrivalIsLegal above, Storm has no
+            // Sprint gate at all (frozen contract, C67) — mid-Sprint placement is legal.
+            Assert.That(program.TryQueueStorm(sprintArrival / 2f, out string reason), Is.True, reason);
+            Assert.That(program.Nodes[1].Verb, Is.EqualTo(ActionVerb.Storm));
+            Assert.That(program.Nodes[1].ExecuteTime, Is.EqualTo(sprintArrival / 2f));
+        }
+
+        [Test]
+        public void TryQueueStorm_CommitsPendingDraftFirstAndUndoRestoresIt()
+        {
+            var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+            Assert.That(program.TryAddWaypoint(new PlanarPosition(2, 0), out _), Is.True);
+            Assert.That(program.HasDraft, Is.True);
+
+            Assert.That(program.TryQueueStorm(program.UsedSeconds, out string reason), Is.True, reason);
+            Assert.That(program.HasDraft, Is.False, "Pending draft must commit before Storm books.");
+            Assert.That(program.Nodes.Count, Is.EqualTo(2), "Move (from committed draft) then Storm.");
+            Assert.That(program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Move));
+            Assert.That(program.Nodes[1].Verb, Is.EqualTo(ActionVerb.Storm));
+
+            Assert.That(program.TryUndoLastStep(out _), Is.True);
+            Assert.That(program.Nodes.Count, Is.EqualTo(1), "Undo removes the Storm step first.");
+            Assert.That(program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Move));
+        }
     }
 }

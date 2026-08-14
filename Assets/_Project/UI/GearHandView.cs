@@ -65,6 +65,7 @@ namespace LogiCard.UI
             new GearHandCardInfo(CardId.Interact, "Interact", "TR —", "PROGRAM", oncePerMatch: false),
             new GearHandCardInfo(CardId.Flashbang, "Flashbang", "TR —", "PROGRAM", oncePerMatch: true),
             new GearHandCardInfo(CardId.Adrenaline, "Adrenaline", "TR —", "PLAYBACK", oncePerMatch: true),
+            new GearHandCardInfo(CardId.Storm, "Storm", "TR —", "PROGRAM", oncePerMatch: true),
         };
 
         private readonly Dictionary<CardId, CardSlot> _slots = new Dictionary<CardId, CardSlot>();
