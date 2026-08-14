@@ -20,6 +20,11 @@ namespace LogiCard.Tests.EditMode
             TapeEventType.Killed,
             TapeEventType.DoorOpened,
             TapeEventType.DoorClosed,
+
+            // C67 — Storm card cast. Continuous presenter mirrors DoorOpened/Closed
+            // (RoundPlayback.SyncWeatherToSeconds): board weather is Storm from this event's
+            // Seconds onward for the rest of the round.
+            TapeEventType.StormCast,
         };
 
         private static readonly HashSet<TapeEventType> ReservedNoPresenterYet = new HashSet<TapeEventType>

@@ -20,6 +20,11 @@ namespace LogiCard.Net
         /// follow-up per docs/contracts/CURRENT.md's Bandage contract); reserved in
         /// TapeEventPlaybackCoverageTests until it lands.</summary>
         Healed = 7,
+
+        /// <summary>C67 — Storm card cast. Continuous presenter (mirrors DoorOpened/Closed): board
+        /// weather mood is Storm from this event's Seconds onward for the rest of the round; no
+        /// wound/charge effect.</summary>
+        StormCast = 8,
     }
 
     /// <summary>

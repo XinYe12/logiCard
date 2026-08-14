@@ -52,6 +52,11 @@ namespace LogiCard.Boot
         private float _doorsSyncedToSeconds = float.NaN;
         private bool _anyoneDead;
 
+        private BoardWeatherPocket _weatherPocket;
+        private BoardWeatherMood _weatherMoodAtArm = BoardWeatherMood.Clear;
+        private BoardWeatherMood? _lastAppliedWeatherMood;
+        private float _weatherSyncedToSeconds = float.NaN;
+
         /// <summary>Stub outcome text for the HUD; empty string means "clear the banner".</summary>
         public event Action<string> OutcomeReported;
 
@@ -136,6 +141,13 @@ namespace LogiCard.Boot
             _doorStateAtArm.Clear();
             _doorsSyncedToSeconds = float.NaN;
 
+            // C67 — a fresh match starts on the ambient Fair mood, not whatever a prior match's
+            // Storm cast left the board in.
+            _weatherSyncedToSeconds = float.NaN;
+            _lastAppliedWeatherMood = null;
+            _weatherMoodAtArm = BoardWeatherMood.Fair;
+            _weatherPocket?.ApplyWeather(BoardWeatherMood.Fair);
+
             if (_board != null && _board.Model != null)
             {
                 IReadOnlyList<Door> doors = _board.Model.Doors;
@@ -169,6 +181,16 @@ namespace LogiCard.Boot
         public void SetMatchResolver(IMatchResolver resolver)
         {
             _matchResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        }
+
+        /// <summary>
+        /// Binds the weather host so Storm-card playback can drive it (C67). Optional — leaving it
+        /// unset makes <see cref="SyncWeatherToSeconds"/> a no-op (safe for scenes/tests without
+        /// weather).
+        /// </summary>
+        public void SetWeatherPocket(BoardWeatherPocket pocket)
+        {
+            _weatherPocket = pocket;
         }
 
         /// <summary>
@@ -247,6 +269,7 @@ namespace LogiCard.Boot
             BuildTracers();
             BuildHitVfx();
             SnapshotDoorStatesAtArm();
+            SnapshotWeatherAtArm();
 
             Debug.Log($"[logiCard] Ghost resolve: {_tape.Events.Count} event(s), " +
                       $"{_tape.Tracks.Count} pawn(s), tape ends at {_tape.EndSeconds:0.0}s TR.");
@@ -285,6 +308,19 @@ namespace LogiCard.Boot
 
             // Final authoritative apply (covers Aftermath without scrubbing to the tape end).
             SyncDoorsToSeconds(float.PositiveInfinity);
+            SyncWeatherToSeconds(float.PositiveInfinity);
+        }
+
+        /// <summary>
+        /// Snapshot the board's active weather mood at Lock In (C67) so scrubbing back to
+        /// round-start restores whatever mood was already active before this round's Storm cast,
+        /// if any — same shape as <see cref="SnapshotDoorStatesAtArm"/>.
+        /// </summary>
+        private void SnapshotWeatherAtArm()
+        {
+            _weatherMoodAtArm = _weatherPocket != null ? _weatherPocket.ActiveMood : BoardWeatherMood.Clear;
+            _weatherSyncedToSeconds = float.NaN;
+            _lastAppliedWeatherMood = null;
         }
 
         /// <summary>
@@ -360,6 +396,49 @@ namespace LogiCard.Boot
             _doorsSyncedToSeconds = seconds;
         }
 
+        /// <summary>
+        /// C67 — Storm card continuous presenter, same shape as <see cref="SyncDoorsToSeconds"/>:
+        /// weather mood is a pure function of the arm-time snapshot plus any StormCast event up to
+        /// <paramref name="seconds"/>. Double-guarded (same-seconds skip, then same-mood skip)
+        /// because <see cref="BoardWeatherPocket.ApplyWeather"/> tears down and rebuilds the whole
+        /// cloud/rain/lightning module — calling it on every identical tick would be the exact
+        /// "door bug class" PLAYBACK_CONTRACT §2 rule 4 warns about, just far more expensive.
+        /// </summary>
+        private void SyncWeatherToSeconds(float seconds)
+        {
+            if (_weatherPocket == null || _weatherSyncedToSeconds == seconds)
+            {
+                return;
+            }
+
+            BoardWeatherMood target = _weatherMoodAtArm;
+            if (_tape != null)
+            {
+                for (int i = 0; i < _tape.Events.Count; i++)
+                {
+                    TapeEvent tapeEvent = _tape.Events[i];
+                    // Events are sorted by Seconds (GhostResolver.CompareEvents).
+                    if (tapeEvent.Seconds > seconds)
+                    {
+                        break;
+                    }
+
+                    if (tapeEvent.Type == TapeEventType.StormCast)
+                    {
+                        target = BoardWeatherMood.Storm;
+                    }
+                }
+            }
+
+            if (_lastAppliedWeatherMood != target)
+            {
+                _weatherPocket.ApplyWeather(target);
+                _lastAppliedWeatherMood = target;
+            }
+
+            _weatherSyncedToSeconds = seconds;
+        }
+
         /// <summary>Back to Allot/Program: drop the tape and stand everyone on their carried point.</summary>
         public void Disarm()
         {
@@ -421,6 +500,7 @@ namespace LogiCard.Boot
             UpdateTracers(seconds);
             UpdateHitVfx(seconds);
             SyncDoorsToSeconds(seconds);
+            SyncWeatherToSeconds(seconds);
 
             if (seconds < _lastAppliedSeconds)
             {

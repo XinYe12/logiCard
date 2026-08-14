@@ -1,10 +1,11 @@
 ﻿# Core / Integrator — STATUS
 
 **Wave / Day:** Phase 5 — Integrator 2026-08-14
-**Branch / worktree:** `master` @ `a76f006` — clean
+**Branch / worktree:** `master` — clean, Storm card Sim-side landed directly
 **Last cross-reviewed:** 2026-08-14 — committed dirty rematch/floors/lighting; wrote C65; opened Map Phase 2
 contract; merged Cards' `feat/cards-collection-docs`, Atmosphere's `feat/atmosphere-stylized`, and Map's
-`dept/map` Phase 2 (all human-approved)
+`dept/map` Phase 2 (all human-approved); human directly asked for a Storm gear card (chat) — wrote **C67**,
+landed the Sim-side myself, opened a 3-way Cards+UI+Atmosphere contract
 
 ## Done
 
@@ -32,19 +33,29 @@ contract; merged Cards' `feat/cards-collection-docs`, Atmosphere's `feat/atmosph
   dressing); walls draw as toy fences instead of a brick slab, still presentation-only (no collider/Sim
   change). New `BoardSurfaceMaterialsTests`. Left the branch's `ProjectSettings` define noise and orphan
   pack `.meta` deletes out of the merge per Map's own STATUS note.
+- **Storm card Sim-side (C67)**, landed directly (mirrors C63's Bandage Sim-side carve-out — no worker
+  needed, small bounded change): `ActionVerb.Storm`, `TapeEventType.StormCast`,
+  permissive `GhostResolver.CompileTrack` emission, `RoundPlayback.SyncWeatherToSeconds`/
+  `SnapshotWeatherAtArm`/`SetWeatherPocket` (continuous presenter mirroring door sync, double-guarded
+  against re-triggering `BoardWeatherPocket.ApplyWeather`'s expensive rebuild on repeated ticks),
+  `ResetForNewMatch` reverting weather to Fair on rematch, `GameBootstrap.BuildWeatherPocket()` boot
+  mood flipped Storm→Fair so the card is a visible change. `GhostResolverStormTests` (EditMode) added.
+  Opened the cross-dept Storm contract (Cards + UI + Atmosphere) in `contracts/CURRENT.md`.
 
 ## In progress
 
-- Monitor UI Bandage HUD report-back
-- Batchmode re-verify `a76f006` (new PlayMode/EditMode tests from rematch/relight, Atmosphere's
-  `CloudEnergize`, and Map's `BoardSurfaceMaterialsTests` not yet run in batchmode — Editor must be closed)
-- After HUD merge: Healed presenter (`PLAYBACK_CONTRACT` §3)
+- Monitor Cards + UI + Atmosphere Storm-card report-backs, and UI's Bandage HUD report-back
+- Batchmode re-verify current tip (new PlayMode/EditMode tests from rematch/relight, Atmosphere's
+  `CloudEnergize`, Map's `BoardSurfaceMaterialsTests`, and today's `GhostResolverStormTests` not yet run
+  in batchmode — Editor must be closed)
+- After Bandage HUD merge: Healed presenter (`PLAYBACK_CONTRACT` §3)
+- After Storm HUD lands: PlayMode arm→scrub→rewind coverage for the weather presenter (blocked on UI's
+  `TryQueueStorm` existing to arm through)
 - Optional, not blocking: `GameBootstrap` lighting/`BuildDioramaVolume` re-grade against Map's new
   saturated flat materials — human already likes the current Play look
 
 ## Offers
 
+- Merge Storm card (Cards + UI + Atmosphere) when all three report Ready + green
 - Merge UI Bandage HUD when Ready + green
-- Cards idle — open a deckbuilder systems brief or Flashbang re-derive if human wants that lane active again
-- Atmosphere idle — restaff for a new weather mood if wanted; unrelated dirty in that worktree still needs a human keep/delete call
 - Map idle — restaff for a prop/dressing follow-up if wanted

@@ -20,12 +20,95 @@ worker slots closed again after C60/C61 (2026-08-11). **Still open:** human sigh
 (runtime grade actually warm now) + C61 scroll zoom feel + earlier reflection/clouds/Scout outfit items.
 **Updated:** 2026-08-14 by Integrator — dirty rematch/floors/lighting committed (`master`), clearing the
 `Board*` conflict; **Map Phase 2 contract opened** (C65, human-confirmed YES on the C53 surface-material
-amendment). Bandage HUD-side contract still open (C63). Gear pause carve-out (C63) and Map's C57 carve-out
-(map/terrain) still apply; Net / other Sim stay paused.
+amendment); **Storm card contract opened** (C67, human-directed cross-dept: Cards + UI + Atmosphere) —
+Sim-side already closed on master. Bandage HUD-side contract still open (C63). Gear pause carve-out (C63,
+extended to C67) and Map's C57 carve-out (map/terrain) still apply; Net / other Sim stay paused.
+**Capacity note:** this wave runs **3 coding-hot departments at once** (Cards + UI + Atmosphere) against the
+Storm contract below — an explicit exception to PARALLEL_OPS's "prefer ≤2" default, opened deliberately with
+frozen signatures for each so contracts stay reviewable (see `departments/INDEX.md`).
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
+
+### Storm card — cross-dept (open 2026-08-14 — **Cards + UI + Atmosphere**, human-directed)
+
+**Depends on:** **C67**; Sim-side closed below (already on `master`); `GearHandView`/`ProgramHud` dock
+pattern (same files the still-open Bandage HUD-side contract targets — build both in the same UI pass,
+your call whether sequential or together, since it's the same worktree); `PLAYBACK_CONTRACT.md`.
+
+**Frozen signatures (Sim-side — landed, `master`)**
+
+```csharp
+// Net
+ActionVerb.Storm            // self-targeting, no board position, no wound/charge effect
+TapeEventType.StormCast     // continuous presenter (mirrors DoorOpened/Closed), not one-shot
+
+// Boot — weather binding; GameBootstrap already calls this in BuildWeatherPocket()
+void RoundPlayback.SetWeatherPocket(BoardWeatherPocket pocket);
+```
+
+`GhostResolver` emits `StormCast` at the node's `ExecuteTime`, fully permissive (no once-per-match
+re-check — that's a HUD-side gate, same shape as Bandage). `RoundPlayback.SyncWeatherToSeconds` derives
+the active mood as a pure function of (arm-time snapshot + any `StormCast` ≤ scrubber second) and only
+calls `BoardWeatherPocket.ApplyWeather` when the derived mood actually changes — **do not call
+`ApplyWeather` from anywhere else per-tick**; it tears down and rebuilds the whole cloud/rain/lightning
+module (`ClearWeather` → `DestroyImmediate` on every child), so an unguarded per-tick call is the "door bug
+class" PLAYBACK_CONTRACT §2 rule 4 warns about, just far more expensive. `GameBootstrap.BuildWeatherPocket()`
+now boots the board on **Fair**, not Storm (was Storm from the earlier Atmosphere merge this session) —
+otherwise casting the card would be a no-op.
+
+**DoD, split by seat:**
+
+**Cards** (`Assets/_Project/Cards/CardData.cs`, `docs/cards/CARD_COLLECTION.md`):
+1. Add `CardId.Storm = 4` and a `GEAR_STORM_AGENT_BRIEF.md`-style short numerics recommendation (Time
+   Resource cost placeholder — do **not** invent a number, use `"TR —"` like every other un-locked
+   first-wave card per C62's convention; once-per-match vs. unlimited casts; a one-line `effectSummary`
+   describing the presentation-only weather trigger, not a combat effect).
+2. `docs/cards/CARD_COLLECTION.md` catalog entry: Storm, gear card, self-targeting, Program-phase only,
+   no LoS/target-pawn needed (unlike Bandage's board-tap-near-node option — Storm only ever needs a
+   Time Resource second, nothing else).
+3. Numerics stay **OPEN** until human confirms — this DoD item proposes defaults, Integrator/human locks
+   them into a follow-up C-row amendment, same two-step shape C62→C63 used for Bandage.
+
+**UI** (`Assets/_Project/UI/GearHandView.cs`, `ProgramHud.cs`, `BoardInputController.cs`,
+`Assets/_Project/Timeline/PawnProgram.cs`):
+1. Add a `PawnProgram.TryQueueStorm(float executeTime, out string rejectionReason)` — same shape as
+   Bandage's still-open `TryQueueBandage`: Program-phase only, no board position, no Sprint/legality
+   gate beyond whatever once-per-match rule Cards' brief recommends.
+2. `BoardInputController`: arming Storm sets `Mode = ActionVerb.Storm`; scrubber click places at the
+   scrubber's current Time Resource second (Storm has no board-tap placement — it isn't targeted).
+3. Dock a `Storm` slot into `GearHandView.FirstWave` (or its successor once Bandage's dock pattern
+   lands) using the same cardstock visual language as the existing four.
+4. Tests: EditMode `PawnProgram` Storm case; PlayMode HUD arm→place smoke, mirroring whatever pattern
+   the Bandage HUD-side contract's own DoD item 7 establishes — build this once, reuse for both cards.
+
+**Atmosphere** (`Assets/_Project/Board/BoardWeatherPocket.cs`):
+1. Confirm `ApplyWeather`/`ClearWeather` are safe to call **mid-match, repeatedly, in any order**
+   (Fair→Storm, Storm→Fair on rewind, Storm→Storm no-op) — this API used to only run once at boot;
+   it is now driven by a Playback-time presenter that can, in principle, call it many times across a
+   scrub session (guarded on the `RoundPlayback` side, see above, but add your own same-mood early-out
+   inside `ApplyWeather` too as defense in depth — belt and suspenders, not a design change).
+2. Double-check `ApplyStormLightingDim`/`RestoreLightingIfDimmed` round-trips cleanly across repeated
+   Fair↔Storm cycles within one Play session (dimmed-light state must not drift or double-apply).
+3. **Creative, optional:** a short "storm rolling in" transition-in beat (few-hundred-ms build, not an
+   instant pop) sells the card-cast moment better than the current instant module swap — nice-to-have,
+   not required for DoD.
+4. Out of scope: no new weather VFX assets — this reuses the already-shipped Storm module verbatim.
+
+**Out of scope (all seats):** any combat/mechanical effect for Storm (visibility, blind, damage) — this
+wave is presentation-only, mirrors Adrenaline's stub precedent; a mechanical effect needs its own
+PRODUCT_MEMORY row and PLAYBACK_CONTRACT redesign, not bundled here.
+
+### Storm Sim-side (closed 2026-08-14 — reference)
+
+- `ActionVerb.Storm`, `TapeEventType.StormCast`, permissive `GhostResolver.CompileTrack` emission,
+  `RoundPlayback.SyncWeatherToSeconds`/`SnapshotWeatherAtArm`/`SetWeatherPocket`, `ResetForNewMatch`
+  reverting weather to Fair on rematch, `GameBootstrap.BuildWeatherPocket()` boot-mood flip to Fair.
+  `GhostResolverStormTests` (EditMode) covers the resolver. **Not yet covered:** a PlayMode arm→scrub→
+  rewind test — blocked on UI's `TryQueueStorm`/HUD wiring above; add it alongside that work, mirroring
+  the pattern `RoundPlaybackPlayModeTests` already uses for door/wound scrubbing. **Not yet
+  batchmode-verified** — same standing caveat as everything landed today.
 
 ### Map Phase 2 — board surface material swap (open 2026-08-14 — **Map seat** on `logiCard-map`)
 
