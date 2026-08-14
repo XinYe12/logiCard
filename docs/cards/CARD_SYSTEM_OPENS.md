@@ -1,7 +1,7 @@
 # Card System — C64 OPEN Decision Menu
 
-**Status:** **Answered 2026-08-14** — human confirmed plan defaults (Q1–Q8). **C66 promoted** into `PRODUCT_MEMORY.md`, merged to `master` by Integrator.  
-**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C64**, **C66**, **C47**, **C62**/**C63**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`CARD_COLLECTION.md`](CARD_COLLECTION.md).
+**Status:** **Answered 2026-08-14** — Q1–Q8 locked as **C66**. Packaging follow-up **C68** (8 per Character; Character in card/deck system). **C67** = Storm gear (separate). See [`DECKBUILDER_SYSTEMS_BRIEF.md`](DECKBUILDER_SYSTEMS_BRIEF.md).  
+**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C64**, **C66**, **C67**, **C68**, **C47**, **C62**/**C63**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`CARD_COLLECTION.md`](CARD_COLLECTION.md).
 
 C64 locked the **hybrid** model (signature cards + shared deckbuilding library). These answers size the deckbuilder / in-match hand layer.
 
@@ -85,11 +85,11 @@ C64 locked the **hybrid** model (signature cards + shared deckbuilding library).
 
 ---
 
-## Proposed C66 — promoted on this branch (merge to master still Integrator)
+## C66 — promoted on master
 
-Human confirmed 2026-08-14 via plan defaults on this menu. **C66 row written into** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) on `feat/cards-collection-docs`. Integrator should review on merge; Cards will not push/merge to master.
+Human confirmed 2026-08-14 via plan defaults on this menu. **C66** lives in [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) on `master` (Integrator assigned the number; Cards had drafted it as C65 before Map claimed C65).
 
-**Working title C66 (number Integrator's to assign):** Deckbuilder sizing + hand/Reveal rules (closes C64's parked OPENs; sits beside **C64**, **C62**, **C47**).
+**C66:** Deckbuilder sizing + hand/Reveal rules (closes C64's parked OPENs; sits beside **C64**, **C62**, **C47**).
 
 Proposed substance:
 
@@ -103,17 +103,16 @@ Proposed substance:
 8. **First-wave four:** Bandage / Flashbang / Interact-as-card / Adrenaline are **shared-library** cards (none are signatures). **Adrenaline** remains a special **Execute-only** slot and may bypass normal deck rules (aligns **C62** / PLAYBACK_CONTRACT).
 9. **Does not** greenlight deckbuilder UI, Flashbang numerics, or Bomber/Time Player active build.
 
-**Still OPEN after C66 (suggested):** exact fixed deck count inside 5–8; per-signature TR numbers; Flashbang/Interact numerics (OPEN #16); Adrenaline real effect.
+**Still OPEN after C66 (suggested):** ~~exact fixed deck count inside 5–8~~ → **resolved by C68** (**8 per Character**); per-signature TR numbers; Flashbang/Interact numerics (OPEN #16); Adrenaline real effect. Tracked in [`DECKBUILDER_SYSTEMS_BRIEF.md`](DECKBUILDER_SYSTEMS_BRIEF.md) / **C68**.
 
 ---
 
 ## Explicit non-goals
 
 - Does not greenlight Flashbang effect shape (brief stays paused; re-derive as library tech later).  
-- Does not start deckbuilder UI or Sim code.  
+- Does not start deckbuilder UI or Sim code (systems brief is the next doc, not a contract).  
 - Does not promote Bomber/Time Player into active build.  
-- Does not touch Bandage HUD (UI seat).  
-- Does not itself write PRODUCT_MEMORY on master — **C66** is on this branch; Integrator owns merge.
+- Does not touch Bandage HUD (UI seat).
 
 ---
 
@@ -121,4 +120,5 @@ Proposed substance:
 
 - [`CARD_COLLECTION.md`](CARD_COLLECTION.md) — catalog + C64 hybrid + C62 transitional  
 - [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md) — hybrid conversation record  
+- [`DECKBUILDER_SYSTEMS_BRIEF.md`](DECKBUILDER_SYSTEMS_BRIEF.md) — post-C66 systems shape  
 - [`../departments/cards/STATUS.md`](../departments/cards/STATUS.md)

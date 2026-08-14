@@ -1,37 +1,37 @@
 # Cards — STATUS
 
-**Wave / Day:** Permanent seat — C64 OPEN answers locked + **C66** merged to master (2026-08-14)
+**Wave / Day:** Permanent seat — Storm catalog DoD + **C68** packaging (2026-08-14)
 **Branch / worktree:** `logiCard-cards-collection` / `feat/cards-collection-docs`
-**Last cross-reviewed:** 2026-08-14 — Q1–Q8 defaults locked; C66 written into PRODUCT_MEMORY and merged
-to `master` by Integrator
+**Last cross-reviewed:** 2026-08-14 — merged master (Storm Sim / **C67**); renumbered packaging → **C68**;
+  Storm `CARD_COLLECTION` + `GEAR_STORM_AGENT_BRIEF` written (Cards Storm DoD). No `CardData.cs` edit.
 
 ## Owned files (this seat)
 
 - `docs/cards/CARD_COLLECTION.md`
 - `docs/cards/CARD_SYSTEM_MODEL_COMPARISON.md`
-- `docs/cards/CARD_SYSTEM_OPENS.md` (answered + C66 source text)
-- `docs/core/PRODUCT_MEMORY.md` — **C66 row added on this branch** (Integrator reviews on merge)
-- Gear briefs (Flashbang **paused**)
+- `docs/cards/CARD_SYSTEM_OPENS.md`
+- `docs/cards/DECKBUILDER_SYSTEMS_BRIEF.md`
+- `docs/cards/GEAR_STORM_AGENT_BRIEF.md` (**new** — numerics recommendation)
+- `docs/core/PRODUCT_MEMORY.md` — **C68** (+ merge kept master's **C67** Storm)
+- Gear briefs (Flashbang **paused**; Storm recommendation open for human lock)
 - This STATUS
 
 ## Done
 
-- Human confirmed OPEN defaults: **a / b / a / c / a / a / a / b**
-- Answers in `CARD_SYSTEM_OPENS.md`; `CARD_COLLECTION.md` synced
-- **C66** promoted into `PRODUCT_MEMORY.md` on this branch; cursor rule synced
-- Cursor rule short CONFIRMED bullet updated for C64/C66
+- **C68** packaging (8/Character; Character-in-deck) on branch (was draft-C67; renumbered after master claimed C67 for Storm)
+- Storm Cards DoD: catalog entry + `TR —` / **1× match** recommendation + one-line effectSummary
 
 ## In progress
 
-- Merged — idle until staffed for a deckbuilder systems brief or Flashbang re-derive
+- Waiting on Integrator **merge**; human lock of Storm numerics when ready
 
 ## Blocked
 
-- Deckbuilder / signature UX code — later systems layer (C66 does not greenlight UI)
-- Flashbang effect brief — paused until re-derived as library tech
+- Storm HUD / Atmosphere — **UI** / **Atmosphere** seats (contract)
+- Deckbuilder UI/Sim — needs separate contract (**C68** does not greenlight)
 - Bandage HUD — **UI seat**
 
 ## Offers / Integrator handoff
 
-- Review + merge `feat/cards-collection-docs` (includes C66 + catalog sync)
-- After merge: optional deckbuilder systems brief; Flashbang library re-derive when wanted
+- Review + merge `feat/cards-collection-docs` (C68 packaging + Storm catalog/brief; C67 Storm already on master)
+- After human confirms Storm TR/charges → follow-up C# amend (C62→C63 shape)
