@@ -1,38 +1,38 @@
 # Cards — STATUS
 
-**Wave / Day:** Permanent seat — docs-only C64 catalog align (2026-08-14)
+**Wave / Day:** Permanent seat — C64 OPEN answers locked (2026-08-14)
 **Branch / worktree:** `logiCard-cards-collection` / `feat/cards-collection-docs`
-**Last cross-reviewed:** 2026-08-14 — confirmed `CARD_COLLECTION.md` leads with C64 hybrid + transitional
-full-hand; OPEN menu links fixed post `docs/` reorg; Flashbang brief pause retargeted to library re-derive
+**Last cross-reviewed:** 2026-08-14 — human confirmed plan defaults Q1–Q8; answers written into
+`CARD_SYSTEM_OPENS.md` + synced through `CARD_COLLECTION.md`; C65 draft ready for Integrator
 
 ## Owned files (this seat)
 
-- `docs/cards/CARD_COLLECTION.md` (C64 long-term hybrid + C62/C63 transitional staples)
+- `docs/cards/CARD_COLLECTION.md` (C64 hybrid + C62/C63 transitional + 2026-08-14 sizing)
 - `docs/cards/CARD_SYSTEM_MODEL_COMPARISON.md` (conversation record)
-- `docs/cards/CARD_SYSTEM_OPENS.md` (parked C64 sizing menu — deck / draw / signature / Reveal)
+- `docs/cards/CARD_SYSTEM_OPENS.md` (**answered** — Q1–Q8 + proposed **C65** for Integrator)
 - Gear briefs (Flashbang **paused** — re-derive as library tech later)
 - This STATUS
 
 ## Done
 
-- C64 hybrid designed + promoted (prior session)
-- `CARD_COLLECTION.md` rewritten so C64 hybrid is the long-term frame; Bandage/etc. stay transitional full-hand
-- `CARD_SYSTEM_OPENS.md` — Q1–Q8 (deck size / copies / draw / signature-in-hand / Reveal / role / first-wave split)
-- Flashbang brief status: paused → must re-derive as shared-library tech (no architecture code this seat)
-- Post-reorg relative links fixed in OPEN menu
+- C64 hybrid designed + promoted (prior)
+- `CARD_COLLECTION.md` C64 frame + transitional full-hand
+- Human confirmed OPEN defaults: **a / b / a / c / a / a / a / b**
+- Answers locked in `CARD_SYSTEM_OPENS.md`; catalog §§ synced
+- Proposed **C65** draft in `CARD_SYSTEM_OPENS.md` (Cards does not edit PRODUCT_MEMORY)
 
 ## In progress
 
-- Waiting on human answers to `CARD_SYSTEM_OPENS.md` (or Integrator assign next)
+- Waiting on Integrator: promote C65 + merge this branch (human approves merge)
 
 ## Blocked
 
-- Deckbuilder / signature UX code — OPENs + later systems layer
+- Deckbuilder / signature UX code — after C65 promote (still later systems layer)
 - Flashbang effect brief — paused until re-derived as library tech
-- Bandage HUD — **UI seat** (this dept must not touch those files)
+- Bandage HUD — **UI seat**
 
-## Offers
+## Offers / Integrator handoff
 
-- After OPEN answers: draft Integrator C# follow-up (C65?) for deck size / hand rules
-- Re-derive Flashbang brief as shared-library card when human wants effect design
-- Integrator merge of this branch → master when ready (Cards will not push/merge)
+- Promote **C65** from `CARD_SYSTEM_OPENS.md` “Proposed C65” section (closes C64 parked OPENs)
+- Merge `feat/cards-collection-docs` → master when human approves (Cards will not push/merge)
+- After C65: optional deckbuilder systems brief; Flashbang library re-derive when human wants effect design
