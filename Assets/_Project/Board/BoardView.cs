@@ -148,7 +148,7 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// C45 room zones as distinct wet-dusk surfaces (Yard asphalt / Hall concrete / Vault polish /
+        /// C45 room zones as distinct urban surfaces (Yard asphalt / Hall wood / Vault marble-concrete /
         /// flank approach lanes). Bounds match GameBootstrap.BuildBoard — presentation only.
         /// </summary>
         private void PlaceRoomFloors(ArenaBoard model)

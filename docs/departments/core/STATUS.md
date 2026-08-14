@@ -1,22 +1,26 @@
 ﻿# Core / Integrator — STATUS
 
-**Wave / Day:** Phase 5 — Integrator 2026-08-12 evening
-**Branch / worktree:** `master` (cards merge `8b791d9` + C62 commit this pass) + dirty rematch/floors
-**Last cross-reviewed:** 2026-08-12 — accepted Character/UI/Cards report-backs; wrote **C62**; merged cards docs
+**Wave / Day:** Phase 5 — Integrator 2026-08-14
+**Branch / worktree:** `master` @ `a419ad4` — clean
+**Last cross-reviewed:** 2026-08-14 — committed dirty rematch/floors/lighting; wrote C65; opened Map Phase 2 contract
 
 ## Done
 
-- **C62** gear collection rules; OPEN #3 → resolved; cursor rule synced
-- Merged `feat/cards-collection-docs`
-- Character + UI idle-ready tracked (Play gates stand)
-- Atmosphere Ready tip noted (`c3296dc`) — not merged yet
+- Opened **Bandage HUD-side** in `docs/contracts/CURRENT.md`
+- Wrote `BANDAGE_HUD_AGENT_BRIEF.md` into UI worktree (`logiCard-modal-restyle`)
+- Committed dirty rematch/floors/lighting (`a419ad4`) — human asked; reclaims `Board*` for Map
+- Wrote **C65** to `docs/core/PRODUCT_MEMORY.md` (C53 surface-material amendment, human YES via
+  `docs/map/C53_SURFACE_MATERIAL_DECISION.md`)
+- Opened **Map Phase 2** in `docs/contracts/CURRENT.md`; refreshed INDEX/DRAFT_HANDOFF/this file
 
 ## In progress
 
-- Monitor Play gates; weather still with Atmosphere
-- Rematch/floors dirty hold
+- Monitor UI Bandage HUD and Map Phase 2 report-backs
+- Batchmode re-verify `a419ad4` (new PlayMode/EditMode tests not yet run in batchmode — Editor must be closed)
+- After HUD merge: Healed presenter (`PLAYBACK_CONTRACT` §3)
 
 ## Offers
 
-- Merge Character → UI → Atmosphere on human clear
-- Open gear implementation brief (post-C62) when human wants Sim/HUD work
+- Merge UI Bandage HUD when Ready + green
+- Merge Map Phase 2 when Ready + green + human screenshot check
+- Merge Atmosphere after human Play clear

@@ -18,13 +18,108 @@ change — root-caused directly (probe `clearFlags` never set, rendering the wro
 **Clouds**: replaced primitive spheres with real textured particle clouds (Kenney CC0 sprite atlas). Both
 worker slots closed again after C60/C61 (2026-08-11). **Still open:** human sighted pass on C60 vibrancy
 (runtime grade actually warm now) + C61 scroll zoom feel + earlier reflection/clouds/Scout outfit items.
-**Updated:** 2026-08-12 by Integrator — `feat/atmosphere-stylized` merged (`5b2ee7c` / LA CloudAtlas + rim mist). UI char-select + modal still on side branches awaiting Play. No open worker contract.
+**Updated:** 2026-08-14 by Integrator — dirty rematch/floors/lighting committed (`master`), clearing the
+`Board*` conflict; **Map Phase 2 contract opened** (C65, human-confirmed YES on the C53 surface-material
+amendment). Bandage HUD-side contract still open (C63). Gear pause carve-out (C63) and Map's C57 carve-out
+(map/terrain) still apply; Net / other Sim stay paused.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
 
-_(none currently open — no worker assigned. Slots free after Integrator presentation push.)_
+### Map Phase 2 — board surface material swap (open 2026-08-14 — **Map seat** on `logiCard-map`)
+
+**Depends on:** **C65** (human YES, `docs/map/C53_SURFACE_MATERIAL_DECISION.md`); standard doc
+`docs/map/MAP_PRESENTATION_STANDARD.md` §2 (material-family table) and §5 (Phase 2 preview, this contract
+follows it); `Board*` dirty tree reclaimed — `master` @ `a419ad4` now carries the rematch/floors/lighting
+commit Map was blocked behind, so `BoardSurfaceMaterials.cs`/`BoardView.cs`/`BoardReflectionProbes.cs` are
+clean to branch from.
+
+**Scope — presentation-layer only, matches MAP_PRESENTATION_STANDARD.md §0:**
+
+- `Assets/_Project/Board/BoardSurfaceMaterials.cs` — floor/wall/door-tint/interior-prop-tint material
+  builders only.
+- `Assets/_Project/Board/BoardView.cs` — `SurfaceMaterialFor(MapSurfaceRole)` call sites, `PlaceRoomFloors`,
+  `PlaceRoomDressing`/`PlaceDoorMesh` material (not mesh) wiring, map-aware dressing per §3.
+- Untouched (out of scope, do not edit): `MapDefinitions`, `GameBootstrap.BuildXxxGeometry()`/
+  `BuildXxxDefenderPayload()`, pathfinding, `Door` API, `Sim/`/`Net/`/`Timeline/`, weather/
+  `BoardWeatherPocket` (Atmosphere's lane), and `GameBootstrap.BuildLighting()`/`BuildDioramaVolume()` —
+  the 2026-08-14 rematch commit already retuned the lighting rig against the *old* material family;
+  re-grading after the material swap is step 4 below, still Integrator's call on `GameBootstrap`, not Map's
+  to edit directly (flag the need, Integrator makes the pass — `GameBootstrap` stays Integrator-owned per
+  `departments/INDEX.md`).
+
+**DoD (mirrors MAP_PRESENTATION_STANDARD.md §5):**
+
+1. `BoardSurfaceMaterials` gains a `Solid()`/gradient-based floor+wall material set keyed by the same four
+   `MapSurfaceRole`s (Yard/Hall/Vault/Flank), replacing `BuildWetSurface()` as the default path for those
+   roles. Keep `BuildWetSurface` code itself (don't delete a working, still-referenced helper) — just stop
+   calling it for board surfaces.
+2. Re-skin nappin door/prop materials via the pack's own `(Mat)Gradient*` variants or a flattened duplicate,
+   through the existing `InteriorPackImportTool` duplicate-and-convert pattern. Door/prop **meshes** stay;
+   only the material changes.
+3. Make `PlaceRoomDressing` map-aware (`MapId` param or per-map methods, C57's "one bespoke method per map"
+   discipline) so Rail Platform / Vault Complex get real in-room dressing instead of Freight-Yard-shaped
+   coordinates or nothing.
+4. Flag the lighting/grade re-pass for Integrator once the material swap lands — don't self-edit
+   `BuildLighting`/`BuildDioramaVolume`.
+5. Tests: EditMode coverage that `SurfaceMaterialFor` returns the new flat family per role; existing
+   `BoardView`/room-floor PlayMode smoke stays green.
+6. Human screenshot check against the Link's Awakening reference (`ART_DIRECTION.md` Moodboard) before
+   calling it done — batchmode green is not a look check.
+
+**Out of scope:** geometry density, vents/breaches, room structure (C57), weather/atmosphere (Atmosphere's
+lane), pathfinding/Door API/Sim (C35/C39/C41).
+
+### Bandage HUD-side (open 2026-08-14 — **UI seat** on `logiCard-modal-restyle`; brief `BANDAGE_HUD_AGENT_BRIEF.md`)
+
+**Depends on:** C63; Sim-side closed below; `GearHandView` scaffold on master (`7213d98`);
+`UI_FLOW.md` §4 item 3; `PLAYBACK_CONTRACT.md` (Healed presenter is a **separate** Integrator follow-up
+after this HUD lands — do not invent FX here).
+
+**Frozen signatures**
+
+```csharp
+// Timeline — Program booking (gear carve-out). Cost locked by C63.
+public const float BandageSeconds = 3f; // on PawnProgram
+bool PawnProgram.TryQueueBandage(float executeTime, out string rejectionReason);
+bool PawnProgram.IsMidSprintAt(float seconds); // helper; used by TryQueueBandage
+
+// Boot — match-carry read for HUD gates (mirrors WoundsOf)
+int RoundPlayback.BandageChargeOf(int pawnId);
+
+// Board — place while Mode == ActionVerb.Bandage
+bool BoardInputController.TryQueueBandageAt(float executeTime, out string reason);
+```
+
+**HUD behavior (DoD)**
+
+1. Dock `GearHandView.Build(...)` into the Program HUD (queue column — do **not** grow
+   `ControlsColumnContentHeight` / break `ProgramHudLayoutTests`).
+2. **Arm:** Program-phase only. Bandage arms → `BoardInputController.Mode = ActionVerb.Bandage`.
+   Interact / Flashbang stay blocked (no contract). Adrenaline stays Execute-only via existing
+   `GearHandPhase` rules (dock may show it greyed in Program).
+3. **Place (timeline):** while Bandage is armed / Mode is Bandage —
+   - scrubber **click** places at the scrubber's current Time Resource seconds, or
+   - board tap near a booked Move node places at that node's `ExecuteTime`, else places at
+     `PawnProgram.UsedSeconds` (append / stationary at schedule tip).
+4. **Three legality gates** (Program-time; resolver stays permissive per Sim contract):
+   - **Wounded** — `RoundPlayback.WoundsOf(localPawn) > 0` (Healthy → cannot arm)
+   - **Charge** — match `BandageChargeOf == 0` and no Bandage node already in this Program
+   - **Not mid-Sprint** — `!IsMidSprintAt(executeTime)` (Walk micro-moves OK; C63)
+5. Cost label for Bandage = `"3s"` (C63). Other first-wave cards keep `"TR —"` placeholders.
+6. After a successful place: clear gear arm, return Mode to Move, refresh spent/blocked presentation.
+7. Tests: EditMode `PawnProgram` Bandage cases; PlayMode HUD arm→place smoke; update
+   `GearHandViewTests` so only Bandage may show a locked cost.
+
+**Out of scope:** `TapeEventType.Healed` presenter; Interact/Flashbang/Adrenaline resolve; deckbuilder
+(C64).
+
+### Bandage Sim-side (closed 2026-08-13 — reference)
+
+- `ActionVerb.Bandage`, `TapeEventType.Healed`, per-match `BandageCharge` through
+  `GhostInput` → `GhostResolver` → `ReplayTape` → `RoundPlayback`.
+- Resolver permissive (no Sprint / Healthy re-check). Merged `4e6bb66`.
 
 ## Closed contracts (reference)
 
