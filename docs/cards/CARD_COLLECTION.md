@@ -279,7 +279,7 @@ Ranked by resolve risk for **library staples** under transitional full-hand (dec
 
 ## 12. Next step
 
-→ Integrator: merge this branch to master (C66 already on branch). Cards seat idle on deckbuilder code until then.
+→ **C66 merged.** Next Cards doc: [`DECKBUILDER_SYSTEMS_BRIEF.md`](DECKBUILDER_SYSTEMS_BRIEF.md) (Phase A). Human answers brief §6 before any loadout/UI contract. No deckbuilder code until Integrator opens that contract.
 
 ---
 
@@ -288,6 +288,7 @@ Ranked by resolve risk for **library staples** under transitional full-hand (dec
 - [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) — C62, C63, **C64**, **C66**, OPEN #16  
 - [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md) — hybrid conversation  
 - [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) — sizing answers (source for C66)  
+- [`DECKBUILDER_SYSTEMS_BRIEF.md`](DECKBUILDER_SYSTEMS_BRIEF.md) — systems shape + phased build gates  
 - [`GEAR_BANDAGE_AGENT_BRIEF.md`](GEAR_BANDAGE_AGENT_BRIEF.md) / [`GEAR_FLASHBANG_AGENT_BRIEF.md`](GEAR_FLASHBANG_AGENT_BRIEF.md)  
 - [`GDD.md`](../core/GDD.md) · [`UI_FLOW.md`](../ui/UI_FLOW.md) · [`PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md) · [`MONETIZATION.md`](../core/MONETIZATION.md)  
 - [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md) — Bomber / Time Player  

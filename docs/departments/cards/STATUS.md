@@ -1,37 +1,35 @@
 # Cards — STATUS
 
-**Wave / Day:** Permanent seat — C64 OPEN answers locked + **C66** merged to master (2026-08-14)
+**Wave / Day:** Permanent seat — **C66** merged; deckbuilder systems brief drafted (2026-08-14)
 **Branch / worktree:** `logiCard-cards-collection` / `feat/cards-collection-docs`
-**Last cross-reviewed:** 2026-08-14 — Q1–Q8 defaults locked; C66 written into PRODUCT_MEMORY and merged
-to `master` by Integrator
+**Last cross-reviewed:** 2026-08-14 — synced to master @ `e73e66b` (C66 merge); wrote
+`DECKBUILDER_SYSTEMS_BRIEF.md` (docs-only). Waiting on human answers to brief §6.
 
 ## Owned files (this seat)
 
 - `docs/cards/CARD_COLLECTION.md`
 - `docs/cards/CARD_SYSTEM_MODEL_COMPARISON.md`
-- `docs/cards/CARD_SYSTEM_OPENS.md` (answered + C66 source text)
-- `docs/core/PRODUCT_MEMORY.md` — **C66 row added on this branch** (Integrator reviews on merge)
+- `docs/cards/CARD_SYSTEM_OPENS.md` (answered; C66 source)
+- `docs/cards/DECKBUILDER_SYSTEMS_BRIEF.md` (**new** — Phase A)
 - Gear briefs (Flashbang **paused**)
 - This STATUS
 
 ## Done
 
-- Human confirmed OPEN defaults: **a / b / a / c / a / a / a / b**
-- Answers in `CARD_SYSTEM_OPENS.md`; `CARD_COLLECTION.md` synced
-- **C66** promoted into `PRODUCT_MEMORY.md` on this branch; cursor rule synced
-- Cursor rule short CONFIRMED bullet updated for C64/C66
+- Human confirmed OPEN defaults → **C66** on master (Integrator renumbered from draft C65)
+- Catalog + OPEN menu synced
+- **Deckbuilder systems brief** drafted (flow, data model, phased gates, open questions)
 
 ## In progress
 
-- Merged — idle until staffed for a deckbuilder systems brief or Flashbang re-derive
+- Awaiting human answers to `DECKBUILDER_SYSTEMS_BRIEF.md` §6 (deck count / flow slot / persistence / signatures at cutover / Adrenaline / validation / Reveal UX)
 
 ## Blocked
 
-- Deckbuilder / signature UX code — later systems layer (C66 does not greenlight UI)
-- Flashbang effect brief — paused until re-derived as library tech
-- Bandage HUD — **UI seat**
+- Deckbuilder UI / Sim code — needs §6 answers + Integrator contract (C66 does not greenlight UI)
+- Flashbang effect brief — paused until library-tech re-derive
+- Bandage HUD — **UI seat** (do not touch)
 
 ## Offers / Integrator handoff
 
-- Review + merge `feat/cards-collection-docs` (includes C66 + catalog sync)
-- After merge: optional deckbuilder systems brief; Flashbang library re-derive when wanted
+- Review `docs/cards/DECKBUILDER_SYSTEMS_BRIEF.md`; after human §6 answers, open Phase D contract only when coding capacity allows (Bandage HUD + Map are today's hot seats)
