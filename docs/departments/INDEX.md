@@ -35,7 +35,8 @@ frozen slice of `contracts/CURRENT.md`'s Storm contract so there's no file overl
 
 | Path / concern | Owner now |
 |----------------|-----------|
-| `docs/cards/CARD_COLLECTION.md`, `docs/cards/CARD_SYSTEM_MODEL_COMPARISON.md`, `docs/cards/CARD_SYSTEM_OPENS.md`, `Assets/_Project/Cards/CardData.cs` | **Cards** — Storm card this wave |
+| `docs/cards/CARD_COLLECTION.md`, `docs/cards/CARD_SYSTEM_MODEL_COMPARISON.md`, `docs/cards/CARD_SYSTEM_OPENS.md` | **Cards** — Storm card catalog entry this wave |
+| `Assets/_Project/Cards/CardData.cs` | **Integrator** — `CardId.Storm` pre-landed to avoid a Cards/UI cross-worktree ordering dependency; Cards reads, does not edit |
 | Weather / `BoardWeatherPocket` / `Resources/Weather/**` | **Atmosphere** this wave — Storm idempotency/lighting-dim check only, no new VFX |
 | Bandage HUD + Storm card HUD: `ProgramHud`, `GearHandView`, `PawnProgram.TryQueueBandage`/`TryQueueStorm`, `BoardInputController` Bandage/Storm place, related tests | **UI** this wave |
 | `RoundPlayback.BandageChargeOf` only (tiny reader) | **UI** this wave — avoid rematch/weather methods |

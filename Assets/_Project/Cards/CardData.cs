@@ -8,6 +8,11 @@ namespace LogiCard.Cards
         Interact = 1,
         Flashbang = 2,
         Adrenaline = 3,
+
+        /// <summary>C67 — landed with the value pre-assigned (not left to Cards) so Cards' catalog
+        /// work and UI's GearHandView dock work can build against it in parallel from separate
+        /// worktrees without a cross-branch ordering dependency.</summary>
+        Storm = 4,
     }
 
     /// <summary>

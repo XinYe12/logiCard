@@ -44,6 +44,11 @@ your call whether sequential or together, since it's the same worktree); `PLAYBA
 ActionVerb.Storm            // self-targeting, no board position, no wound/charge effect
 TapeEventType.StormCast     // continuous presenter (mirrors DoorOpened/Closed), not one-shot
 
+// Cards — CardId.Storm's value is landed here too (not left to the Cards seat) so Cards and UI
+// can build in parallel from separate worktrees with no cross-branch ordering dependency —
+// Bandage never hit this because all four first-wave CardId values were defined together upfront.
+CardId.Storm = 4
+
 // Boot — weather binding; GameBootstrap already calls this in BuildWeatherPocket()
 void RoundPlayback.SetWeatherPocket(BoardWeatherPocket pocket);
 ```
@@ -60,11 +65,11 @@ otherwise casting the card would be a no-op.
 
 **DoD, split by seat:**
 
-**Cards** (`Assets/_Project/Cards/CardData.cs`, `docs/cards/CARD_COLLECTION.md`):
-1. Add `CardId.Storm = 4` and a `GEAR_STORM_AGENT_BRIEF.md`-style short numerics recommendation (Time
-   Resource cost placeholder — do **not** invent a number, use `"TR —"` like every other un-locked
-   first-wave card per C62's convention; once-per-match vs. unlimited casts; a one-line `effectSummary`
-   describing the presentation-only weather trigger, not a combat effect).
+**Cards** (`docs/cards/CARD_COLLECTION.md`; `CardId.Storm` is already landed, no `CardData.cs` edit needed):
+1. Write a `GEAR_STORM_AGENT_BRIEF.md`-style short numerics recommendation (Time Resource cost
+   placeholder — do **not** invent a number, use `"TR —"` like every other un-locked first-wave card per
+   C62's convention; once-per-match vs. unlimited casts; a one-line `effectSummary` describing the
+   presentation-only weather trigger, not a combat effect).
 2. `docs/cards/CARD_COLLECTION.md` catalog entry: Storm, gear card, self-targeting, Program-phase only,
    no LoS/target-pawn needed (unlike Bandage's board-tap-near-node option — Storm only ever needs a
    Time Resource second, nothing else).
@@ -102,9 +107,10 @@ PRODUCT_MEMORY row and PLAYBACK_CONTRACT redesign, not bundled here.
 
 ### Storm Sim-side (closed 2026-08-14 — reference)
 
-- `ActionVerb.Storm`, `TapeEventType.StormCast`, permissive `GhostResolver.CompileTrack` emission,
-  `RoundPlayback.SyncWeatherToSeconds`/`SnapshotWeatherAtArm`/`SetWeatherPocket`, `ResetForNewMatch`
-  reverting weather to Fair on rematch, `GameBootstrap.BuildWeatherPocket()` boot-mood flip to Fair.
+- `ActionVerb.Storm`, `TapeEventType.StormCast`, `CardId.Storm = 4`, permissive
+  `GhostResolver.CompileTrack` emission, `RoundPlayback.SyncWeatherToSeconds`/`SnapshotWeatherAtArm`/
+  `SetWeatherPocket`, `ResetForNewMatch` reverting weather to Fair on rematch,
+  `GameBootstrap.BuildWeatherPocket()` boot-mood flip to Fair.
   `GhostResolverStormTests` (EditMode) covers the resolver. **Not yet covered:** a PlayMode arm→scrub→
   rewind test — blocked on UI's `TryQueueStorm`/HUD wiring above; add it alongside that work, mirroring
   the pattern `RoundPlaybackPlayModeTests` already uses for door/wound scrubbing. **Not yet
