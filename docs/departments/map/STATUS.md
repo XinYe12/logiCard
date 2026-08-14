@@ -1,11 +1,9 @@
 # Map — STATUS
 
-**Wave / Day:** New permanent seat, stood up 2026-08-13. **Not yet registered in `docs/departments/INDEX.md`**
-(Integrator-owned file — this seat cannot self-register; flagged below, not assumed done).
-**Branch / worktree:** `logiCard-map` / `dept/map` @ `d605789` (matches `master` tip at seat start; docs-only
-commit(s) on top, no code yet)
-**Last cross-reviewed:** 2026-08-13 — first session, self-review only (no peer department has reviewed this
-seat's output yet)
+**Wave / Day:** Docs/decision-prep session, 2026-08-14. **Still not registered in `docs/departments/INDEX.md`**
+on this worktree's copy — see Blocked (this is not self-registerable; flagged again below, with a new finding).
+**Branch / worktree:** `logiCard-map` / `dept/map` @ `d632d3b` (tip after Phase 1 doc reorg into `docs/map/`).
+**Last cross-reviewed:** 2026-08-14 — self-review only; no peer department has reviewed this seat's output yet.
 
 ## Scope (per seat brief)
 
@@ -20,35 +18,68 @@ seat's output yet)
 
 ## Done
 
-- Read-in-order pass: `PARALLEL_OPS.md` → `departments/INDEX.md` → (this file didn't exist yet — see
-  Blocked) → `GDD.md` full pass (§8/§11) → `ART_DIRECTION.md` full → `PRODUCT_MEMORY.md` C29/C53/C54/C57/C58/C60
-  → `MAP_AUTHORING.md` → code read (`BoardView.cs`, `BoardSurfaceMaterials.cs`, `BoardReflectionProbes.cs`,
-  `GameBootstrap.cs`'s three `BuildXxxGeometry()` methods, `MapDefinitions.cs`) → asset-pack survey
-  (`Assets/ithappy/Cartoon_City_Free`, `Assets/nappin/**`, both `THIRD_PARTY.md`s, `ART_PACK_RESEARCH.md`).
-- Wrote `docs/MAP_PRESENTATION_STANDARD.md` (Phase 1 deliverable): diagnoses why **C58**/**C60**'s vibrancy
-  passes didn't hold (photographic-PBR-plus-tint and an HDRP-sourced muted "modern office" pack were graded
-  harder twice instead of swapped for an inherently saturated flat/toon material family — see that doc §1 for
-  the full trace, including the finding that `ART_PACK_RESEARCH.md`'s own 2026-08-10/11 "soft clay, not wet
-  PBR" verdict was never actually implemented in `BoardSurfaceMaterials.cs`, which still runs
-  `BuildWetSurface()` for every room floor). Proposes a material-family standard (§2) and explicitly
-  disambiguates the "rebuild with blocks" instruction as modular-pieces-within-C57, not a data-driven map
-  format reversal (§0).
+- Phase 1 (prior session): `docs/map/MAP_PRESENTATION_STANDARD.md` written and, this session, confirmed still
+  at Phase 1 status after the docs/ department reorg (`d632d3b`).
+- This session (docs/decision-prep only, per brief — no Phase 2 code):
+  - Re-read in order: `departments/INDEX.md` → `departments/map/STATUS.md` →
+    `docs/map/MAP_PRESENTATION_STANDARD.md` → `docs/map/MAP_AUTHORING.md` → `docs/map/ART_PACK_RESEARCH.md`.
+  - Wrote `docs/map/C53_SURFACE_MATERIAL_DECISION.md` — one-page human decision sheet for §4: amend C53 for
+    board *surface materials* only (flat/toon over photographic-PBR), geometry density and Atmosphere
+    untouched. Recommended default = **yes**, with the one-sentence risk if **no** (a third grading pass on
+    material families that already showed twice — C58/C60 — that grading doesn't fix the complaint).
+  - Confirmed the Phase 2 ordered checklist below matches `MAP_PRESENTATION_STANDARD.md` §5 exactly (no
+    rewrite needed, just surfaced here as the ready checklist for whoever opens the contract).
+  - Checked the main Integrator tree (`D:\projects\Game\logiCard`, read-only `git status`) to verify the
+    conflict note below is still accurate, not stale — it is, and has a new detail: `docs/departments/INDEX.md`
+    is *also* dirty in the main tree, which explains why this worktree's copy still doesn't show Map
+    registered (Integrator's registration edit, if any, is sitting uncommitted there, not merged).
 
 ## In progress
 
-- None — Phase 1 is docs-only per the brief; stopping here for human/Integrator review before Phase 2 code.
+- None — this was a docs/decision-prep-only session per the brief. No Phase 2 code started.
 
 ## Blocked
 
-- **This seat is not yet listed in `docs/departments/INDEX.md`'s live-folders table or ownership matrix.**
-  Per `PARALLEL_OPS.md`, only Integrator edits that file — flagging for Integrator to add a fifth permanent-seat
-  row (or fold this under an existing seat, if that's the human's call) rather than self-registering.
-- **`docs/MAP_PRESENTATION_STANDARD.md` §4's open question is not resolved.** It proposes amending part of
-  **C53** (materials move toward flat/toon, away from photographic-real, for board surfaces specifically) —
-  that needs explicit human confirm → a new `PRODUCT_MEMORY.md` C-row before Phase 2 starts recoloring
-  anything, per this project's save-file-rule governance. Phase 2 should not start until that answer lands.
+- **This seat is still not listed in `docs/departments/INDEX.md`'s live-folders table or ownership matrix**,
+  confirmed again this session by reading the file at this worktree's tip. Per `PARALLEL_OPS.md`, only
+  Integrator edits that file — not self-registering.
+- **New finding this session:** the main Integrator tree has `docs/departments/INDEX.md` itself showing as
+  modified (dirty, uncommitted) in `git status`, alongside `BoardView.cs`, `BoardSurfaceMaterials.cs`,
+  `BoardReflectionProbes.cs`, `GameBootstrap.cs`, `RoundPlayback.cs`, `MatchClock.cs`, and two Interior
+  materials (`(Mat)Floor_URP.mat`, `(Mat)Glass_URP.mat`), plus `docs/DRAFT_HANDOFF.md` and
+  `docs/contracts/CURRENT.md`. This is Integrator's own in-progress work-in-flight, not this department's to
+  touch or assume a baseline from — flagging because it's the likely reason INDEX registration hasn't reached
+  this worktree yet (it may already be drafted in that dirty copy, just not committed/merged).
+- **`docs/map/MAP_PRESENTATION_STANDARD.md` §4's open question is still not resolved** — human decision sheet
+  now exists (`docs/map/C53_SURFACE_MATERIAL_DECISION.md`), but the answer itself hasn't landed. Phase 2 does
+  not start until it does, and until a new `PRODUCT_MEMORY.md` C-row records it (Integrator writes that row —
+  save-file rule).
+
+## Conflict note — Phase 2 must not assume current main-tree baseline
+
+The main Integrator tree (`D:\projects\Game\logiCard`, `master`) currently has **uncommitted, dirty** changes
+to `BoardView.cs`, `BoardSurfaceMaterials.cs`, and `BoardReflectionProbes.cs` — exactly the three files Phase 2
+of this doc's plan needs to edit. Those files are invisible to this worktree (worktrees only see committed
+history, per `PARALLEL_OPS.md`) and their eventual shape is unknown from here. **Phase 2 must not start against
+an assumed baseline for those three files** — wait for Integrator to either commit/reclaim that dirty work or
+explicitly hand off a known-good tip before Map opens a Phase 2 branch, or Phase 2's diff will be built against
+a baseline that's already stale the moment Integrator's dirty work lands.
 
 ## Offers
 
-- Phase 2 (once §4 is confirmed): rebuild the three existing maps' floors/walls/door materials and make
-  `PlaceRoomDressing` map-aware, per `MAP_PRESENTATION_STANDARD.md` §5's ordered plan.
+- Phase 2 (once §4 is confirmed, a PRODUCT_MEMORY C-row exists, **and** the main-tree conflict above is
+  cleared): rebuild the three existing maps' floors/walls/door materials and make `PlaceRoomDressing`
+  map-aware, per the ordered checklist below (= `MAP_PRESENTATION_STANDARD.md` §5, restated here so a contract
+  can be opened straight off this file without re-deriving it):
+
+  1. Add a `Solid()`/gradient-based floor+wall material set to `BoardSurfaceMaterials`, keyed by the same four
+     `MapSurfaceRole`s, replacing `BuildWetSurface()` as the default path. Keep `BuildWetSurface` code (don't
+     delete working code speculatively) in case a future non-board surface wants a wet-photo look.
+  2. Re-skin nappin door/prop materials via the pack's own `(Mat)Gradient*` variants or a flattened duplicate,
+     through the existing `InteriorPackImportTool` duplicate-and-convert pattern.
+  3. Make `PlaceRoomDressing` map-aware so Rail Platform / Vault Complex get real in-room dressing instead of
+     Freight-Yard-shaped coordinates or nothing.
+  4. Re-run `BuildDioramaVolume`/`BuildLighting` grading *after* the material swap, not before — grade a
+     saturated base, don't re-grade the same muted one a third time.
+  5. Human screenshot check against the Link's Awakening reference (`ART_DIRECTION.md` Moodboard) before
+     calling it done — batchmode green is not a look check (`docs/DIRECTING_AGENTS.md`).
