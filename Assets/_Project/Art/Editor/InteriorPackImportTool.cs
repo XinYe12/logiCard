@@ -53,6 +53,11 @@ namespace LogiCard.Art.Editor
     /// <c>BoardView.PlaceInteriorProp</c>'s existing per-call <c>uniformScale</c> (0.7 vs 0.9), same as
     /// every other catalog entry's real-world size is already resolved.
     ///
+    /// <b>C65 / Map Phase 2:</b> runtime board presentation re-skins door leaves and opaque prop bodies onto
+    /// the already-duplicated <c>(Mat)Gradient*_URP</c> materials under Resources/Interior/Materials (or a
+    /// Solid() fallback). This tool stays the only writer of those duplicates — never edit nappin
+    /// originals; re-run import if a new Gradient source needs converting into Resources.
+    ///
     /// Run: -executeMethod LogiCard.Art.Editor.InteriorPackImportTool.Run
     /// Menu: Tools → LogiCard → Import Interior Pack Prefabs
     /// </summary>

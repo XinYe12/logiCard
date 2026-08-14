@@ -1,6 +1,6 @@
 # Deckbuilder Systems Brief (C64 / C66)
 
-**Status:** §6 closed → **C67** written into `PRODUCT_MEMORY.md` on this branch (2026-08-14). Catalog vocab synced. Integrator merge to master still needed. **Docs only** — no UI/Sim contract opened.
+**Status:** §6 closed → **C68** written into `PRODUCT_MEMORY.md` on this branch (2026-08-14). Catalog vocab synced. Integrator merge to master still needed. **Docs only** — no UI/Sim contract opened.
 
 ---
 
@@ -10,7 +10,7 @@ Cards dept previously modeled:
 - **Character** = pre-match pick (public), **not** a card inside the constructed deck  
 - **Deck** = gear/library list only (5–8), signature extra outside  
 
-**Human correction 2026-08-14 → C67:** that split is wrong for the intended design.
+**Human correction 2026-08-14 → C68:** that split is wrong for the intended design.
 - **Each Character has a deck of 8 cards** to play in the game  
 - **Characters are part of the card/deck system** (not a parallel non-card identity bolted onto a gear-only list)
 
@@ -19,7 +19,7 @@ Working model (Q1b **(c)**):
 - **Each Character fields exactly one 8-card play deck** for the match  
 - Those 8 are what get armed into the **timeline** as that Character's behavior (GDD)
 
-Save-file truth: **C67** in [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) on this branch.
+Save-file truth: **C68** in [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) on this branch.
 
 ---
 
@@ -156,7 +156,7 @@ Integrator should promote a C# that amends C66 (and C64 vocab as needed):
 
 ## 9. Next step
 
-1. ~~Q1b~~ **done** → **C67** on this branch.  
+1. ~~Q1b~~ **done** → **C68** on this branch.  
 2. Catalog vocab synced.  
 3. Integrator: merge `feat/cards-collection-docs` when human approves.  
 4. Phase D only when coding capacity allows.

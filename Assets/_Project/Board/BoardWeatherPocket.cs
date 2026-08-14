@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using LogiCard.Sim;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -12,115 +13,735 @@ namespace LogiCard.Board
     /// Clouds, rain, rim mist, and lightning are real scene geometry sized to the board footprint so
     /// weather reads as sitting on the diorama, matching the locked reference's "sky pocket over the chunk."
     ///
-    /// 2026-08-12 atmosphere stylized pass: cloud bank = soft circular CloudAtlas discs (LA pillow
-    /// aim; Additive blend, few large overlapping masses). Pack <c>PF_CloudLayer</c> demoted.
-    /// Soft atmosphere is rim-only Kenney/soft-atlas mist + optional pack <c>PF_Fog_Main</c>/
-    /// <c>PF_Fog_Distant</c> at the board edge so the playable center stays readable.
-    /// Rain stays pack <c>PF_RainSystem</c>; lightning stays Zap <c>VFX_Zap_White</c>.
-    /// Prefab copies land via <see cref="LogiCard.Art.Editor.WeatherPackImportTool"/>.
-    /// Human Play <c>image copy 10</c>: Kenney whitePuff atlas rejected (dark rims / broken cloth);
-    /// atlas regenerated soft + bank retuned toward glued Link's Awakening pillows.
+    /// Cloud bank (2026-08-12 <c>image copy 13</c>): Link's Awakening-style <b>clay lobes</b> —
+    /// opaque URP Unlit meshes glued into masses (true 3D volume under ortho/rotate). Billboard
+    /// CloudAtlas discs were rejected as too 2D/cheap with dark alpha 边缘 <b>as the primary cloud
+    /// read</b>. Soft atlas is still used, now for two things: subtle rim mist at the board's far
+    /// corners, and a thin billboard haze fringe hugging each formation's envelope so the opaque
+    /// mesh's hard silhouette blurs into the void instead of cutting sharp. Each formation
+    /// (2026-08-13) is built two-layer: <see cref="SpawnCloudPuff"/> makes one small irregular puff,
+    /// <see cref="PlaceClayMass"/> assembles many puffs with a triangular dense-middle/loose-edge
+    /// profile into a rounded mound — spherical but not entirely. Lobes are ellipsoid-squashed (not
+    /// mesh-kneaded — that pass shattered shade UVs). Shading is a posterized crown/belly map.
+    /// Pack <c>PF_CloudLayer</c> demoted. Rain = <c>PF_RainSystem</c>; Zap =
+    /// White + Yellow only (<c>VFX_Zap_White</c> / <c>VFX_Zap_Yellow</c>). Prefabs via
+    /// <see cref="LogiCard.Art.Editor.WeatherPackImportTool"/>.
+    /// Weather is <b>modular</b>: <see cref="Build"/> binds the host to the board; cards call
+    /// <see cref="ApplyWeather"/> to spawn Fair/Storm (or <see cref="BoardWeatherMood.Clear"/>)
+    /// as a replaceable child module over the sky pocket. Storm lightning glues itself to the
+    /// CloudBank's own measured world bounds (position and reach) rather than to independent
+    /// hand-tuned numbers, so wherever a future card places the Storm module, the strikes follow —
+    /// see <see cref="PlaceStormLightning"/>.
     /// </summary>
+    public enum BoardWeatherMood
+    {
+        Clear,
+        Fair,
+        Storm,
+    }
+
     public sealed class BoardWeatherPocket : MonoBehaviour
     {
-        private static Material _cloudMaterial;
+        private static Material _clayCloudMaterial;
         private static Material _mistMaterial;
+        private static Mesh _unitSphereMesh;
         private static GameObject _rainSystemPrefab;
         private static GameObject _fogMainPrefab;
         private static GameObject _fogDistantPrefab;
-        private static GameObject _lightningPrefab;
+        private static GameObject _rainMistPrefab;
+        private static GameObject _lightningWhitePrefab;
+        private static GameObject _lightningYellowPrefab;
 
         private const string RainSystemResourcePath = "Weather/PF_RainSystem";
         private const string FogMainResourcePath = "Weather/PF_Fog_Main";
         private const string FogDistantResourcePath = "Weather/PF_Fog_Distant";
-        private const string LightningResourcePath = "Weather/VFX_Zap_White";
+        private const string RainMistResourcePath = "Weather/PF_RainMist";
+        private const string LightningWhiteResourcePath = "Weather/VFX_Zap_White";
+        private const string LightningYellowResourcePath = "Weather/VFX_Zap_Yellow";
+
+        private BoardWeatherMood _mood = BoardWeatherMood.Clear;
+        private float _boardWidth;
+        private float _boardDepth;
+        private bool _boardBound;
+        private Transform _moduleRoot;
+        private Color _savedAmbient;
+        private bool _lightingDimmed;
+        private Light[] _dimmedLights;
+        private float[] _savedLightIntensities;
+        private Color[] _savedLightColors;
+        private Bounds _cloudBankWorldBounds;
+        private bool _hasCloudBankBounds;
+        private readonly List<Bounds> _cloudMassWorldBounds = new List<Bounds>();
+
+        /// <summary>Layer-2 formation envelopes (same shell <see cref="PlaceCloudEdgeHaze"/> uses) —
+        /// exterior rim samples for storm energize arcs.</summary>
+        private readonly List<CloudEnvelope> _cloudEnvelopes = new List<CloudEnvelope>();
+        /// <summary>Rim arc clusters (2–3 chords each); pulse picks one at random.</summary>
+        private readonly List<List<ParticleSystem>> _cloudEnergizeGroups = new List<List<ParticleSystem>>();
+
+        /// <summary>One Layer-2 mass envelope in world space — center, half-extents, yaw.</summary>
+        private readonly struct CloudEnvelope
+        {
+            public readonly Vector3 WorldCenter;
+            public readonly Vector3 Extents;
+            public readonly float YawDegrees;
+
+            public CloudEnvelope(Vector3 worldCenter, Vector3 extents, float yawDegrees)
+            {
+                WorldCenter = worldCenter;
+                Extents = extents;
+                YawDegrees = yawDegrees;
+            }
+        }
+
+        /// <summary>Active weather module (Clear = no sky module).</summary>
+        public BoardWeatherMood ActiveMood => _mood;
 
         /// <summary>
-        /// Build (or rebuild) the weather pocket over <paramref name="board"/>. Safe to call once from
-        /// bootstrap after the board exists; destroys prior children first.
+        /// Bind the weather host to <paramref name="board"/> (position + footprint). Does <b>not</b>
+        /// spawn weather — cards / bootstrap call <see cref="ApplyWeather"/> afterward.
         /// </summary>
         public void Build(BoardView board)
         {
+            ClearWeather();
+
+            if (board == null || board.Model == null)
+            {
+                _boardBound = false;
+                return;
+            }
+
+            ArenaBoard model = board.Model;
+            _boardWidth = (model.MaxX - model.MinX) * board.WorldScale;
+            _boardDepth = (model.MaxY - model.MinY) * board.WorldScale;
+            transform.position = board.CenterWorld;
+            _boardBound = true;
+        }
+
+        /// <summary>
+        /// Convenience: bind board then spawn <paramref name="mood"/> (used by bootstrap / tests).
+        /// </summary>
+        public void Build(BoardView board, BoardWeatherMood mood)
+        {
+            Build(board);
+            ApplyWeather(mood);
+        }
+
+        /// <summary>
+        /// Card / program entry — replace the active weather module. <see cref="BoardWeatherMood.Clear"/>
+        /// removes sky weather and restores pre-storm lighting. Fair/Storm spawn a self-contained
+        /// child (<c>Weather_Fair</c> / <c>Weather_Storm</c>) so a future Storm card only mounts that module.
+        /// </summary>
+        public void ApplyWeather(BoardWeatherMood mood)
+        {
+            if (!_boardBound && mood != BoardWeatherMood.Clear)
+            {
+                Debug.LogWarning("BoardWeatherPocket.ApplyWeather: host not bound — call Build(board) first.");
+                return;
+            }
+
+            ClearWeather();
+            _mood = mood;
+            if (mood == BoardWeatherMood.Clear)
+            {
+                return;
+            }
+
+            var module = new GameObject(mood == BoardWeatherMood.Storm ? "Weather_Storm" : "Weather_Fair");
+            _moduleRoot = module.transform;
+            _moduleRoot.SetParent(transform, false);
+
+            float width = _boardWidth;
+            float depth = _boardDepth;
+            PlaceCloudBank(width, depth);
+            PlaceRain(width, depth);
+            PlaceFogMist(width, depth);
+            if (mood == BoardWeatherMood.Storm)
+            {
+                PlaceStormCloudEnergize();
+                PlaceStormVolumeFog(width, depth);
+                ApplyStormLightingDim();
+            }
+
+            PlaceLightning(width, depth);
+        }
+
+        /// <summary>Tear down the active module and stop Zap loops. Safe if already clear.</summary>
+        public void ClearWeather()
+        {
+            StopAllCoroutines();
+            RestoreLightingIfDimmed();
+
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
                 DestroyImmediate(transform.GetChild(i).gameObject);
             }
 
-            if (board == null || board.Model == null)
+            _moduleRoot = null;
+            _mood = BoardWeatherMood.Clear;
+            _hasCloudBankBounds = false;
+            _cloudMassWorldBounds.Clear();
+            _cloudEnvelopes.Clear();
+            _cloudEnergizeGroups.Clear();
+        }
+
+        private Transform ModuleParent => _moduleRoot != null ? _moduleRoot : transform;
+
+        /// <summary>
+        /// Cloud height — contained shelf over the chunk. 1.7 kept after human height notes
+        /// (<c>image copy 10</c>–<c>12</c>).
+        /// </summary>
+        private const float InterimCloudHeightBoost = 1.7f;
+
+        /// <summary>One clay lobe inside a mass — unit offsets in [-0.5,0.5] scaled by mass footprint.</summary>
+        private readonly struct ClayLobe
+        {
+            public readonly Vector3 UnitOffset;
+            public readonly float RadiusNorm;
+            public readonly bool Belly;
+
+            public ClayLobe(float x, float y, float z, float radiusNorm, bool belly = false)
             {
-                return;
+                UnitOffset = new Vector3(x, y, z);
+                RadiusNorm = radiusNorm;
+                Belly = belly;
             }
-
-            ArenaBoard model = board.Model;
-            float width = (model.MaxX - model.MinX) * board.WorldScale;
-            float depth = (model.MaxY - model.MinY) * board.WorldScale;
-            Vector3 center = board.CenterWorld;
-
-            transform.position = center;
-
-            PlaceCloudBank(width, depth);
-            PlaceRain(width, depth);
-            PlaceFogMist(width, depth);
-            PlaceLightning(width, depth);
         }
 
         /// <summary>
-        /// Cloud scale/height — contained shelf over the chunk. 1.15 sat too low on the board
-        /// (human Play <c>image copy 10</c>); 2.1 previously flew out of the ortho frustum
-        /// (<c>image copy 9</c>). 1.7 aims for LA backdrop height while staying in frame.
+        /// Layer 1 — spawn function: one small, irregular cloud puff as a handful of glued lobes
+        /// (golden-angle sunflower disk fill so the puff's own silhouette is never a single dominant
+        /// sphere — same fix as the 2026-08-13 "big white ball" pass, just at puff scale now). Called
+        /// repeatedly by <see cref="PlaceClayMass"/> (Layer 2) to build up one formation. Random per
+        /// call, so every puff — and every formation — is a fresh arbitrary shape.
         /// </summary>
-        private const float InterimCloudScale = 0.9f;
-        private const float InterimCloudHeightBoost = 1.7f;
+        private static ClayLobe[] SpawnCloudPuff(int lobeCount, float minRadiusNorm, float maxRadiusNorm)
+        {
+            const float goldenAngle = 137.50776f * Mathf.Deg2Rad;
+            const float maxDiskRadius = 0.40f;
+            lobeCount = Mathf.Max(1, lobeCount);
+            var lobes = new ClayLobe[lobeCount];
+
+            for (int i = 0; i < lobeCount; i++)
+            {
+                float t = (i + 0.5f) / lobeCount;
+                float diskRadius = Mathf.Sqrt(t) * maxDiskRadius;
+                float theta = i * goldenAngle;
+                float x = diskRadius * Mathf.Cos(theta);
+                float z = diskRadius * Mathf.Sin(theta);
+
+                // Dome bias: center (small diskRadius) sits high/crown, rim sits lower/belly.
+                float domeT = diskRadius / maxDiskRadius;
+                float y = Mathf.Lerp(0.14f, -0.08f, domeT) + Random.Range(-0.03f, 0.03f);
+
+                float radiusNorm = Random.Range(minRadiusNorm, maxRadiusNorm);
+                lobes[i] = new ClayLobe(x, y, z, radiusNorm, belly: y < -0.01f);
+            }
+
+            return lobes;
+        }
+
+        /// <summary>Symmetric triangular distribution on [-1, 1], peaked at 0 (inverse-CDF sampling).
+        /// Drives Layer 2's "dense/thick middle, loose/thin sides" placement.</summary>
+        private static float TriangularSample()
+        {
+            float u = Random.value;
+            return u < 0.5f ? Mathf.Sqrt(2f * u) - 1f : 1f - Mathf.Sqrt(2f * (1f - u));
+        }
+
+        /// <summary>One cloud mass's placement/size/tint — factors are relative to board width/depth
+        /// (X/Z) or absolute world units scaled by <see cref="InterimCloudHeightBoost"/> (height).</summary>
+        private readonly struct CloudMassSpec
+        {
+            public readonly string Name;
+            public readonly float PosXFactor;
+            public readonly float PosZFactor;
+            public readonly float HeightUnits;
+            public readonly float ScaleXFactor;
+            public readonly float ScaleYUnits;
+            public readonly float ScaleZFactor;
+            public readonly Color TopTint;
+            public readonly Color BellyTint;
+
+            public CloudMassSpec(
+                string name, float posX, float posZ, float heightUnits,
+                float scaleX, float scaleY, float scaleZ, Color topTint, Color bellyTint)
+            {
+                Name = name;
+                PosXFactor = posX;
+                PosZFactor = posZ;
+                HeightUnits = heightUnits;
+                ScaleXFactor = scaleX;
+                ScaleYUnits = scaleY;
+                ScaleZFactor = scaleZ;
+                TopTint = topTint;
+                BellyTint = bellyTint;
+            }
+        }
 
         /// <summary>
-        /// Soft LA-style CloudAtlas (4x2): glued bulbous lobes with white tops + soft blue-grey
-        /// undersides (<c>Tools/gen_soft_cloud_atlas.py</c>; ref <c>image copy 11.png</c>). No dark
-        /// smoke rim. Kenney whitePuff frames kept under Textures/ for provenance only.
+        /// Centered cloud shelf (2026-08-13 Play: prior ±0.68–0.78 X span read as four corner piles
+        /// with a hole over the board). Masses now sit in a tight central cluster (~±0.26 board width)
+        /// so Fair and Storm both read as one overhead bank a card can "spawn above the sky."
         /// </summary>
-        private const int CloudAtlasColumns = 4;
-        private const int CloudAtlasRows = 2;
-
-        /// <summary>
-        /// Few large billboards per mass — LA clouds are big glued pillows, not particle confetti.
-        /// </summary>
-        private const float CloudParticleDensity = 0.14f;
-        private const int CloudParticlesMin = 3;
-        private const int CloudParticlesMax = 6;
-
-        /// <summary>Not a real "infinite" lifetime (Unity has none) — long enough that a burst-spawned,
-        /// non-moving puff cluster never visibly expires during a play session.</summary>
-        private const float CloudParticleLifetimeSeconds = 9999f;
+        private static readonly CloudMassSpec[] CloudMasses =
+        {
+            new CloudMassSpec("Mass_W", -0.22f, 0.06f, 5.55f, 0.36f, 0.95f, 0.32f,
+                new Color(0.99f, 0.98f, 0.97f), new Color(0.90f, 0.90f, 0.92f)),
+            new CloudMassSpec("Mass_NW", -0.10f, 0.14f, 5.45f, 0.34f, 0.9f, 0.30f,
+                new Color(0.99f, 0.99f, 1f), new Color(0.93f, 0.95f, 1f)),
+            new CloudMassSpec("Mass_Main", 0f, 0.02f, 5.7f, 0.42f, 1.05f, 0.36f,
+                new Color(1f, 1f, 1f), new Color(0.94f, 0.96f, 1f)),
+            new CloudMassSpec("Mass_NE", 0.12f, 0.12f, 5.5f, 0.34f, 0.9f, 0.30f,
+                new Color(0.98f, 0.99f, 1f), new Color(0.92f, 0.94f, 0.99f)),
+            new CloudMassSpec("Mass_E", 0.24f, 0.04f, 5.6f, 0.36f, 0.95f, 0.32f,
+                new Color(0.99f, 0.97f, 0.95f), new Color(0.89f, 0.88f, 0.90f)),
+            new CloudMassSpec("Mass_S", 0.06f, -0.10f, 5.4f, 0.32f, 0.85f, 0.28f,
+                new Color(1f, 0.99f, 0.98f), new Color(0.96f, 0.95f, 0.93f)),
+            new CloudMassSpec("Mass_High", -0.02f, -0.02f, 6.05f, 0.28f, 0.75f, 0.24f,
+                new Color(1f, 1f, 1f), new Color(0.95f, 0.96f, 1f)),
+        };
 
         private void PlaceCloudBank(float width, float depth)
         {
             var root = new GameObject("CloudBank");
-            root.transform.SetParent(transform, false);
+            root.transform.SetParent(ModuleParent, false);
+            _cloudMassWorldBounds.Clear();
+            _cloudEnvelopes.Clear();
 
-            // Three big overlapping masses high above the board — LA backdrop density, not a low fog lid.
-            PlaceCloudPuff(root.transform, "Mass_Main",
-                new Vector3(0f, 3.9f * InterimCloudHeightBoost, 0.02f * depth),
-                new Vector3(width * 1.05f, 1.25f, depth * 0.85f) * InterimCloudScale,
-                new Color(1f, 1f, 1f, 1f));
+            // Opaque clay spheres — no alpha 边缘 rings. Desk-lamp Lit shading supplies the 3D read
+            // billboards never could (human Play image copy 13). Soft CloudAtlas haze fringes each
+            // mass's envelope so the mesh's hard silhouette blurs into the void (human ask 2026-08-13).
+            for (int i = 0; i < CloudMasses.Length; i++)
+            {
+                CloudMassSpec spec = CloudMasses[i];
+                Color topTint = _mood == BoardWeatherMood.Storm ? StormTopTint(spec.TopTint) : spec.TopTint;
+                Color bellyTint = _mood == BoardWeatherMood.Storm ? StormBellyTint(spec.BellyTint) : spec.BellyTint;
+                Vector3 pos = new Vector3(
+                    spec.PosXFactor * width,
+                    spec.HeightUnits * InterimCloudHeightBoost,
+                    spec.PosZFactor * depth);
+                Vector3 scale = new Vector3(spec.ScaleXFactor * width, spec.ScaleYUnits, spec.ScaleZFactor * depth);
 
-            PlaceCloudPuff(root.transform, "Mass_NW",
-                new Vector3(-width * 0.26f, 3.7f * InterimCloudHeightBoost, depth * 0.18f),
-                new Vector3(width * 0.7f, 1.15f, depth * 0.58f) * InterimCloudScale,
-                new Color(0.98f, 0.99f, 1f, 1f));
+                // 7-10 puffs per formation, each its own small Layer-1 puff — see PlaceClayMass for
+                // the triangular dense-middle/loose-edges assembly (human ask 2026-08-13).
+                float yaw = RandomMassYaw();
+                PlaceClayMass(root.transform, spec.Name, pos, scale, Random.Range(7, 11), yaw, topTint, bellyTint);
+                PlaceCloudEdgeHaze(root.transform, "Haze_" + spec.Name, pos, scale, topTint);
 
-            PlaceCloudPuff(root.transform, "Mass_SE",
-                new Vector3(width * 0.28f, 3.75f * InterimCloudHeightBoost, -depth * 0.16f),
-                new Vector3(width * 0.68f, 1.1f, depth * 0.55f) * InterimCloudScale,
-                new Color(1f, 0.99f, 0.97f, 1f));
+                // Same 1.08× envelope the edge-haze rides — exterior shell of this Layer-2 formation.
+                Vector3 worldCenter = ModuleParent.TransformPoint(pos);
+                Vector3 envelopeExtents = scale * (0.5f * 1.08f);
+                _cloudEnvelopes.Add(new CloudEnvelope(worldCenter, envelopeExtents, yaw));
+
+                // Per-mass bounds, not just the aggregate — masses sit at different heights (Mass_High
+                // is a full HeightUnits taller than the rest), so a strike's X/Z and its target tip
+                // height must both come from the SAME mass, never "position under mass A, height from
+                // the whole bank's center" (that mismatch was still poking through — image copy 17).
+                Transform massTransform = root.transform.Find(spec.Name);
+                if (massTransform != null)
+                {
+                    _cloudMassWorldBounds.Add(ComputeWorldBounds(massTransform));
+                }
+            }
+
+            // Aggregate kept too — used only as a last-resort fallback if per-mass placement ever fails.
+            _cloudBankWorldBounds = ComputeWorldBounds(root.transform);
+            _hasCloudBankBounds = _cloudBankWorldBounds.size.sqrMagnitude > 0f;
         }
 
         /// <summary>
-        /// One coherent LA-style cloud mass: few large shaded-lobe billboards, heavily overlapped.
+        /// Yellow Zap segments along Layer-2 envelopes so arcs <b>embrace the clay edge</b>.
+        /// Each rim step spawns a 2–3 chord twist as one pulse group; each tick picks a group
+        /// at random (<see cref="CloudEnergizeFrequencySeconds"/>). Fair skips.
         /// </summary>
-        private static void PlaceCloudPuff(
+        private const int CloudEnergizeRimSegmentsPerMass = 8;
+        private const int CloudEnergizeBankRimSegments = 12;
+        /// <summary>Uniform scale = bolt thickness. Length is fitted to the chord separately.</summary>
+        private const float CloudEnergizeScaleMin = 0.28f;
+        private const float CloudEnergizeScaleMax = 0.42f;
+        /// <summary>Quiet gap between group pulses (lower = more frequent).</summary>
+        private const float CloudEnergizeFrequencySeconds = 1.8f;
+
+        private void PlaceStormCloudEnergize()
+        {
+            GameObject prefab = LoadPrefab(ref _lightningYellowPrefab, LightningYellowResourcePath);
+            if (prefab == null)
+            {
+                return;
+            }
+
+            _cloudEnergizeGroups.Clear();
+
+            var root = new GameObject("CloudEnergize");
+            root.transform.SetParent(ModuleParent, false);
+
+            // Per-formation exterior: walk the same Layer-2 envelope ellipse the haze uses.
+            for (int e = 0; e < _cloudEnvelopes.Count; e++)
+            {
+                PlaceEnergizeRimLoop(
+                    root.transform,
+                    prefab,
+                    $"Mass{e}",
+                    _cloudEnvelopes[e],
+                    CloudEnergizeRimSegmentsPerMass);
+            }
+
+            // General cloud bank silhouette — one outer ring around the whole shelf.
+            if (_hasCloudBankBounds && _cloudBankWorldBounds.size.sqrMagnitude > 0f)
+            {
+                Bounds bank = _cloudBankWorldBounds;
+                var bankEnvelope = new CloudEnvelope(
+                    bank.center,
+                    bank.extents * 1.04f,
+                    yawDegrees: 0f);
+                PlaceEnergizeRimLoop(
+                    root.transform,
+                    prefab,
+                    "Bank",
+                    bankEnvelope,
+                    CloudEnergizeBankRimSegments);
+            }
+
+            if (_cloudEnergizeGroups.Count > 0)
+            {
+                StartCoroutine(CloudEnergizePulseLoop());
+            }
+        }
+
+        /// <summary>
+        /// One rim step = one pulse group: 2–3 short chords with radial zig-zag so the flash
+        /// reads as a twisted cluster hugging that clay edge (not scattered single sparks).
+        /// </summary>
+        private void PlaceEnergizeRimLoop(
+            Transform parent,
+            GameObject prefab,
+            string tag,
+            CloudEnvelope envelope,
+            int segments)
+        {
+            segments = Mathf.Max(4, segments);
+            float phase = tag.Length * 0.7f;
+
+            for (int i = 0; i < segments; i++)
+            {
+                float a0 = (i / (float)segments) * Mathf.PI * 2f;
+                float a1 = ((i + 1) / (float)segments) * Mathf.PI * 2f;
+                // Random 2 or 3 chords for this cluster.
+                int chordCount = Random.Range(2, 4);
+                var group = new List<ParticleSystem>(chordCount);
+
+                Vector3 prev = EnvelopeRimPoint(
+                    envelope, a0, RimYBias(a0, phase), radialBias: 1.12f);
+
+                for (int c = 1; c <= chordCount; c++)
+                {
+                    float t = c / (float)chordCount;
+                    float angle = Mathf.Lerp(a0, a1, t);
+                    // Alternate out / in / out so the polyline twists around the clay puff.
+                    float radial = (c % 2 == 1) ? 0.96f : 1.14f;
+                    float y = RimYBias(angle, phase + c * 0.85f);
+                    Vector3 next = EnvelopeRimPoint(envelope, angle, y, radialBias: radial);
+                    TrySpawnRimChord(parent, prefab, $"{tag}_{i}_{c}", prev, next, group);
+                    prev = next;
+                }
+
+                if (group.Count >= 2)
+                {
+                    _cloudEnergizeGroups.Add(group);
+                }
+                else if (group.Count == 1 && _cloudEnergizeGroups.Count > 0)
+                {
+                    _cloudEnergizeGroups[_cloudEnergizeGroups.Count - 1].Add(group[0]);
+                }
+            }
+        }
+
+        private static float RimYBias(float angleRad, float phase)
+        {
+            return 0.40f
+                + 0.32f * Mathf.Sin(angleRad * 2f + phase)
+                + 0.10f * Mathf.Sin(angleRad * 5f + phase * 1.3f);
+        }
+
+        /// <summary>World point on the Layer-2 envelope ellipse with circumferential puff undulation
+        /// (same shell family as <see cref="PlaceCloudEdgeHaze"/>).
+        /// <paramref name="radialBias"/> &gt; 1 pushes outside the clay, &lt; 1 tucks into creases.</summary>
+        private static Vector3 EnvelopeRimPoint(
+            CloudEnvelope envelope,
+            float angleRad,
+            float yBias01,
+            float radialBias = 1f)
+        {
+            float cos = Mathf.Cos(angleRad);
+            float sin = Mathf.Sin(angleRad);
+            // Stronger bumpy radius so the rim follows clay puffs instead of a perfect ellipse.
+            float puff = 1f
+                + 0.18f * Mathf.Sin(angleRad * 3f)
+                + 0.10f * Mathf.Cos(angleRad * 5f)
+                + 0.05f * Mathf.Sin(angleRad * 7f);
+            float r = puff * radialBias;
+            Vector3 local = new Vector3(
+                cos * envelope.Extents.x * r,
+                Mathf.Lerp(-envelope.Extents.y, envelope.Extents.y, Mathf.Clamp01(yBias01)),
+                sin * envelope.Extents.z * r);
+            return envelope.WorldCenter + Quaternion.Euler(0f, envelope.YawDegrees, 0f) * local;
+        }
+
+        private void TrySpawnRimChord(
+            Transform parent,
+            GameObject prefab,
+            string name,
+            Vector3 worldA,
+            Vector3 worldB,
+            List<ParticleSystem> rimArcs)
+        {
+            ParticleSystem ps = SpawnEnergizeArcAlongEdge(parent, prefab, name, worldA, worldB);
+            if (ps != null)
+            {
+                rimArcs.Add(ps);
+            }
+        }
+
+        private ParticleSystem SpawnEnergizeArcAlongEdge(
+            Transform parent,
+            GameObject prefab,
+            string name,
+            Vector3 worldA,
+            Vector3 worldB)
+        {
+            Vector3 delta = worldB - worldA;
+            float worldLen = delta.magnitude;
+            if (worldLen < 0.08f)
+            {
+                return null;
+            }
+
+            Vector3 along = delta / worldLen;
+            float scale = Random.Range(CloudEnergizeScaleMin, CloudEnergizeScaleMax);
+
+            var instance = Instantiate(prefab, parent);
+            instance.name = name;
+            // Prefab bolt fires along local +Y — park the origin on A and aim at B.
+            instance.transform.SetPositionAndRotation(
+                worldA,
+                Quaternion.FromToRotation(Vector3.up, along));
+            instance.transform.localScale = Vector3.one * scale;
+
+            DisableZapGroundDecals(instance);
+            // Fit length to the chord; scale only drives thickness.
+            FitZapHeightToCloudRise(instance, worldLen / scale);
+
+            var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
+            for (int s = 0; s < systems.Length; s++)
+            {
+                systems[s].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+
+            return instance.GetComponent<ParticleSystem>()
+                ?? (systems.Length > 0 ? systems[0] : null);
+        }
+
+        /// <summary>
+        /// Each tick picks one random 2–3 arc cluster and hard-retriggers every Zap in that group
+        /// together, then waits <see cref="CloudEnergizeFrequencySeconds"/>.
+        /// </summary>
+        private IEnumerator CloudEnergizePulseLoop()
+        {
+            yield return new WaitForSeconds(0.4f);
+
+            while (true)
+            {
+                if (_cloudEnergizeGroups.Count == 0)
+                {
+                    yield break;
+                }
+
+                int groupIndex = Random.Range(0, _cloudEnergizeGroups.Count);
+                List<ParticleSystem> group = _cloudEnergizeGroups[groupIndex];
+                for (int i = 0; i < group.Count; i++)
+                {
+                    ParticleSystem ps = group[i];
+                    if (ps == null)
+                    {
+                        continue;
+                    }
+
+                    // Hard retrigger — one-shot Zap needs Clear or a second Play can be a no-op flash.
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                    ps.Play(true);
+                }
+
+                yield return new WaitForSeconds(CloudEnergizeFrequencySeconds);
+            }
+        }
+
+        /// <summary>Hide scorch / floor-add so tiny surface arcs don't stamp the clay.</summary>
+        private static void DisableZapGroundDecals(GameObject zapRoot)
+        {
+            Transform t = zapRoot.transform;
+            for (int i = 0; i < t.childCount; i++)
+            {
+                Transform child = t.GetChild(i);
+                if (child.name == "Scorch" || child.name == "Zap Add Floor")
+                {
+                    child.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        /// <summary>World-space bounds of every opaque clay mesh under <paramref name="root"/>,
+        /// encapsulated. Cheap and exact — these are static <see cref="MeshRenderer"/>s, not particles,
+        /// so bounds are valid the instant they're created (no simulate-forward needed).</summary>
+        private static Bounds ComputeWorldBounds(Transform root)
+        {
+            var renderers = root.GetComponentsInChildren<MeshRenderer>(true);
+            if (renderers.Length == 0)
+            {
+                return new Bounds(root.position, Vector3.zero);
+            }
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            return bounds;
+        }
+
+        /// <summary>Storm clay — same mound shapes as fair, pulled toward slate grey so the bank
+        /// reads as weather, not bright fair-weather pillows (human 2026-08-13).</summary>
+        private static Color StormTopTint(Color fair) =>
+            Color.Lerp(fair, new Color(0.52f, 0.56f, 0.64f, 1f), 0.78f);
+
+        private static Color StormBellyTint(Color fair) =>
+            Color.Lerp(fair, new Color(0.30f, 0.33f, 0.40f, 1f), 0.85f);
+
+        /// <summary>Mild random spin per mass so the same cluster doesn't always face the same way.</summary>
+        private static float RandomMassYaw() => Random.Range(0f, 360f);
+
+        /// <summary>
+        /// Layer 2 — assembly: places <paramref name="puffCount"/> Layer-1 puffs (<see
+        /// cref="SpawnCloudPuff"/>) inside one formation using a <b>triangular density/size profile</b>
+        /// along the formation's local X — puffs land denser and bigger near the center
+        /// (<see cref="TriangularSample"/> peaks at 0) and sparser/smaller toward the fringe, with fringe
+        /// puffs drifting slightly upward. Reads as a rounded-triangle/pyramid cloud built from many
+        /// small irregular pieces, not a uniform ball of same-size lobes — human 2026-08-13, pointing at
+        /// a reference: "dense, thick in the middle, loose and thin at the sides... almost triangular."
+        /// No cast shadows (image copy 14: shadow ate the board). No Lit terminator darkening —
+        /// Unlit + posterized shade map keeps crowns bright and bellies pale without a glossy-render
+        /// gradient (image copy 16 close-up: "needs to be more stylized").
+        /// Individual lobes are Y-squashed ellipsoids (yaw only — never pitch/roll). Full random
+        /// spin rotated the crown/belly shade map off-axis so every pillow self-lit (image copy 15
+        /// "lightings wrongly applied"). Volume read comes from mass-height tint + a near-flat
+        /// shade wash, not from each lobe's own highlight.
+        /// </summary>
+        private static void PlaceClayMass(
             Transform parent,
             string name,
             Vector3 localPosition,
-            Vector3 localScale,
+            Vector3 massScale,
+            int puffCount,
+            float yawDegrees,
+            Color topTint,
+            Color bellyTint)
+        {
+            var mass = new GameObject(name);
+            mass.transform.SetParent(parent, false);
+            mass.transform.localPosition = localPosition;
+            mass.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+
+            Mesh sphere = UnitSphereMesh();
+            Material clay = ClayCloudMaterial();
+            float footprint = Mathf.Max(massScale.x, massScale.z);
+
+            for (int p = 0; p < puffCount; p++)
+            {
+                float u = TriangularSample(); // -1..1, peaked at 0 — formation's dense/thick core
+                float depthJitter = Random.Range(-0.5f, 0.5f);
+                float edgeT = Mathf.Abs(u); // 0 at core .. 1 at fringe
+
+                float puffScale = Mathf.Lerp(1f, 0.4f, edgeT); // core puffs big, fringe puffs small
+                int puffLobes = Mathf.RoundToInt(Mathf.Lerp(5f, 2f, edgeT)); // fringe puffs thinner too
+                float puffMinR = Mathf.Lerp(0.22f, 0.15f, edgeT);
+                float puffMaxR = Mathf.Lerp(0.30f, 0.21f, edgeT);
+
+                var puffGo = new GameObject($"Puff_{p}");
+                puffGo.transform.SetParent(mass.transform, false);
+                // Pull depth toward the core so the assembled mass reads as one rounded mound
+                // (spherical-but-not-entirely), not a flat raft of equal bubbles.
+                float depthSpread = massScale.z * (0.55f - 0.25f * edgeT);
+                float puffY = Mathf.Lerp(0.06f, 0.20f, edgeT) * massScale.y;
+                puffGo.transform.localPosition = new Vector3(
+                    u * massScale.x * 0.42f,
+                    puffY,
+                    depthJitter * depthSpread);
+
+                ClayLobe[] puff = SpawnCloudPuff(puffLobes, puffMinR, puffMaxR);
+                float puffFootprintXZ = footprint * puffScale * 0.55f;
+                float puffThicknessY = massScale.y * puffScale;
+
+                for (int i = 0; i < puff.Length; i++)
+                {
+                    ClayLobe lobe = puff[i];
+                    var go = new GameObject($"Lobe_{i}");
+                    go.transform.SetParent(puffGo.transform, false);
+
+                    Vector3 lobeLocal = new Vector3(
+                        lobe.UnitOffset.x * puffFootprintXZ,
+                        lobe.UnitOffset.y * puffThicknessY,
+                        lobe.UnitOffset.z * puffFootprintXZ);
+                    go.transform.localPosition = lobeLocal;
+
+                    // Glue oversize + Y-squash ellipsoid. Yaw only — shade map crown stays world-up.
+                    float diameter = lobe.RadiusNorm * puffFootprintXZ * 2.35f;
+                    go.transform.localScale = new Vector3(
+                        diameter * Random.Range(0.88f, 1.18f),
+                        diameter * Random.Range(0.62f, 0.92f),
+                        diameter * Random.Range(0.88f, 1.18f));
+                    go.transform.localRotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+
+                    var filter = go.AddComponent<MeshFilter>();
+                    filter.sharedMesh = sphere;
+
+                    var renderer = go.AddComponent<MeshRenderer>();
+                    renderer.sharedMaterial = clay;
+                    // Shadows off — cast shadow blacked out the board (image copy 14); self-receive
+                    // carved harsh crevices between lobes.
+                    renderer.shadowCastingMode = ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+
+                    // Mass-volume tint: brighter toward the mound crown, cooler toward belly/fringe.
+                    // Replaces per-lobe shade-map "each ball has its own sun" lighting.
+                    float height01 = Mathf.InverseLerp(
+                        -0.35f * massScale.y,
+                        0.55f * massScale.y,
+                        puffY + lobeLocal.y);
+                    Color tint = Color.Lerp(bellyTint, topTint, Mathf.Clamp01(height01));
+                    tint = Color.Lerp(tint, bellyTint, edgeT * 0.35f);
+                    var block = new MaterialPropertyBlock();
+                    block.SetColor("_BaseColor", tint);
+                    block.SetColor("_Color", tint);
+                    renderer.SetPropertyBlock(block);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Soft CloudAtlas billboard fringe riding the outer envelope of one clay mass. The opaque
+        /// Unlit spheres have a hard mesh-edge silhouette with no built-in softness (no Fresnel/rim
+        /// alpha available without a custom shader); this reuses the already-proven rim-mist billboard
+        /// technique (<see cref="PlaceRimMistPuff"/>) — camera-facing puffs with baked alpha falloff —
+        /// so the silhouette blurs into the void instead of cutting hard (human ask 2026-08-13).
+        /// Depth-tested against the opaque core (material/queue unchanged from <see cref="MistMaterial"/>),
+        /// so haze never shows through a mass onto the board.
+        /// </summary>
+        private static void PlaceCloudEdgeHaze(
+            Transform parent,
+            string name,
+            Vector3 localPosition,
+            Vector3 massScale,
             Color tint)
         {
             var puff = new GameObject(name);
@@ -130,45 +751,72 @@ namespace LogiCard.Board
             var ps = puff.AddComponent<ParticleSystem>();
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
-            float footprint = Mathf.Max(0.01f, localScale.x * localScale.z);
-            int count = Mathf.Clamp(
-                Mathf.RoundToInt(footprint * CloudParticleDensity),
-                CloudParticlesMin,
-                CloudParticlesMax);
-            // Large discs — atlas already holds a glued multi-lobe pillow per frame.
-            float baseSize = Mathf.Sqrt(footprint / count) * 3.4f;
+            // Thin silhouette softener only — heavy haze read as more floating glass bubbles on top
+            // of the clay (image copy 15). Keep fringe sparse/low-alpha so the two-layer clay mass owns the shape.
+            Vector3 envelope = massScale * 1.08f;
+            float footprint = Mathf.Max(0.01f, envelope.x * envelope.z);
+            int maxCount = Mathf.Clamp(Mathf.RoundToInt(footprint * 0.4f), 6, 14);
+            float baseSize = Mathf.Sqrt(footprint / maxCount) * 1.55f;
 
             var main = ps.main;
-            main.loop = false;
+            main.loop = true;
             main.playOnAwake = true;
-            main.duration = 1f;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(CloudParticleLifetimeSeconds);
+            main.prewarm = true;
+            main.duration = 8f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(6f, 9.5f);
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.95f, baseSize * 1.12f);
-            main.startRotation = new ParticleSystem.MinMaxCurve(-12f * Mathf.Deg2Rad, 12f * Mathf.Deg2Rad);
-            // Near-opaque so painted blue-grey undersides read (Additive washed that shading away).
+            main.startSize = new ParticleSystem.MinMaxCurve(baseSize * 0.85f, baseSize * 1.35f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f * Mathf.Deg2Rad);
             main.startColor = new ParticleSystem.MinMaxGradient(
-                new Color(tint.r * 0.98f, tint.g * 0.98f, tint.b * 0.98f, 0.88f),
-                new Color(Mathf.Min(1f, tint.r * 1.02f), Mathf.Min(1f, tint.g * 1.02f), Mathf.Min(1f, tint.b * 1.02f), 0.98f));
-            main.maxParticles = Mathf.Max(count, 3);
+                new Color(tint.r, tint.g, tint.b, 0.16f),
+                new Color(tint.r, tint.g, tint.b, 0.30f));
+            main.maxParticles = maxCount;
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
             main.gravityModifier = 0f;
             main.scalingMode = ParticleSystemScalingMode.Local;
 
             var emission = ps.emission;
             emission.enabled = true;
-            emission.rateOverTime = 0f;
-            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)count) });
+            emission.rateOverTime = Mathf.Clamp(maxCount / 6f, 1.5f, 3.5f);
 
             var shape = ps.shape;
             shape.enabled = true;
-            shape.shapeType = ParticleSystemShapeType.Sphere;
-            float radius = 0.42f * Mathf.Max(localScale.x, localScale.z);
-            shape.radius = Mathf.Max(radius, 0.25f);
-            shape.radiusThickness = 1f;
-            shape.scale = new Vector3(1f, Mathf.Clamp(localScale.y / Mathf.Max(radius, 0.01f), 0.5f, 1.2f), 1f);
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = envelope;
+            // Shell only — haze rides the mass envelope surface, not its interior (would hide
+            // behind the opaque core and waste particles).
+            shape.boxThickness = Vector3.zero;
             shape.position = Vector3.zero;
             shape.rotation = Vector3.zero;
+
+            var velocity = ps.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = new ParticleSystem.MinMaxCurve(-0.03f, 0.03f);
+            velocity.y = new ParticleSystem.MinMaxCurve(-0.02f, 0.02f);
+            velocity.z = new ParticleSystem.MinMaxCurve(-0.03f, 0.03f);
+
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(Color.white, 0f),
+                    new GradientColorKey(Color.white, 1f),
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(1f, 0.25f),
+                    new GradientAlphaKey(0.8f, 0.75f),
+                    new GradientAlphaKey(0f, 1f),
+                });
+            colorOverLifetime.color = gradient;
+
+            var rotation = ps.rotationOverLifetime;
+            rotation.enabled = true;
+            rotation.z = new ParticleSystem.MinMaxCurve(-0.08f, 0.08f);
 
             var tsa = ps.textureSheetAnimation;
             tsa.enabled = true;
@@ -183,11 +831,33 @@ namespace LogiCard.Board
             var renderer = puff.GetComponent<ParticleSystemRenderer>();
             renderer.renderMode = ParticleSystemRenderMode.Billboard;
             renderer.sortMode = ParticleSystemSortMode.Distance;
-            renderer.sharedMaterial = CloudMaterial();
+            renderer.sharedMaterial = MistMaterial();
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
 
             ps.Play(true);
+        }
+
+        private static Mesh UnitSphereMesh()
+        {
+            if (_unitSphereMesh != null)
+            {
+                return _unitSphereMesh;
+            }
+
+            // Borrow Unity's unit sphere mesh only — destroy the temp GO immediately (not scene fog).
+            var tmp = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            _unitSphereMesh = tmp.GetComponent<MeshFilter>().sharedMesh;
+            if (Application.isPlaying)
+            {
+                Object.Destroy(tmp);
+            }
+            else
+            {
+                Object.DestroyImmediate(tmp);
+            }
+
+            return _unitSphereMesh;
         }
 
         private void PlaceRain(float width, float depth)
@@ -198,11 +868,12 @@ namespace LogiCard.Board
                 return;
             }
 
-            var instance = Instantiate(prefab, transform);
+            var instance = Instantiate(prefab, ModuleParent);
             instance.name = "Rain";
-            // Emit just under the cloud shelf so streaks read as falling out of the pocket. Same height
-            // this file's rain has used since the 2026-08-09/10 framing fix.
-            instance.transform.localPosition = new Vector3(0f, 2.85f * InterimCloudHeightBoost, 0f);
+            // Emit just under the cloud shelf so streaks read as falling out of the pocket. Bumped
+            // from 2.85 with the 2026-08-13 cloud-height raise (masses now sit at 5.4-6.1 units,
+            // was 3.75-4.3) so rain still starts close under the clouds instead of from a bare gap.
+            instance.transform.localPosition = new Vector3(0f, 4.6f * InterimCloudHeightBoost, 0f);
             instance.transform.localRotation = Quaternion.identity;
             instance.transform.localScale = Vector3.one;
 
@@ -222,13 +893,14 @@ namespace LogiCard.Board
             shape.position = Vector3.zero;
             shape.rotation = new Vector3(180f, 0f, 0f);
 
+            bool storm = _mood == BoardWeatherMood.Storm;
             var emission = ps.emission;
-            emission.rateOverTime = 700f;
+            emission.rateOverTime = storm ? 1600f : 700f;
 
             var main = ps.main;
             main.prewarm = true;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 2500;
+            main.maxParticles = storm ? 4500 : 2500;
             main.startSpeed = new ParticleSystem.MinMaxCurve(5.5f, 7.5f);
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.55f, 0.85f);
             main.startSize3D = true;
@@ -245,7 +917,9 @@ namespace LogiCard.Board
                 psRenderer.sharedMaterial = SoftRainMaterial(psRenderer.sharedMaterial);
             }
 
-            main.startColor = new Color(0.72f, 0.78f, 0.88f, 0.42f);
+            main.startColor = storm
+                ? new Color(0.55f, 0.60f, 0.70f, 0.55f)
+                : new Color(0.72f, 0.78f, 0.88f, 0.42f);
             main.gravityModifier = 0.35f;
 
             var colorOverLifetime = ps.colorOverLifetime;
@@ -325,109 +999,60 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Rim-only stylized mist — Kenney CloudAtlas billboards drift along the board edge, plus
-        /// lightly-tuned pack <c>PF_Fog_Main</c>/<c>PF_Fog_Distant</c> at the apron. Deliberately
-        /// does <b>not</b> cover the playable center (human rejected full-board fog white-out).
+        /// Soft CloudAtlas grid for rim mist billboards only (cloud bank is clay meshes now).
+        /// </summary>
+        private const int CloudAtlasColumns = 4;
+        private const int CloudAtlasRows = 2;
+
+        /// <summary>
+        /// Rim-only soft mist — very subtle. Human Play <c>image copy 13</c>: dense low billboards
+        /// read as cheap 2D clouds over the board; keep apron haze sparse so clay bank owns the look.
         /// </summary>
         private void PlaceFogMist(float width, float depth)
         {
             var root = new GameObject("RimMist");
-            root.transform.SetParent(transform, false);
+            root.transform.SetParent(ModuleParent, false);
 
-            float rimX = width * 0.48f;
-            float rimZ = depth * 0.48f;
-            float edgeAlongX = width * 0.72f;
-            float edgeAlongZ = depth * 0.72f;
-            float rimThickness = Mathf.Max(width, depth) * 0.12f;
+            float rimX = width * 0.52f;
+            float rimZ = depth * 0.52f;
+            float rimThickness = Mathf.Max(width, depth) * 0.10f;
 
-            // Four edge midpoints — thin boxes that hug the apron, never the board center.
-            PlaceRimMistPuff(root.transform, "Mist_N",
-                new Vector3(0f, 0.55f, rimZ),
-                new Vector3(edgeAlongX, 0.55f, rimThickness),
-                new Color(0.78f, 0.74f, 0.62f, 0.38f),
-                driftX: new ParticleSystem.MinMaxCurve(-0.12f, 0.12f),
-                driftZ: new ParticleSystem.MinMaxCurve(-0.04f, 0.02f));
-
-            PlaceRimMistPuff(root.transform, "Mist_S",
-                new Vector3(0f, 0.48f, -rimZ),
-                new Vector3(edgeAlongX, 0.5f, rimThickness),
-                new Color(0.72f, 0.78f, 0.86f, 0.34f),
-                driftX: new ParticleSystem.MinMaxCurve(-0.12f, 0.12f),
-                driftZ: new ParticleSystem.MinMaxCurve(-0.02f, 0.04f));
-
-            PlaceRimMistPuff(root.transform, "Mist_E",
-                new Vector3(rimX, 0.52f, 0f),
-                new Vector3(rimThickness, 0.55f, edgeAlongZ),
-                new Color(0.76f, 0.72f, 0.64f, 0.36f),
-                driftX: new ParticleSystem.MinMaxCurve(-0.04f, 0.02f),
-                driftZ: new ParticleSystem.MinMaxCurve(-0.12f, 0.12f));
-
-            PlaceRimMistPuff(root.transform, "Mist_W",
-                new Vector3(-rimX, 0.5f, 0f),
-                new Vector3(rimThickness, 0.5f, edgeAlongZ),
-                new Color(0.70f, 0.76f, 0.84f, 0.32f),
-                driftX: new ParticleSystem.MinMaxCurve(-0.02f, 0.04f),
-                driftZ: new ParticleSystem.MinMaxCurve(-0.12f, 0.12f));
-
-            // Corner accents — slightly higher/warmer so the rim reads as volume, still off-center.
+            // Two far corners only — not four full edges (was skimming the playable face).
             PlaceRimMistPuff(root.transform, "Mist_NW",
-                new Vector3(-rimX * 0.92f, 0.72f, rimZ * 0.92f),
-                new Vector3(rimThickness * 1.4f, 0.65f, rimThickness * 1.4f),
-                new Color(0.80f, 0.74f, 0.58f, 0.40f),
-                driftX: new ParticleSystem.MinMaxCurve(0.02f, 0.10f),
-                driftZ: new ParticleSystem.MinMaxCurve(-0.10f, -0.02f));
+                new Vector3(-rimX * 0.95f, 0.55f, rimZ * 0.95f),
+                new Vector3(rimThickness * 1.2f, 0.45f, rimThickness * 1.2f),
+                new Color(0.92f, 0.90f, 0.86f, 0.18f),
+                driftX: new ParticleSystem.MinMaxCurve(0.02f, 0.08f),
+                driftZ: new ParticleSystem.MinMaxCurve(-0.08f, -0.02f));
 
             PlaceRimMistPuff(root.transform, "Mist_SE",
-                new Vector3(rimX * 0.92f, 0.68f, -rimZ * 0.92f),
-                new Vector3(rimThickness * 1.4f, 0.6f, rimThickness * 1.4f),
-                new Color(0.68f, 0.74f, 0.82f, 0.36f),
-                driftX: new ParticleSystem.MinMaxCurve(-0.10f, -0.02f),
-                driftZ: new ParticleSystem.MinMaxCurve(0.02f, 0.10f));
+                new Vector3(rimX * 0.95f, 0.5f, -rimZ * 0.95f),
+                new Vector3(rimThickness * 1.2f, 0.4f, rimThickness * 1.2f),
+                new Color(0.88f, 0.90f, 0.94f, 0.16f),
+                driftX: new ParticleSystem.MinMaxCurve(-0.08f, -0.02f),
+                driftZ: new ParticleSystem.MinMaxCurve(0.02f, 0.08f));
 
-            // Pack distant/main fog — rim apron only, low rate, never a full-board volume.
             PlaceRimPackFog(
                 ref _fogDistantPrefab,
                 FogDistantResourcePath,
                 "FogDistant_N",
-                new Vector3(0f, 1.1f, depth * 0.58f),
-                width * 0.85f,
-                rimThickness * 1.6f,
-                rateOverTime: 8f,
-                startSize: new ParticleSystem.MinMaxCurve(1.8f, 3.2f),
-                startColor: new Color(0.70f, 0.74f, 0.82f, 0.22f));
+                new Vector3(0f, 1.15f, depth * 0.62f),
+                width * 0.7f,
+                rimThickness * 1.4f,
+                rateOverTime: 4f,
+                startSize: new ParticleSystem.MinMaxCurve(1.5f, 2.6f),
+                startColor: new Color(0.82f, 0.84f, 0.90f, 0.12f));
 
             PlaceRimPackFog(
                 ref _fogDistantPrefab,
                 FogDistantResourcePath,
                 "FogDistant_S",
-                new Vector3(0f, 1.0f, -depth * 0.58f),
-                width * 0.85f,
-                rimThickness * 1.6f,
-                rateOverTime: 8f,
-                startSize: new ParticleSystem.MinMaxCurve(1.8f, 3.2f),
-                startColor: new Color(0.72f, 0.70f, 0.62f, 0.20f));
-
-            PlaceRimPackFog(
-                ref _fogMainPrefab,
-                FogMainResourcePath,
-                "FogMain_E",
-                new Vector3(width * 0.58f, 0.85f, 0f),
-                rimThickness * 1.5f,
-                depth * 0.7f,
-                rateOverTime: 6f,
-                startSize: new ParticleSystem.MinMaxCurve(1.4f, 2.4f),
-                startColor: new Color(0.74f, 0.70f, 0.58f, 0.18f));
-
-            PlaceRimPackFog(
-                ref _fogMainPrefab,
-                FogMainResourcePath,
-                "FogMain_W",
-                new Vector3(-width * 0.58f, 0.85f, 0f),
-                rimThickness * 1.5f,
-                depth * 0.7f,
-                rateOverTime: 6f,
-                startSize: new ParticleSystem.MinMaxCurve(1.4f, 2.4f),
-                startColor: new Color(0.68f, 0.74f, 0.80f, 0.18f));
+                new Vector3(0f, 1.05f, -depth * 0.62f),
+                width * 0.7f,
+                rimThickness * 1.4f,
+                rateOverTime: 4f,
+                startSize: new ParticleSystem.MinMaxCurve(1.5f, 2.6f),
+                startColor: new Color(0.86f, 0.84f, 0.78f, 0.10f));
         }
 
         /// <summary>
@@ -553,7 +1178,7 @@ namespace LogiCard.Board
                 return;
             }
 
-            var instance = Instantiate(prefab, transform);
+            var instance = Instantiate(prefab, ModuleParent);
             instance.name = name;
             instance.transform.localPosition = localPosition;
             instance.transform.localRotation = Quaternion.identity;
@@ -611,68 +1236,407 @@ namespace LogiCard.Board
             }
         }
 
-        /// <summary>Randomized interval between flashes — modest and occasional, not constant storm
-        /// strobing.</summary>
-        private const float LightningIntervalMinSeconds = 12f;
-        private const float LightningIntervalMaxSeconds = 22f;
+        /// <summary>Fair weather — occasional single strike.</summary>
+        private const float FairLightningIntervalMinSeconds = 12f;
+        private const float FairLightningIntervalMaxSeconds = 22f;
+
+        /// <summary>Storm — many more pack Zap plays (human 2026-08-13).</summary>
+        private const float StormLightningIntervalMinSeconds = 0.9f;
+        private const float StormLightningIntervalMaxSeconds = 2.8f;
+        private const int StormLightningRigCount = 6;
 
         private void PlaceLightning(float width, float depth)
         {
-            GameObject prefab = LoadPrefab(ref _lightningPrefab, LightningResourcePath);
+            if (_mood == BoardWeatherMood.Storm)
+            {
+                PlaceStormLightning(width, depth);
+                return;
+            }
+
+            GameObject prefab = LoadPrefab(ref _lightningWhitePrefab, LightningWhiteResourcePath);
             if (prefab == null)
             {
                 return;
             }
 
-            var instance = Instantiate(prefab, transform);
-            instance.name = "Lightning";
-            // Ground strike — playtest 2026-08-11: anchor at board floor with slight off-center XZ.
-            instance.transform.localPosition = new Vector3(width * 0.18f, 0.05f, -depth * 0.12f);
+            ParticleSystem ps = SpawnZapRig(
+                prefab,
+                "Lightning",
+                new Vector3(width * 0.18f, 0.05f, -depth * 0.12f),
+                targetTipWorldY: null);
+            if (ps != null)
+            {
+                StartCoroutine(LightningLoop(ps, FairLightningIntervalMinSeconds, FairLightningIntervalMaxSeconds, doubleStrikeChance: 0f));
+            }
+        }
+
+        /// <summary>
+        /// Storm Zap field — <b>Yellow only</b>. Bolt height is driven by the placed cloud mass
+        /// height (<see cref="StrikeTipWorldY"/> ← measured clay bounds from
+        /// <c>HeightUnits × InterimCloudHeightBoost</c>). Ground spawn, upright; ConeVolume
+        /// <c>shape.length</c> = rise from ground to that cloud Y so the tip tracks the shelf.
+        /// </summary>
+        private void PlaceStormLightning(float width, float depth)
+        {
+            var root = new GameObject("LightningStorm");
+            root.transform.SetParent(ModuleParent, false);
+
+            GameObject prefab = LoadPrefab(ref _lightningYellowPrefab, LightningYellowResourcePath);
+            if (prefab == null)
+            {
+                Debug.LogWarning(
+                    "BoardWeatherPocket: missing Resources/Weather/VFX_Zap_Yellow — run " +
+                    "Tools > LogiCard > Import Weather Pack Prefabs.");
+                return;
+            }
+
+            for (int i = 0; i < StormLightningRigCount; i++)
+            {
+                Bounds strikeMass = PickStrikeMassBounds();
+                ParticleSystem ps = SpawnStormZap(
+                    prefab,
+                    $"Zap_{i}",
+                    StrikeLocalPositionWithinMass(strikeMass, width, depth),
+                    StrikeTipWorldY(strikeMass));
+                if (ps == null)
+                {
+                    continue;
+                }
+
+                ps.transform.SetParent(root.transform, true);
+                StartCoroutine(LightningLoop(
+                    ps,
+                    StormLightningIntervalMinSeconds,
+                    StormLightningIntervalMaxSeconds,
+                    doubleStrikeChance: 0.55f));
+            }
+        }
+
+        /// <summary>Picks one placed cloud mass's own measured bounds. Falls back to the CloudBank
+        /// aggregate, then to a degenerate placeholder, only if per-mass placement didn't happen.</summary>
+        private Bounds PickStrikeMassBounds()
+        {
+            if (_cloudMassWorldBounds.Count > 0)
+            {
+                return _cloudMassWorldBounds[Random.Range(0, _cloudMassWorldBounds.Count)];
+            }
+
+            if (_hasCloudBankBounds)
+            {
+                return _cloudBankWorldBounds;
+            }
+
+            return new Bounds(ModuleParent.position, Vector3.zero);
+        }
+
+        /// <summary>Strike X/Z sampled from one mass's real measured footprint, inset so strikes stay
+        /// under its silhouette rather than its bounding-box edge. Falls back to the old board-fraction
+        /// guess only if no bounds are available at all (e.g. CloudBank failed to place).</summary>
+        private Vector3 StrikeLocalPositionWithinMass(Bounds massBounds, float width, float depth)
+        {
+            if (massBounds.size.sqrMagnitude > 0f)
+            {
+                const float footprintInset = 0.55f;
+                float x = massBounds.center.x + Random.Range(-0.5f, 0.5f) * massBounds.size.x * footprintInset;
+                float z = massBounds.center.z + Random.Range(-0.5f, 0.5f) * massBounds.size.z * footprintInset;
+                Vector3 groundWorld = new Vector3(x, ModuleParent.position.y + 0.05f, z);
+                return ModuleParent.InverseTransformPoint(groundWorld);
+            }
+
+            return new Vector3(Random.Range(-0.22f, 0.22f) * width, 0.05f, Random.Range(-0.18f, 0.18f) * depth);
+        }
+
+        /// <summary>
+        /// Cloud-height reference for the bolt tip — the mass's measured world-Y center (from the
+        /// fixed shelf placement <c>HeightUnits × InterimCloudHeightBoost</c>). Same mass as the
+        /// strike X/Z so tip height matches the clay actually above that point.
+        /// </summary>
+        private static float? StrikeTipWorldY(Bounds massBounds)
+        {
+            return massBounds.size.sqrMagnitude > 0f ? massBounds.center.y : (float?)null;
+        }
+
+        /// <summary>
+        /// Storm Zap: ground spawn, stock upright look. Bolt vertical span is set from
+        /// <paramref name="cloudTipWorldY"/> (cloud shelf height) via
+        /// <see cref="FitZapHeightToCloudRise"/>.
+        /// </summary>
+        private ParticleSystem SpawnStormZap(
+            GameObject prefab,
+            string name,
+            Vector3 groundLocalPosition,
+            float? cloudTipWorldY)
+        {
+            var instance = Instantiate(prefab, ModuleParent);
+            instance.name = name;
+            instance.transform.localPosition = groundLocalPosition;
             instance.transform.localRotation = Quaternion.identity;
             instance.transform.localScale = Vector3.one;
 
-            var ps = instance.GetComponent<ParticleSystem>();
-            if (ps == null)
+            if (cloudTipWorldY.HasValue)
+            {
+                float cloudRise = Mathf.Max(0.5f, cloudTipWorldY.Value - instance.transform.position.y);
+                FitZapHeightToCloudRise(instance, cloudRise);
+            }
+
+            var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                systems[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+
+            return instance.GetComponent<ParticleSystem>() ?? (systems.Length > 0 ? systems[0] : null);
+        }
+
+        /// <summary>
+        /// Map cloud rise (ground → cloud shelf Y) onto the Zap bolt layers. Prefab uses Cone
+        /// (base-only) with a fixed <c>length: 5</c>; switching those layers to
+        /// <see cref="ParticleSystemShapeType.ConeVolume"/> and setting <c>shape.length = cloudRise</c>
+        /// makes the particle span track the clay height. Stretch <c>lengthScale</c> is kept modest
+        /// so the ribbon doesn't poke past the shelf; <c>startSize</c> is left alone (thickness).
+        /// Ground Sphere layers (flare / scorch / floor) are untouched.
+        /// </summary>
+        private static void FitZapHeightToCloudRise(GameObject zapRoot, float cloudRise)
+        {
+            float rise = Mathf.Max(0.5f, cloudRise);
+
+            var systems = zapRoot.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                ParticleSystem ps = systems[i];
+                ParticleSystem.ShapeModule shape = ps.shape;
+
+                if (shape.enabled &&
+                    (shape.shapeType == ParticleSystemShapeType.Sphere ||
+                     shape.shapeType == ParticleSystemShapeType.Hemisphere))
+                {
+                    continue;
+                }
+
+                bool isCone =
+                    shape.enabled &&
+                    (shape.shapeType == ParticleSystemShapeType.Cone ||
+                     shape.shapeType == ParticleSystemShapeType.ConeVolume ||
+                     shape.shapeType == ParticleSystemShapeType.ConeShell ||
+                     shape.shapeType == ParticleSystemShapeType.ConeVolumeShell);
+
+                if (isCone)
+                {
+                    // Volume along +Y (prefab already tilts the shape 90°) — length = cloud shelf rise.
+                    shape.shapeType = ParticleSystemShapeType.ConeVolume;
+                    shape.angle = 0f;
+                    shape.radius = 0.01f;
+                    shape.length = rise;
+                }
+
+                var renderer = ps.GetComponent<ParticleSystemRenderer>();
+                if (renderer != null && renderer.renderMode == ParticleSystemRenderMode.Stretch)
+                {
+                    // Prefab lengthScale 2 on size~2 added ~4u past the cone tip and cleared the clay.
+                    // Keep a short ribbon so segments connect without overshooting the shelf.
+                    renderer.velocityScale = 0f;
+                    renderer.lengthScale = 0.75f;
+                }
+            }
+        }
+
+        private ParticleSystem SpawnZapRig(
+            GameObject prefab,
+            string name,
+            Vector3 localPosition,
+            float? targetTipWorldY)
+        {
+            var instance = Instantiate(prefab, ModuleParent);
+            instance.name = name;
+            instance.transform.localPosition = localPosition;
+            instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale = Vector3.one;
+
+            // Fair — stock upward Zap, untouched.
+            _ = targetTipWorldY;
+
+            var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                systems[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+
+            return instance.GetComponent<ParticleSystem>() ?? (systems.Length > 0 ? systems[0] : null);
+        }
+
+        /// <summary>
+        /// Re-triggers the (one-shot, non-looping) Zap rig on a randomized interval. Storm passes a
+        /// high <paramref name="doubleStrikeChance"/> so flashes cluster like real lightning.
+        /// </summary>
+        private static IEnumerator LightningLoop(
+            ParticleSystem rig,
+            float intervalMin,
+            float intervalMax,
+            float doubleStrikeChance)
+        {
+            // Stagger first strike so six storm rigs don't sync on frame 0.
+            yield return new WaitForSeconds(Random.Range(0.05f, intervalMax));
+
+            while (rig != null)
+            {
+                rig.Play(true);
+                if (doubleStrikeChance > 0f && Random.value < doubleStrikeChance)
+                {
+                    yield return new WaitForSeconds(Random.Range(0.06f, 0.18f));
+                    if (rig == null)
+                    {
+                        yield break;
+                    }
+
+                    rig.Play(true);
+                }
+
+                yield return new WaitForSeconds(Random.Range(intervalMin, intervalMax));
+            }
+        }
+
+        /// <summary>
+        /// Pack fog volumes for storm only — denser apron without a full-board fog slab. Fair weather
+        /// keeps rim-only mist (PlayMode smoke asserts no FogGround/RainMist there).
+        /// </summary>
+        private void PlaceStormVolumeFog(float width, float depth)
+        {
+            PlaceRimPackFog(
+                ref _fogMainPrefab,
+                FogMainResourcePath,
+                "FogMain_Storm",
+                new Vector3(0f, 1.4f, depth * 0.35f),
+                width * 0.85f,
+                depth * 0.35f,
+                rateOverTime: 10f,
+                startSize: new ParticleSystem.MinMaxCurve(2.0f, 3.4f),
+                startColor: new Color(0.45f, 0.48f, 0.55f, 0.22f));
+
+            PlaceRimPackFog(
+                ref _rainMistPrefab,
+                RainMistResourcePath,
+                "RainMist_Storm",
+                new Vector3(0f, 0.85f, 0f),
+                width * 0.9f,
+                depth * 0.9f,
+                rateOverTime: 8f,
+                startSize: new ParticleSystem.MinMaxCurve(1.2f, 2.2f),
+                startColor: new Color(0.50f, 0.54f, 0.60f, 0.16f));
+        }
+
+        /// <summary>
+        /// Cool + dim diorama lights under a storm module. Snapshots intensities so
+        /// <see cref="ClearWeather"/> / Fair can restore (card swap must not permanently crush the key).
+        /// </summary>
+        private void ApplyStormLightingDim()
+        {
+            if (_lightingDimmed)
             {
                 return;
             }
 
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            _savedAmbient = RenderSettings.ambientLight;
+            RenderSettings.ambientLight = new Color(0.16f, 0.18f, 0.22f);
 
-            StartCoroutine(LightningLoop(ps));
-        }
-
-        /// <summary>
-        /// Re-triggers the (one-shot, non-looping) Zap rig on a randomized interval.
-        /// </summary>
-        private static IEnumerator LightningLoop(ParticleSystem rig)
-        {
-            while (rig != null)
+            Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
+            _dimmedLights = lights;
+            _savedLightIntensities = new float[lights.Length];
+            _savedLightColors = new Color[lights.Length];
+            for (int i = 0; i < lights.Length; i++)
             {
-                yield return new WaitForSeconds(Random.Range(LightningIntervalMinSeconds, LightningIntervalMaxSeconds));
-                if (rig == null)
+                Light light = lights[i];
+                if (light == null)
                 {
-                    yield break;
+                    continue;
                 }
 
-                rig.Play(true);
+                _savedLightIntensities[i] = light.intensity;
+                _savedLightColors[i] = light.color;
+                if (!light.enabled)
+                {
+                    continue;
+                }
+
+                if (light.type == LightType.Directional)
+                {
+                    light.intensity *= 0.62f;
+                    light.color = Color.Lerp(light.color, new Color(0.70f, 0.76f, 0.88f), 0.55f);
+                }
+                else if (light.type == LightType.Point)
+                {
+                    light.intensity *= 0.85f;
+                }
             }
+
+            _lightingDimmed = true;
+        }
+
+        private void RestoreLightingIfDimmed()
+        {
+            if (!_lightingDimmed)
+            {
+                return;
+            }
+
+            RenderSettings.ambientLight = _savedAmbient;
+            if (_dimmedLights != null)
+            {
+                for (int i = 0; i < _dimmedLights.Length; i++)
+                {
+                    Light light = _dimmedLights[i];
+                    if (light == null)
+                    {
+                        continue;
+                    }
+
+                    light.intensity = _savedLightIntensities[i];
+                    light.color = _savedLightColors[i];
+                }
+            }
+
+            _dimmedLights = null;
+            _savedLightIntensities = null;
+            _savedLightColors = null;
+            _lightingDimmed = false;
         }
 
         /// <summary>
-        /// Shared CloudAtlas material for ceiling cloud puffs — Alpha blend so painted LA shading
-        /// (white tops / soft blue-grey undersides) survives. Soft edge RGB is near-white so the
-        /// fringe does not stroke a dark outline against the void.
+        /// Soft Unlit clay for sphere lobes. Lit diffuse was darkening sphere limbs into mid-grey
+        /// "边缘" against the void (image copy 14). Shade map is a <b>near-flat</b> vertical wash —
+        /// strong per-lobe crown contrast read as individually lit bubbles under the top-down camera
+        /// (image copy 15). Mass-volume tint is applied in <see cref="PlaceClayMass"/> instead.
+        /// No cast shadows so the board stays readable.
         /// </summary>
-        private static Material CloudMaterial()
+        private static Material ClayCloudMaterial()
         {
-            if (_cloudMaterial != null)
+            if (_clayCloudMaterial != null)
             {
-                return _cloudMaterial;
+                return _clayCloudMaterial;
             }
 
-            _cloudMaterial = CreateAtlasParticleMaterial(new Color(1f, 1f, 1f, 1f), additive: false);
-            return _cloudMaterial;
+            var unlit = Shader.Find("Universal Render Pipeline/Unlit")
+                ?? Shader.Find("Unlit/Color")
+                ?? Shader.Find("Sprites/Default");
+            _clayCloudMaterial = new Material(unlit);
+
+            Texture2D shade = Resources.Load<Texture2D>("Weather/ClaySphereShade");
+            if (shade != null)
+            {
+                _clayCloudMaterial.mainTexture = shade;
+                if (_clayCloudMaterial.HasProperty("_BaseMap"))
+                {
+                    _clayCloudMaterial.SetTexture("_BaseMap", shade);
+                }
+            }
+
+            var cream = new Color(1f, 1f, 1f, 1f);
+            _clayCloudMaterial.color = cream;
+            if (_clayCloudMaterial.HasProperty("_BaseColor"))
+            {
+                _clayCloudMaterial.SetColor("_BaseColor", cream);
+            }
+
+            return _clayCloudMaterial;
         }
 
         /// <summary>

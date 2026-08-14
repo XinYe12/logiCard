@@ -44,6 +44,7 @@ namespace LogiCard.Boot
         private RoundPhaseController _phase;
         private BoardInputController _attackerInput;
         private RoundPlayback _playback;
+        private BoardWeatherPocket _weatherPocket;
         private MatchClock _matchClock;
         private IFoleyPlayer _foley;
         private BoardCameraRig _cameraRig;
@@ -776,7 +777,12 @@ namespace LogiCard.Boot
         {
             var weatherGo = new GameObject("WeatherPocket");
             weatherGo.transform.SetParent(transform, false);
-            weatherGo.AddComponent<BoardWeatherPocket>().Build(_board);
+            // Modular weather host — the Storm card (C67) calls ApplyWeather(Storm) via
+            // RoundPlayback's StormCast presenter. Bootstrap mounts the calmer Fair look so the
+            // card has something to visibly change; Storm is no longer the permanent boot mood.
+            _weatherPocket = weatherGo.AddComponent<BoardWeatherPocket>();
+            _weatherPocket.Build(_board, BoardWeatherMood.Fair);
+            _playback.SetWeatherPocket(_weatherPocket);
         }
 
         /// <summary>

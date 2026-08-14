@@ -1,7 +1,7 @@
 # Card System — C64 OPEN Decision Menu
 
-**Status:** **Answered 2026-08-14** — Q1–Q8 locked as **C66**. Packaging follow-up **C67** (8 per Character; Character in card/deck system) — see [`DECKBUILDER_SYSTEMS_BRIEF.md`](DECKBUILDER_SYSTEMS_BRIEF.md).  
-**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C64**, **C66**, **C67**, **C47**, **C62**/**C63**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`CARD_COLLECTION.md`](CARD_COLLECTION.md).
+**Status:** **Answered 2026-08-14** — Q1–Q8 locked as **C66**. Packaging follow-up **C68** (8 per Character; Character in card/deck system). **C67** = Storm gear (separate). See [`DECKBUILDER_SYSTEMS_BRIEF.md`](DECKBUILDER_SYSTEMS_BRIEF.md).  
+**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C64**, **C66**, **C67**, **C68**, **C47**, **C62**/**C63**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`CARD_COLLECTION.md`](CARD_COLLECTION.md).
 
 C64 locked the **hybrid** model (signature cards + shared deckbuilding library). These answers size the deckbuilder / in-match hand layer.
 
@@ -103,7 +103,7 @@ Proposed substance:
 8. **First-wave four:** Bandage / Flashbang / Interact-as-card / Adrenaline are **shared-library** cards (none are signatures). **Adrenaline** remains a special **Execute-only** slot and may bypass normal deck rules (aligns **C62** / PLAYBACK_CONTRACT).
 9. **Does not** greenlight deckbuilder UI, Flashbang numerics, or Bomber/Time Player active build.
 
-**Still OPEN after C66 (suggested):** ~~exact fixed deck count inside 5–8~~ → **resolved by C67** (**8 per Character**); per-signature TR numbers; Flashbang/Interact numerics (OPEN #16); Adrenaline real effect. Tracked in [`DECKBUILDER_SYSTEMS_BRIEF.md`](DECKBUILDER_SYSTEMS_BRIEF.md) / **C67**.
+**Still OPEN after C66 (suggested):** ~~exact fixed deck count inside 5–8~~ → **resolved by C68** (**8 per Character**); per-signature TR numbers; Flashbang/Interact numerics (OPEN #16); Adrenaline real effect. Tracked in [`DECKBUILDER_SYSTEMS_BRIEF.md`](DECKBUILDER_SYSTEMS_BRIEF.md) / **C68**.
 
 ---
 

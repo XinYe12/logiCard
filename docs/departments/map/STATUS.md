@@ -1,56 +1,37 @@
 # Map — STATUS
 
-**Wave / Day:** New permanent seat, opened 2026-08-13 — live `logiCard-map`
-**Branch / worktree:** `dept/map` @ `D:\projects\Game\logiCard-map`
-**Last cross-reviewed:** 2026-08-13 — seat opened by Integrator, mandate below
+**Wave / Day:** Map Phase 2 (C65) — **Merged to master**, 2026-08-14.
+**Branch / worktree:** `logiCard-map` / `dept/map` (master merges through Atmosphere/Cards tips; Phase 2 commits on this branch).
+**Last cross-reviewed:** human Play look signed (`screenshots/image copy 15.png` — floors + fences good).
 
-## Mandate (2026-08-13)
+## Scope (per seat brief)
 
-The human's own framing: *"the current architecture and floor and texture is a mess."* Job in two
-phases, doc first:
-
-1. **Standardization doc** — how map/room/floor construction should actually work to fit the game's
-   philosophy (GDD) and visual target, before touching more assets ad hoc.
-2. **First real implementation job** — rebuild the map(s) using existing imported asset packs to hit a
-   **vibrant, cute, Link's Awakening feel** — explicitly *not* the current dark/grey/desaturated look.
-
-## Owned files (this seat)
-
-- New standardization doc (name TBD by this seat, e.g. `docs/MAP_STANDARDS.md`)
-- `Assets/_Project/Board/BoardView.cs` (mesh/prop/material assembly), `BoardSurfaceMaterials.cs`,
-  `BoardReflectionProbes.cs`
-- Floor/prop/material choices within `Assets/_Project/Art/Environment/**`
-- This STATUS
-
-## Must not touch (read, don't rewrite)
-
-- `MapDefinitions.cs` / `MapLayout.cs` / `MapId` — Sim-layer room-bound source of truth (**C57**),
-  Integrator-owned
-- Door/Vent/Breach placement logic, `GhostResolver`, any `Sim/`/`Net/`/`Timeline/` code — standing
-  pause applies, no carve-out for Map yet
-- `BoardWeatherPocket.cs` / `Resources/Weather/**` — Atmosphere's lane
-- `Assets/_Project/UI/**` — UI's lane
-
-## Known conflict — read before starting
-
-Main tree currently has **uncommitted, unverified** "urban floor" work touching these same files
-(`BoardSurfaceMaterials.cs`, `BoardReflectionProbes.cs`, `BoardView.cs`) sitting dirty on
-`D:\projects\Game\logiCard`. It is not merged, not batchmode-green, and per the human's own assessment
-is part of "the mess." Do not assume it represents a direction to build on — start from `master` as
-committed and treat that dirty work as informational at most, not a baseline.
+- **Owns:** map/room/floor **presentation** — materials, prop dressing, per-`MapSurfaceRole` visual language.
+  `BoardView.cs`, `BoardSurfaceMaterials.cs`.
+- **Does not own:** `MapDefinitions` room authorship, `GameBootstrap` geometry/lighting, Sim/Door API,
+  weather (Atmosphere), HUD (UI).
 
 ## Done
 
-- Nothing yet — seat just opened.
+- Phase 1 docs + §4 YES → **C65**; Integrator opened Phase 2 contract.
+- **Phase 2 implementation:**
+  1. Flat/`Solid()` floors + walls keyed by `MapSurfaceRole`; `BuildWetSurface` kept, unused for board surfaces.
+  2. Door leaf + opaque props re-skinned to Gradient*_URP / Solid (glass/emissive preserved).
+  3. Map-aware `PlaceRoomDressing` for Freight Yard / Rail Platform / Vault Complex.
+  4. Walls drawn as toy fences (cream panel + honey rails + dark posts), not coral brick slabs.
+  5. EditMode `BoardSurfaceMaterialsTests`.
+- **Human look:** `image copy 15.png` — floors and fences approved (“good!”).
 
 ## In progress
 
-- Nothing yet.
+- None on Map. Merged; idle unless restaffed.
 
-## Blocked
+## Blocked / Integrator follow-ups
 
-- Nothing yet.
+- Batchmode not run on this branch (do not claim green).
+- Contract DoD #4: optional lighting/`BuildDioramaVolume` re-pass on the new saturated base — Integrator owns
+  `GameBootstrap`; Map did not edit it. Human already likes the current Play look; treat as optional polish.
 
 ## Offers
 
-- N/A — new seat.
+- After merge: Map idle unless a prop/dressing follow-up is requested.

@@ -52,7 +52,7 @@ One **shared** match Time Resource pool (demo **900s**). Each round one side pla
 ## Other CONFIRMED (short)
 
 - Unity; long-term Fusion Host + Win+Android; **demo ship = polished Windows 1v1 local**
-- Move + Shoot = base verbs; gear cards = Bandage / Interact-as-card / Flashbang / Adrenaline (**C62** catalog; transitional full-hand + charges). Long-term **C64** hybrid + **C67**: Characters first-class in card/deck system; **each Character has an 8-card play deck** (≤2 library copies, always-have hand, no draw RNG; up to 10 saved decks; Host/relay validates; played cards → timeline). Everything is a card (Adrenaline in deck model; Execute timing may remain). Later signatures cost TR; Scout/Jug no signature work. Adrenaline effect still stub.
+- Move + Shoot = base verbs; gear cards = Bandage / Interact-as-card / Flashbang / Adrenaline / **Storm** (**C62** + **C67**; transitional full-hand + charges). Long-term **C64** hybrid + **C68**: Characters first-class in card/deck system; **each Character has an 8-card play deck** (≤2 library copies, always-have hand, no draw RNG; up to 10 saved decks; Host/relay validates; played cards → timeline). Everything is a card (Adrenaline in deck model; Execute timing may remain). **Storm** = presentation-only weather trigger (numerics OPEN). Later signatures cost TR; Scout/Jug no signature work. Adrenaline effect still stub.
 - Board surface materials moving flat/toon per **C65** (amends C53 for surfaces only; Map Phase 2 implements).
 - Juggernaut pays +1 tick switching Snap↔Hold Angle (mirrors stance penalty); Scout pays 0 (C25)
 - Slice 1 first: visible Move + Shoot on Time Resource scrubber
