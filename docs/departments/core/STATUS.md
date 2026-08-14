@@ -1,10 +1,10 @@
 ﻿# Core / Integrator — STATUS
 
 **Wave / Day:** Phase 5 — Integrator 2026-08-14
-**Branch / worktree:** `master` @ `668b162` — clean
+**Branch / worktree:** `master` @ `a76f006` — clean
 **Last cross-reviewed:** 2026-08-14 — committed dirty rematch/floors/lighting; wrote C65; opened Map Phase 2
-contract; merged Cards' `feat/cards-collection-docs` and Atmosphere's `feat/atmosphere-stylized` (both
-human-approved)
+contract; merged Cards' `feat/cards-collection-docs`, Atmosphere's `feat/atmosphere-stylized`, and Map's
+`dept/map` Phase 2 (all human-approved)
 
 ## Done
 
@@ -25,17 +25,26 @@ human-approved)
   storm cloud energize (Yellow Zap rim clusters, random-group pulse). Left the branch's unrelated dirty
   (Floor/Glass mats, ProjectSettings, orphan pack `.meta` deletes, `_Recovery/`, debug screenshots) out of
   the merge per Atmosphere's own STATUS note — still sitting in that worktree, human keep/delete call.
+- Merged `dept/map` → `master` (`a76f006`), human Play-signed: `BoardSurfaceMaterials` room
+  floors/walls/door-tint/prop-tint moved from photographic-PBR (`BuildWetSurface`) to `Solid()`/nappin-
+  Gradient flat family (`BuildWetSurface` kept, just no longer the board-surface default);
+  `BoardView.PlaceRoomDressing` now map-aware (Freight Yard/Rail Platform/Vault Complex each get real
+  dressing); walls draw as toy fences instead of a brick slab, still presentation-only (no collider/Sim
+  change). New `BoardSurfaceMaterialsTests`. Left the branch's `ProjectSettings` define noise and orphan
+  pack `.meta` deletes out of the merge per Map's own STATUS note.
 
 ## In progress
 
-- Monitor UI Bandage HUD and Map Phase 2 report-backs
-- Batchmode re-verify `668b162` (new PlayMode/EditMode tests from the rematch/relight commit and Atmosphere's
-  `CloudEnergize` coverage not yet run in batchmode — Editor must be closed)
+- Monitor UI Bandage HUD report-back
+- Batchmode re-verify `a76f006` (new PlayMode/EditMode tests from rematch/relight, Atmosphere's
+  `CloudEnergize`, and Map's `BoardSurfaceMaterialsTests` not yet run in batchmode — Editor must be closed)
 - After HUD merge: Healed presenter (`PLAYBACK_CONTRACT` §3)
+- Optional, not blocking: `GameBootstrap` lighting/`BuildDioramaVolume` re-grade against Map's new
+  saturated flat materials — human already likes the current Play look
 
 ## Offers
 
 - Merge UI Bandage HUD when Ready + green
-- Merge Map Phase 2 when Ready + green + human screenshot check
 - Cards idle — open a deckbuilder systems brief or Flashbang re-derive if human wants that lane active again
 - Atmosphere idle — restaff for a new weather mood if wanted; unrelated dirty in that worktree still needs a human keep/delete call
+- Map idle — restaff for a prop/dressing follow-up if wanted
