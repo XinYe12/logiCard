@@ -78,14 +78,21 @@ otherwise casting the card would be a no-op.
 
 **UI** (`Assets/_Project/UI/GearHandView.cs`, `ProgramHud.cs`, `BoardInputController.cs`,
 `Assets/_Project/Timeline/PawnProgram.cs`):
-1. Add a `PawnProgram.TryQueueStorm(float executeTime, out string rejectionReason)` — same shape as
-   Bandage's still-open `TryQueueBandage`: Program-phase only, no board position, no Sprint/legality
-   gate beyond whatever once-per-match rule Cards' brief recommends.
+1. Add a `PawnProgram.TryQueueStorm(float executeTime, out string rejectionReason)`. `TryQueueBandage`
+   doesn't exist yet either (still-open contract, same worktree) — mirror the **real** existing
+   precedent instead: `TryQueueDoor`/`TryQueueShoot` (`PawnProgram.cs` ~line 381/426) both start
+   `if (HasDraft && !TryCommitDraft(out rejectionReason)) return false;` before their own checks.
+   Storm needs no further legality beyond Program-phase + whatever once-per-match rule Cards'
+   brief recommends — no board position, no Sprint gate.
 2. `BoardInputController`: arming Storm sets `Mode = ActionVerb.Storm`; scrubber click places at the
    scrubber's current Time Resource second (Storm has no board-tap placement — it isn't targeted).
 3. Dock a `Storm` slot into `GearHandView.FirstWave` (or its successor once Bandage's dock pattern
    lands) using the same cardstock visual language as the existing four.
-4. Tests: EditMode `PawnProgram` Storm case; PlayMode HUD arm→place smoke, mirroring whatever pattern
+4. **`Assets/_Project/Tests/EditMode/GearHandViewTests.cs` line 46–53,
+   `FirstWaveRosterIsBandageInteractFlashbangAdrenaline`, hard-asserts `FirstWave.Length == 4` and the
+   exact roster — adding Storm breaks it immediately.** Update that one test (extend the roster +
+   rename); the file's other tests iterate `FirstWave` generically and don't need changes.
+5. Tests: EditMode `PawnProgram` Storm case; PlayMode HUD arm→place smoke, mirroring whatever pattern
    the Bandage HUD-side contract's own DoD item 7 establishes — build this once, reuse for both cards.
 
 **Atmosphere** (`Assets/_Project/Board/BoardWeatherPocket.cs`):
@@ -93,13 +100,21 @@ otherwise casting the card would be a no-op.
    (Fair→Storm, Storm→Fair on rewind, Storm→Storm no-op) — this API used to only run once at boot;
    it is now driven by a Playback-time presenter that can, in principle, call it many times across a
    scrub session (guarded on the `RoundPlayback` side, see above, but add your own same-mood early-out
-   inside `ApplyWeather` too as defense in depth — belt and suspenders, not a design change).
-2. Double-check `ApplyStormLightingDim`/`RestoreLightingIfDimmed` round-trips cleanly across repeated
-   Fair↔Storm cycles within one Play session (dimmed-light state must not drift or double-apply).
+   inside `ApplyWeather` too as defense in depth — belt and suspenders, not a design change). **No
+   existing test exercises repeated `ApplyWeather` calls** (`BoardWeatherPocketPlayModeTests.cs` only
+   checks a single mount) — add one: call `ApplyWeather` with the same mood twice and assert a child
+   (e.g. `CloudBank`) is the *same* `GameObject` instance both times, not destroyed/recreated.
+2. Double-check `ApplyStormLightingDim`/`RestoreLightingIfDimmed` (`BoardWeatherPocket.cs` lines
+   ~1531/1574) round-trip cleanly across repeated Fair↔Storm cycles within one Play session (dimmed-light
+   state must not drift or double-apply).
 3. **Creative, optional:** a short "storm rolling in" transition-in beat (few-hundred-ms build, not an
    instant pop) sells the card-cast moment better than the current instant module swap — nice-to-have,
    not required for DoD.
 4. Out of scope: no new weather VFX assets — this reuses the already-shipped Storm module verbatim.
+   Note: `BoardWeatherPocketPlayModeTests.WeatherPocketBuildsCloudBankAndRimMistWithoutThrow` already
+   had to be fixed by Integrator (it asserted boot-time `ActiveMood == Storm`, no longer true after the
+   Fair boot-mood change) — it now calls `ApplyWeather(Storm)` explicitly before its Storm-structure
+   assertions; nothing further needed there unless your idempotency work touches the same file region.
 
 **Out of scope (all seats):** any combat/mechanical effect for Storm (visibility, blind, damage) — this
 wave is presentation-only, mirrors Adrenaline's stub precedent; a mechanical effect needs its own

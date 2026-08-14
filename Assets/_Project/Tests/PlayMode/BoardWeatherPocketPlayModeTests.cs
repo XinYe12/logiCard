@@ -7,8 +7,8 @@ using UnityEngine.TestTools;
 namespace LogiCard.Tests.PlayMode
 {
     /// <summary>
-    /// Smoke: WeatherPocket binds + applies a modular weather child (Storm by bootstrap default)
-    /// with centered clay CloudBank + rim mist — not a full-board fog slab.
+    /// Smoke: WeatherPocket binds + applies a modular weather child (Storm module structure) with
+    /// centered clay CloudBank + rim mist — not a full-board fog slab.
     /// </summary>
     [TestFixture]
     public sealed class BoardWeatherPocketPlayModeTests : SliceSceneFixture
@@ -18,8 +18,13 @@ namespace LogiCard.Tests.PlayMode
         {
             var weather = Object.FindAnyObjectByType<BoardWeatherPocket>();
             Assert.That(weather, Is.Not.Null, "Bootstrap built no BoardWeatherPocket.");
+
+            // C67 — bootstrap now boots on Fair (the Storm card drives the switch), not Storm.
+            // This test exercises the Storm module's internal structure specifically, so it
+            // requests Storm explicitly instead of relying on the old boot default.
+            weather.ApplyWeather(BoardWeatherMood.Storm);
             Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Storm),
-                "Bootstrap should mount the Storm module for the current look pass.");
+                "ApplyWeather(Storm) should mount the Storm module.");
 
             Transform module = weather.transform.Find("Weather_Storm");
             Assert.That(module, Is.Not.Null, "Expected Weather_Storm module child (card-swappable).");
