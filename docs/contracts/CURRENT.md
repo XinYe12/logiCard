@@ -18,20 +18,35 @@ change — root-caused directly (probe `clearFlags` never set, rendering the wro
 **Clouds**: replaced primitive spheres with real textured particle clouds (Kenney CC0 sprite atlas). Both
 worker slots closed again after C60/C61 (2026-08-11). **Still open:** human sighted pass on C60 vibrancy
 (runtime grade actually warm now) + C61 scroll zoom feel + earlier reflection/clouds/Scout outfit items.
-**Updated:** 2026-08-14 by Integrator — dirty rematch/floors/lighting committed (`master`), clearing the
-`Board*` conflict; **Map Phase 2 contract opened** (C65, human-confirmed YES on the C53 surface-material
-amendment); **Storm card contract opened** (C67, human-directed cross-dept: Cards + UI + Atmosphere) —
-Sim-side already closed on master. Bandage HUD-side contract still open (C63). Gear pause carve-out (C63,
-extended to C67) and Map's C57 carve-out (map/terrain) still apply; Net / other Sim stay paused.
-**Capacity note:** this wave runs **3 coding-hot departments at once** (Cards + UI + Atmosphere) against the
-Storm contract below — an explicit exception to PARALLEL_OPS's "prefer ≤2" default, opened deliberately with
-frozen signatures for each so contracts stay reviewable (see `departments/INDEX.md`).
+**Updated:** 2026-08-14 by Integrator — **Storm card contract closed**: Cards (catalog + numerics brief),
+UI (HUD dock/arm/place), and Atmosphere (idempotency + lighting round-trip; roll-in transition deferred)
+all merged. **Bandage HUD-side contract closed** too (UI built both in one pass). **Map Phase 2** and the
+dirty rematch/floors/lighting commit are also merged (see their sections below). Gear pause carve-out (C63,
+extended to C67) and Map's C57 carve-out (map/terrain) still apply; Net / other Sim stay paused. No
+department is coding-hot right now — all three Storm seats plus UI/Map are idle pending new work.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
 
-### Storm card — cross-dept (open 2026-08-14 — **Cards + UI + Atmosphere**, human-directed)
+### Storm card — cross-dept (closed 2026-08-14 — **Cards + UI + Atmosphere**, human-directed)
+
+**Landed:** Cards' `docs/cards/CARD_COLLECTION.md` entry + `docs/cards/GEAR_STORM_AGENT_BRIEF.md`
+(numerics recommendation: `TR —`, 1×/Character/match, effect summary — still OPEN pending human lock).
+UI's `PawnProgram.TryQueueStorm`/`BoardInputController.TryQueueStormAt`/`GearHandView` dock/`ProgramHud`
+arm-place wiring, merged alongside Bandage HUD-side below. Atmosphere's `ApplyWeather` same-mood
+early-out + `ApplyStormLightingDim` clean-baseline-on-restore fix (ported onto master directly rather
+than merging their branch — see note below), with two new PlayMode tests.
+**Deviations, documented not hidden:** (1) Storm's once-per-match gate is HUD-side "not already queued
+this Program" only — per-round, not a true cross-round counter (no `StormCastCountOf` the way Bandage
+has `BandageChargeOf`); harmless for now since TR cost is 0 and recasting an already-active mood is a
+no-op at the presenter level — revisit if numerics lock to a real cost or strict enforcement is wanted.
+(2) Atmosphere's DoD item 3 ("storm rolling in" transition) was explicitly skipped, still an instant
+module swap. **Not merged:** Atmosphere's branch also carried an unrelated, uncoordinated "Sunny weather
+mood" feature (new `BoardWeatherMood` value, boot-mode changed Fair→Sunny, renamed lighting fields) —
+human confirmed this should NOT land with this contract; only the two DoD fixes were ported (translated
+onto master's actual, non-Sunny-refactored code), and that work stays uncommitted in the Atmosphere
+worktree pending a separate decision.
 
 **Depends on:** **C67**; Sim-side closed below (already on `master`); `GearHandView`/`ProgramHud` dock
 pattern (same files the still-open Bandage HUD-side contract targets — build both in the same UI pass,
@@ -131,7 +146,7 @@ PRODUCT_MEMORY row and PLAYBACK_CONTRACT redesign, not bundled here.
   the pattern `RoundPlaybackPlayModeTests` already uses for door/wound scrubbing. **Not yet
   batchmode-verified** — same standing caveat as everything landed today.
 
-### Map Phase 2 — board surface material swap (open 2026-08-14 — **Map seat** on `logiCard-map`)
+### Map Phase 2 — board surface material swap (closed 2026-08-14 — **Map seat** on `logiCard-map`, merged `a76f006`)
 
 **Depends on:** **C65** (human YES, `docs/map/C53_SURFACE_MATERIAL_DECISION.md`); standard doc
 `docs/map/MAP_PRESENTATION_STANDARD.md` §2 (material-family table) and §5 (Phase 2 preview, this contract
@@ -175,7 +190,12 @@ clean to branch from.
 **Out of scope:** geometry density, vents/breaches, room structure (C57), weather/atmosphere (Atmosphere's
 lane), pathfinding/Door API/Sim (C35/C39/C41).
 
-### Bandage HUD-side (open 2026-08-14 — **UI seat** on `logiCard-modal-restyle`; brief `BANDAGE_HUD_AGENT_BRIEF.md`)
+### Bandage HUD-side (closed 2026-08-14 — **UI seat** on `logiCard-modal-restyle`; brief `BANDAGE_HUD_AGENT_BRIEF.md`)
+
+**Landed** exactly per the frozen signatures below. Batchmode reported by UI (Editor closed on that
+worktree): EditMode 153/153, PlayMode 49/49 (Bandage alone); 166/166 / 51/51 combined with Storm. Not
+independently re-run by Integrator. **Follow-up still open:** Integrator's Healed presenter
+(`TapeEventType.Healed` in `RoundPlayback` + `PLAYBACK_CONTRACT` §3) — not started.
 
 **Depends on:** C63; Sim-side closed below; `GearHandView` scaffold on master (`7213d98`);
 `UI_FLOW.md` §4 item 3; `PLAYBACK_CONTRACT.md` (Healed presenter is a **separate** Integrator follow-up
