@@ -2,7 +2,9 @@
 
 **Updated:** 2026-08-14 — Integrator committed dirty rematch/floors/lighting (`a419ad4`), clearing the
 `Board*` conflict; wrote **C65** (C53 surface-material amendment, human YES) to `PRODUCT_MEMORY.md`; opened
-**Map Phase 2 contract**. UI still coding-hot (Bandage HUD); Map now coding-hot too (Phase 2 unblocked).
+**Map Phase 2 contract**; merged `feat/cards-collection-docs` (**C66** deckbuilder sizing + C64 catalog
+sync, `4a355dd`) on human approval. UI still coding-hot (Bandage HUD); Map now coding-hot too (Phase 2
+unblocked); Cards merged and idle again.
 
 **Ops constitution:** [`../PARALLEL_OPS.md`](../PARALLEL_OPS.md) · human-side playbook: [`../DIRECTING_AGENTS.md`](../DIRECTING_AGENTS.md)
 **Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md) · Playback: [`../core/PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md)
@@ -16,9 +18,9 @@
 
 | Seat | Canonical | **Live folder now** | Tip / state | STATUS |
 |------|-----------|---------------------|-------------|--------|
-| **Integrator** | `logiCard` | `D:\projects\Game\logiCard` | `master` @ `a419ad4` — clean | [`core/STATUS.md`](core/STATUS.md) |
+| **Integrator** | `logiCard` | `D:\projects\Game\logiCard` | `master` @ `4a355dd` — clean | [`core/STATUS.md`](core/STATUS.md) |
 | **Atmosphere** | `logiCard-atmosphere` | `logiCard-atmosphere-stylized` | `feat/atmosphere-stylized` @ `fac245a` + dirty weather polish — merge after human Play | [`atmosphere/STATUS.md`](atmosphere/STATUS.md) |
-| **Cards** | `logiCard-cards` | `logiCard-cards-collection` | `feat/cards-collection-docs` — C64 docs follow-up | [`cards/STATUS.md`](cards/STATUS.md) |
+| **Cards** | `logiCard-cards` | `logiCard-cards-collection` | `feat/cards-collection-docs` @ `8b5e86d` — **merged (`4a355dd`)**, idle | [`cards/STATUS.md`](cards/STATUS.md) |
 | **Character** | `logiCard-character` | `logiCard-char-select-motion` | `feat/char-select-motion` — 4 briefs; idle until human answers | [`character/STATUS.md`](character/STATUS.md) |
 | **UI** | `logiCard-ui` | `logiCard-modal-restyle` | `feat/modal-restyle` — **Bandage HUD coding** | [`ui/STATUS.md`](ui/STATUS.md) |
 | **Map** | `logiCard-map` | `D:\projects\Game\logiCard-map` | `dept/map` @ `d632d3b` — **Phase 2 contract open, unblocked** | [`map/STATUS.md`](map/STATUS.md) |
@@ -27,7 +29,7 @@
 
 | Path / concern | Owner now |
 |----------------|-----------|
-| `docs/CARD_COLLECTION.md`, `docs/CARD_SYSTEM_MODEL_COMPARISON.md` | **Cards** |
+| `docs/cards/CARD_COLLECTION.md`, `docs/cards/CARD_SYSTEM_MODEL_COMPARISON.md`, `docs/cards/CARD_SYSTEM_OPENS.md` | **Cards** |
 | Weather / `BoardWeatherPocket` / `Resources/Weather/**` | **Atmosphere** until merged |
 | Bandage HUD: `ProgramHud`, `GearHandView`, `PawnProgram.TryQueueBandage`, `BoardInputController` Bandage place, related tests | **UI** this wave |
 | `RoundPlayback.BandageChargeOf` only (tiny reader) | **UI** this wave — avoid rematch methods |
@@ -44,4 +46,5 @@
 2. **Map Phase 2** — merge when Ready + batchmode green + human screenshot check against the Link's Awakening reference.
 3. Atmosphere — after human look (`fac245a`+ dirty).
 4. Character ability Sim — blocked on brief answers + carve-out.
-5. Batchmode re-verify `a419ad4` (rematch/relight commit's new tests not yet run in batchmode).
+5. Batchmode re-verify `4a355dd` (new tests from the rematch/relight commit not yet run in batchmode).
+6. ~~Cards `feat/cards-collection-docs`~~ — **merged** (`4a355dd`, C66 + C64 catalog sync).
