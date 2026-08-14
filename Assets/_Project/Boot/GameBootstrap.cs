@@ -760,7 +760,8 @@ namespace LogiCard.Boot
         {
             var weatherGo = new GameObject("WeatherPocket");
             weatherGo.transform.SetParent(transform, false);
-            // Storm is the active look pass (fair clay bank remains Build(..., Fair) — human-signed).
+            // Modular weather host — cards will call ApplyWeather. Bootstrap mounts Storm for the
+            // current look pass; Fair = ApplyWeather(Fair), clear sky = ApplyWeather(Clear).
             weatherGo.AddComponent<BoardWeatherPocket>().Build(_board, BoardWeatherMood.Storm);
         }
 

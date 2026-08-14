@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using LogiCard.Sim;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -23,13 +24,18 @@ namespace LogiCard.Board
     /// profile into a rounded mound — spherical but not entirely. Lobes are ellipsoid-squashed (not
     /// mesh-kneaded — that pass shattered shade UVs). Shading is a posterized crown/belly map.
     /// Pack <c>PF_CloudLayer</c> demoted. Rain = <c>PF_RainSystem</c>; Zap =
-    /// <c>VFX_Zap_White</c> (+ Blue/Yellow when imported). Prefabs via
+    /// White + Yellow only (<c>VFX_Zap_White</c> / <c>VFX_Zap_Yellow</c>). Prefabs via
     /// <see cref="LogiCard.Art.Editor.WeatherPackImportTool"/>.
-    /// Fair clay bank human-signed 2026-08-13; <see cref="BoardWeatherMood.Storm"/> is the active
-    /// darker grey + dense Zap pass.
+    /// Weather is <b>modular</b>: <see cref="Build"/> binds the host to the board; cards call
+    /// <see cref="ApplyWeather"/> to spawn Fair/Storm (or <see cref="BoardWeatherMood.Clear"/>)
+    /// as a replaceable child module over the sky pocket. Storm lightning glues itself to the
+    /// CloudBank's own measured world bounds (position and reach) rather than to independent
+    /// hand-tuned numbers, so wherever a future card places the Storm module, the strikes follow —
+    /// see <see cref="PlaceStormLightning"/>.
     /// </summary>
     public enum BoardWeatherMood
     {
+        Clear,
         Fair,
         Storm,
     }
@@ -44,7 +50,6 @@ namespace LogiCard.Board
         private static GameObject _fogDistantPrefab;
         private static GameObject _rainMistPrefab;
         private static GameObject _lightningWhitePrefab;
-        private static GameObject _lightningBluePrefab;
         private static GameObject _lightningYellowPrefab;
 
         private const string RainSystemResourcePath = "Weather/PF_RainSystem";
@@ -52,44 +57,85 @@ namespace LogiCard.Board
         private const string FogDistantResourcePath = "Weather/PF_Fog_Distant";
         private const string RainMistResourcePath = "Weather/PF_RainMist";
         private const string LightningWhiteResourcePath = "Weather/VFX_Zap_White";
-        private const string LightningBlueResourcePath = "Weather/VFX_Zap_Blue";
         private const string LightningYellowResourcePath = "Weather/VFX_Zap_Yellow";
 
-        private BoardWeatherMood _mood = BoardWeatherMood.Fair;
+        private BoardWeatherMood _mood = BoardWeatherMood.Clear;
+        private float _boardWidth;
+        private float _boardDepth;
+        private bool _boardBound;
+        private Transform _moduleRoot;
+        private Color _savedAmbient;
+        private bool _lightingDimmed;
+        private Light[] _dimmedLights;
+        private float[] _savedLightIntensities;
+        private Color[] _savedLightColors;
+        private Bounds _cloudBankWorldBounds;
+        private bool _hasCloudBankBounds;
+        private readonly List<Bounds> _cloudMassWorldBounds = new List<Bounds>();
+
+        /// <summary>Active weather module (Clear = no sky module).</summary>
+        public BoardWeatherMood ActiveMood => _mood;
 
         /// <summary>
-        /// Build (or rebuild) the weather pocket over <paramref name="board"/>. Safe to call once from
-        /// bootstrap after the board exists; destroys prior children first. Defaults to
-        /// <see cref="BoardWeatherMood.Storm"/> while the storm look is under human Play iteration;
-        /// pass <see cref="BoardWeatherMood.Fair"/> for the signed-off regular bank.
+        /// Bind the weather host to <paramref name="board"/> (position + footprint). Does <b>not</b>
+        /// spawn weather — cards / bootstrap call <see cref="ApplyWeather"/> afterward.
         /// </summary>
-        public void Build(BoardView board) => Build(board, BoardWeatherMood.Storm);
-
-        public void Build(BoardView board, BoardWeatherMood mood)
+        public void Build(BoardView board)
         {
-            for (int i = transform.childCount - 1; i >= 0; i--)
-            {
-                DestroyImmediate(transform.GetChild(i).gameObject);
-            }
+            ClearWeather();
 
             if (board == null || board.Model == null)
+            {
+                _boardBound = false;
+                return;
+            }
+
+            ArenaBoard model = board.Model;
+            _boardWidth = (model.MaxX - model.MinX) * board.WorldScale;
+            _boardDepth = (model.MaxY - model.MinY) * board.WorldScale;
+            transform.position = board.CenterWorld;
+            _boardBound = true;
+        }
+
+        /// <summary>
+        /// Convenience: bind board then spawn <paramref name="mood"/> (used by bootstrap / tests).
+        /// </summary>
+        public void Build(BoardView board, BoardWeatherMood mood)
+        {
+            Build(board);
+            ApplyWeather(mood);
+        }
+
+        /// <summary>
+        /// Card / program entry — replace the active weather module. <see cref="BoardWeatherMood.Clear"/>
+        /// removes sky weather and restores pre-storm lighting. Fair/Storm spawn a self-contained
+        /// child (<c>Weather_Fair</c> / <c>Weather_Storm</c>) so a future Storm card only mounts that module.
+        /// </summary>
+        public void ApplyWeather(BoardWeatherMood mood)
+        {
+            if (!_boardBound && mood != BoardWeatherMood.Clear)
+            {
+                Debug.LogWarning("BoardWeatherPocket.ApplyWeather: host not bound — call Build(board) first.");
+                return;
+            }
+
+            ClearWeather();
+            _mood = mood;
+            if (mood == BoardWeatherMood.Clear)
             {
                 return;
             }
 
-            _mood = mood;
+            var module = new GameObject(mood == BoardWeatherMood.Storm ? "Weather_Storm" : "Weather_Fair");
+            _moduleRoot = module.transform;
+            _moduleRoot.SetParent(transform, false);
 
-            ArenaBoard model = board.Model;
-            float width = (model.MaxX - model.MinX) * board.WorldScale;
-            float depth = (model.MaxY - model.MinY) * board.WorldScale;
-            Vector3 center = board.CenterWorld;
-
-            transform.position = center;
-
+            float width = _boardWidth;
+            float depth = _boardDepth;
             PlaceCloudBank(width, depth);
             PlaceRain(width, depth);
             PlaceFogMist(width, depth);
-            if (_mood == BoardWeatherMood.Storm)
+            if (mood == BoardWeatherMood.Storm)
             {
                 PlaceStormVolumeFog(width, depth);
                 ApplyStormLightingDim();
@@ -97,6 +143,25 @@ namespace LogiCard.Board
 
             PlaceLightning(width, depth);
         }
+
+        /// <summary>Tear down the active module and stop Zap loops. Safe if already clear.</summary>
+        public void ClearWeather()
+        {
+            StopAllCoroutines();
+            RestoreLightingIfDimmed();
+
+            for (int i = transform.childCount - 1; i >= 0; i--)
+            {
+                DestroyImmediate(transform.GetChild(i).gameObject);
+            }
+
+            _moduleRoot = null;
+            _mood = BoardWeatherMood.Clear;
+            _hasCloudBankBounds = false;
+            _cloudMassWorldBounds.Clear();
+        }
+
+        private Transform ModuleParent => _moduleRoot != null ? _moduleRoot : transform;
 
         /// <summary>
         /// Cloud height — contained shelf over the chunk. 1.7 kept after human height notes
@@ -191,36 +256,33 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Masses spread across the full board width (2026-08-13: "single cloud size is too big" — a
-        /// few large blobs read as separate objects; replaced with seven smaller ones so the bank reads
-        /// as one continuous cloud layer instead of discrete chunks). X spacing between adjacent masses
-        /// is tighter than <c>ScaleXFactor</c> half-widths sum to (deliberate overlap margin) so
-        /// neighboring masses' silhouettes visually touch instead of leaving a void gap between them
-        /// (human ask 2026-08-13: "clouds need to be more glued together"). Height bumped ~45% from the
-        /// prior pass (still not high enough per human Play — "still needs to be higher").
+        /// Centered cloud shelf (2026-08-13 Play: prior ±0.68–0.78 X span read as four corner piles
+        /// with a hole over the board). Masses now sit in a tight central cluster (~±0.26 board width)
+        /// so Fair and Storm both read as one overhead bank a card can "spawn above the sky."
         /// </summary>
         private static readonly CloudMassSpec[] CloudMasses =
         {
-            new CloudMassSpec("Mass_W2", -0.68f, 0.10f, 5.6f, 0.34f, 0.85f, 0.30f,
+            new CloudMassSpec("Mass_W", -0.22f, 0.06f, 5.55f, 0.36f, 0.95f, 0.32f,
                 new Color(0.99f, 0.98f, 0.97f), new Color(0.90f, 0.90f, 0.92f)),
-            new CloudMassSpec("Mass_NW", -0.38f, 0.20f, 5.4f, 0.40f, 0.95f, 0.34f,
+            new CloudMassSpec("Mass_NW", -0.10f, 0.14f, 5.45f, 0.34f, 0.9f, 0.30f,
                 new Color(0.99f, 0.99f, 1f), new Color(0.93f, 0.95f, 1f)),
-            new CloudMassSpec("Mass_Main", 0f, 0.04f, 5.7f, 0.46f, 1.05f, 0.36f,
+            new CloudMassSpec("Mass_Main", 0f, 0.02f, 5.7f, 0.42f, 1.05f, 0.36f,
                 new Color(1f, 1f, 1f), new Color(0.94f, 0.96f, 1f)),
-            new CloudMassSpec("Mass_NE", 0.32f, 0.14f, 5.5f, 0.36f, 0.9f, 0.30f,
+            new CloudMassSpec("Mass_NE", 0.12f, 0.12f, 5.5f, 0.34f, 0.9f, 0.30f,
                 new Color(0.98f, 0.99f, 1f), new Color(0.92f, 0.94f, 0.99f)),
-            new CloudMassSpec("Mass_SE", 0.56f, -0.12f, 5.45f, 0.38f, 0.9f, 0.32f,
-                new Color(1f, 0.99f, 0.98f), new Color(0.96f, 0.95f, 0.93f)),
-            new CloudMassSpec("Mass_E2", 0.78f, 0.06f, 5.75f, 0.30f, 0.8f, 0.26f,
+            new CloudMassSpec("Mass_E", 0.24f, 0.04f, 5.6f, 0.36f, 0.95f, 0.32f,
                 new Color(0.99f, 0.97f, 0.95f), new Color(0.89f, 0.88f, 0.90f)),
-            new CloudMassSpec("Mass_High", -0.10f, -0.10f, 6.1f, 0.24f, 0.7f, 0.22f,
+            new CloudMassSpec("Mass_S", 0.06f, -0.10f, 5.4f, 0.32f, 0.85f, 0.28f,
+                new Color(1f, 0.99f, 0.98f), new Color(0.96f, 0.95f, 0.93f)),
+            new CloudMassSpec("Mass_High", -0.02f, -0.02f, 6.05f, 0.28f, 0.75f, 0.24f,
                 new Color(1f, 1f, 1f), new Color(0.95f, 0.96f, 1f)),
         };
 
         private void PlaceCloudBank(float width, float depth)
         {
             var root = new GameObject("CloudBank");
-            root.transform.SetParent(transform, false);
+            root.transform.SetParent(ModuleParent, false);
+            _cloudMassWorldBounds.Clear();
 
             // Opaque clay spheres — no alpha 边缘 rings. Desk-lamp Lit shading supplies the 3D read
             // billboards never could (human Play image copy 13). Soft CloudAtlas haze fringes each
@@ -240,7 +302,41 @@ namespace LogiCard.Board
                 // the triangular dense-middle/loose-edges assembly (human ask 2026-08-13).
                 PlaceClayMass(root.transform, spec.Name, pos, scale, Random.Range(7, 11), RandomMassYaw(), topTint, bellyTint);
                 PlaceCloudEdgeHaze(root.transform, "Haze_" + spec.Name, pos, scale, topTint);
+
+                // Per-mass bounds, not just the aggregate — masses sit at different heights (Mass_High
+                // is a full HeightUnits taller than the rest), so a strike's X/Z and its target tip
+                // height must both come from the SAME mass, never "position under mass A, height from
+                // the whole bank's center" (that mismatch was still poking through — image copy 17).
+                Transform massTransform = root.transform.Find(spec.Name);
+                if (massTransform != null)
+                {
+                    _cloudMassWorldBounds.Add(ComputeWorldBounds(massTransform));
+                }
             }
+
+            // Aggregate kept too — used only as a last-resort fallback if per-mass placement ever fails.
+            _cloudBankWorldBounds = ComputeWorldBounds(root.transform);
+            _hasCloudBankBounds = _cloudBankWorldBounds.size.sqrMagnitude > 0f;
+        }
+
+        /// <summary>World-space bounds of every opaque clay mesh under <paramref name="root"/>,
+        /// encapsulated. Cheap and exact — these are static <see cref="MeshRenderer"/>s, not particles,
+        /// so bounds are valid the instant they're created (no simulate-forward needed).</summary>
+        private static Bounds ComputeWorldBounds(Transform root)
+        {
+            var renderers = root.GetComponentsInChildren<MeshRenderer>(true);
+            if (renderers.Length == 0)
+            {
+                return new Bounds(root.position, Vector3.zero);
+            }
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            return bounds;
         }
 
         /// <summary>Storm clay — same mound shapes as fair, pulled toward slate grey so the bank
@@ -501,7 +597,7 @@ namespace LogiCard.Board
                 return;
             }
 
-            var instance = Instantiate(prefab, transform);
+            var instance = Instantiate(prefab, ModuleParent);
             instance.name = "Rain";
             // Emit just under the cloud shelf so streaks read as falling out of the pocket. Bumped
             // from 2.85 with the 2026-08-13 cloud-height raise (masses now sit at 5.4-6.1 units,
@@ -644,7 +740,7 @@ namespace LogiCard.Board
         private void PlaceFogMist(float width, float depth)
         {
             var root = new GameObject("RimMist");
-            root.transform.SetParent(transform, false);
+            root.transform.SetParent(ModuleParent, false);
 
             float rimX = width * 0.52f;
             float rimZ = depth * 0.52f;
@@ -811,7 +907,7 @@ namespace LogiCard.Board
                 return;
             }
 
-            var instance = Instantiate(prefab, transform);
+            var instance = Instantiate(prefab, ModuleParent);
             instance.name = name;
             instance.transform.localPosition = localPosition;
             instance.transform.localRotation = Quaternion.identity;
@@ -892,7 +988,11 @@ namespace LogiCard.Board
                 return;
             }
 
-            ParticleSystem ps = SpawnZapRig(prefab, "Lightning", new Vector3(width * 0.18f, 0.05f, -depth * 0.12f));
+            ParticleSystem ps = SpawnZapRig(
+                prefab,
+                "Lightning",
+                new Vector3(width * 0.18f, 0.05f, -depth * 0.12f),
+                targetTipWorldY: null);
             if (ps != null)
             {
                 StartCoroutine(LightningLoop(ps, FairLightningIntervalMinSeconds, FairLightningIntervalMaxSeconds, doubleStrikeChance: 0f));
@@ -900,44 +1000,33 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Dense storm Zap field — multiple Vefects <c>VFX_Zap_*</c> rigs scattered over the board,
-        /// short intervals, frequent double-strikes. Uses White always; Blue/Yellow when present under
-        /// Resources (import tool catalog).
+        /// Storm Zap field — <b>Yellow only</b>. Bolt height is driven by the placed cloud mass
+        /// height (<see cref="StrikeTipWorldY"/> ← measured clay bounds from
+        /// <c>HeightUnits × InterimCloudHeightBoost</c>). Ground spawn, upright; ConeVolume
+        /// <c>shape.length</c> = rise from ground to that cloud Y so the tip tracks the shelf.
         /// </summary>
         private void PlaceStormLightning(float width, float depth)
         {
             var root = new GameObject("LightningStorm");
-            root.transform.SetParent(transform, false);
+            root.transform.SetParent(ModuleParent, false);
 
-            GameObject[] prefabs =
+            GameObject prefab = LoadPrefab(ref _lightningYellowPrefab, LightningYellowResourcePath);
+            if (prefab == null)
             {
-                LoadPrefab(ref _lightningWhitePrefab, LightningWhiteResourcePath),
-                LoadPrefab(ref _lightningBluePrefab, LightningBlueResourcePath),
-                LoadPrefab(ref _lightningYellowPrefab, LightningYellowResourcePath),
-            };
+                Debug.LogWarning(
+                    "BoardWeatherPocket: missing Resources/Weather/VFX_Zap_Yellow — run " +
+                    "Tools > LogiCard > Import Weather Pack Prefabs.");
+                return;
+            }
 
-            int placed = 0;
             for (int i = 0; i < StormLightningRigCount; i++)
             {
-                GameObject prefab = null;
-                for (int attempt = 0; attempt < prefabs.Length; attempt++)
-                {
-                    GameObject candidate = prefabs[(i + attempt) % prefabs.Length];
-                    if (candidate != null)
-                    {
-                        prefab = candidate;
-                        break;
-                    }
-                }
-
-                if (prefab == null)
-                {
-                    break;
-                }
-
-                float x = Random.Range(-0.42f, 0.42f) * width;
-                float z = Random.Range(-0.42f, 0.42f) * depth;
-                ParticleSystem ps = SpawnZapRig(prefab, $"Zap_{i}", new Vector3(x, 0.05f, z));
+                Bounds strikeMass = PickStrikeMassBounds();
+                ParticleSystem ps = SpawnStormZap(
+                    prefab,
+                    $"Zap_{i}",
+                    StrikeLocalPositionWithinMass(strikeMass, width, depth),
+                    StrikeTipWorldY(strikeMass));
                 if (ps == null)
                 {
                     continue;
@@ -949,24 +1038,151 @@ namespace LogiCard.Board
                     StormLightningIntervalMinSeconds,
                     StormLightningIntervalMaxSeconds,
                     doubleStrikeChance: 0.55f));
-                placed++;
-            }
-
-            if (placed == 0)
-            {
-                Debug.LogWarning(
-                    "BoardWeatherPocket: no Zap prefabs under Resources/Weather — run " +
-                    "Tools > LogiCard > Import Weather Pack Prefabs.");
             }
         }
 
-        private ParticleSystem SpawnZapRig(GameObject prefab, string name, Vector3 localPosition)
+        /// <summary>Picks one placed cloud mass's own measured bounds. Falls back to the CloudBank
+        /// aggregate, then to a degenerate placeholder, only if per-mass placement didn't happen.</summary>
+        private Bounds PickStrikeMassBounds()
         {
-            var instance = Instantiate(prefab, transform);
+            if (_cloudMassWorldBounds.Count > 0)
+            {
+                return _cloudMassWorldBounds[Random.Range(0, _cloudMassWorldBounds.Count)];
+            }
+
+            if (_hasCloudBankBounds)
+            {
+                return _cloudBankWorldBounds;
+            }
+
+            return new Bounds(ModuleParent.position, Vector3.zero);
+        }
+
+        /// <summary>Strike X/Z sampled from one mass's real measured footprint, inset so strikes stay
+        /// under its silhouette rather than its bounding-box edge. Falls back to the old board-fraction
+        /// guess only if no bounds are available at all (e.g. CloudBank failed to place).</summary>
+        private Vector3 StrikeLocalPositionWithinMass(Bounds massBounds, float width, float depth)
+        {
+            if (massBounds.size.sqrMagnitude > 0f)
+            {
+                const float footprintInset = 0.55f;
+                float x = massBounds.center.x + Random.Range(-0.5f, 0.5f) * massBounds.size.x * footprintInset;
+                float z = massBounds.center.z + Random.Range(-0.5f, 0.5f) * massBounds.size.z * footprintInset;
+                Vector3 groundWorld = new Vector3(x, ModuleParent.position.y + 0.05f, z);
+                return ModuleParent.InverseTransformPoint(groundWorld);
+            }
+
+            return new Vector3(Random.Range(-0.22f, 0.22f) * width, 0.05f, Random.Range(-0.18f, 0.18f) * depth);
+        }
+
+        /// <summary>
+        /// Cloud-height reference for the bolt tip — the mass's measured world-Y center (from the
+        /// fixed shelf placement <c>HeightUnits × InterimCloudHeightBoost</c>). Same mass as the
+        /// strike X/Z so tip height matches the clay actually above that point.
+        /// </summary>
+        private static float? StrikeTipWorldY(Bounds massBounds)
+        {
+            return massBounds.size.sqrMagnitude > 0f ? massBounds.center.y : (float?)null;
+        }
+
+        /// <summary>
+        /// Storm Zap: ground spawn, stock upright look. Bolt vertical span is set from
+        /// <paramref name="cloudTipWorldY"/> (cloud shelf height) via
+        /// <see cref="FitZapHeightToCloudRise"/>.
+        /// </summary>
+        private ParticleSystem SpawnStormZap(
+            GameObject prefab,
+            string name,
+            Vector3 groundLocalPosition,
+            float? cloudTipWorldY)
+        {
+            var instance = Instantiate(prefab, ModuleParent);
+            instance.name = name;
+            instance.transform.localPosition = groundLocalPosition;
+            instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale = Vector3.one;
+
+            if (cloudTipWorldY.HasValue)
+            {
+                float cloudRise = Mathf.Max(0.5f, cloudTipWorldY.Value - instance.transform.position.y);
+                FitZapHeightToCloudRise(instance, cloudRise);
+            }
+
+            var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                systems[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+
+            return instance.GetComponent<ParticleSystem>() ?? (systems.Length > 0 ? systems[0] : null);
+        }
+
+        /// <summary>
+        /// Map cloud rise (ground → cloud shelf Y) onto the Zap bolt layers. Prefab uses Cone
+        /// (base-only) with a fixed <c>length: 5</c>; switching those layers to
+        /// <see cref="ParticleSystemShapeType.ConeVolume"/> and setting <c>shape.length = cloudRise</c>
+        /// makes the particle span track the clay height. Stretch <c>lengthScale</c> is kept modest
+        /// so the ribbon doesn't poke past the shelf; <c>startSize</c> is left alone (thickness).
+        /// Ground Sphere layers (flare / scorch / floor) are untouched.
+        /// </summary>
+        private static void FitZapHeightToCloudRise(GameObject zapRoot, float cloudRise)
+        {
+            float rise = Mathf.Max(0.5f, cloudRise);
+
+            var systems = zapRoot.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                ParticleSystem ps = systems[i];
+                ParticleSystem.ShapeModule shape = ps.shape;
+
+                if (shape.enabled &&
+                    (shape.shapeType == ParticleSystemShapeType.Sphere ||
+                     shape.shapeType == ParticleSystemShapeType.Hemisphere))
+                {
+                    continue;
+                }
+
+                bool isCone =
+                    shape.enabled &&
+                    (shape.shapeType == ParticleSystemShapeType.Cone ||
+                     shape.shapeType == ParticleSystemShapeType.ConeVolume ||
+                     shape.shapeType == ParticleSystemShapeType.ConeShell ||
+                     shape.shapeType == ParticleSystemShapeType.ConeVolumeShell);
+
+                if (isCone)
+                {
+                    // Volume along +Y (prefab already tilts the shape 90°) — length = cloud shelf rise.
+                    shape.shapeType = ParticleSystemShapeType.ConeVolume;
+                    shape.angle = 0f;
+                    shape.radius = 0.01f;
+                    shape.length = rise;
+                }
+
+                var renderer = ps.GetComponent<ParticleSystemRenderer>();
+                if (renderer != null && renderer.renderMode == ParticleSystemRenderMode.Stretch)
+                {
+                    // Prefab lengthScale 2 on size~2 added ~4u past the cone tip and cleared the clay.
+                    // Keep a short ribbon so segments connect without overshooting the shelf.
+                    renderer.velocityScale = 0f;
+                    renderer.lengthScale = 0.75f;
+                }
+            }
+        }
+
+        private ParticleSystem SpawnZapRig(
+            GameObject prefab,
+            string name,
+            Vector3 localPosition,
+            float? targetTipWorldY)
+        {
+            var instance = Instantiate(prefab, ModuleParent);
             instance.name = name;
             instance.transform.localPosition = localPosition;
             instance.transform.localRotation = Quaternion.identity;
             instance.transform.localScale = Vector3.one;
+
+            // Fair — stock upward Zap, untouched.
+            _ = targetTipWorldY;
 
             var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
             for (int i = 0; i < systems.Length; i++)
@@ -1038,18 +1254,34 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Cool + dim the existing diorama lights so the board reads under a storm shelf without
-        /// replacing <see cref="LogiCard.Boot.GameBootstrap"/>'s light rig. Fair builds skip this.
+        /// Cool + dim diorama lights under a storm module. Snapshots intensities so
+        /// <see cref="ClearWeather"/> / Fair can restore (card swap must not permanently crush the key).
         /// </summary>
-        private static void ApplyStormLightingDim()
+        private void ApplyStormLightingDim()
         {
+            if (_lightingDimmed)
+            {
+                return;
+            }
+
+            _savedAmbient = RenderSettings.ambientLight;
             RenderSettings.ambientLight = new Color(0.16f, 0.18f, 0.22f);
 
             Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
+            _dimmedLights = lights;
+            _savedLightIntensities = new float[lights.Length];
+            _savedLightColors = new Color[lights.Length];
             for (int i = 0; i < lights.Length; i++)
             {
                 Light light = lights[i];
-                if (light == null || !light.enabled)
+                if (light == null)
+                {
+                    continue;
+                }
+
+                _savedLightIntensities[i] = light.intensity;
+                _savedLightColors[i] = light.color;
+                if (!light.enabled)
                 {
                     continue;
                 }
@@ -1064,6 +1296,37 @@ namespace LogiCard.Board
                     light.intensity *= 0.85f;
                 }
             }
+
+            _lightingDimmed = true;
+        }
+
+        private void RestoreLightingIfDimmed()
+        {
+            if (!_lightingDimmed)
+            {
+                return;
+            }
+
+            RenderSettings.ambientLight = _savedAmbient;
+            if (_dimmedLights != null)
+            {
+                for (int i = 0; i < _dimmedLights.Length; i++)
+                {
+                    Light light = _dimmedLights[i];
+                    if (light == null)
+                    {
+                        continue;
+                    }
+
+                    light.intensity = _savedLightIntensities[i];
+                    light.color = _savedLightColors[i];
+                }
+            }
+
+            _dimmedLights = null;
+            _savedLightIntensities = null;
+            _savedLightColors = null;
+            _lightingDimmed = false;
         }
 
         /// <summary>
