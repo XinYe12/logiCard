@@ -104,5 +104,22 @@ namespace LogiCard.Tests.EditMode
             Assert.That(clock.RemainingSeconds, Is.EqualTo(10f).Within(0.0001f));
             Assert.That(clock.CanFundAnotherRound, Is.False);
         }
+
+        [Test]
+        public void Reset_RestoresFullPoolRoundOneAndAttackerChooser()
+        {
+            var clock = new MatchClock(900f, 30f);
+            Assert.That(clock.TryPlayTimeCard(60f, out _), Is.True);
+            clock.EndRound();
+            Assert.That(clock.TryPlayTimeCard(30f, out _), Is.True);
+
+            clock.Reset(MatchSide.Attacker);
+
+            Assert.That(clock.RemainingSeconds, Is.EqualTo(900f).Within(0.0001f));
+            Assert.That(clock.RoundAllotment, Is.EqualTo(0f));
+            Assert.That(clock.RoundIndex, Is.EqualTo(1));
+            Assert.That(clock.CurrentChooser, Is.EqualTo(MatchSide.Attacker));
+            Assert.That(clock.CanFundAnotherRound, Is.True);
+        }
     }
 }

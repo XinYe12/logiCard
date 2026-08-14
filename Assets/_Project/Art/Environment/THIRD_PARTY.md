@@ -70,11 +70,10 @@ must stay traceable.
 ## CloudAtlas — soft stylized discs (Link's Awakening pillow aim)
 
 - **Date:** 2026-08-12 (supersedes the Kenney whitePuff composite for the *cloud bank*)
-- **Status:** `Resources/Weather/CloudAtlas.png` is now a generated 4x2 atlas of soft circular
-  cream discs (`Tools/gen_soft_cloud_atlas.py`) — smooth alpha falloff, near-white RGB at edges
-  (no dark smoke rim). Human Play `image copy 10` rejected the Kenney "White puff" atlas: jagged
-  silhouettes + grey/black fringe read as outlined "broken cloth," not glued LA-style pillows.
-  `BoardWeatherPocket` cloud bank uses Additive particle blend + few large overlapping masses.
+- **Status:** `Resources/Weather/CloudAtlas.png` is a generated 4x2 atlas of soft bulbous LA-style
+  discs (`Tools/gen_soft_cloud_atlas.py`) — eight distinct silhouettes, white tops / pale blue-grey
+  recesses, near-white soft edges (no dark smoke rim). Human Play `image copy 12` asked for more
+  variation + lighter 边缘 + stronger 3D; bank pins each mass to a different frame band.
 - **Kenney Smoke Particles (CC0):** originals still under `Textures/kenney_smoke_particles/` for
   provenance; rim mist may still share the soft atlas. Kenney pack page:
   https://kenney.nl/assets/smoke-particles (CC0 1.0).

@@ -6,9 +6,9 @@ using UnityEngine;
 namespace LogiCard.Board
 {
     /// <summary>
-    /// Scene view for <see cref="ArenaBoard"/> (C35/C39 Phase 4 + C53 detail pass): room-zoned
-    /// floors, brick walls, terrain-edge strata, and prop dressing. Sim owns geometry truth; this
-    /// only draws and converts coordinates. Wall/door <em>positions</em> stay gameplay-owned.
+    /// Scene view for <see cref="ArenaBoard"/> (C35/C39 Phase 4 + C53/C65 presentation): room-zoned
+    /// flat/toon floors, walls, terrain-edge strata, and map-aware prop dressing. Sim owns geometry
+    /// truth; this only draws and converts coordinates. Wall/door <em>positions</em> stay gameplay-owned.
     /// </summary>
     public sealed class BoardView : MonoBehaviour
     {
@@ -83,7 +83,7 @@ namespace LogiCard.Board
 
             for (int i = 0; i < model.Walls.Count; i++)
             {
-                PlaceSegmentBox($"Wall_{i}", model.Walls[i], BoardSurfaceMaterials.BrickWall, WallHeight);
+                PlaceWallFence($"Wall_{i}", model.Walls[i]);
             }
 
             for (int i = 0; i < model.Doors.Count; i++)
@@ -148,8 +148,8 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// C45 room zones as distinct wet-dusk surfaces (Yard asphalt / Hall concrete / Vault polish /
-        /// flank approach lanes). Bounds match GameBootstrap.BuildBoard — presentation only.
+        /// C45/C65 room zones as flat/toon surfaces per <see cref="MapSurfaceRole"/>. Bounds come from
+        /// <see cref="MapDefinitions"/> via <see cref="Layout"/> — presentation only.
         /// </summary>
         private void PlaceRoomFloors(ArenaBoard model)
         {
@@ -196,20 +196,8 @@ namespace LogiCard.Board
             underlay.GetComponent<MeshRenderer>().sharedMaterial = BoardSurfaceMaterials.StrataDirt;
         }
 
-        private static Material SurfaceMaterialFor(MapSurfaceRole role)
-        {
-            switch (role)
-            {
-                case MapSurfaceRole.Yard:
-                    return BoardSurfaceMaterials.YardFloor;
-                case MapSurfaceRole.Hall:
-                    return BoardSurfaceMaterials.HallFloor;
-                case MapSurfaceRole.Vault:
-                    return BoardSurfaceMaterials.VaultFloor;
-                default:
-                    return BoardSurfaceMaterials.FlankFloor;
-            }
-        }
+        /// <summary>C65 role → flat/toon material. Public for EditMode coverage of the Phase 2 contract.</summary>
+        public static Material SurfaceMaterialFor(MapSurfaceRole role) => BoardSurfaceMaterials.ForRole(role);
 
         private void PlaceFloorSlab(
             Transform parent,
@@ -337,57 +325,154 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Presentation-only Quaternius interior dressing + warm glass panes. Placed clear of door
-        /// corridors and spawn lanes so they never read as blockers (C40 — no pawn collision anyway;
-        /// these also strip colliders so taps pass through to the ground underlay).
+        /// Presentation-only interior dressing + warm glass panes. Map-aware (C57 one-bespoke-per-map /
+        /// MAP_PRESENTATION_STANDARD §3) so Rail Platform / Vault Complex get in-room props instead of
+        /// Freight-Yard coordinates. Props strip colliders (C40 — taps pass through to the underlay).
         /// </summary>
         private void PlaceRoomDressing(ArenaBoard model)
         {
             var root = new GameObject("RoomDressing");
             root.transform.SetParent(transform, false);
 
+            switch (Layout.Id)
+            {
+                case MapId.RailPlatform:
+                    PlaceRailPlatformDressing(root.transform);
+                    break;
+                case MapId.VaultComplex:
+                    PlaceVaultComplexDressing(root.transform);
+                    break;
+                default:
+                    PlaceFreightYardDressing(root.transform);
+                    break;
+            }
+
+            _ = model;
+        }
+
+        private void PlaceFreightYardDressing(Transform root)
+        {
             // Yard — approach clutter at the edges, leave the (4,*) spine clear for attacker.
-            PlaceInteriorProp(root.transform, "Yard_Cabinet_W", "Cabinet", new PlanarPosition(0.7f, 1.2f),
+            PlaceInteriorProp(root, "Yard_Cabinet_W", "Cabinet", new PlanarPosition(0.7f, 1.2f),
                 0.55f, 12f);
-            PlaceInteriorProp(root.transform, "Yard_Cabinet_E", "Cabinet", new PlanarPosition(7.3f, 1.4f),
+            PlaceInteriorProp(root, "Yard_Cabinet_E", "Cabinet", new PlanarPosition(7.3f, 1.4f),
                 0.55f, -18f);
-            PlaceInteriorProp(root.transform, "Yard_Chair_W", "Chair", new PlanarPosition(1.1f, 2.8f),
+            PlaceInteriorProp(root, "Yard_Chair_W", "Chair", new PlanarPosition(1.1f, 2.8f),
                 0.45f, 40f);
-            PlaceInteriorProp(root.transform, "Yard_Table_E", "Table", new PlanarPosition(6.9f, 2.6f),
+            PlaceInteriorProp(root, "Yard_Table_E", "Table", new PlanarPosition(6.9f, 2.6f),
                 0.5f, 0f);
 
             // Hall — cover furniture + window frames on the side walls.
-            PlaceInteriorProp(root.transform, "Hall_Cover_SW", "Cabinet", new PlanarPosition(2.55f, 4.55f),
+            PlaceInteriorProp(root, "Hall_Cover_SW", "Cabinet", new PlanarPosition(2.55f, 4.55f),
                 0.5f, 8f);
-            PlaceInteriorProp(root.transform, "Hall_Cover_NE", "Shelf", new PlanarPosition(5.45f, 6.4f),
+            PlaceInteriorProp(root, "Hall_Cover_NE", "Shelf", new PlanarPosition(5.45f, 6.4f),
                 0.55f, -22f);
-            PlaceInteriorProp(root.transform, "Hall_Window_W", "WindowSmall", new PlanarPosition(2.08f, 5.5f),
+            PlaceInteriorProp(root, "Hall_Window_W", "WindowSmall", new PlanarPosition(2.08f, 5.5f),
                 0.7f, 90f, yLift: 0.35f);
-            PlaceInteriorProp(root.transform, "Hall_Window_E", "WindowSmall", new PlanarPosition(5.92f, 5.5f),
+            PlaceInteriorProp(root, "Hall_Window_E", "WindowSmall", new PlanarPosition(5.92f, 5.5f),
                 0.7f, 90f, yLift: 0.35f);
-            PlaceInteriorProp(root.transform, "Hall_Light", "LightCeiling", new PlanarPosition(4f, 5.5f),
+            PlaceInteriorProp(root, "Hall_Light", "LightCeiling", new PlanarPosition(4f, 5.5f),
                 0.45f, 0f, yLift: WallHeight * 0.92f);
-            // Keep warm emissive panes behind the window frames for the lit-window read.
-            PlaceWindowPane(root.transform, "Hall_Glow_W", new PlanarPosition(2.05f, 5.5f),
+            PlaceWindowPane(root, "Hall_Glow_W", new PlanarPosition(2.05f, 5.5f),
                 new Vector3(0.03f, 0.4f, 0.55f), 0.55f);
-            PlaceWindowPane(root.transform, "Hall_Glow_E", new PlanarPosition(5.95f, 5.5f),
+            PlaceWindowPane(root, "Hall_Glow_E", new PlanarPosition(5.95f, 5.5f),
                 new Vector3(0.03f, 0.4f, 0.55f), 0.55f);
 
             // Vault — shelving / depth dressing north of Door #2.
-            PlaceInteriorProp(root.transform, "Vault_Bookshelf_W", "Bookshelf", new PlanarPosition(1.2f, 8.8f),
+            PlaceInteriorProp(root, "Vault_Bookshelf_W", "Bookshelf", new PlanarPosition(1.2f, 8.8f),
                 0.85f, 0f);
-            PlaceInteriorProp(root.transform, "Vault_Shelf_E", "ShelfLarge", new PlanarPosition(6.8f, 8.8f),
+            PlaceInteriorProp(root, "Vault_Shelf_E", "ShelfLarge", new PlanarPosition(6.8f, 8.8f),
                 0.85f, 180f);
-            PlaceInteriorProp(root.transform, "Vault_Cabinet", "Cabinet", new PlanarPosition(4.0f, 9.3f),
+            PlaceInteriorProp(root, "Vault_Cabinet", "Cabinet", new PlanarPosition(4.0f, 9.3f),
                 0.55f, 15f);
-            PlaceInteriorProp(root.transform, "Vault_Window_N", "WindowLarge", new PlanarPosition(4f, 9.88f),
+            PlaceInteriorProp(root, "Vault_Window_N", "WindowLarge", new PlanarPosition(4f, 9.88f),
                 0.9f, 0f, yLift: 0.35f);
-            PlaceInteriorProp(root.transform, "Vault_Light", "LightCeilingAlt", new PlanarPosition(4f, 8.5f),
+            PlaceInteriorProp(root, "Vault_Light", "LightCeilingAlt", new PlanarPosition(4f, 8.5f),
                 0.45f, 0f, yLift: WallHeight * 0.92f);
-            PlaceWindowPane(root.transform, "Vault_Glow_N", new PlanarPosition(4f, 9.85f),
+            PlaceWindowPane(root, "Vault_Glow_N", new PlanarPosition(4f, 9.85f),
                 new Vector3(1.0f, 0.35f, 0.03f), 0.55f);
+        }
 
-            _ = model;
+        private void PlaceRailPlatformDressing(Transform root)
+        {
+            // Approach platform (y 0-4) — edge clutter, keep x≈4 corridor mouth clear.
+            PlaceInteriorProp(root, "Approach_Cabinet_W", "Cabinet", new PlanarPosition(0.8f, 1.1f),
+                0.5f, 10f);
+            PlaceInteriorProp(root, "Approach_Table_E", "Table", new PlanarPosition(7.0f, 1.3f),
+                0.48f, -8f);
+            PlaceInteriorProp(root, "Approach_Chair", "Chair", new PlanarPosition(6.6f, 2.7f),
+                0.42f, 35f);
+
+            // Corridor (x 3-5, y 4-9) — one light + slim shelf; leave door mouths at y=4 / y=9 clear.
+            PlaceInteriorProp(root, "Corridor_Shelf", "Shelf", new PlanarPosition(4.55f, 6.5f),
+                0.42f, 90f);
+            PlaceInteriorProp(root, "Corridor_Light", "LightCeiling", new PlanarPosition(4f, 6.5f),
+                0.4f, 0f, yLift: WallHeight * 0.92f);
+
+            // Crawlspace (x 0-3) — keep Vent at (1.3-1.7, 6.5) clear; one prop south of it.
+            PlaceInteriorProp(root, "Crawl_Cabinet", "Cabinet", new PlanarPosition(1.0f, 5.0f),
+                0.45f, 5f);
+
+            // Pocket (x 5-8) — dead-end bulge; keep Breach at (5, 6.3-6.7) clear.
+            PlaceInteriorProp(root, "Pocket_Table", "Table", new PlanarPosition(6.6f, 5.2f),
+                0.48f, 12f);
+            PlaceInteriorProp(root, "Pocket_Chair", "Chair", new PlanarPosition(7.1f, 7.4f),
+                0.42f, -25f);
+
+            // Objective platform (y 9-13).
+            PlaceInteriorProp(root, "Objective_Bookshelf_W", "Bookshelf", new PlanarPosition(1.2f, 11.2f),
+                0.8f, 0f);
+            PlaceInteriorProp(root, "Objective_Shelf_E", "ShelfLarge", new PlanarPosition(6.8f, 11.2f),
+                0.8f, 180f);
+            PlaceInteriorProp(root, "Objective_Window_N", "WindowLarge", new PlanarPosition(4f, 12.85f),
+                0.9f, 0f, yLift: 0.35f);
+            PlaceInteriorProp(root, "Objective_Light", "LightCeilingAlt", new PlanarPosition(4f, 11.0f),
+                0.42f, 0f, yLift: WallHeight * 0.92f);
+            PlaceWindowPane(root, "Objective_Glow_N", new PlanarPosition(4f, 12.82f),
+                new Vector3(1.0f, 0.35f, 0.03f), 0.55f);
+        }
+
+        private void PlaceVaultComplexDressing(Transform root)
+        {
+            // Entry (0-4, 0-3) — keep Door #1 (y=3, x≈2) and Door #2 (x=4, y≈1.5) mouths clear.
+            PlaceInteriorProp(root, "Entry_Cabinet", "Cabinet", new PlanarPosition(0.7f, 0.8f),
+                0.48f, 8f);
+            PlaceInteriorProp(root, "Entry_Chair", "Chair", new PlanarPosition(2.8f, 0.7f),
+                0.4f, -20f);
+
+            // Courtyard (4-8, 0-3).
+            PlaceInteriorProp(root, "Courtyard_Table", "Table", new PlanarPosition(6.5f, 1.2f),
+                0.48f, 0f);
+            PlaceInteriorProp(root, "Courtyard_Window", "WindowSmall", new PlanarPosition(7.85f, 1.5f),
+                0.65f, 90f, yLift: 0.35f);
+            PlaceWindowPane(root, "Courtyard_Glow", new PlanarPosition(7.82f, 1.5f),
+                new Vector3(0.03f, 0.35f, 0.5f), 0.55f);
+
+            // WestMid (0-4, 3-6) — keep Vent (x=4, y≈4.5) and Breach (y=6, x≈2) clear.
+            PlaceInteriorProp(root, "WestMid_Shelf", "Shelf", new PlanarPosition(0.7f, 4.5f),
+                0.5f, 0f);
+            PlaceInteriorProp(root, "WestMid_Light", "LightCeiling", new PlanarPosition(1.8f, 4.5f),
+                0.4f, 0f, yLift: WallHeight * 0.92f);
+
+            // EastMid (4-8, 3-6).
+            PlaceInteriorProp(root, "EastMid_Cabinet", "Cabinet", new PlanarPosition(7.2f, 4.4f),
+                0.48f, -12f);
+            PlaceInteriorProp(root, "EastMid_Shelf", "Shelf", new PlanarPosition(5.2f, 5.4f),
+                0.48f, 90f);
+
+            // Vault objective (0-8, 6-9).
+            PlaceInteriorProp(root, "VC_Vault_Bookshelf_W", "Bookshelf", new PlanarPosition(1.0f, 7.6f),
+                0.75f, 0f);
+            PlaceInteriorProp(root, "VC_Vault_Shelf_E", "ShelfLarge", new PlanarPosition(7.0f, 7.6f),
+                0.75f, 180f);
+            PlaceInteriorProp(root, "VC_Vault_Cabinet", "Cabinet", new PlanarPosition(4.0f, 8.3f),
+                0.5f, 10f);
+            PlaceInteriorProp(root, "VC_Vault_Window_N", "WindowLarge", new PlanarPosition(4f, 8.88f),
+                0.85f, 0f, yLift: 0.35f);
+            PlaceInteriorProp(root, "VC_Vault_Light", "LightCeilingAlt", new PlanarPosition(4f, 7.4f),
+                0.42f, 0f, yLift: WallHeight * 0.92f);
+            PlaceWindowPane(root, "VC_Vault_Glow_N", new PlanarPosition(4f, 8.85f),
+                new Vector3(1.0f, 0.32f, 0.03f), 0.55f);
         }
 
         private void PlaceInteriorProp(
@@ -403,8 +488,11 @@ namespace LogiCard.Board
             if (prefab == null)
             {
                 // Prefabs not imported yet — keep a muted cube so the scene still builds in tests.
+                Material fallback = resourceName == "Chair"
+                    ? BoardSurfaceMaterials.PropAccent
+                    : BoardSurfaceMaterials.PropBody;
                 PlaceProp(parent, name, planar, new Vector3(uniformScale, uniformScale, uniformScale),
-                    Mathf.Max(0.15f, yLift), yawDegrees, BoardSurfaceMaterials.PropCrate);
+                    Mathf.Max(0.15f, yLift), yawDegrees, fallback);
                 return;
             }
 
@@ -413,7 +501,56 @@ namespace LogiCard.Board
             prop.transform.localPosition = LocalFromPlanar(planar) + new Vector3(0f, yLift, 0f);
             prop.transform.localScale = Vector3.one * (uniformScale * WorldScale);
             prop.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            ReskinInteriorPropMaterials(prop, resourceName);
             StripCollidersRecursive(prop);
+        }
+
+        /// <summary>
+        /// C65: keep nappin meshes; swap opaque body mats to flat/gradient family. Preserve glass +
+        /// emissive slots so windows/lights still read.
+        /// </summary>
+        private static void ReskinInteriorPropMaterials(GameObject prop, string resourceName)
+        {
+            Material body = resourceName == "Chair"
+                ? BoardSurfaceMaterials.PropAccent
+                : BoardSurfaceMaterials.PropBody;
+
+            MeshRenderer[] renderers = prop.GetComponentsInChildren<MeshRenderer>();
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Material[] shared = renderers[i].sharedMaterials;
+                var next = new Material[shared.Length];
+                for (int m = 0; m < shared.Length; m++)
+                {
+                    Material mat = shared[m];
+                    if (mat != null && ShouldPreserveInteriorMaterial(mat))
+                    {
+                        next[m] = mat;
+                    }
+                    else
+                    {
+                        next[m] = body;
+                    }
+                }
+
+                renderers[i].sharedMaterials = next;
+            }
+        }
+
+        private static bool ShouldPreserveInteriorMaterial(Material mat)
+        {
+            string name = mat.name ?? string.Empty;
+            if (name.IndexOf("Glass", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            if (name.IndexOf("Emissive", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            return mat.IsKeywordEnabled("_EMISSION");
         }
 
         private void PlaceProp(
@@ -497,6 +634,7 @@ namespace LogiCard.Board
                     hinge.transform, leafGo.transform, leafWidth, height, leafThickness);
                 leaf = leafGo.transform;
                 renderers = leafGo.GetComponentsInChildren<MeshRenderer>();
+                ApplyDoorLeafFlatFamily(renderers);
                 originalColors = CaptureRendererColors(renderers);
                 StripCollidersRecursive(leafGo);
             }
@@ -508,6 +646,7 @@ namespace LogiCard.Board
                 box.transform.SetParent(hinge.transform, false);
                 box.transform.localPosition = new Vector3(length * 0.5f * WorldScale, height * 0.5f, 0f);
                 box.transform.localScale = new Vector3(leafWidth, height, leafThickness);
+                box.GetComponent<MeshRenderer>().sharedMaterial = BoardSurfaceMaterials.DoorLeaf;
                 StripCollider(box);
                 leaf = box.transform;
                 renderers = new[] { box.GetComponent<MeshRenderer>() };
@@ -522,6 +661,24 @@ namespace LogiCard.Board
             originalColors = KindTintOverride(door.Kind, originalColors);
 
             return new DoorVisual(door, root, hinge.transform, leaf, renderers, originalColors);
+        }
+
+        /// <summary>C65: door leaf mesh stays; paint with flat/gradient DoorLeaf before state tint.</summary>
+        private static void ApplyDoorLeafFlatFamily(MeshRenderer[] renderers)
+        {
+            Material leafMat = BoardSurfaceMaterials.DoorLeaf;
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Material[] shared = renderers[i].sharedMaterials;
+                var next = new Material[shared.Length];
+                for (int m = 0; m < shared.Length; m++)
+                {
+                    Material mat = shared[m];
+                    next[m] = mat != null && ShouldPreserveInteriorMaterial(mat) ? mat : leafMat;
+                }
+
+                renderers[i].sharedMaterials = next;
+            }
         }
 
         private void PlaceDoorCasing(Transform root, float leafWidth, float height)
@@ -883,7 +1040,11 @@ namespace LogiCard.Board
             }
         }
 
-        private GameObject PlaceSegmentBox(string name, Segment segment, Material material, float height)
+        /// <summary>
+        /// C65 fence presentation — Sim wall segments stay as-authored; we draw posts + rails + a short
+        /// cream panel instead of one tall coral brick slab so walls match the toy-floor palette.
+        /// </summary>
+        private void PlaceWallFence(string name, Segment segment)
         {
             float dx = segment.B.X - segment.A.X;
             float dy = segment.B.Y - segment.A.Y;
@@ -894,22 +1055,78 @@ namespace LogiCard.Board
             }
 
             PlanarPosition mid = PlanarPosition.Lerp(segment.A, segment.B, 0.5f);
-            var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            box.name = name;
-            box.transform.SetParent(transform, false);
-            box.transform.localPosition = LocalFromPlanar(mid) + new Vector3(0f, height * 0.5f, 0f);
-            box.transform.localScale = new Vector3(length * WorldScale, height, SegmentThickness * WorldScale);
             float yaw = Mathf.Atan2(-dy, dx) * Mathf.Rad2Deg;
-            box.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
-            box.GetComponent<MeshRenderer>().sharedMaterial = material;
 
-            Collider col = box.GetComponent<Collider>();
-            if (col != null)
+            var root = new GameObject(name);
+            root.transform.SetParent(transform, false);
+            root.transform.localPosition = LocalFromPlanar(mid);
+            root.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+
+            float worldLen = length * WorldScale;
+            float postW = Mathf.Max(SegmentThickness * WorldScale * 1.35f, 0.11f);
+            float postDepth = Mathf.Max(SegmentThickness * WorldScale * 1.5f, 0.12f);
+            // Fence sits a bit under full WallHeight so doors still clear the top visually.
+            float fenceH = WallHeight * 0.78f;
+            float panelH = fenceH * 0.55f;
+            float railH = fenceH * 0.10f;
+            float halfLen = worldLen * 0.5f;
+
+            // Cream panel — soft plaster fill (readable LoS blocker without looking like a brick slab).
+            PlaceFencePart(
+                root.transform, "Panel",
+                new Vector3(0f, panelH * 0.5f, 0f),
+                new Vector3(Mathf.Max(worldLen - postW * 0.85f, worldLen * 0.55f), panelH, SegmentThickness * WorldScale * 0.85f),
+                BoardSurfaceMaterials.BrickWall);
+
+            // Top + mid rails.
+            PlaceFencePart(
+                root.transform, "Rail_Top",
+                new Vector3(0f, fenceH - (railH * 0.5f), 0f),
+                new Vector3(worldLen, railH, postDepth * 0.95f),
+                BoardSurfaceMaterials.FenceRail);
+            PlaceFencePart(
+                root.transform, "Rail_Mid",
+                new Vector3(0f, panelH * 0.72f, 0f),
+                new Vector3(worldLen, railH * 0.85f, postDepth * 0.85f),
+                BoardSurfaceMaterials.FenceRail);
+
+            // End posts.
+            PlaceFencePart(
+                root.transform, "Post_A",
+                new Vector3(-halfLen + (postW * 0.5f), fenceH * 0.5f, 0f),
+                new Vector3(postW, fenceH, postDepth),
+                BoardSurfaceMaterials.FencePost);
+            PlaceFencePart(
+                root.transform, "Post_B",
+                new Vector3(halfLen - (postW * 0.5f), fenceH * 0.5f, 0f),
+                new Vector3(postW, fenceH, postDepth),
+                BoardSurfaceMaterials.FencePost);
+
+            // Extra posts on longer runs so the fence doesn't read as one long bar.
+            const float postSpacing = 1.15f;
+            int midCount = Mathf.FloorToInt(length / postSpacing) - 1;
+            for (int i = 1; i <= midCount; i++)
             {
-                Object.Destroy(col);
+                float t = i / (float)(midCount + 1);
+                float x = Mathf.Lerp(-halfLen, halfLen, t);
+                PlaceFencePart(
+                    root.transform, $"Post_M{i}",
+                    new Vector3(x, fenceH * 0.5f, 0f),
+                    new Vector3(postW * 0.85f, fenceH * 0.96f, postDepth * 0.9f),
+                    BoardSurfaceMaterials.FencePost);
             }
+        }
 
-            return box;
+        private static void PlaceFencePart(
+            Transform parent, string name, Vector3 localPosition, Vector3 localScale, Material material)
+        {
+            var part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            part.name = name;
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = localPosition;
+            part.transform.localScale = localScale;
+            part.GetComponent<MeshRenderer>().sharedMaterial = material;
+            StripCollider(part);
         }
 
         private sealed class DoorVisual

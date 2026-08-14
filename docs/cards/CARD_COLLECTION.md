@@ -1,21 +1,22 @@
 # Card Collection & Gear Deck — Design Research
 
-**Status:** Research + **CONFIRMED** direction via **C62** (2026-08-12). §8 answers promoted to `PRODUCT_MEMORY.md`. Gear **numerics** (§6A) and Adrenaline real-effect redesign remain OPEN.  
+**Status:** **C64 hybrid** is the long-term target (2026-08-13). Deckbuilder sizing **locked as C66** (2026-08-14) — see [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) / PRODUCT_MEMORY. First-wave staples still ship on **transitional full-hand** (**C62**/**C63**) until a deckbuilder lands. Gear **numerics** (§6A, except Bandage/C63) and Adrenaline real-effect redesign remain OPEN.  
+**Flashbang:** effect brief **paused** — when resumed, re-derive as **shared-library** tech under C64 (not a signature).  
 **Worktree:** `D:\projects\Game\logiCard-cards-collection` / `feat/cards-collection-docs`  
-**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C15**, **C18**, **C33**, **C34**/**C46**, OPEN #3; [`GDD.md`](../core/GDD.md) § deferred cards; [`CORE_LOOP.md`](../core/CORE_LOOP.md); [`UI_FLOW.md`](../ui/UI_FLOW.md); [`MONETIZATION.md`](../core/MONETIZATION.md) **C47**; [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md).
+**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C15**, **C18** *(amended by C64)*, **C33**, **C42–C44**, **C47**, **C62**, **C63**, **C64**, **C66**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`GDD.md`](../core/GDD.md); [`CORE_LOOP.md`](../core/CORE_LOOP.md); [`UI_FLOW.md`](../ui/UI_FLOW.md); [`MONETIZATION.md`](../core/MONETIZATION.md); [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md).
 
 ---
 
 ## 1. Why this doc exists
 
-The live ship still runs **base verbs only** (Move, Shoot, Door) plus the **Time Card** allotment UI. Gear cards are named in GDD/UI_FLOW but never specified as a collection, deck-build, or per-character kit. Before any HUD strip or Sim verb lands, we need answers to:
+Gear cards need a catalog, an access model, and an in-match economy before HUD/Sim work sprawls. This file is the Cards-department catalog: **C64 hybrid** as the long-term frame, with **C62**/**C63** as the shipping transitional layer. It does **not** implement code.
 
-1. What cards exist in the product (catalog)?
-2. Does each Character own a **different** kit, or do both sides share the **same** gear set?
-3. How does a player **hold / draw / spend** cards inside a match (economy)?
-4. Is there a **meta collection** (unlock / inventory / cosmetics) separate from the in-match hand?
+Live questions this doc answers (with which C# owns the answer):
 
-This file proposes a taxonomy and a short decision menu. It does **not** implement code.
+1. What cards exist in the first wave? → **C62** catalog (library candidates under C64)  
+2. Same universal gear list forever? → **C64**: long-term **no** (personal decks + signatures); transitional shipping **yes** (full-hand staples)  
+3. Hold / draw / spend? → transitional full-hand+charges (**C62**); long-term = always-have constructed hand from 5–8 deck (**C66**)  
+4. Meta collection / paywall? → none for gameplay; free library + signatures (**C64** / **C47**)
 
 ---
 
@@ -23,16 +24,24 @@ This file proposes a taxonomy and a short decision menu. It does **not** impleme
 
 | ID | Fact |
 |----|------|
-| **C15** | Move + Shoot = **base verbs**; cards = **gear**; Characters differ by attrs (and later unique verbs — roster doc). |
-| **C18** | Attacker/Defender are labels + spawns; **same gear deck** (both sides use the same gear set — not role-locked kits). |
-| **C33** | **Time Card** commits match-pool seconds. It is a **round-allotment commit**, **not** a gear card. |
-| **C21 / C25** | There is **no Walk card**, **no Snap/Hold card**. Stance and shoot mode are direct picks on base verbs. |
-| **C34 / C46** | Named gear (Bandage / Flashbang / Adrenaline / Interact-as-card) + Otherwise library are **roadmap**, not current core-loop ship. C46 removed the artificial “after demo” calendar gate but did **not** auto-promote gear into active build. |
-| **PLAYBACK_CONTRACT** | Adrenaline today = Execute-only UI gate + **stub** effect; mid-Playback resolve that mutates the armed tape needs an explicit redesign. |
-| **C47** | F2P cosmetic-only IAP. **Gameplay cards / unique verbs are not sellable power.** Time Card *backs* may be cosmetic. |
-| **OPEN #3** | **Card economy** (full hand vs draw each Program) is explicitly parked with gear under C34-era deferral. |
+| **C15** | Move + Shoot = **base verbs**; cards = **gear**; Characters differ by attrs and later unique verbs. |
+| **C18** | Attacker/Defender are labels + spawns. *"Same gear deck" as a hard long-term rule is **retired by C64*** — players may bring different cards from a shared library; labels still don't role-lock kits. |
+| **C33** | **Time Card** commits match-pool seconds — **not** a gear card. |
+| **C21 / C25** | No Walk card, no Snap/Hold card. Stance and shoot mode are direct picks on base verbs. |
+| **C34 / C46** | Named gear was roadmap under demo framing; C46 removed the calendar gate. Bandage Sim has since landed (**C63**); other first-wave cards still staged. |
+| **C42–C44** | Unique-verb Characters (Bomber / Time Player) — long-term; event-stream only. Under C64 the exclusive power is still a unique verb, **armed by playing a signature card**. |
+| **C47** | F2P cosmetic-only IAP. Gameplay cards / signatures / unique verbs are **not** sellable power. |
+| **C62** | First-wave catalog + **transitional** economy (full hand + charges; no binder; Interact = future stations; Adrenaline Execute stub). Long-term "same deck / verbs-not-cards" clauses superseded by **C64**. |
+| **C63** | Bandage: 3s TR, 1×/Character/match; HUD-gated not-mid-Sprint; Sim carve-out for Bandage. Unaffected by C64. |
+| **C64** | Long-term = **hybrid**: Character **signature** cards (unique verb armed by card) + **personal decks** built from a **shared library**; deck/hand hidden; Character pick public; library + signatures free forever. Shipping staples stay on transitional full-hand until deckbuilder. |
+| **PLAYBACK_CONTRACT** | Adrenaline today = Execute-only UI gate + **stub** effect. |
 
-**Implication of C18:** the first answer to “does each character own different cards?” for **Attacker vs Defender** and for **Scout vs Juggernaut as attribute twins** is already: **same gear deck**. Per-character *unique cards* would be a **new** product decision (closer to unique-verb roster / loadout packs) and would need to amend or sit beside C18 carefully.
+**Two horizons (read every section with this split):**
+
+| Horizon | Access model |
+|---------|----------------|
+| **Long-term (C64)** | Constructed **personal deck** from shared **library** + Character **signature** card(s); players may bring different cards; opponent does not see deck/hand |
+| **Shipping / transitional** | Full visible hand of first-wave staples + charges (**C62**/**C63**) — Bandage etc. — until deckbuilder ships |
 
 ---
 
@@ -44,11 +53,13 @@ Use these names in future docs so “card” stops meaning four different things
 |------|---------|
 | **Time Card** | Allotment UI + match-pool commit (**C33**). Not gear. Cosmetic backs OK (**MONETIZATION**). |
 | **Character Card** | Pre-match Scout / Juggernaut (attrs). Not a playable gear card. |
-| **Gear card** | Schedulable (or Execute-gated) item that spends Time Resource and/or a charge — Bandage, Flashbang, etc. |
-| **Otherwise card** | Failure / contingency library (e.g. stop-before-block rules today are simplified; full library is roadmap). |
-| **In-match hand** | What the player can arm during Program (or Execute for Adrenaline). |
-| **Collection / binder** | Meta inventory of owned gear definitions + cosmetic skins — **OPEN**, not designed. |
-| **Loadout** | Pre-match subset of the collection brought into a match — **OPEN**; conflicts with “same gear deck” if loadouts diverge by Character unless loadouts are identical for all. |
+| **Gear / library card** | Shared-library schedulable (or Execute-gated) item — Bandage, Flashbang, etc. Under C64, chosen into a personal deck (long-term) or offered as transitional full-hand staples (shipping). |
+| **Signature card** | Character-unique card that **arms a unique verb** (C64) — e.g. Bomber's Bomb. Not in other Characters' legal sets. |
+| **Otherwise card** | Failure / contingency library (family; not first-wave). |
+| **In-match hand** | What the player can arm during Program (or Execute for Adrenaline). Hidden from opponent under C64. |
+| **Shared library** | Full free catalog of buildable non-signature cards (**C64**). |
+| **Personal deck** | Pre-match constructed list from the shared library (**C64**/**C66**). Size **5–8**, ≤**2** copies per library card. |
+| **Cosmetic binder** | Skins for gear / Time Card backs — sellable; not gameplay unlocks (**C47**). |
 
 ---
 
@@ -60,11 +71,12 @@ Plain-language versions of §3's dev vocabulary — what a player would actually
 
 | Term (player-facing) | What it means to the player |
 |---|---|
-| **Character** | Who you're playing — Scout or Juggernaut today. Changes how fast you move and how quickly you handle doors and gear. Doesn't change what gear you can bring. |
+| **Character** | Who you're playing — Scout or Juggernaut today (attrs). Later Characters may also bring a **signature** ability card only they can play. |
 | **Time Card** | The card you play each round to commit part of the shared match clock. Bigger commitment = more time to act this round, but your opponent plans against that same window. |
 | **Program** | The planning phase — you secretly draw your path, aim your shots, and place any gear. Nobody sees your plan until it plays out. |
-| **Gear** | Tools like Bandage or Flashbang. Every Character has access to the same gear — there's no "Scout-only" or "Juggernaut-only" item. |
-| **Hand** | The gear you can use this round. |
+| **Gear / library cards** | Tools like Bandage or Flashbang from the shared pool. Long-term you **build a deck** from that pool; today both sides still see the same staple set while we ship the first cards. |
+| **Signature** | Your Character's unique card — playing it fires that Character's special verb (e.g. Bomber's bomb). |
+| **Hand** | The gear you can use this round (hidden from the opponent long-term). |
 | **Otherwise** | What happens if your planned move gets blocked (like running into a closed door) — a backup rule, not something you choose in the moment. |
 | **Reveal** | The instant both plans flip face-up, right before they play out. |
 | **Playback** | The replay that shows both sides' round unfolding together, second by second. |
@@ -104,67 +116,70 @@ Today resolve stops movement before a closed door / block. A full **Otherwise** 
 | Door open/close | GDD / C39 | Contextual map action, not a gear card for the current ship |
 | Vent / Breach | C57 | Reskinned `Door.Kind` — map features, not hand cards |
 | 高铁 ride | C31 | Match-limited map verb; not gear |
-| Bomber / Time Player unique verbs | CHARACTER_ROSTER_LONGTERM | Character verbs, **not** shared gear — monetization: free gameplay |
+| Bomber / Time Player | CHARACTER_ROSTER_LONGTERM / **C64** | Long-term **signature**: unique verb **armed by** a Character-only card — free gameplay |
 
 **No additional gear names are invented here.** Expanding the catalog is an explicit human call.
 
 ---
 
-## 5. Same deck vs per-character kits
+## 5. Access model — C64 hybrid (+ transitional full-hand)
 
-### 5.1 What is already locked
+### 5.1 What is locked now
 
-**C18 → same gear deck** for both sides (Attacker/Defender). Scout and Juggernaut today share verbs and differ by **attrs only**, so the natural reading is:
+| Layer | Rule |
+|-------|------|
+| **Long-term (C64)** | Shared **library** → each player builds a **personal deck** (**5–8**, ≤2 copies) before the match; Character also brings **signature** card(s) **extra** outside deck cap, always available. Players **may bring different cards**. Deck/hand **hidden**; Character select public. Played cards flip at **Reveal**. |
+| **Shipping (C62/C63)** | First-wave staples on **transitional full-hand** — both sides see the same Bandage / Flashbang / Interact / Adrenaline set until a deckbuilder ships. Bandage numerics locked (C63). Does **not** wait on deckbuilder UX. |
+| **Attacker/Defender** | Still labels + spawns + Allot chooser — **not** role-locked kits (**no** deck interaction — answered 2026-08-14). |
+| **Monetization** | Entire gameplay library + all signatures **free forever** (**C64** / **C47**). Cosmetics only sellable. |
 
-> Both Characters bring the **same legal gear list** into a match. Character fantasy comes from Speed / Agility / Strength (and later unique verbs), **not** from exclusive Bandage-vs-Flashbang kits.
+Conversation record: [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md). Sizing: [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) / **C66**.
 
-### 5.2 Options if we reopen “who owns which cards?”
+### 5.2 Historical options (pre-C64 research — kept for context)
 
-| Option | Description | Fits C18? | Risk |
-|--------|-------------|-----------|------|
-| **A. Shared universal deck (default)** | Every Character may use every gear card in the catalog. Attrs change *how well* you use time/doors, not *which* cards exist. | Yes | Gear can feel generic; Character identity stays numeric |
-| **B. Shared deck + Character modifiers** | Same cards, but costs/charges scale with attrs (e.g. Juggernaut Bandage faster, Scout Flashbang cheaper). | Yes (same *set*) | Needs numerics; easy to accidentally P2W if sold |
-| **C. Per-Character exclusive cards** | Scout-only / Juggernaut-only gear | **No** — needs new C# amending C18 | Splits balance matrix; loadout + roster explosion |
-| **D. Shared deck + unique-verb Characters** | Scout/Juggernaut share gear; Bomber’s bomb is a **verb**, not a gear card | Yes for gear; unique verbs separate | Keep gear vs verb boundary sharp (C15) |
-
-**Recommendation for first gear ship (research only):** **A**, optionally light **B**. Keep **C** out unless human explicitly wants to amend C18. Put Bomber/Time Player power in **verbs**, not exclusive gear packs (**D**).
+| Option | Description | Status after C64 |
+|--------|-------------|------------------|
+| **A. Shared universal set** | Everyone always has every library card | **Transitional shipping only** |
+| **B. Shared set + attr cost mods** | Same cards; Strength may scale Interact cost (C62 carve-out) | Still valid for Interact |
+| **C. Per-Character exclusive library cards** | Scout-only Flashbang etc. | Not the C64 model — exclusives are **signatures**, not random library splits |
+| **D. Unique verbs only (no signature card)** | Bomber bomb as verb with no hand card | **Superseded by C64** — signature = verb *and* card |
 
 ---
 
-## 5A. "Same gear deck" vs unique-verb Characters — the boundary, spelled out
+## 5A. Library gear vs signature (verb + card) — the boundary
 
-§5 covers *whether Characters share a gear list*. This section is the sharper rule for telling **gear** apart from **unique Character verbs** (Bomber's bomb, Time Player's rewind — `CHARACTER_ROSTER_LONGTERM.md`, **C42–C44**) once both exist in the same product, since they will otherwise look like the same kind of thing to a player.
+**C64 test:**
 
-**The test:** if the capability exists in a match **regardless of which Character either player picked**, it's gear. If it exists **only because a specific Character was picked**, it's a unique verb.
-
-| | Gear card | Unique Character verb |
+| | Shared-library gear | Signature (verb + card) |
 |---|---|---|
-| **Example** | Bandage, Flashbang, Interact-as-card, Adrenaline | Bomber's bomb-place, Time Player's rewind (**C43/C44**, long-term, not active build) |
-| **Who has access** | Every Character, every match (**C18**) | Only a player who picked that specific Character |
-| **What changes it** | Nothing — access is universal; attrs may scale *cost/speed* (§5.2 option B), never *legality* | Character selection itself |
-| **Doc home** | This file → future `GEAR_CATALOG.md` | `CHARACTER_ROSTER_LONGTERM.md` |
-| **C15 boundary** | "cards = gear" | "Characters differ by attrs (and later unique verbs)" |
-| **Resolve shape** | Schedulable event, same event-stream discipline as Move/Shoot/Door | Same event-stream discipline (**C42**'s requirement), but the verb itself doesn't exist for a Character who didn't pick it |
-| **Monetization** | Free gameplay; only the *skin* is sellable (**C47**, `MONETIZATION.md`) | Must ship free or skill-gated — never paywalled (`MONETIZATION.md` §Cross-reference) |
+| **Example** | Bandage, Flashbang, Interact-as-card, Adrenaline | Bomber Bomb, Time Player rewind card (**C43/C44**, not active build) |
+| **Who can include it** | Any Character (deck choice long-term; full-hand transitional) | Only the owning Character |
+| **How you use it** | Play/arm as gear | Play the **card** → resolve runs the **unique verb** (event-stream, C42) |
+| **Doc home** | This file | `CHARACTER_ROSTER_LONGTERM.md` + this file's signature rows |
+| **Monetization** | Free forever (**C64**/**C47**) | Free forever — never paywalled |
 
-**Why this matters for a future catalog:** adding a new gear card is a content addition inside the existing "same deck" rule — no roster change needed. Adding a unique verb is a **roster decision** that touches `CHARACTER_ROSTER_LONGTERM.md`, needs its own C# row, and (per **C42**) must still resolve through the deterministic event-stream or get an architecture pass first. Don't let a new gear-card proposal quietly grow into a "well, what if only Juggernaut gets it" unique-verb proposal without recognizing that's a different, bigger decision (§5.2 option C, explicitly **not** recommended without a human amendment to C18).
+Adding a **library** card is a catalog content add. Adding a **signature** is a roster decision (Character brief + C#) that also adds a card wrapper — don't smuggle exclusives into the library without calling them signatures.
+
+**Flashbang note (paused):** do not open a Flashbang Sim/HUD contract from the parked brief. When effect design resumes, treat Flashbang as **shared-library** tech under C64 — re-derive the brief against that frame; it is not a signature.
 
 ---
 
-## 6. In-match economy (OPEN #3)
+## 6. In-match economy
 
-Until this is confirmed, do not build draw RNG into Program HUD.
+**Long-term (C64 + C66):** personal constructed deck (**5–8**, ≤2 copies) from the shared library; **always-have** that constructed hand each Program (charges limit spend; no draw RNG). Signature is **extra** outside deck cap, always available, costs TR. Played cards public at **Reveal**.
 
-| Model | How it plays | Pros | Cons |
-|-------|--------------|------|------|
-| **1. Full hand every Program** | All owned/legal gear visible each round; spend charges / once-per-match limits | Readable; no RNG; matches “toy cards on the desk” | Clutter; strong cards need hard charges |
-| **2. Draw N each Program** | Draw from deck into hand; discard / reshuffle rules | Card-game feel; variance | Hidden info + RNG fights blind-program clarity; harder to teach |
-| **3. Match loadout, fixed charges** | Pre-match pick ≤K cards from catalog; charges persist across rounds | Collection/loadout meta; still deterministic in-round | Loadout screen; can violate “same deck” if picks differ a lot |
-| **4. Hybrid** | Small fixed staples (e.g. Bandage always) + 1 flex slot | Identity + simplicity | Still a loadout UI |
+**Shipping (C62):** full hand every Program + per-card charges for first-wave staples. Do **not** build draw RNG into the Bandage HUD path; transitional full-hand is intentional until the deckbuilder layer.
 
-**Adrenaline special case:** already specified as **Execute-only**, **1/match**, not Program-armed. Whatever economy ships must keep that split or explicitly rewrite PLAYBACK_CONTRACT.
+| Model | Role now |
+|-------|----------|
+| **1. Full hand every Program** | **Transitional shipping** (C62) — Bandage / Flashbang / Interact / Adrenaline |
+| **2. Draw N each Program** | Rejected for long-term (answered Q3-a) |
+| **3. Match loadout / constructed deck** | **C64 long-term** — 5–8, always-have hand (answered) |
+| **4. Staples + flex** | Bridge only while transitional full-hand remains |
 
-**Time Card relation:** spending gear still burns **Time Resource** inside round **N** (or a free Execute interrupt for Adrenaline — TBD). Gear must not invent a second budget without a C# row.
+**Adrenaline:** Execute-only, 1/match, stub effect until PLAYBACK_CONTRACT redesign; under Q8-b may bypass normal deck rules.
+
+**Time Card relation:** gear and signatures burn **Time Resource** inside round **N** (signature magnitudes OPEN per character).
 
 ---
 
@@ -179,7 +194,7 @@ Until this is confirmed, do not build draw RNG into Program HUD.
 | **Interact-as-card** | Program | **2–4s**, same family as Door's Strength-scaled open/close (GDD §6) | Unlimited **uses**, gated by a legal target existing (mirrors Door's `InteractRadius` gate, **C39**) | n/a | Closest to an existing resolve shape (Door) — lowest design risk of the four. Needs a real target (vent/monitor/station) to exist before it does anything; **not** meaningful until those exist per §4.4. |
 | **Adrenaline** | **Execute only** (locked, not OPEN — GDD/`PLAYBACK_CONTRACT`) | Not time-budgeted the same way — it's a mid-cinema interrupt, not a Program-armed cost | **1 per match** (locked — GDD §4.2, `PLAYBACK_CONTRACT` §4) | n/a | Effect itself is **stub** today (`AdrenalineUsed` event, no mechanical change). Any real effect needs the explicit redesign `PLAYBACK_CONTRACT` §2 rule 5 requires before it can do more than log an event — this is a bigger question than "what number," flagged separately in §8 Q6. |
 
-**What's locked vs open in this table:** the *phase* column (Program vs Execute-only) and Adrenaline's 1×/match cap are already decided (GDD, `PLAYBACK_CONTRACT`). Everything else — costs, charge counts, Flashbang's actual effect, Bandage's heal timing edge cases — is this doc's strawman guess, explicitly awaiting the human §8 answers (particularly Q1 catalog scope and Q6 Adrenaline effect design) before anyone treats it as buildable.
+**What's locked vs open in this table:** phase column + Adrenaline 1×/match locked; **Bandage cost/charges locked by C63**. Flashbang/Interact numerics + Flashbang effect shape still OPEN (OPEN #16). Under C64 / Q8 these four are **shared-library** cards (Adrenaline keeps special Execute slot); none are signatures.
 
 ---
 
@@ -193,33 +208,23 @@ Until this is confirmed, do not build draw RNG into Program HUD.
 | **Match access** | Which of those can I bring / draw this match? | Gameplay — free; must not paywall power (**C47**) |
 | **Cosmetic binder** | Skins for gear / Time Card backs / sleeve art | Sellable if readability-safe |
 
-**Recommendation (research):** ship order should be **rules catalog → in-match economy → cosmetic binder**. Do not build a gacha collection UI before the four named gear cards have resolve rules.
+**C64 / C47:** gameplay library + signatures stay free forever — no gacha unlock for power. Cosmetic binder (Time Card backs, gear skins) is the only sellable layer.
 
-If a Steam “collection” page is desired for marketing, it can start as **cosmetic Time Card backs + future gear skins**, not as purchasable Bandage unlocks.
+Ship order for *systems*: transitional staple resolve (Bandage…) → deckbuilder/hand rules (**C66** locked; UI later) → cosmetic binder.
 
 ---
 
-## 8. Decision menu for human (please answer)
+## 8. Decision menu — C62 answers (2026-08-12) + C64 overlay + sizing (2026-08-14)
 
-Reply with letters / short notes; Integrator will promote confirmed answers into PRODUCT_MEMORY.
+**§8 answered 2026-08-12 → C62.** **Long-term access model answered 2026-08-13 → C64.** **Deckbuilder sizing → C66** (2026-08-14; detail [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md)).
 
-**Answered by human in chat, 2026-08-12.** Each answer below is Cards dept's recommendation, accepted as-is. This resolves the doc's open questions; it does **not** by itself amend `PRODUCT_MEMORY.md` — that still needs an Integrator-written C# row per the save-file rule (`PRODUCT_MEMORY.md` §How to update: "Confirm in chat → edit C# row").
-
-1. **Catalog scope for first gear wave** — **Answered: (a).** Only the four named: Bandage, Interact-as-card, Flashbang, Adrenaline. No Otherwise card in this wave — Otherwise is a family (§4.3), not a single card, and scoping it in now turns a bounded 4-item wave into an open-ended one.
-   - ~~(b) Four + a minimal Otherwise rule card~~ — rejected, see above.
-   - ~~(c) Larger catalog~~ — rejected; no new names invented per brief.
-
-2. **Same deck?** — **Answered: (a), with one scoped carve-out.** Keep **C18** — every Character has the same legal gear list, no exclusives. Carve-out: **Interact-as-card**'s cost may scale by Strength, mirroring the existing Door open/close precedent (GDD §6 — Scout slower, Juggernaut faster) it's generalizing. Bandage and Flashbang stay flat-cost for everyone unless playtest indicates otherwise — this is not a blanket adoption of §5 option B, just applying an existing precedent where the card is a direct generalization of an already-scaled action.
-   - ~~(b) Amend C18 — per-Character exclusives~~ — rejected.
-   - ~~(c) Shared cards + attr-scaled costs, unscoped~~ — rejected as a blanket rule; see carve-out above instead.
-
-3. **In-match economy** — **Answered: (a).** Full hand every Program + per-card charges (§6 model 1). No draw/RNG (fights blind-programming clarity) and no pre-match loadout screen prerequisite (§6 models 2–4 all rejected for the first wave).
-
-4. **Meta collection** — **Answered: (a).** None this milestone — rules catalog only, no binder/UI. Revisit **(b)** cosmetic binder once `MONETIZATION.md`'s Phase 4 IAP skeleton lands. **(c)** unlock-to-use gear is rejected outright, not just deferred — gates gameplay cards behind grind/pay in a PvP game, which sits too close to C47's no-pay-to-win line even if the letter of C47 (cosmetic-only) doesn't technically forbid a free-only unlock grind.
-
-5. **Interact-as-card vs contextual Door/Vent** — **Answered: (a).** Keep Door/Vent/Breach exactly as shipped (C57's `Door.Kind` reskin); Interact-as-card is reserved for **future stations that don't exist yet** (monitor / terminal / power station — `docs/UI_BOARD_ANCHORED_COMPONENTS.md`). Do not migrate any existing map interact onto the hand.
-
-6. **Adrenaline** — **Answered: (a).** Keep the Execute-only stub. A real effect needs the explicit tape-branch/second-resolve redesign `PLAYBACK_CONTRACT.md` §2 rule 5 requires — that's an architecture decision, sequenced as its own pass *after* the other three cards ship (§11), not bundled into this wave.
+1. **Catalog scope for first gear wave** — **(a)** Bandage, Interact-as-card, Flashbang, Adrenaline only. No Otherwise card this wave. **Still holds** (shared-library under Q8-b; Adrenaline = special Execute slot).
+2. **Same deck?** — **C62 answered (a)** same legal list + Interact Strength carve-out. **C64 amends long-term:** personal decks may differ; signatures are Character-exclusive. **Transitional shipping still behaves like C62 full-hand staples.**
+3. **In-match economy** — **C62 (a)** full hand + charges for first wave. **Long-term:** always-have constructed hand from 5–8 deck (≤2 copies); signature extra + always on; no draw RNG.
+4. **Meta collection** — **(a)** no gameplay binder/unlock wall. **C64** restates: library + signatures free forever; cosmetics only (**C47**).
+5. **Interact-as-card vs Door/Vent** — **(a)** Door/Vent/Breach stay map actions; Interact = future stations. **Still holds.**
+6. **Adrenaline** — **(a)** Execute stub until PLAYBACK redesign. **Still holds** (+ Q8-b may bypass normal deck rules).
+7. **Reveal / role / signature TR** — played cards at **Reveal**; Attack/Defend **no** deck interaction; signatures **cost TR** (magnitudes OPEN).
 
 ---
 
@@ -237,42 +242,52 @@ Reply with letters / short notes; Integrator will promote confirmed answers into
 
 ---
 
-## 10. One-page default — now the human-confirmed direction (§8, 2026-08-12)
+## 10. One-page direction — C64 long-term + C62 transitional
 
-What was a strawman guess is now what the human answered in §8:
+**Long-term (C64 + 2026-08-14 sizing) — target model:**
 
-- **Catalog:** Bandage, Flashbang, Adrenaline, Interact-as-card (stations later). No Otherwise card this wave.
-- **Ownership:** **Same gear deck** for all Characters (**C18**), with one carve-out — Interact-as-card's cost may scale by Strength (Door precedent). Bandage/Flashbang stay flat.
-- **Economy:** Full visible hand + per-card charges / Adrenaline 1× match (model **1**).
-- **Collection:** No unlock wall, no binder UI this milestone — definitions only; cosmetic Time Card backs are a later Phase 4 item, not built now.
-- **Interact-as-card scope:** future stations only; Door/Vent/Breach stay untouched.
-- **Adrenaline:** stub stays a stub; real effect is a separate later design pass.
-- **Unique roster power:** verbs (Bomber / Time Player), not exclusive gear.
+- **Hybrid:** shared free **library** → **personal decks** (**5–8**, ≤**2** copies); Character **signature** = unique verb **armed by** a card — **extra** outside deck cap, always available, costs TR.
+- Players may bring **different** cards; deck/hand **hidden**; Character pick public; played cards flip at **Reveal**.
+- Attack/Defend labels do **not** constrain decks.
+- Gameplay library + signatures free forever (**C47**).
+- Bandage / Flashbang / Interact / Adrenaline = shared-library; Adrenaline keeps special Execute slot.
+- Detail: [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) / **C66**.
 
-**CONFIRMED as C62** — binding product direction. Numerics in §6A and Adrenaline redesign remain OPEN (see PRODUCT_MEMORY OPEN #16).
+**Shipping / transitional (C62 + C63) — what ships before the deckbuilder:**
+
+- Catalog staples (library candidates): Bandage, Flashbang, Interact-as-card, Adrenaline (stations later for Interact).
+- Full visible hand + charges; Bandage 3s / 1× match locked.
+- Interact cost may scale by Strength; Door/Vent/Breach stay map actions.
+- Adrenaline Execute stub until PLAYBACK redesign.
+- No gameplay unlock binder.
+- Does **not** block Bandage HUD or other staple Sim/HUD.
 
 ---
 
 ## 11. Recommended first-ship sequence (proposal only)
 
-If/when the human confirms a first gear wave (§8 Q1), this is the suggested **build order**, ranked by resolve risk and reuse of existing shapes — not by "most exciting first":
+Ranked by resolve risk for **library staples** under transitional full-hand (deckbuilder is a later systems layer; **C66** sizes it but does not greenlight UI):
 
-1. **Interact-as-card** — reuses the Door contextual-action resolve shape almost exactly (`TryGetNearestDoor`-style radius gate, GDD §4/§6A above). Lowest new-mechanic risk. **Caveat:** per §4.4/§8 Q5, it isn't meaningful without a real target (vent/monitor/station) to interact with — may need to ship *after* a station exists, not before, despite being mechanically simplest.
-2. **Bandage** — new state mutation (Wounded → Healthy) but on the existing wound ladder (GDD §5), Program-armed like Move/Shoot, no new targeting model. Second-lowest risk.
-3. **Flashbang** — needs an actual new effect (soft control / vision), not just a state flip. Higher design risk than Bandage because "what does soft control do" is still an open mechanical question, not only a numeric one (§6A).
-4. **Adrenaline (real effect)** — stays **stub** until last. It's Execute-only, mid-cinema, and `PLAYBACK_CONTRACT` §2 rule 5 requires an explicit redesign (tape branch or second resolve) before it can be more than a logged event. Building this before the other three establishes conventions risks having to redo it.
-5. **Otherwise library** — treat as its own project after all four named cards, not a fifth card. It's a family (§4.3), and today's simplified "stop before block" behavior already covers the ship's actual need.
+1. **Bandage** — **Sim landed (C63)**; HUD-side owned by UI seat (this dept does not touch Bandage HUD files).
+2. **Interact-as-card** — Door-like resolve; blocked on a real station target.
+3. **Flashbang** — **paused**; when resumed, re-derive brief as shared-library tech (`GEAR_FLASHBANG_AGENT_BRIEF.md`). Effect shape + numerics still OPEN.
+4. **Adrenaline (real effect)** — last; needs PLAYBACK_CONTRACT redesign.
+5. **Deckbuilder + signatures** — after staple conventions exist (**C66** rules locked); Bomber/Time Player still need C43/C44 prereqs.
+6. **Otherwise library** — separate project after the four named cards.
 
-This sequence is **not confirmed** and assumes the §10 strawman defaults (catalog = the four named cards, same gear deck, full-hand economy). If the human answers §8 differently — e.g. picks pre-match loadouts (§6 model 3) instead of full-hand — this ordering may need to change, since loadout UI would become a prerequisite for shipping *any* of the four rather than an independent step.
+---
+
+## 12. Next step
+
+→ Integrator: merge this branch to master (C66 already on branch). Cards seat idle on deckbuilder code until then.
 
 ---
 
 ## See also
 
-- [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) — C15, C18, OPEN #3  
-- [`GDD.md`](../core/GDD.md) § deferred cards  
-- [`CORE_LOOP.md`](../core/CORE_LOOP.md) — base verbs vs future cards  
-- [`UI_FLOW.md`](../ui/UI_FLOW.md) § Program / Execution card UX  
-- [`PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md) — Adrenaline gate  
-- [`MONETIZATION.md`](../core/MONETIZATION.md) — cosmetic Time Card backs; no pay-to-win gear  
-- [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md) — unique verbs ≠ gear exclusives  
+- [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) — C62, C63, **C64**, **C66**, OPEN #16  
+- [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md) — hybrid conversation  
+- [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) — sizing answers (source for C66)  
+- [`GEAR_BANDAGE_AGENT_BRIEF.md`](GEAR_BANDAGE_AGENT_BRIEF.md) / [`GEAR_FLASHBANG_AGENT_BRIEF.md`](GEAR_FLASHBANG_AGENT_BRIEF.md)  
+- [`GDD.md`](../core/GDD.md) · [`UI_FLOW.md`](../ui/UI_FLOW.md) · [`PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md) · [`MONETIZATION.md`](../core/MONETIZATION.md)  
+- [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md) — Bomber / Time Player  

@@ -1,9 +1,7 @@
 # Flashbang — Gear Implementation Brief
 
-**Status:** **Paused 2026-08-13** — foundational card-system model conversation takes priority
-(`docs/CARD_SYSTEM_MODEL_COMPARISON.md`). Do not open a Flashbang Sim/HUD contract from this brief
-until that conversation closes (or explicitly unpauses gear-numerics work). Draft body below is
-retained, not discarded.
+**Status:** **Paused** — C64 hybrid landed; this brief must be **re-derived as shared-library tech**
+before any Sim/HUD contract. Do not implement from the draft body below. Draft retained, not discarded.
 **Scope:** Flashbang only — next C62 first-wave gear card after Bandage (**C63** closed Bandage's
 numerics; Sim-side Bandage is on `master` @ `4e6bb66`). Written so Integrator can open a frozen
 Sim/HUD contract **once the effect shape + numerics below are greenlit by the human** — this brief

@@ -355,6 +355,14 @@ namespace LogiCard.Net
                         events.Add(new TapeEvent(node.ExecuteTime, pawnId, TapeEventType.Healed, current));
                     }
                 }
+                else if (node.Verb == ActionVerb.Storm)
+                {
+                    // C67 — self-targeting, no movement, no wound/charge effect. Resolver stays
+                    // permissive (does not re-check once-per-match) — that is a HUD-side gate per
+                    // docs/contracts/CURRENT.md's Storm contract, same shape as Bandage above.
+                    currentTime = node.ExecuteTime;
+                    events.Add(new TapeEvent(node.ExecuteTime, pawnId, TapeEventType.StormCast, current));
+                }
                 else
                 {
                     currentTime = node.ExecuteTime;

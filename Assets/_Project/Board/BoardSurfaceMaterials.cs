@@ -3,9 +3,10 @@ using UnityEngine;
 namespace LogiCard.Board
 {
     /// <summary>
-    /// Wet-dusk surface materials for the C53 environment detail pass. Prefers Poly Haven CC0
-    /// textures from <c>Resources/BoardSurfaces/</c> (see Art/Environment/THIRD_PARTY.md); falls
-    /// back to procedural tints if those assets are missing so EditMode tests still compile/run.
+    /// Board surface materials (C65 / Map Phase 2). Room floors, walls, door-tint base, and prop tint
+    /// use the flat/gradient toon family (<see cref="Solid"/> + nappin <c>(Mat)Gradient*_URP</c>).
+    /// Photographic <see cref="BuildWetSurface"/> stays in this file for non-board callers but is no
+    /// longer the default path for <see cref="MapSurfaceRole"/> surfaces.
     /// </summary>
     internal static class BoardSurfaceMaterials
     {
@@ -14,6 +15,8 @@ namespace LogiCard.Board
         private static Material _vault;
         private static Material _flank;
         private static Material _wall;
+        private static Material _fenceRail;
+        private static Material _fencePost;
         private static Material _woodEdge;
         private static Material _strataRock;
         private static Material _strataDirt;
@@ -21,104 +24,106 @@ namespace LogiCard.Board
         private static Material _propCrate;
         private static Material _propMetal;
         private static Material _warmGlass;
+        private static Material _doorLeaf;
+        private static Material _propBody;
+        private static Material _propAccent;
 
-        // wetSmoothnessBoost retuned 2026-08-10 (feat/wet-surface-reflections) now that BoardReflectionProbes
-        // gives these floors a real reflection source (three room-scoped Reflection Probes, blending +
-        // box projection on). The old values were tuned against *no* reflection input at all — high
-        // smoothness with nothing to reflect just reads as flat/plasticky sheen, so they leaned high to
-        // fake a glint from direct lights alone. With real (if modest — 128-res, realtime-refresh-once)
-        // probe content now driving the reflection, Yard/Vault came down off their highest settings
-        // (avoids the small board's low-res cubemap reading as an obvious low-fidelity mirror at full
-        // gloss) while Hall/Flank came up slightly (they can now afford a bit more sheen to actually
-        // sell wetness instead of needing to stay low specifically to hide the lack of a reflection).
-        // C60 vibrancy pass: Yard tint pushed further into a richer terracotta (was already the
-        // warmest of the three procedural floors, but "vibrant" per the human's direct feedback means
-        // punching the saturation up further, not just staying warm-but-muted).
-        public static Material YardFloor => _yard ??= BuildWetSurface(
-            "asphalt_diff", "asphalt_nor", "asphalt_rough",
-            fallback: new Color(0.28f, 0.22f, 0.18f),
-            wetSmoothnessBoost: 0.42f, // was 0.55
-            tint: new Color(0.90f, 0.64f, 0.42f), // image-13: push Yard brighter still
-            // 2026-08-12: raise tile so 1K asphalt shows grain at ortho 2.6–3.4 (ART_PACK use-now;
-            // 2K/4K re-fetch still better when someone pulls it).
-            tile: 3.4f);
+        // C65: saturated toy-diorama albedos (Link's Awakening / soft clay), low smoothness — color at
+        // the material, not via a third grading pass on photographic PBR (see MAP_PRESENTATION_STANDARD §1).
+        public static Material YardFloor => _yard ??= Solid(new Color(0.94f, 0.78f, 0.48f), 0.12f);
 
-        // 2026-08-11: Hall/Vault switched from the Poly Haven procedural concrete build to nappin's own
-        // baked floor material directly (human direction: "use asset pack floor directly," after a
-        // screenshot showed the interior floor reading badly) — LoadInteriorFloor() falls back to the
-        // old BuildWetSurface concrete approach only if InteriorPackImportTool.BakeFloorMaterial() hasn't
-        // been run yet, so EditMode tests (no baked Resources asset present) still compile/run.
-        //
-        // C60 tension, resolved: that baked material (Resources/Interior/Materials/(Mat)Floor_URP.mat)
-        // was a near-black flat matte (_BaseColor ~0.043,0.043,0.043) and a real contributor to "not
-        // vibrant." The human's "use asset pack floor directly" direction stays respected — this code
-        // still loads that exact material asset, unchanged in shader/texture/structure — but the baked
-        // .mat's _BaseColor/_Color were retinted in place (C60 ~0.17 taupe; image-13 pass ~0.34 warm
-        // wood/clay — still "the asset pack floor," just bright enough to read as a stage, not mud).
-        public static Material HallFloor => _hall ??= LoadInteriorFloor() ?? BuildWetSurface(
-            "concrete_diff", "concrete_nor", "concrete_rough",
-            fallback: new Color(0.45f, 0.40f, 0.34f),
-            wetSmoothnessBoost: 0.34f, // was 0.28
-            tint: new Color(0.88f, 0.72f, 0.58f),
-            tile: 1.8f);
+        public static Material HallFloor => _hall ??= Solid(new Color(0.90f, 0.68f, 0.42f), 0.14f);
 
-        // C60: procedural fallback tint (used only when the baked Resources asset is missing, e.g.
-        // EditMode tests) retinted off cool blue toward a warm brass/gold — still reads as a distinct
-        // "vault" identity (valuables, not a cold storeroom) without contributing to the overall
-        // cool-and-flat complaint. Real render path uses LoadInteriorFloor() -> the retinted baked
-        // material below, same as HallFloor.
-        public static Material VaultFloor => _vault ??= LoadInteriorFloor() ?? BuildWetSurface(
-            "concrete_diff", "concrete_nor", "concrete_rough",
-            fallback: new Color(0.26f, 0.30f, 0.34f),
-            wetSmoothnessBoost: 0.46f, // was 0.62
-            tint: new Color(0.62f, 0.52f, 0.30f), // was cool blue (0.45, 0.58, 0.78)
-            tile: 2.4f);
+        public static Material VaultFloor => _vault ??= Solid(new Color(0.78f, 0.88f, 0.96f), 0.22f);
 
-        private static Material LoadInteriorFloor()
-        {
-            return Resources.Load<Material>("Interior/Materials/(Mat)Floor_URP");
-        }
+        public static Material FlankFloor => _flank ??= Solid(new Color(0.62f, 0.78f, 0.48f), 0.10f);
 
-        // C60: was flat neutral-grey (0.52, 0.48, 0.42), read as desaturated/dull. Warmed into an ochre
-        // tone with real saturation instead of near-grey.
-        public static Material FlankFloor => _flank ??= BuildWetSurface(
-            "asphalt_diff", "asphalt_nor", "asphalt_rough",
-            fallback: new Color(0.26f, 0.22f, 0.18f),
-            wetSmoothnessBoost: 0.30f, // was 0.35
-            tint: new Color(0.58f, 0.46f, 0.36f), // was (0.52, 0.48, 0.42)
-            tile: 3.2f); // match Yard closer-zoom grain (2026-08-12)
+        /// <summary>Legacy name — cream plaster panel fill between fence posts (was coral brick slab).</summary>
+        public static Material BrickWall => _wall ??= Solid(new Color(0.96f, 0.90f, 0.78f), 0.10f);
 
-        public static Material BrickWall => _wall ??= BuildWetSurface(
-            "brick_diff", "brick_nor", "brick_rough",
-            fallback: new Color(0.42f, 0.34f, 0.30f),
-            wetSmoothnessBoost: 0.12f,
-            tint: new Color(0.85f, 0.78f, 0.72f),
-            tile: 1.4f);
+        /// <summary>Horizontal fence rails — warm honey wood matching sandy Yard floors.</summary>
+        public static Material FenceRail => _fenceRail ??= Solid(new Color(0.86f, 0.62f, 0.34f), 0.14f);
 
-        public static Material WoodEdge => _woodEdge ??= BuildWetSurface(
-            "wood_diff", "wood_nor", "wood_rough",
-            fallback: new Color(0.55f, 0.42f, 0.28f),
-            wetSmoothnessBoost: 0.18f,
-            tint: Color.white,
-            tile: 1.1f);
+        /// <summary>Vertical fence posts — slightly darker wood so posts read against rails.</summary>
+        public static Material FencePost => _fencePost ??= Solid(new Color(0.62f, 0.40f, 0.22f), 0.12f);
+
+        public static Material WoodEdge => _woodEdge ??= Solid(new Color(0.72f, 0.48f, 0.28f), 0.16f);
 
         public static Material StrataRock => _strataRock ??= Solid(new Color(0.38f, 0.36f, 0.34f), 0.12f);
 
-        public static Material StrataDirt => _strataDirt ??= Solid(new Color(0.28f, 0.20f, 0.12f), 0.08f);
+        public static Material StrataDirt => _strataDirt ??= Solid(new Color(0.34f, 0.35f, 0.38f), 0.08f);
 
         public static Material StrataGrass => _strataGrass ??= Solid(new Color(0.22f, 0.32f, 0.16f), 0.1f);
 
-        public static Material PropCrate => _propCrate ??= BuildWetSurface(
-            "wood_diff", "wood_nor", "wood_rough",
-            fallback: new Color(0.48f, 0.36f, 0.22f),
-            wetSmoothnessBoost: 0.15f,
-            tint: new Color(0.9f, 0.82f, 0.7f),
-            tile: 0.8f);
+        public static Material PropCrate => _propCrate ??= Solid(new Color(0.86f, 0.62f, 0.36f), 0.14f);
 
-        public static Material PropMetal => _propMetal ??= Solid(new Color(0.35f, 0.38f, 0.42f), 0.45f, metallic: 0.55f);
+        public static Material PropMetal => _propMetal ??= Solid(new Color(0.42f, 0.48f, 0.58f), 0.35f, metallic: 0.35f);
 
         public static Material WarmGlass => _warmGlass ??= Emissive(new Color(1f, 0.72f, 0.38f), 2.4f);
 
+        /// <summary>Door leaf base before open/closed state tint — nappin GradientBrown when present.</summary>
+        public static Material DoorLeaf => _doorLeaf ??= LoadInteriorGradient("GradientBrown")
+            ?? Solid(new Color(0.78f, 0.55f, 0.32f), 0.18f);
+
+        /// <summary>Default opaque prop body (cabinets/shelves/tables).</summary>
+        public static Material PropBody => _propBody ??= LoadInteriorGradient("GradientBeige")
+            ?? PropCrate;
+
+        /// <summary>Secondary prop accent (chairs / small furniture).</summary>
+        public static Material PropAccent => _propAccent ??= LoadInteriorGradient("GradientBlue")
+            ?? Solid(new Color(0.45f, 0.62f, 0.88f), 0.16f);
+
+        /// <summary>Role → flat/toon floor material (C65 default path).</summary>
+        public static Material ForRole(MapSurfaceRole role)
+        {
+            switch (role)
+            {
+                case MapSurfaceRole.Yard:
+                    return YardFloor;
+                case MapSurfaceRole.Hall:
+                    return HallFloor;
+                case MapSurfaceRole.Vault:
+                    return VaultFloor;
+                default:
+                    return FlankFloor;
+            }
+        }
+
+        /// <summary>
+        /// True when the material has no photographic diffuse map — the C65 flat/toon family signature.
+        /// Gradient*_URP assets keep a soft ramp texture (still non-photo); those count as flat family
+        /// via <paramref name="allowGradientRamp"/>.
+        /// </summary>
+        public static bool IsFlatFamily(Material material, bool allowGradientRamp = true)
+        {
+            if (material == null)
+            {
+                return false;
+            }
+
+            if (!material.HasProperty("_BaseMap"))
+            {
+                return true;
+            }
+
+            Texture map = material.GetTexture("_BaseMap");
+            if (map == null)
+            {
+                return true;
+            }
+
+            if (!allowGradientRamp)
+            {
+                return false;
+            }
+
+            string name = material.name ?? string.Empty;
+            return name.IndexOf("Gradient", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        /// <summary>
+        /// Kept for non-board / revert paths. Board room surfaces no longer call this (C65).
+        /// </summary>
         private static Material BuildWetSurface(
             string diffName,
             string norName,
@@ -155,8 +160,6 @@ namespace LogiCard.Board
                 }
             }
 
-            // URP Lit: roughness map isn't a first-class slot on every version — bake wetness into
-            // Smoothness and darken slightly so rain reads on the Yard/Vault without a custom shader.
             float baseSmooth = rough != null ? 0.22f : 0.15f;
             SetSmoothness(mat, Mathf.Clamp01(baseSmooth + wetSmoothnessBoost));
             SetMetallic(mat, 0f);
@@ -183,6 +186,28 @@ namespace LogiCard.Board
                 mat.EnableKeyword("_EMISSION");
                 mat.SetColor("_EmissionColor", color * intensity);
                 mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            }
+
+            return mat;
+        }
+
+        private static Material LoadInteriorGradient(string gradientName)
+        {
+            // Already duplicated+URP-converted by InteriorPackImportTool into Resources/Interior/Materials.
+            Material source = Resources.Load<Material>($"Interior/Materials/(Mat){gradientName}_URP");
+            if (source == null)
+            {
+                return null;
+            }
+
+            // Instance so we can drop sheen without mutating the shared import asset.
+            Material mat = new Material(source);
+            SetSmoothness(mat, 0.16f);
+            SetMetallic(mat, 0f);
+            if (mat.HasProperty("_BumpMap"))
+            {
+                mat.SetTexture("_BumpMap", null);
+                mat.DisableKeyword("_NORMALMAP");
             }
 
             return mat;
@@ -239,5 +264,6 @@ namespace LogiCard.Board
                 material.SetFloat("_Metallic", metallic);
             }
         }
+
     }
 }
