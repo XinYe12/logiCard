@@ -16,8 +16,8 @@ namespace LogiCard.Board
     /// <summary>
     /// Which of the four existing <see cref="BoardSurfaceMaterials"/> floor looks a room reads as,
     /// by tactical role rather than by this specific map's room names — lets new maps reuse the same
-    /// four PBR materials (no new art asset work needed to add a map) while still getting sensible
-    /// per-room variation (open ground vs. a tighter interior vs. a polished objective space).
+    /// four flat/toon materials (C65; no new art asset work needed to add a map) while still getting
+    /// sensible per-room variation (open ground vs. a tighter interior vs. a polished objective space).
     /// </summary>
     public enum MapSurfaceRole
     {

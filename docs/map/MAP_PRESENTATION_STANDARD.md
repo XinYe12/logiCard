@@ -1,14 +1,14 @@
 # Map Presentation Standard — vibrant/cute diorama target
 
-**Status:** Phase 1 (docs-only) — Map department, 2026-08-13.
+**Status:** Phase 2 implementation landed in Map worktree (2026-08-14) — awaiting human screenshot look +
+Integrator lighting/grade re-pass (`GameBootstrap.BuildLighting` / `BuildDioramaVolume`, not Map-owned).
 **Depends on:** [GDD.md](../core/GDD.md) §8/§11, [ART_DIRECTION.md](../core/ART_DIRECTION.md), [MAP_AUTHORING.md](MAP_AUTHORING.md),
-[ART_PACK_RESEARCH.md](ART_PACK_RESEARCH.md), [PRODUCT_MEMORY.md](../core/PRODUCT_MEMORY.md) **C29 / C45 / C53 / C54 / C57 / C58 / C60**.
-**Does not amend** C57 (hand-authored map geometry) — see §0. **Proposes amending** C53's material-realism
-clause for board *surfaces* only — see §4, flagged for human confirm, not self-locked by this doc.
+[ART_PACK_RESEARCH.md](ART_PACK_RESEARCH.md), [PRODUCT_MEMORY.md](../core/PRODUCT_MEMORY.md) **C29 / C45 / C53 / C54 / C57 / C58 / C60 / C65**.
+**Does not amend** C57 (hand-authored map geometry) — see §0. **§4 resolved by C65** (human YES) — board
+*surface materials* only move flat/toon; geometry density and Atmosphere untouched.
 
-This is Phase 1 of a two-phase job: this doc only. Phase 2 (a real implementation pass rebuilding the three
-existing maps' presentation against this standard) does not start until this doc is read and the §4 open
-question is answered.
+This doc was Phase 1 (standard). Phase 2 implementation follows C65 + `docs/contracts/CURRENT.md`
+(Map Phase 2). Human screenshot look + Integrator lighting re-pass remain before Done.
 
 ---
 
@@ -140,7 +140,13 @@ presentation-only, matching this department's scope boundary.
 
 ---
 
-## 4. Open question for human confirm before Phase 2 (flagged, not resolved here)
+## 4. §4 decision — resolved by C65 (2026-08-14)
+
+Human confirmed YES on `C53_SURFACE_MATERIAL_DECISION.md`. Product memory row **C65** records the amendment:
+board surface materials (floors/walls/door-leaf tint/interior-prop tint) → flat/toon; geometry density and
+weather/atmosphere stay as C53 wrote them. Historical framing of the open question kept below for provenance.
+
+<details><summary>Original open-question framing (historical)</summary>
 
 **C53** (2026-08-09) is still the standing product-memory row for board materials, and its own text says
 *"materials/architecture move toward realistic detail rather than clay-primitive/chibi."* §2 of this doc
@@ -160,21 +166,14 @@ This doc is not that row. Framed as a direct question:
 > (C57's vents/breaches) and the weather/atmosphere system (Atmosphere department's lane, not touched here).
 > Confirm this reading before Phase 2 starts recoloring the board.
 
+</details>
+
 ---
 
-## 5. Phase 2 preview (not started — docs-only per this brief)
+## 5. Phase 2 checklist (implemented in Map worktree 2026-08-14 — look check still open)
 
-Once §4 is confirmed:
-
-1. Add a `Solid()`/gradient-based floor+wall material set to `BoardSurfaceMaterials`, keyed by the same four
-   `MapSurfaceRole`s, replacing `BuildWetSurface()` as the default path (keep `BuildWetSurface` code only if a
-   future non-board surface actually wants a wet-photo look — don't delete working code speculatively).
-2. Re-skin nappin door/prop materials via the pack's own `(Mat)Gradient*` variants or a flattened duplicate,
-   through the existing `InteriorPackImportTool` duplicate-and-convert pattern.
-3. Make `PlaceRoomDressing` map-aware so Rail Platform / Vault Complex get real, in-room dressing instead of
-   Freight-Yard-shaped coordinates or nothing.
-4. Re-run `BuildDioramaVolume`/`BuildLighting` grading *after* the material swap, not before — grade a
-   saturated base, don't re-grade the same muted one a third time.
-5. Human screenshot check against the Link's Awakening reference (`ART_DIRECTION.md` Moodboard) before calling
-   it done — every presentation change this project has shipped has needed one; batchmode green is not a look
-   check (`docs/DIRECTING_AGENTS.md`).
+1. ~~Add a `Solid()`/gradient-based floor+wall material set…~~ done (`BoardSurfaceMaterials`).
+2. ~~Re-skin nappin door/prop materials via Gradient*_URP / Solid…~~ done (`BoardView` runtime reskin; import tool remains the duplicate writer).
+3. ~~Make `PlaceRoomDressing` map-aware…~~ done (Freight Yard / Rail Platform / Vault Complex).
+4. **Integrator:** re-run `BuildDioramaVolume`/`BuildLighting` grading *after* this material swap — Map flagged, did not edit `GameBootstrap`.
+5. **Human:** screenshot check against the Link's Awakening reference (`ART_DIRECTION.md` Moodboard) before calling Phase 2 Done.
