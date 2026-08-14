@@ -130,6 +130,20 @@ namespace LogiCard.Boot
             return 0;
         }
 
+        /// <summary>Bandage HUD-side contract (C63) — mirrors <see cref="WoundsOf"/>.</summary>
+        public int BandageChargeOf(int pawnId)
+        {
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                if (_pawns[i].PawnId == pawnId)
+                {
+                    return _pawns[i].BandageCharge;
+                }
+            }
+
+            return 0;
+        }
+
         /// <summary>
         /// Rematch / new Local Play after Match Over: clear carried wounds/positions back to spawn,
         /// restore doors to each <see cref="Door.InitialState"/>, drop the armed tape and hit VFX.

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using LogiCard.Audio;
 using LogiCard.Board;
+using LogiCard.Cards;
 using LogiCard.Net;
 using LogiCard.Sim;
 using LogiCard.Timeline;
@@ -50,6 +51,14 @@ namespace LogiCard.UI
         private const float ContextLabelHeight = 40f;
         private const float ContextLabelGap = 4f;
         private const float StanceInnerGap = 4f;
+
+        /// <summary>
+        /// Fraction of the queue column's height given to <see cref="GearHandView"/> (top); the queue
+        /// readout keeps the rest. Lives in QueueColumn, not ControlsColumn, so it never touches
+        /// <see cref="ControlsColumnContentHeight"/> (Bandage HUD-side contract — must not break
+        /// <c>ProgramHudLayoutTests</c>).
+        /// </summary>
+        private const float GearHandAreaMinY = 0.60f;
 
         /// <summary>
         /// UI-unit height consumed by the Program controls column (scrub + verbs + stance/context).
@@ -127,9 +136,16 @@ namespace LogiCard.UI
         private GameObject _moveStanceControls;
         private GameObject _shootModeControls;
         private GameObject _doorModeControls;
+        private GameObject _bandageModeControls;
+        private GameObject _stormModeControls;
         private Text _stanceLabel;
         private Text _shootModeLabel;
         private Text _doorModeLabel;
+        private Text _bandageModeLabel;
+        private Text _stormModeLabel;
+        private GearHandView _gearHand;
+        private Func<int> _woundsOf;
+        private Func<int> _bandageChargeOf;
         private RectTransform _canvasRoot;
         private RectTransform _matchChrome;
         private AppFlowController _appFlow;
@@ -256,6 +272,21 @@ namespace LogiCard.UI
                 _input.ActionRejected += OnActionRejected;
                 OnQueueChanged(_input.Program);
             }
+        }
+
+        /// <summary>
+        /// Wires live wound/charge reads for the Bandage gates (DoD gate 4). Delegates rather than a
+        /// <c>RoundPlayback</c> reference — <c>LogiCard.UI</c> cannot reference <c>LogiCard.Boot</c>
+        /// (Boot already depends on UI, not the reverse) — so the Integrator's one-line
+        /// <c>GameBootstrap</c> hook is expected to read
+        /// <c>RegisterMatchState(() =&gt; playback.WoundsOf(pawnId), () =&gt; playback.BandageChargeOf(pawnId))</c>.
+        /// Until this is called, Bandage stays blocked (safe default) rather than guessing legal.
+        /// </summary>
+        public void RegisterMatchState(Func<int> woundsOf, Func<int> bandageChargeOf)
+        {
+            _woundsOf = woundsOf;
+            _bandageChargeOf = bandageChargeOf;
+            RefreshGearHandLegality();
         }
 
         private void OnAppFlowEnteredMatch(bool viaRelay)
@@ -456,8 +487,24 @@ namespace LogiCard.UI
                 BuildPhaseDebugRow(controlsCol, ref cursor);
             }
 
+            BuildGearHand(queueCol);
             BuildQueuePanel(queueCol);
             BuildActionRow(actionCol);
+        }
+
+        /// <summary>
+        /// Docks <see cref="GearHandView"/> into the top of the queue column (Bandage HUD-side
+        /// contract) — the queue readout below keeps the rest of the column.
+        /// </summary>
+        private void BuildGearHand(RectTransform zone)
+        {
+            _gearHand = GearHandView.Build(_ui, zone, new Vector2(0f, GearHandAreaMinY), Vector2.one);
+            _gearHand.CardArmed += OnGearCardArmed;
+            _gearHand.ArmCleared += OnGearArmCleared;
+
+            // Interact / Flashbang have no contract this wave — block rather than half-wire them.
+            _gearHand.SetSpent(CardId.Interact, true);
+            _gearHand.SetSpent(CardId.Flashbang, true);
         }
 
         private void BuildAllotPanel(RectTransform zone)
@@ -604,6 +651,29 @@ namespace LogiCard.UI
             _doorModeLabel = _ui.CreateText(doorRt, "DoorModeLabel", "DOOR — click near a door to select it", 18, TextAnchor.MiddleLeft, Ink);
             UiFactory.PlaceRow(_doorModeLabel.rectTransform, ref doorCursor, ContextLabelHeight, ContextLabelGap);
 
+            _bandageModeControls = new GameObject("BandageModeControls", typeof(RectTransform));
+            var bandageRt = _bandageModeControls.GetComponent<RectTransform>();
+            bandageRt.SetParent(zone, false);
+            UiFactory.Stretch(bandageRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            float bandageCursor = rowTop;
+            // Arm happens on the Gear_Bandage card, not a verb-row button (Bandage HUD-side contract) —
+            // this is context/status only, mirroring Shoot/Door's cost+hint line.
+            _bandageModeLabel = _ui.CreateText(bandageRt, "BandageModeLabel", "BANDAGE", 18, TextAnchor.MiddleLeft, Ink);
+            UiFactory.PlaceRow(_bandageModeLabel.rectTransform, ref bandageCursor, ContextLabelHeight, ContextLabelGap);
+
+            _stormModeControls = new GameObject("StormModeControls", typeof(RectTransform));
+            var stormRt = _stormModeControls.GetComponent<RectTransform>();
+            stormRt.SetParent(zone, false);
+            UiFactory.Stretch(stormRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            float stormCursor = rowTop;
+            // Arm happens on the Gear_Storm card, not a verb-row button (Storm contract, C67) —
+            // context/status only, same shape as Bandage's line above. Storm has no board-tap path
+            // at all (self-targeting, nothing to aim at), so the copy says "scrubber" only.
+            _stormModeLabel = _ui.CreateText(stormRt, "StormModeLabel", "STORM", 18, TextAnchor.MiddleLeft, Ink);
+            UiFactory.PlaceRow(_stormModeLabel.rectTransform, ref stormCursor, ContextLabelHeight, ContextLabelGap);
+
             // Move uses two control rows (stances + SET PATH); Shoot/Door share that taller envelope.
             cursor = rowTop
                 - ContextLabelHeight - ContextLabelGap
@@ -673,7 +743,8 @@ namespace LogiCard.UI
         /// </summary>
         private void BuildQueuePanel(RectTransform zone)
         {
-            RectTransform panel = _ui.CreatePanel(zone, "QueuePanel", PanelSunken, Vector2.zero, Vector2.one);
+            RectTransform panel = _ui.CreatePanel(zone, "QueuePanel", PanelSunken,
+                Vector2.zero, new Vector2(1f, GearHandAreaMinY));
             panel.offsetMin = new Vector2(Gap, Pad);
             panel.offsetMax = new Vector2(-Gap, -Pad);
 
@@ -798,6 +869,83 @@ namespace LogiCard.UI
             RefreshVerbContextControls(_input.Program);
         }
 
+        /// <summary>
+        /// Arming Bandage (the only wired first-wave card this wave) switches board input into
+        /// Bandage placement mode via the same <see cref="SetMode"/> Move/Shoot/Door already use, so
+        /// a pending Move draft commits first here too — otherwise a board-tap/scrubber place right
+        /// after arming would resolve against a stale pre-commit <c>UsedSeconds</c>.
+        /// </summary>
+        private void OnGearCardArmed(CardId id)
+        {
+            if (id == CardId.Bandage)
+            {
+                SetMode(ActionVerb.Bandage);
+            }
+            else if (id == CardId.Storm)
+            {
+                SetMode(ActionVerb.Storm);
+            }
+        }
+
+        /// <summary>
+        /// Fires on manual re-click cancel, phase swap, AND a successful Bandage placement (see
+        /// <see cref="OnQueueChanged"/>, which clears the arm once its node lands) — one path handles
+        /// DoD gate 6's "after place: clear arm, Mode → Move" for every way the arm can end.
+        /// </summary>
+        private void OnGearArmCleared()
+        {
+            if (_input != null && (_input.Mode == ActionVerb.Bandage || _input.Mode == ActionVerb.Storm))
+            {
+                _input.Mode = ActionVerb.Move;
+                RefreshModeButtons();
+                RefreshVerbContextControls(_input.Program);
+            }
+        }
+
+        /// <summary>
+        /// Bandage's arm-time legality gates (DoD gate 4: Wounded, charge, no Bandage node already
+        /// queued this Program — mid-Sprint is checked at place-time by <c>PawnProgram.TryQueueBandage</c>
+        /// itself). Reuses <see cref="GearHandView.SetSpent"/>'s existing greyed/blocked presentation
+        /// rather than inventing a second disabled state.
+        /// </summary>
+        private void RefreshGearHandLegality()
+        {
+            if (_gearHand == null)
+            {
+                return;
+            }
+
+            bool bandageLegal = _woundsOf != null
+                && _bandageChargeOf != null
+                && _input?.Program != null
+                && _woundsOf() > 0
+                && _bandageChargeOf() == 0
+                && !HasNodeQueued(_input.Program, ActionVerb.Bandage);
+
+            _gearHand.SetSpent(CardId.Bandage, !bandageLegal);
+
+            // Storm's Sim-side stays fully permissive on once-per-match (frozen contract, C67) — this
+            // "already queued this Program" dedup is the best gate achievable HUD-side without a
+            // cross-round counter (RoundPlayback has no StormCast-count reader the way it does
+            // BandageChargeOf). Flagged as a deviation: this is per-round, not true once-per-match.
+            bool stormLegal = _input?.Program != null && !HasNodeQueued(_input.Program, ActionVerb.Storm);
+            _gearHand.SetSpent(CardId.Storm, !stormLegal);
+        }
+
+        private static bool HasNodeQueued(PawnProgram program, ActionVerb verb)
+        {
+            IReadOnlyList<ActionNode> nodes = program.Nodes;
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (nodes[i].Verb == verb)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private void SetStanceBand(StanceType stance)
         {
             _input.TrySetDraftStance(stance);
@@ -863,6 +1011,16 @@ namespace LogiCard.UI
                 _doorModeControls.SetActive(mode == ActionVerb.Door);
             }
 
+            if (_bandageModeControls != null)
+            {
+                _bandageModeControls.SetActive(mode == ActionVerb.Bandage);
+            }
+
+            if (_stormModeControls != null)
+            {
+                _stormModeControls.SetActive(mode == ActionVerb.Storm);
+            }
+
             // The floating door prompt only makes sense in Door mode — hide it unconditionally here
             // so leaving Door mode always clears it, regardless of which refresh path got here
             // (RefreshDoorModeControls only re-shows it when there's still something pending).
@@ -879,10 +1037,40 @@ namespace LogiCard.UI
             {
                 RefreshDoorModeControls(program);
             }
+            else if (mode == ActionVerb.Bandage)
+            {
+                RefreshBandageModeControls();
+            }
+            else if (mode == ActionVerb.Storm)
+            {
+                RefreshStormModeControls();
+            }
             else
             {
                 RefreshStanceControls(program);
             }
+        }
+
+        private void RefreshBandageModeControls()
+        {
+            if (_bandageModeLabel == null)
+            {
+                return;
+            }
+
+            _bandageModeLabel.text = $"BANDAGE  {PawnProgram.BandageSeconds:0}s — tap board or scrubber to place";
+        }
+
+        private void RefreshStormModeControls()
+        {
+            if (_stormModeLabel == null)
+            {
+                return;
+            }
+
+            // No numeric cost shown — TR — is still OPEN (Cards' C67 recommendation), and there is no
+            // board-tap path to mention (self-targeting, nothing to aim at).
+            _stormModeLabel.text = "STORM — scrubber to place";
         }
 
         private void RefreshShootModeControls(PawnProgram program)
@@ -1107,6 +1295,21 @@ namespace LogiCard.UI
             RefreshVerbContextControls(program);
             RefreshUndoButton(program);
             RefreshScrubberMarkers(program);
+
+            // A Bandage/Storm node landing while still armed means TryQueueBandage/TryQueueStorm just
+            // succeeded (armed is the only way one gets added to the tail) — clear arm / Mode here
+            // (DoD gate 6, same shape for both cards).
+            if (_gearHand != null && program.Nodes.Count > 0)
+            {
+                ActionVerb lastVerb = program.Nodes[program.Nodes.Count - 1].Verb;
+                if ((_gearHand.ArmedId == CardId.Bandage && lastVerb == ActionVerb.Bandage)
+                    || (_gearHand.ArmedId == CardId.Storm && lastVerb == ActionVerb.Storm))
+                {
+                    _gearHand.ClearArm();
+                }
+            }
+
+            RefreshGearHandLegality();
         }
 
         /// <summary>
@@ -1363,6 +1566,23 @@ namespace LogiCard.UI
 
             _clock.Pause();
             _clock.SetNormalized(value);
+
+            // Scrubber-click placement while Bandage or Storm is armed (Bandage HUD-side contract item
+            // 3; Storm contract, C67, item 2 — Storm's only placement path). Self-limiting against
+            // drag repeats: the first successful place clears the arm via OnQueueChanged, so later
+            // onValueChanged ticks in the same drag fall through to a plain scrub with no further
+            // placement attempt.
+            if (_gearHand != null && _input != null)
+            {
+                if (_gearHand.ArmedId == CardId.Bandage)
+                {
+                    _input.TryQueueBandageAt(_clock.CurrentSeconds, out _);
+                }
+                else if (_gearHand.ArmedId == CardId.Storm)
+                {
+                    _input.TryQueueStormAt(_clock.CurrentSeconds, out _);
+                }
+            }
         }
 
         private void OnClockTime(float seconds)
@@ -1419,7 +1639,10 @@ namespace LogiCard.UI
             if (phase == RoundPhase.Program)
             {
                 ShowOutcome(string.Empty);
+                RefreshGearHandLegality();
             }
+
+            _gearHand?.SetPhase(phase == RoundPhase.Execute ? GearHandPhase.Execute : GearHandPhase.Program);
 
             if (phase == RoundPhase.Allot)
             {

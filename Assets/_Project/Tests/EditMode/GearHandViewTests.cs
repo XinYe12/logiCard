@@ -43,20 +43,27 @@ namespace LogiCard.Tests.EditMode
         }
 
         [Test]
-        public void FirstWaveRosterIsBandageInteractFlashbangAdrenaline()
+        public void FirstWaveRosterIsBandageInteractFlashbangAdrenalineStorm()
         {
-            Assert.That(GearHandView.FirstWave.Length, Is.EqualTo(4));
+            Assert.That(GearHandView.FirstWave.Length, Is.EqualTo(5));
             Assert.That(GearHandView.FirstWave[0].Id, Is.EqualTo(CardId.Bandage));
             Assert.That(GearHandView.FirstWave[1].Id, Is.EqualTo(CardId.Interact));
             Assert.That(GearHandView.FirstWave[2].Id, Is.EqualTo(CardId.Flashbang));
             Assert.That(GearHandView.FirstWave[3].Id, Is.EqualTo(CardId.Adrenaline));
+            Assert.That(GearHandView.FirstWave[4].Id, Is.EqualTo(CardId.Storm));
         }
 
         [Test]
-        public void CostLabelsStayPlaceholdersUntilNumericsLock()
+        public void CostLabelsStayPlaceholdersUntilNumericsLockExceptBandage()
         {
             foreach (GearHandCardInfo info in GearHandView.FirstWave)
             {
+                if (info.Id == CardId.Bandage)
+                {
+                    Assert.That(info.CostLabel, Is.EqualTo("3s"), "Bandage's cost locked via C63.");
+                    continue;
+                }
+
                 Assert.That(info.CostLabel, Is.EqualTo("TR —"),
                     $"{info.Id} must not invent a Time Resource cost while OPEN #16 is open.");
             }

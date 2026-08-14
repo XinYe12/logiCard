@@ -275,5 +275,120 @@ namespace LogiCard.Tests.EditMode
             Assert.That(preview.EndSeconds, Is.EqualTo(3f));
             Assert.That(preview.Nodes.Count, Is.EqualTo(2), "Origin + one straight-line arrival on a clear board.");
         }
+
+        // ---------- Bandage (C63 / Bandage HUD-side contract) ----------
+
+        [Test]
+        public void TryQueueBandage_AtScheduleTip_ReservesCostAndAddsNode()
+        {
+            var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+
+            bool ok = program.TryQueueBandage(program.UsedSeconds, out string reason);
+
+            Assert.That(ok, Is.True, reason);
+            Assert.That(program.Nodes.Count, Is.EqualTo(1));
+            Assert.That(program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Bandage));
+            Assert.That(program.Nodes[0].ExecuteTime, Is.EqualTo(0f));
+            Assert.That(program.UsedSeconds, Is.EqualTo(PawnProgram.BandageSeconds));
+        }
+
+        [Test]
+        public void TryQueueBandage_ExceedingBudget_IsRejectedAndStateUnchanged()
+        {
+            var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 2f);
+
+            bool ok = program.TryQueueBandage(0f, out string reason);
+
+            Assert.That(ok, Is.False);
+            Assert.That(reason, Is.Not.Null.And.Not.Empty);
+            Assert.That(program.UsedSeconds, Is.EqualTo(0f));
+            Assert.That(program.Nodes, Is.Empty);
+        }
+
+        [Test]
+        public void TryQueueBandage_MidSprintLeg_IsRejectedButArrivalIsLegal()
+        {
+            var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+            Assert.That(program.TryQueueMove(new PlanarPosition(3, 0), out _, StanceType.Sprint), Is.True);
+            float sprintArrival = program.Nodes[0].ExecuteTime;
+
+            Assert.That(program.IsMidSprintAt(sprintArrival / 2f), Is.True);
+            Assert.That(program.TryQueueBandage(sprintArrival / 2f, out string midReason), Is.False);
+            Assert.That(midReason, Is.Not.Null.And.Not.Empty);
+            Assert.That(program.Nodes.Count, Is.EqualTo(1), "Rejected mid-Sprint Bandage must not book a node.");
+
+            Assert.That(program.IsMidSprintAt(sprintArrival), Is.False, "Arrival instant is not 'mid' (C63).");
+            Assert.That(program.TryQueueBandage(sprintArrival, out string arrivalReason), Is.True, arrivalReason);
+            Assert.That(program.Nodes[1].Verb, Is.EqualTo(ActionVerb.Bandage));
+            Assert.That(program.Nodes[1].ExecuteTime, Is.EqualTo(sprintArrival));
+            Assert.That(program.UsedSeconds, Is.EqualTo(sprintArrival + PawnProgram.BandageSeconds));
+        }
+
+        [Test]
+        public void TryQueueBandage_CommitsPendingDraftFirstAndUndoRestoresIt()
+        {
+            var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+            Assert.That(program.TryAddWaypoint(new PlanarPosition(2, 0), out _), Is.True);
+            Assert.That(program.HasDraft, Is.True);
+
+            Assert.That(program.TryQueueBandage(program.UsedSeconds, out string reason), Is.True, reason);
+            Assert.That(program.HasDraft, Is.False, "Pending draft must commit before Bandage books.");
+            Assert.That(program.Nodes.Count, Is.EqualTo(2), "Move (from committed draft) then Bandage.");
+            Assert.That(program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Move));
+            Assert.That(program.Nodes[1].Verb, Is.EqualTo(ActionVerb.Bandage));
+
+            Assert.That(program.TryUndoLastStep(out _), Is.True);
+            Assert.That(program.Nodes.Count, Is.EqualTo(1), "Undo removes the Bandage step first.");
+            Assert.That(program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Move));
+        }
+
+        // ---------- Storm (C67 / Storm contract) ----------
+
+        [Test]
+        public void TryQueueStorm_AtScheduleTip_ReservesCostAndAddsNode()
+        {
+            var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+
+            bool ok = program.TryQueueStorm(program.UsedSeconds, out string reason);
+
+            Assert.That(ok, Is.True, reason);
+            Assert.That(program.Nodes.Count, Is.EqualTo(1));
+            Assert.That(program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Storm));
+            Assert.That(program.Nodes[0].ExecuteTime, Is.EqualTo(0f));
+            Assert.That(program.UsedSeconds, Is.EqualTo(PawnProgram.StormSeconds));
+        }
+
+        [Test]
+        public void TryQueueStorm_HasNoSprintGate_UnlikeBandage()
+        {
+            var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+            Assert.That(program.TryQueueMove(new PlanarPosition(3, 0), out _, StanceType.Sprint), Is.True);
+            float sprintArrival = program.Nodes[0].ExecuteTime;
+            Assert.That(program.IsMidSprintAt(sprintArrival / 2f), Is.True);
+
+            // Unlike TryQueueBandage_MidSprintLeg_IsRejectedButArrivalIsLegal above, Storm has no
+            // Sprint gate at all (frozen contract, C67) — mid-Sprint placement is legal.
+            Assert.That(program.TryQueueStorm(sprintArrival / 2f, out string reason), Is.True, reason);
+            Assert.That(program.Nodes[1].Verb, Is.EqualTo(ActionVerb.Storm));
+            Assert.That(program.Nodes[1].ExecuteTime, Is.EqualTo(sprintArrival / 2f));
+        }
+
+        [Test]
+        public void TryQueueStorm_CommitsPendingDraftFirstAndUndoRestoresIt()
+        {
+            var program = new PawnProgram(new PlanarPosition(0, 0), baseSecondsPerTile: 1f, budgetSeconds: 60f);
+            Assert.That(program.TryAddWaypoint(new PlanarPosition(2, 0), out _), Is.True);
+            Assert.That(program.HasDraft, Is.True);
+
+            Assert.That(program.TryQueueStorm(program.UsedSeconds, out string reason), Is.True, reason);
+            Assert.That(program.HasDraft, Is.False, "Pending draft must commit before Storm books.");
+            Assert.That(program.Nodes.Count, Is.EqualTo(2), "Move (from committed draft) then Storm.");
+            Assert.That(program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Move));
+            Assert.That(program.Nodes[1].Verb, Is.EqualTo(ActionVerb.Storm));
+
+            Assert.That(program.TryUndoLastStep(out _), Is.True);
+            Assert.That(program.Nodes.Count, Is.EqualTo(1), "Undo removes the Storm step first.");
+            Assert.That(program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Move));
+        }
     }
 }

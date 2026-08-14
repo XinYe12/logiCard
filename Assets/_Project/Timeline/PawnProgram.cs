@@ -32,6 +32,18 @@ namespace LogiCard.Timeline
         /// </summary>
         private const float InteractRadius = 0.7f;
 
+        /// <summary>Bandage Time Resource cost (C63, frozen by the Bandage HUD-side contract).</summary>
+        public const float BandageSeconds = 3f;
+
+        /// <summary>
+        /// Storm Time Resource cost (C67). Cards' numerics recommendation is still an OPEN "TR —"
+        /// placeholder (same convention as Interact/Flashbang/Adrenaline) — 0f here is a
+        /// non-inventing default that keeps <see cref="TryQueueStorm"/> reserving against budget the
+        /// same shape as every other verb, not a locked balance number. Update when Cards/human
+        /// locks a real cost, same two-step shape C62→C63 used for Bandage.
+        /// </summary>
+        public const float StormSeconds = 0f;
+
         private readonly List<ActionNode> _nodes = new List<ActionNode>();
         private readonly List<PlanarPosition> _draftWaypoints = new List<PlanarPosition>();
         private readonly List<PlanarPosition> _pathBuffer = new List<PlanarPosition>();
@@ -453,6 +465,120 @@ namespace LogiCard.Timeline
             _nodes.Add(new ActionNode(ActionVerb.Door, UsedSeconds, doorPosition, CurrentStance, doorAction: action));
             rejectionReason = null;
             return true;
+        }
+
+        /// <summary>
+        /// Books an <see cref="ActionVerb.Bandage"/> node at an explicit <paramref name="executeTime"/>
+        /// (Bandage HUD-side contract, C63) — unlike Shoot/Door, which always append at the schedule
+        /// tip, Bandage may also be placed to coincide with an already-booked Move node's arrival (the
+        /// board-tap path resolves that instant before calling this; the scrubber-click path passes
+        /// its own current seconds directly). <see cref="BandageSeconds"/> is reserved against the
+        /// round budget the same way as any other verb; the node's own <c>ExecuteTime</c> records when
+        /// the heal actually happens on the timeline, which is why it is taken verbatim from the
+        /// caller rather than derived from <see cref="UsedSeconds"/> post-reserve like Shoot/Door do.
+        /// </summary>
+        public bool TryQueueBandage(float executeTime, out string rejectionReason)
+        {
+            if (HasDraft && !TryCommitDraft(out rejectionReason))
+            {
+                return false;
+            }
+
+            if (IsMidSprintAt(executeTime))
+            {
+                rejectionReason = "Cannot Bandage mid-Sprint.";
+                return false;
+            }
+
+            var beforeReserve = new CommittedStepSnapshot(_nodes.Count, UsedSeconds, CurrentPosition, CurrentStance);
+            if (!TryReserve(BandageSeconds, out rejectionReason))
+            {
+                return false;
+            }
+
+            _committedStepHistory.Add(beforeReserve);
+            _nodes.Add(new ActionNode(ActionVerb.Bandage, executeTime, PositionAtExecuteTime(executeTime), CurrentStance));
+            rejectionReason = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Books an <see cref="ActionVerb.Storm"/> node at an explicit <paramref name="executeTime"/>
+        /// (Storm contract, C67) — self-targeting like Bandage, but with no board-tap placement at
+        /// all (the scrubber-click path is the only path in; there is no board-tap counterpart to
+        /// resolve an executeTime from). Mirrors <see cref="TryQueueDoor"/>/<see cref="TryQueueShoot"/>'s
+        /// real guard-first shape (commit any pending Move draft before this verb's own checks) rather
+        /// than being built from scratch. No Sprint gate, no board position needed — Sim-side stays
+        /// fully permissive on once-per-match (that is a HUD-side gate, same shape as Bandage's
+        /// "already queued this Program" check).
+        /// </summary>
+        public bool TryQueueStorm(float executeTime, out string rejectionReason)
+        {
+            if (HasDraft && !TryCommitDraft(out rejectionReason))
+            {
+                return false;
+            }
+
+            var beforeReserve = new CommittedStepSnapshot(_nodes.Count, UsedSeconds, CurrentPosition, CurrentStance);
+            if (!TryReserve(StormSeconds, out rejectionReason))
+            {
+                return false;
+            }
+
+            _committedStepHistory.Add(beforeReserve);
+            _nodes.Add(new ActionNode(ActionVerb.Storm, executeTime, PositionAtExecuteTime(executeTime), CurrentStance));
+            rejectionReason = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Pawn's scheduled position at <paramref name="seconds"/>: the last committed Move node whose
+        /// arrival is at or before it, or <see cref="CurrentPosition"/> if none (nothing has moved yet,
+        /// or <paramref name="seconds"/> is at/after the schedule tip). Stamps Bandage's own Position
+        /// when it is placed to coincide with an earlier Move arrival rather than appended at the tip.
+        /// </summary>
+        private PlanarPosition PositionAtExecuteTime(float seconds)
+        {
+            PlanarPosition position = CurrentPosition;
+            for (int i = 0; i < _nodes.Count; i++)
+            {
+                ActionNode node = _nodes[i];
+                if (node.Verb == ActionVerb.Move && node.ExecuteTime <= seconds + BudgetEpsilon)
+                {
+                    position = node.Position;
+                }
+            }
+
+            return position;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="seconds"/> falls strictly inside a Sprint Move leg (C63 — Walk/Crawl
+        /// are fine; exact arrival/departure instants are not "mid"). Only committed Move nodes define
+        /// the movement timeline — Shoot/Door/Bandage are instantaneous and don't shift it.
+        /// </summary>
+        public bool IsMidSprintAt(float seconds)
+        {
+            float segmentStart = 0f;
+            for (int i = 0; i < _nodes.Count; i++)
+            {
+                ActionNode node = _nodes[i];
+                if (node.Verb != ActionVerb.Move)
+                {
+                    continue;
+                }
+
+                if (node.Stance == StanceType.Sprint
+                    && seconds > segmentStart + BudgetEpsilon
+                    && seconds < node.ExecuteTime - BudgetEpsilon)
+                {
+                    return true;
+                }
+
+                segmentStart = node.ExecuteTime;
+            }
+
+            return false;
         }
 
         /// <summary>
