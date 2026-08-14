@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using LogiCard.Sim;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.UI;
 
 namespace LogiCard.Board
 {
@@ -27,17 +29,18 @@ namespace LogiCard.Board
     /// White + Yellow only (<c>VFX_Zap_White</c> / <c>VFX_Zap_Yellow</c>). Prefabs via
     /// <see cref="LogiCard.Art.Editor.WeatherPackImportTool"/>.
     /// Weather is <b>modular</b>: <see cref="Build"/> binds the host to the board; cards call
-    /// <see cref="ApplyWeather"/> to spawn Fair/Storm (or <see cref="BoardWeatherMood.Clear"/>)
-    /// as a replaceable child module over the sky pocket. Storm lightning glues itself to the
-    /// CloudBank's own measured world bounds (position and reach) rather than to independent
-    /// hand-tuned numbers, so wherever a future card places the Storm module, the strikes follow —
-    /// see <see cref="PlaceStormLightning"/>.
+    /// <see cref="ApplyWeather"/> to spawn Fair / Storm / Sunny (or <see cref="BoardWeatherMood.Clear"/>)
+    /// as a replaceable child module over the sky pocket. Mood lighting (storm dim, sunny brighten)
+    /// is owned here and restored on swap. Storm lightning glues itself to the CloudBank's own
+    /// measured world bounds — see <see cref="PlaceStormLightning"/>.
     /// </summary>
     public enum BoardWeatherMood
     {
         Clear,
         Fair,
         Storm,
+        /// <summary>Cloudless sunny — keywords Sunshine / 万里无云. No sky bank; bright mood lighting.</summary>
+        Sunny,
     }
 
     public sealed class BoardWeatherPocket : MonoBehaviour
@@ -65,13 +68,26 @@ namespace LogiCard.Board
         private bool _boardBound;
         private Transform _moduleRoot;
         private Color _savedAmbient;
-        private bool _lightingDimmed;
-        private Light[] _dimmedLights;
+        private bool _lightingOverridden;
+        private Light[] _overrideLights;
         private float[] _savedLightIntensities;
         private Color[] _savedLightColors;
+        private Quaternion[] _savedLightRotations;
+        private float[] _savedShadowStrengths;
+        private LightShadows[] _savedShadowModes;
+        private bool[] _savedLightEnabled;
+        private Camera _savedCamera;
+        private Color _savedCameraBackground;
+        private bool _volumeSaved;
+        private ColorAdjustments _volumeColor;
+        private float _savedExposure;
+        private float _savedContrast;
+        private float _savedSaturation;
+        private Color _savedColorFilter;
         private Bounds _cloudBankWorldBounds;
         private bool _hasCloudBankBounds;
         private readonly List<Bounds> _cloudMassWorldBounds = new List<Bounds>();
+        private Text _weatherToggleLabel;
 
         /// <summary>Layer-2 formation envelopes (same shell <see cref="PlaceCloudEdgeHaze"/> uses) —
         /// exterior rim samples for storm energize arcs.</summary>
@@ -116,6 +132,7 @@ namespace LogiCard.Board
             _boardDepth = (model.MaxY - model.MinY) * board.WorldScale;
             transform.position = board.CenterWorld;
             _boardBound = true;
+            EnsureWeatherToggleUi();
         }
 
         /// <summary>
@@ -129,8 +146,9 @@ namespace LogiCard.Board
 
         /// <summary>
         /// Card / program entry — replace the active weather module. <see cref="BoardWeatherMood.Clear"/>
-        /// removes sky weather and restores pre-storm lighting. Fair/Storm spawn a self-contained
-        /// child (<c>Weather_Fair</c> / <c>Weather_Storm</c>) so a future Storm card only mounts that module.
+        /// removes sky weather and restores mood lighting. Fair/Storm/Sunny spawn self-contained
+        /// children (<c>Weather_Fair</c> / <c>Weather_Storm</c> / <c>Weather_Sunny</c>).
+        /// Sunny = Sunshine / 万里无云 — cloudless, bright mood lighting (Atmosphere-owned).
         /// </summary>
         public void ApplyWeather(BoardWeatherMood mood)
         {
@@ -144,15 +162,25 @@ namespace LogiCard.Board
             _mood = mood;
             if (mood == BoardWeatherMood.Clear)
             {
+                RefreshWeatherToggleLabel();
                 return;
             }
 
-            var module = new GameObject(mood == BoardWeatherMood.Storm ? "Weather_Storm" : "Weather_Fair");
+            var module = new GameObject(WeatherModuleName(mood));
             _moduleRoot = module.transform;
             _moduleRoot.SetParent(transform, false);
 
             float width = _boardWidth;
             float depth = _boardDepth;
+
+            if (mood == BoardWeatherMood.Sunny)
+            {
+                // Capture + crush baseline first, then spawn mood-owned sun (not in the crush list).
+                ApplySunnyLighting();
+                RefreshWeatherToggleLabel();
+                return;
+            }
+
             PlaceCloudBank(width, depth);
             PlaceRain(width, depth);
             PlaceFogMist(width, depth);
@@ -164,17 +192,45 @@ namespace LogiCard.Board
             }
 
             PlaceLightning(width, depth);
+            RefreshWeatherToggleLabel();
         }
+
+        /// <summary>Look-pass authoring: flip Sunny ↔ Storm (Sunshine / 万里无云 ↔ storm shelf).</summary>
+        public void ToggleSunnyStorm()
+        {
+            if (!_boardBound)
+            {
+                return;
+            }
+
+            ApplyWeather(_mood == BoardWeatherMood.Storm
+                ? BoardWeatherMood.Sunny
+                : BoardWeatherMood.Storm);
+        }
+
+        private static string WeatherModuleName(BoardWeatherMood mood) => mood switch
+        {
+            BoardWeatherMood.Storm => "Weather_Storm",
+            BoardWeatherMood.Sunny => "Weather_Sunny",
+            _ => "Weather_Fair",
+        };
 
         /// <summary>Tear down the active module and stop Zap loops. Safe if already clear.</summary>
         public void ClearWeather()
         {
             StopAllCoroutines();
-            RestoreLightingIfDimmed();
+            RestoreLightingIfOverridden();
 
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
-                DestroyImmediate(transform.GetChild(i).gameObject);
+                Transform child = transform.GetChild(i);
+                // Look-pass toggle lives on the host, not inside a weather module.
+                if (child.name == WeatherToggleUiName)
+                {
+                    continue;
+                }
+
+                DestroyImmediate(child.gameObject);
             }
 
             _moduleRoot = null;
@@ -342,6 +398,8 @@ namespace LogiCard.Board
                 if (massTransform != null)
                 {
                     _cloudMassWorldBounds.Add(ComputeWorldBounds(massTransform));
+                    // Phase A cloud motion — gentle bob/drift so the clay bank reads alive (see CLOUD_MOTION.md).
+                    ClayCloudDrift.Attach(massTransform);
                 }
             }
 
@@ -1525,34 +1583,22 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Cool + dim diorama lights under a storm module. Snapshots intensities so
-        /// <see cref="ClearWeather"/> / Fair can restore (card swap must not permanently crush the key).
+        /// Cool + dim diorama lights under a storm module. Snapshots baseline so
+        /// <see cref="ClearWeather"/> / other moods can restore (card swap must not permanently crush the key).
         /// </summary>
         private void ApplyStormLightingDim()
         {
-            if (_lightingDimmed)
+            if (!CaptureLightingBaseline())
             {
                 return;
             }
 
-            _savedAmbient = RenderSettings.ambientLight;
             RenderSettings.ambientLight = new Color(0.16f, 0.18f, 0.22f);
 
-            Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
-            _dimmedLights = lights;
-            _savedLightIntensities = new float[lights.Length];
-            _savedLightColors = new Color[lights.Length];
-            for (int i = 0; i < lights.Length; i++)
+            for (int i = 0; i < _overrideLights.Length; i++)
             {
-                Light light = lights[i];
-                if (light == null)
-                {
-                    continue;
-                }
-
-                _savedLightIntensities[i] = light.intensity;
-                _savedLightColors[i] = light.color;
-                if (!light.enabled)
+                Light light = _overrideLights[i];
+                if (light == null || !light.enabled)
                 {
                     continue;
                 }
@@ -1568,22 +1614,306 @@ namespace LogiCard.Board
                 }
             }
 
-            _lightingDimmed = true;
+            _lightingOverridden = true;
         }
 
-        private void RestoreLightingIfDimmed()
+        private const string WeatherToggleUiName = "WeatherToggleUi";
+
+        /// <summary>
+        /// Atmosphere look-pass control — Sunny ↔ Storm. Own canvas so we don't edit ProgramHud (UI seat).
+        /// Survives <see cref="ClearWeather"/> module teardown.
+        /// </summary>
+        private void EnsureWeatherToggleUi()
         {
-            if (!_lightingDimmed)
+            if (transform.Find(WeatherToggleUiName) != null)
+            {
+                RefreshWeatherToggleLabel();
+                return;
+            }
+
+            var canvasGo = new GameObject(WeatherToggleUiName, typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            canvasGo.transform.SetParent(transform, false);
+            var canvas = canvasGo.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 50;
+            var scaler = canvasGo.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1080f, 1920f);
+            scaler.matchWidthOrHeight = 1f;
+
+            var buttonGo = new GameObject("WeatherToggleButton", typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonGo.transform.SetParent(canvasGo.transform, false);
+            var buttonRt = buttonGo.GetComponent<RectTransform>();
+            buttonRt.anchorMin = new Vector2(1f, 1f);
+            buttonRt.anchorMax = new Vector2(1f, 1f);
+            buttonRt.pivot = new Vector2(1f, 1f);
+            // Sit just under the top strip, right edge — portrait thumb-reachable without covering Lock In.
+            buttonRt.anchoredPosition = new Vector2(-16f, -72f);
+            buttonRt.sizeDelta = new Vector2(200f, 56f);
+
+            var image = buttonGo.GetComponent<Image>();
+            image.color = new Color(0.18f, 0.22f, 0.30f, 0.92f);
+            var button = buttonGo.GetComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(ToggleSunnyStorm);
+
+            var labelGo = new GameObject("Label", typeof(RectTransform), typeof(Text));
+            labelGo.transform.SetParent(buttonGo.transform, false);
+            var labelRt = labelGo.GetComponent<RectTransform>();
+            labelRt.anchorMin = Vector2.zero;
+            labelRt.anchorMax = Vector2.one;
+            labelRt.offsetMin = Vector2.zero;
+            labelRt.offsetMax = Vector2.zero;
+            _weatherToggleLabel = labelGo.GetComponent<Text>();
+            _weatherToggleLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _weatherToggleLabel.fontSize = 22;
+            _weatherToggleLabel.alignment = TextAnchor.MiddleCenter;
+            _weatherToggleLabel.color = new Color(0.95f, 0.93f, 0.88f);
+            _weatherToggleLabel.raycastTarget = false;
+
+            RefreshWeatherToggleLabel();
+        }
+
+        private void RefreshWeatherToggleLabel()
+        {
+            if (_weatherToggleLabel == null)
+            {
+                Transform existing = transform.Find(WeatherToggleUiName);
+                if (existing != null)
+                {
+                    _weatherToggleLabel = existing.GetComponentInChildren<Text>();
+                }
+            }
+
+            if (_weatherToggleLabel == null)
+            {
+                return;
+            }
+
+            _weatherToggleLabel.text = _mood switch
+            {
+                BoardWeatherMood.Storm => "Weather: Storm",
+                BoardWeatherMood.Sunny => "Weather: Sunny",
+                BoardWeatherMood.Fair => "Weather: Fair",
+                _ => "Weather: Clear",
+            };
+        }
+
+        /// <summary>
+        /// Per-mass clay drift — slow bob + lateral sway + yaw rock. Phase A of
+        /// <c>docs/departments/atmosphere/CLOUD_MOTION.md</c>. Keeps shade yaw-up (no pitch/roll).
+        /// </summary>
+        private sealed class ClayCloudDrift : MonoBehaviour
+        {
+            private Vector3 _baseLocalPos;
+            private Quaternion _baseLocalRot;
+            private float _phase;
+            private float _bobAmp;
+            private float _driftAmp;
+            private float _yawAmpDeg;
+            private float _speed;
+
+            public static void Attach(Transform mass)
+            {
+                if (mass == null || mass.GetComponent<ClayCloudDrift>() != null)
+                {
+                    return;
+                }
+
+                var drift = mass.gameObject.AddComponent<ClayCloudDrift>();
+                drift._baseLocalPos = mass.localPosition;
+                drift._baseLocalRot = mass.localRotation;
+                drift._phase = Random.Range(0f, Mathf.PI * 2f);
+                drift._bobAmp = Random.Range(0.06f, 0.14f);
+                drift._driftAmp = Random.Range(0.08f, 0.18f);
+                drift._yawAmpDeg = Random.Range(2.5f, 5.5f);
+                drift._speed = Random.Range(0.22f, 0.42f);
+            }
+
+            private void LateUpdate()
+            {
+                float t = Time.time * _speed + _phase;
+                transform.localPosition = _baseLocalPos + new Vector3(
+                    Mathf.Sin(t) * _driftAmp,
+                    Mathf.Sin(t * 1.37f + 0.6f) * _bobAmp,
+                    Mathf.Cos(t * 0.91f) * _driftAmp * 0.55f);
+                transform.localRotation = _baseLocalRot
+                    * Quaternion.Euler(0f, Mathf.Sin(t * 0.73f) * _yawAmpDeg, 0f);
+            }
+        }
+
+        /// <summary>
+        /// Sunshine / 万里无云. image copy 25–26: nudging bootstrap Key/Fill was too subtle indoors —
+        /// crush baseline directionals, punch ambient/Volume, spawn a mood-owned sun under the module.
+        /// </summary>
+        private void ApplySunnyLighting()
+        {
+            if (!CaptureLightingBaseline())
+            {
+                return;
+            }
+
+            // Open the floor of the grade hard — brown Hall mats otherwise swallow daylight.
+            RenderSettings.ambientLight = new Color(0.78f, 0.80f, 0.84f);
+
+            if (_savedCamera != null)
+            {
+                _savedCamera.backgroundColor = new Color(0.62f, 0.76f, 0.92f);
+            }
+
+            // Silence desk-lamp Key/Fill so the module sun owns the read.
+            for (int i = 0; i < _overrideLights.Length; i++)
+            {
+                Light light = _overrideLights[i];
+                if (light == null)
+                {
+                    continue;
+                }
+
+                if (light.type == LightType.Directional)
+                {
+                    light.enabled = false;
+                }
+                else if (light.type == LightType.Point)
+                {
+                    light.intensity *= 0.25f;
+                }
+            }
+
+            if (_volumeColor != null)
+            {
+                _volumeColor.postExposure.overrideState = true;
+                _volumeColor.contrast.overrideState = true;
+                _volumeColor.saturation.overrideState = true;
+                _volumeColor.colorFilter.overrideState = true;
+                _volumeColor.postExposure.value = 0.85f;
+                _volumeColor.contrast.value = 0f;
+                _volumeColor.saturation.value = 30f;
+                _volumeColor.colorFilter.value = new Color(1f, 0.98f, 0.90f);
+            }
+
+            _lightingOverridden = true;
+            PlaceSunnySunRig();
+        }
+
+        /// <summary>Mood-owned sun + sky fill under <c>Weather_Sunny</c> (destroyed on swap).</summary>
+        private void PlaceSunnySunRig()
+        {
+            var root = new GameObject("SunnySky");
+            root.transform.SetParent(ModuleParent, false);
+
+            var sunGo = new GameObject("SunnySun");
+            sunGo.transform.SetParent(root.transform, false);
+            var sun = sunGo.AddComponent<Light>();
+            sun.type = LightType.Directional;
+            sun.color = new Color(1f, 0.95f, 0.78f);
+            sun.intensity = 2.4f;
+            sun.shadows = LightShadows.Soft;
+            sun.shadowStrength = 0.32f;
+            sun.transform.rotation = Quaternion.Euler(70f, -32f, 0f);
+
+            var fillGo = new GameObject("SunnySkyFill");
+            fillGo.transform.SetParent(root.transform, false);
+            var fill = fillGo.AddComponent<Light>();
+            fill.type = LightType.Directional;
+            fill.color = new Color(0.70f, 0.82f, 1f);
+            fill.intensity = 1.35f;
+            fill.shadows = LightShadows.None;
+            fill.transform.rotation = Quaternion.Euler(55f, 148f, 0f);
+        }
+
+        /// <summary>Snapshot ambient / lights / camera clear / Volume grade once per override cycle.</summary>
+        private bool CaptureLightingBaseline()
+        {
+            if (_lightingOverridden)
+            {
+                return false;
+            }
+
+            _savedAmbient = RenderSettings.ambientLight;
+
+            Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
+            _overrideLights = lights;
+            _savedLightIntensities = new float[lights.Length];
+            _savedLightColors = new Color[lights.Length];
+            _savedLightRotations = new Quaternion[lights.Length];
+            _savedShadowStrengths = new float[lights.Length];
+            _savedShadowModes = new LightShadows[lights.Length];
+            _savedLightEnabled = new bool[lights.Length];
+            for (int i = 0; i < lights.Length; i++)
+            {
+                Light light = lights[i];
+                if (light == null)
+                {
+                    continue;
+                }
+
+                _savedLightIntensities[i] = light.intensity;
+                _savedLightColors[i] = light.color;
+                _savedLightRotations[i] = light.transform.rotation;
+                _savedShadowStrengths[i] = light.shadowStrength;
+                _savedShadowModes[i] = light.shadows;
+                _savedLightEnabled[i] = light.enabled;
+            }
+
+            _savedCamera = Camera.main;
+            if (_savedCamera == null)
+            {
+                _savedCamera = Object.FindFirstObjectByType<Camera>();
+            }
+
+            if (_savedCamera != null)
+            {
+                _savedCameraBackground = _savedCamera.backgroundColor;
+            }
+
+            _volumeSaved = false;
+            _volumeColor = null;
+            Volume[] volumes = Object.FindObjectsByType<Volume>(FindObjectsSortMode.None);
+            Volume chosen = null;
+            for (int v = 0; v < volumes.Length; v++)
+            {
+                Volume volume = volumes[v];
+                if (volume == null || volume.sharedProfile == null)
+                {
+                    continue;
+                }
+
+                if (volume.gameObject.name == "Diorama Volume")
+                {
+                    chosen = volume;
+                    break;
+                }
+
+                chosen ??= volume;
+            }
+
+            if (chosen != null && chosen.sharedProfile.TryGet(out ColorAdjustments color))
+            {
+                _volumeColor = color;
+                _savedExposure = color.postExposure.value;
+                _savedContrast = color.contrast.value;
+                _savedSaturation = color.saturation.value;
+                _savedColorFilter = color.colorFilter.value;
+                _volumeSaved = true;
+            }
+
+            return true;
+        }
+
+        private void RestoreLightingIfOverridden()
+        {
+            if (!_lightingOverridden)
             {
                 return;
             }
 
             RenderSettings.ambientLight = _savedAmbient;
-            if (_dimmedLights != null)
+            if (_overrideLights != null)
             {
-                for (int i = 0; i < _dimmedLights.Length; i++)
+                for (int i = 0; i < _overrideLights.Length; i++)
                 {
-                    Light light = _dimmedLights[i];
+                    Light light = _overrideLights[i];
                     if (light == null)
                     {
                         continue;
@@ -1591,13 +1921,37 @@ namespace LogiCard.Board
 
                     light.intensity = _savedLightIntensities[i];
                     light.color = _savedLightColors[i];
+                    light.transform.rotation = _savedLightRotations[i];
+                    light.shadowStrength = _savedShadowStrengths[i];
+                    light.shadows = _savedShadowModes[i];
+                    light.enabled = _savedLightEnabled[i];
                 }
             }
 
-            _dimmedLights = null;
+            if (_savedCamera != null)
+            {
+                _savedCamera.backgroundColor = _savedCameraBackground;
+            }
+
+            if (_volumeSaved && _volumeColor != null)
+            {
+                _volumeColor.postExposure.value = _savedExposure;
+                _volumeColor.contrast.value = _savedContrast;
+                _volumeColor.saturation.value = _savedSaturation;
+                _volumeColor.colorFilter.value = _savedColorFilter;
+            }
+
+            _overrideLights = null;
             _savedLightIntensities = null;
             _savedLightColors = null;
-            _lightingDimmed = false;
+            _savedLightRotations = null;
+            _savedShadowStrengths = null;
+            _savedShadowModes = null;
+            _savedLightEnabled = null;
+            _savedCamera = null;
+            _volumeColor = null;
+            _volumeSaved = false;
+            _lightingOverridden = false;
         }
 
         /// <summary>

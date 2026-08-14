@@ -1,22 +1,26 @@
 # Atmosphere — STATUS
 
-**Wave / Day:** Permanent department seat (GDD §11 / PARALLEL_OPS) — **Ready for Integrator merge** 2026-08-14
+**Wave / Day:** Permanent department seat (GDD §11 / PARALLEL_OPS) — **In progress** 2026-08-14
 **Branch / worktree:** `feat/atmosphere-stylized` @ `D:\projects\Game\logiCard-atmosphere-stylized`
-**Last cross-reviewed:** 2026-08-14 — Zap tip signed (`b62b48a` / image copy 23). Cloud energize human-signed (“this is good”).
+**Last cross-reviewed:** 2026-08-14 — Storm parked. Sunny look pass + weather toggle + cloud motion Phase A.
 
 ## Owned files (this seat)
 
 - `BoardWeatherPocket.cs`, `Resources/Weather/**`, `WeatherPackImportTool`, weather PlayMode smoke, this STATUS
+- Mood lighting overrides while a weather module is active
+- `CLOUD_MOTION.md` — clay bank animation plan
 
-## Committed
+## Committed (Storm — do not reopen unless asked)
 
-- Storm Zap tip ↔ cloud shelf height; Yellow-only; modular Storm host (`b62b48a`).
-- **Storm cloud energize** — Layer-2 envelope rim clusters (2–3 twisted chords per group); random group pulse every 1.8s with hard Stop/Play retrigger; scale ~0.28–0.42; PlayMode smoke for `CloudEnergize` + rim bias.
+- Zap tip ↔ cloud shelf (`b62b48a`); cloud energize rim groups (`45ccbc1`).
 
-## Dirty (uncommitted, out of seat / noise)
+## Dirty (this pass)
 
-- Floor/Glass mats, ProjectSettings, orphan pack `.meta` deletes, `Assets/_Recovery/`, debug screenshots — leave out of weather merge unless Integrator asks.
+1. **`BoardWeatherMood.Sunny`** — Sunshine / 万里无云; mood-owned `SunnySun` / `SunnySkyFill`; crush baseline directionals.
+2. **Weather toggle button** — top-right `WeatherToggleUi` on the pocket host; Sunny ↔ Storm.
+3. **Cloud motion Phase A** — `ClayCloudDrift` per mass (bob / drift / yaw). See `CLOUD_MOTION.md` for B/C.
+4. Bootstrap default Sunny; PlayMode Sunny + Storm-apply smokes.
 
 ## Blocked
 
-- None for weather look — human signed tip + energize. Integrator merge when scheduled.
+- Human Play — Sunny punch + Storm cloud drift via toggle; then decide Phase B puff breathe.

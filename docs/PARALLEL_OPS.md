@@ -24,7 +24,7 @@
 
 | Dept | Role | Owns (write, typical) | Must not touch | Worktree |
 |------|------|----------------------|----------------|----------|
-| **Atmosphere** | Sky / clouds / mist / weather pocket; diorama air above the board | `BoardWeatherPocket.cs`, `Resources/Weather/**`, weather import tools, related PlayMode smoke, atmosphere STATUS | `GhostResolver`, gear resolve, HUD allot math, Character Select | `logiCard-atmosphere` |
+| **Atmosphere** | Sky / clouds / mist / weather pocket; **mood lighting** while a weather module is active (storm dim, sunny brighten); diorama air above the board | `BoardWeatherPocket.cs`, `Resources/Weather/**`, weather import tools, related PlayMode smoke, atmosphere STATUS | `GhostResolver`, gear resolve, HUD allot math, Character Select | `logiCard-atmosphere` |
 | **Cards** | Gear catalog, hand/economy, collection binder, Time Card *presentation* as cardstock | `docs/CARD_COLLECTION.md` (until promoted), future gear UI/data as contracted, cards STATUS | Host resolve tape mutation without PLAYBACK_CONTRACT redesign; Character unique verbs | `logiCard-cards` |
 | **Character** | Character Cards, roster, pawn look, Character Select motion/feel | Character Select views, pawn art/outfit pipelines as briefed, roster docs, character STATUS | Map Select carousel (**C59**), modal chrome owned by UI, weather | `logiCard-character` |
 | **UI** | Shell + HUD chrome, modals, docks, selection grids, board-anchored prompts | `Assets/_Project/UI/**` (except Character Select when Character dept owns that slice), `UiStyle` tokens prefixed per contract, ui STATUS | Sim/Net resolve; weather; pawn meshes | `logiCard-ui` |
@@ -97,7 +97,7 @@ Then update **your** STATUS to In progress. If a file you need is owned by anoth
 
 - Two agents editing `GameBootstrap` / `RoundPlayback` / `ProgramHud` in the same wave without an Integrator-owned split  
 - Two agents editing `DRAFT_HANDOFF` or ART_DIRECTION terminology  
-- Atmosphere + board-surface lighting fights without a contract (Integrator mediates)  
+- Atmosphere + board-surface lighting fights without a contract (Integrator mediates). **Exception (2026-08-14):** Atmosphere owns **mood lighting** while `BoardWeatherPocket` has an active module (Sunny brighten / Storm dim); bootstrap Fair/Clear baseline lights stay Integrator/`GameBootstrap`.  
 - Character Select owned by Character **and** UI at once — pick one owner in INDEX  
 - Verify on the same path as an open Editor  
 - Unprompted board/path art restarts after human sign-off (schedule > polish unless human reopens)

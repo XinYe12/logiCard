@@ -753,16 +753,16 @@ namespace LogiCard.Boot
         }
 
         /// <summary>
-        /// Contained stormy sky + rain above the board (C53). Sits in the space above the existing
-        /// chunk; does not replace the dark void or change camera clear flags.
+        /// Contained weather pocket above the board (C53). Modular moods via
+        /// <see cref="BoardWeatherPocket.ApplyWeather"/> — Sunny by default for the current look pass.
         /// </summary>
         private void BuildWeatherPocket()
         {
             var weatherGo = new GameObject("WeatherPocket");
             weatherGo.transform.SetParent(transform, false);
-            // Modular weather host — cards will call ApplyWeather. Bootstrap mounts Storm for the
-            // current look pass; Fair = ApplyWeather(Fair), clear sky = ApplyWeather(Clear).
-            weatherGo.AddComponent<BoardWeatherPocket>().Build(_board, BoardWeatherMood.Storm);
+            // Modular weather host — cards call ApplyWeather. Bootstrap mounts Sunny (Sunshine /
+            // 万里无云) for the current look pass; Storm/Fair remain ApplyWeather swaps.
+            weatherGo.AddComponent<BoardWeatherPocket>().Build(_board, BoardWeatherMood.Sunny);
         }
 
         /// <summary>

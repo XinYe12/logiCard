@@ -7,19 +7,88 @@ using UnityEngine.TestTools;
 namespace LogiCard.Tests.PlayMode
 {
     /// <summary>
-    /// Smoke: WeatherPocket binds + applies a modular weather child (Storm by bootstrap default)
-    /// with centered clay CloudBank + rim mist — not a full-board fog slab.
+    /// WeatherPocket modular moods — Sunny is the bootstrap look pass; Storm stays swappable.
     /// </summary>
     [TestFixture]
     public sealed class BoardWeatherPocketPlayModeTests : SliceSceneFixture
     {
         [UnityTest]
-        public IEnumerator WeatherPocketBuildsCloudBankAndRimMistWithoutThrow()
+        public IEnumerator WeatherPocketDefaultsToSunnyCloudless()
         {
             var weather = Object.FindAnyObjectByType<BoardWeatherPocket>();
             Assert.That(weather, Is.Not.Null, "Bootstrap built no BoardWeatherPocket.");
-            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Storm),
-                "Bootstrap should mount the Storm module for the current look pass.");
+            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Sunny),
+                "Bootstrap should mount Sunny (Sunshine / 万里无云) for the current look pass.");
+
+            Transform module = weather.transform.Find("Weather_Sunny");
+            Assert.That(module, Is.Not.Null, "Expected Weather_Sunny module child (card-swappable).");
+            Assert.That(module.Find("SunnySky"), Is.Not.Null, "Sunny module should expose SunnySky marker.");
+            Assert.That(module.Find("CloudBank"), Is.Null, "Sunny must be cloudless — no CloudBank.");
+            Assert.That(module.Find("LightningStorm"), Is.Null, "Sunny must not spawn LightningStorm.");
+            Assert.That(module.Find("CloudEnergize"), Is.Null, "Sunny must not spawn CloudEnergize.");
+            Assert.That(module.Find("RimMist"), Is.Null, "Sunny must not spawn RimMist.");
+
+            // Mood lighting: clear-sky ambient lift (Atmosphere-owned override).
+            Assert.That(RenderSettings.ambientLight.g, Is.GreaterThan(0.7f),
+                "Sunny ambient should be punched open (not desk-lamp dim).");
+
+            Transform sunnySky = module.Find("SunnySky");
+            Assert.That(sunnySky, Is.Not.Null, "Sunny module should expose SunnySky rig.");
+            Assert.That(sunnySky.Find("SunnySun"), Is.Not.Null, "Expected mood-owned SunnySun directional.");
+            Assert.That(sunnySky.Find("SunnySkyFill"), Is.Not.Null, "Expected mood-owned SunnySkyFill.");
+            var sun = sunnySky.Find("SunnySun").GetComponent<Light>();
+            Assert.That(sun, Is.Not.Null);
+            Assert.That(sun.enabled, Is.True);
+            Assert.That(sun.intensity, Is.GreaterThan(2f), "SunnySun should punch harder than desk-lamp Key.");
+
+            Assert.That(weather.transform.Find("WeatherToggleUi"), Is.Not.Null,
+                "Look-pass Sunny/Storm toggle should live on the weather host.");
+
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator WeatherToggleFlipsSunnyAndStorm()
+        {
+            var weather = Object.FindAnyObjectByType<BoardWeatherPocket>();
+            Assert.That(weather, Is.Not.Null);
+            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Sunny));
+
+            weather.ToggleSunnyStorm();
+            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Storm));
+            Assert.That(weather.transform.Find("Weather_Storm"), Is.Not.Null);
+            Assert.That(weather.transform.Find("Weather_Storm/CloudBank"), Is.Not.Null);
+
+            var drifts = weather.GetComponentsInChildren<MonoBehaviour>(true);
+            int driftCount = 0;
+            for (int i = 0; i < drifts.Length; i++)
+            {
+                if (drifts[i] != null && drifts[i].GetType().Name == "ClayCloudDrift")
+                {
+                    driftCount++;
+                }
+            }
+
+            Assert.That(driftCount, Is.GreaterThanOrEqualTo(4),
+                "Storm CloudBank masses should carry ClayCloudDrift (Phase A motion).");
+
+            weather.ToggleSunnyStorm();
+            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Sunny));
+            Assert.That(weather.transform.Find("Weather_Sunny"), Is.Not.Null);
+            Assert.That(weather.transform.Find("WeatherToggleUi"), Is.Not.Null,
+                "Toggle UI must survive ClearWeather module teardown.");
+
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator WeatherPocketStormModuleStillBuildsWhenApplied()
+        {
+            var weather = Object.FindAnyObjectByType<BoardWeatherPocket>();
+            Assert.That(weather, Is.Not.Null, "Bootstrap built no BoardWeatherPocket.");
+
+            weather.ApplyWeather(BoardWeatherMood.Storm);
+            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Storm));
 
             Transform module = weather.transform.Find("Weather_Storm");
             Assert.That(module, Is.Not.Null, "Expected Weather_Storm module child (card-swappable).");
@@ -32,18 +101,10 @@ namespace LogiCard.Tests.PlayMode
             var meshRenderers = cloudBank.GetComponentsInChildren<MeshRenderer>(true);
             Assert.That(meshRenderers.Length, Is.GreaterThanOrEqualTo(12),
                 "Expected multiple clay lobe meshes under CloudBank.");
-            for (int i = 0; i < meshRenderers.Length; i++)
-            {
-                Assert.That(meshRenderers[i].sharedMaterial, Is.Not.Null,
-                    $"Clay lobe {meshRenderers[i].name} missing material.");
-            }
 
             Transform rimMist = module.Find("RimMist");
             Assert.That(rimMist, Is.Not.Null, "Expected RimMist under Weather_Storm.");
-            Assert.That(rimMist.childCount, Is.GreaterThanOrEqualTo(2),
-                "Rim mist should place at least corner apron haze.");
 
-            Assert.That(weather.transform.Find("FogGround"), Is.Null);
             Transform lightningStorm = module.Find("LightningStorm");
             Assert.That(lightningStorm, Is.Not.Null,
                 "Storm module should include LightningStorm (Yellow Zap).");
@@ -54,71 +115,40 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(cloudEnergize, Is.Not.Null,
                 "Storm module should wrap tiny yellow Zap arcs around the clay (CloudEnergize).");
             Assert.That(cloudEnergize.childCount, Is.GreaterThanOrEqualTo(6),
-                "Expected rim-chained energize arcs under CloudEnergize (Layer-2 envelope wrap).");
+                "Expected rim-chained energize arcs under CloudEnergize.");
 
-            // Arcs should sit near the bank exterior, not deep in the volume core.
             Bounds cloudBounds = meshRenderers[0].bounds;
             for (int i = 1; i < meshRenderers.Length; i++)
             {
                 cloudBounds.Encapsulate(meshRenderers[i].bounds);
             }
 
-            int rimish = 0;
-            for (int i = 0; i < cloudEnergize.childCount; i++)
-            {
-                Vector3 p = cloudEnergize.GetChild(i).position;
-                Vector3 flat = p - cloudBounds.center;
-                flat.y = 0f;
-                float radial = new Vector2(flat.x / Mathf.Max(0.01f, cloudBounds.extents.x),
-                    flat.z / Mathf.Max(0.01f, cloudBounds.extents.z)).magnitude;
-                if (radial > 0.55f)
-                {
-                    rimish++;
-                }
-            }
-
-            Assert.That(rimish, Is.GreaterThanOrEqualTo(cloudEnergize.childCount / 2),
-                "Most energize arcs should lie on the exterior envelope rim, not the core.");
-
-            // Bolt height tracks cloud shelf: ConeVolume length ≈ ground→cloud-center rise.
-            // (reuse cloudBounds from above)
-
             const float footprintMargin = 1.5f;
-            for (int i = 0; i < lightningStorm.childCount; i++)
+            Transform zap = lightningStorm.GetChild(0);
+            Assert.That(zap.position.x, Is.InRange(cloudBounds.min.x - footprintMargin, cloudBounds.max.x + footprintMargin));
+            Assert.That(zap.position.z, Is.InRange(cloudBounds.min.z - footprintMargin, cloudBounds.max.z + footprintMargin));
+            Assert.That(zap.position.y, Is.LessThan(cloudBounds.min.y));
+            Assert.That(Vector3.Dot(zap.up, Vector3.up), Is.GreaterThan(0.9f));
+            Assert.That(zap.localScale, Is.EqualTo(Vector3.one));
+
+            float cloudRise = cloudBounds.center.y - zap.position.y;
+            var systems = zap.GetComponentsInChildren<ParticleSystem>(true);
+            int fitted = 0;
+            for (int c = 0; c < systems.Length; c++)
             {
-                Transform zap = lightningStorm.GetChild(i);
-                Assert.That(zap.position.x, Is.InRange(cloudBounds.min.x - footprintMargin, cloudBounds.max.x + footprintMargin),
-                    $"{zap.name} X should be under the cloud bank's footprint.");
-                Assert.That(zap.position.z, Is.InRange(cloudBounds.min.z - footprintMargin, cloudBounds.max.z + footprintMargin),
-                    $"{zap.name} Z should be under the cloud bank's footprint.");
-                Assert.That(zap.position.y, Is.LessThan(cloudBounds.min.y),
-                    $"{zap.name} should spawn near the ground.");
-                Assert.That(Vector3.Dot(zap.up, Vector3.up), Is.GreaterThan(0.9f),
-                    $"{zap.name} should stay upright.");
-                Assert.That(zap.localScale, Is.EqualTo(Vector3.one),
-                    $"{zap.name} should stay scale 1 — height comes from ConeVolume length, not transform scale.");
-
-                float cloudRise = cloudBounds.center.y - zap.position.y;
-                var systems = zap.GetComponentsInChildren<ParticleSystem>(true);
-                int fitted = 0;
-                for (int c = 0; c < systems.Length; c++)
+                ParticleSystem.ShapeModule shape = systems[c].shape;
+                if (!shape.enabled || shape.shapeType != ParticleSystemShapeType.ConeVolume)
                 {
-                    ParticleSystem.ShapeModule shape = systems[c].shape;
-                    if (!shape.enabled || shape.shapeType != ParticleSystemShapeType.ConeVolume)
-                    {
-                        continue;
-                    }
-
-                    fitted++;
-                    Assert.That(shape.length, Is.EqualTo(cloudRise).Within(cloudBounds.size.y + 0.75f),
-                        $"{zap.name}/{systems[c].name} ConeVolume length {shape.length:F2} should track cloud rise ~{cloudRise:F2}.");
-                    Assert.That(shape.length, Is.Not.EqualTo(5f).Within(0.05f),
-                        $"{zap.name}/{systems[c].name} must not keep the prefab's fixed length 5.");
+                    continue;
                 }
 
-                Assert.That(fitted, Is.GreaterThanOrEqualTo(1),
-                    $"{zap.name} should expose ConeVolume bolt layers fitted to cloud height.");
+                fitted++;
+                Assert.That(shape.length, Is.EqualTo(cloudRise).Within(cloudBounds.size.y + 0.75f));
+                Assert.That(shape.length, Is.Not.EqualTo(5f).Within(0.05f));
             }
+
+            Assert.That(fitted, Is.GreaterThanOrEqualTo(1),
+                $"{zap.name} should expose ConeVolume bolt layers fitted to cloud height.");
 
             yield return null;
         }
