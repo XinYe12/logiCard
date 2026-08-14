@@ -18,12 +18,58 @@ change — root-caused directly (probe `clearFlags` never set, rendering the wro
 **Clouds**: replaced primitive spheres with real textured particle clouds (Kenney CC0 sprite atlas). Both
 worker slots closed again after C60/C61 (2026-08-11). **Still open:** human sighted pass on C60 vibrancy
 (runtime grade actually warm now) + C61 scroll zoom feel + earlier reflection/clouds/Scout outfit items.
-**Updated:** 2026-08-14 by Integrator — Bandage HUD-side contract opened (C63). Sim-side already merged
-`4e6bb66`. Gear pause carve-out (C63) still applies; Net / non-gear Sim stay paused.
+**Updated:** 2026-08-14 by Integrator — dirty rematch/floors/lighting committed (`master`), clearing the
+`Board*` conflict; **Map Phase 2 contract opened** (C65, human-confirmed YES on the C53 surface-material
+amendment). Bandage HUD-side contract still open (C63). Gear pause carve-out (C63) and Map's C57 carve-out
+(map/terrain) still apply; Net / other Sim stay paused.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
 ## Frozen contracts this wave
+
+### Map Phase 2 — board surface material swap (open 2026-08-14 — **Map seat** on `logiCard-map`)
+
+**Depends on:** **C65** (human YES, `docs/map/C53_SURFACE_MATERIAL_DECISION.md`); standard doc
+`docs/map/MAP_PRESENTATION_STANDARD.md` §2 (material-family table) and §5 (Phase 2 preview, this contract
+follows it); `Board*` dirty tree reclaimed — `master` @ `a419ad4` now carries the rematch/floors/lighting
+commit Map was blocked behind, so `BoardSurfaceMaterials.cs`/`BoardView.cs`/`BoardReflectionProbes.cs` are
+clean to branch from.
+
+**Scope — presentation-layer only, matches MAP_PRESENTATION_STANDARD.md §0:**
+
+- `Assets/_Project/Board/BoardSurfaceMaterials.cs` — floor/wall/door-tint/interior-prop-tint material
+  builders only.
+- `Assets/_Project/Board/BoardView.cs` — `SurfaceMaterialFor(MapSurfaceRole)` call sites, `PlaceRoomFloors`,
+  `PlaceRoomDressing`/`PlaceDoorMesh` material (not mesh) wiring, map-aware dressing per §3.
+- Untouched (out of scope, do not edit): `MapDefinitions`, `GameBootstrap.BuildXxxGeometry()`/
+  `BuildXxxDefenderPayload()`, pathfinding, `Door` API, `Sim/`/`Net/`/`Timeline/`, weather/
+  `BoardWeatherPocket` (Atmosphere's lane), and `GameBootstrap.BuildLighting()`/`BuildDioramaVolume()` —
+  the 2026-08-14 rematch commit already retuned the lighting rig against the *old* material family;
+  re-grading after the material swap is step 4 below, still Integrator's call on `GameBootstrap`, not Map's
+  to edit directly (flag the need, Integrator makes the pass — `GameBootstrap` stays Integrator-owned per
+  `departments/INDEX.md`).
+
+**DoD (mirrors MAP_PRESENTATION_STANDARD.md §5):**
+
+1. `BoardSurfaceMaterials` gains a `Solid()`/gradient-based floor+wall material set keyed by the same four
+   `MapSurfaceRole`s (Yard/Hall/Vault/Flank), replacing `BuildWetSurface()` as the default path for those
+   roles. Keep `BuildWetSurface` code itself (don't delete a working, still-referenced helper) — just stop
+   calling it for board surfaces.
+2. Re-skin nappin door/prop materials via the pack's own `(Mat)Gradient*` variants or a flattened duplicate,
+   through the existing `InteriorPackImportTool` duplicate-and-convert pattern. Door/prop **meshes** stay;
+   only the material changes.
+3. Make `PlaceRoomDressing` map-aware (`MapId` param or per-map methods, C57's "one bespoke method per map"
+   discipline) so Rail Platform / Vault Complex get real in-room dressing instead of Freight-Yard-shaped
+   coordinates or nothing.
+4. Flag the lighting/grade re-pass for Integrator once the material swap lands — don't self-edit
+   `BuildLighting`/`BuildDioramaVolume`.
+5. Tests: EditMode coverage that `SurfaceMaterialFor` returns the new flat family per role; existing
+   `BoardView`/room-floor PlayMode smoke stays green.
+6. Human screenshot check against the Link's Awakening reference (`ART_DIRECTION.md` Moodboard) before
+   calling it done — batchmode green is not a look check.
+
+**Out of scope:** geometry density, vents/breaches, room structure (C57), weather/atmosphere (Atmosphere's
+lane), pathfinding/Door API/Sim (C35/C39/C41).
 
 ### Bandage HUD-side (open 2026-08-14 — **UI seat** on `logiCard-modal-restyle`; brief `BANDAGE_HUD_AGENT_BRIEF.md`)
 
