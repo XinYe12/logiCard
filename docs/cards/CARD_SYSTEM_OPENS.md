@@ -1,7 +1,7 @@
 # Card System — C64 OPEN Decision Menu
 
-**Status:** **Answered 2026-08-14** — human confirmed plan defaults (Q1–Q8). Docs locked here; **not** in PRODUCT_MEMORY until Integrator promotes **C65** (§ below).  
-**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C64**, **C47**, **C62**/**C63**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`CARD_COLLECTION.md`](CARD_COLLECTION.md).
+**Status:** **Answered 2026-08-14** — human confirmed plan defaults (Q1–Q8). **C65 promoted** into `PRODUCT_MEMORY.md` on this branch (Integrator merge to master still needed).  
+**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C64**, **C65**, **C47**, **C62**/**C63**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`CARD_COLLECTION.md`](CARD_COLLECTION.md).
 
 C64 locked the **hybrid** model (signature cards + shared deckbuilding library). These answers size the deckbuilder / in-match hand layer.
 
@@ -85,9 +85,9 @@ C64 locked the **hybrid** model (signature cards + shared deckbuilding library).
 
 ---
 
-## Proposed C65 — for Integrator (Cards draft; not yet PRODUCT_MEMORY)
+## Proposed C65 — promoted on this branch (merge to master still Integrator)
 
-Human confirmed 2026-08-14 via plan defaults on this menu. **Cards does not edit PRODUCT_MEMORY.** Integrator should promote (or revise) something in this shape after review, then merge `feat/cards-collection-docs` when ready:
+Human confirmed 2026-08-14 via plan defaults on this menu. **C65 row written into** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) on `feat/cards-collection-docs`. Integrator should review on merge; Cards will not push/merge to master.
 
 **Working title C65 (number Integrator's to assign):** Deckbuilder sizing + hand/Reveal rules (closes C64's parked OPENs; sits beside **C64**, **C62**, **C47**).
 
@@ -113,7 +113,7 @@ Proposed substance:
 - Does not start deckbuilder UI or Sim code.  
 - Does not promote Bomber/Time Player into active build.  
 - Does not touch Bandage HUD (UI seat).  
-- Does not itself write PRODUCT_MEMORY — Integrator owns C65 promote + merge.
+- Does not itself write PRODUCT_MEMORY on master — **C65** is on this branch; Integrator owns merge.
 
 ---
 

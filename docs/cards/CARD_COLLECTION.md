@@ -1,9 +1,9 @@
 # Card Collection & Gear Deck — Design Research
 
-**Status:** **C64 hybrid** is the long-term target (2026-08-13). Deckbuilder sizing answers **locked 2026-08-14** in [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) (awaiting Integrator **C65** promote). First-wave staples still ship on **transitional full-hand** (**C62**/**C63**) until a deckbuilder lands. Gear **numerics** (§6A, except Bandage/C63) and Adrenaline real-effect redesign remain OPEN.  
+**Status:** **C64 hybrid** is the long-term target (2026-08-13). Deckbuilder sizing **locked as C65** (2026-08-14) — see [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) / PRODUCT_MEMORY. First-wave staples still ship on **transitional full-hand** (**C62**/**C63**) until a deckbuilder lands. Gear **numerics** (§6A, except Bandage/C63) and Adrenaline real-effect redesign remain OPEN.  
 **Flashbang:** effect brief **paused** — when resumed, re-derive as **shared-library** tech under C64 (not a signature).  
 **Worktree:** `D:\projects\Game\logiCard-cards-collection` / `feat/cards-collection-docs`  
-**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C15**, **C18** *(amended by C64)*, **C33**, **C42–C44**, **C47**, **C62**, **C63**, **C64**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`GDD.md`](../core/GDD.md); [`CORE_LOOP.md`](../core/CORE_LOOP.md); [`UI_FLOW.md`](../ui/UI_FLOW.md); [`MONETIZATION.md`](../core/MONETIZATION.md); [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md).
+**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C15**, **C18** *(amended by C64)*, **C33**, **C42–C44**, **C47**, **C62**, **C63**, **C64**, **C65**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`GDD.md`](../core/GDD.md); [`CORE_LOOP.md`](../core/CORE_LOOP.md); [`UI_FLOW.md`](../ui/UI_FLOW.md); [`MONETIZATION.md`](../core/MONETIZATION.md); [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md).
 
 ---
 
@@ -15,7 +15,7 @@ Live questions this doc answers (with which C# owns the answer):
 
 1. What cards exist in the first wave? → **C62** catalog (library candidates under C64)  
 2. Same universal gear list forever? → **C64**: long-term **no** (personal decks + signatures); transitional shipping **yes** (full-hand staples)  
-3. Hold / draw / spend? → transitional full-hand+charges (**C62**); long-term = always-have constructed hand from 5–8 deck ([`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md), pending **C65**)  
+3. Hold / draw / spend? → transitional full-hand+charges (**C62**); long-term = always-have constructed hand from 5–8 deck (**C65**)  
 4. Meta collection / paywall? → none for gameplay; free library + signatures (**C64** / **C47**)
 
 ---
@@ -58,7 +58,7 @@ Use these names in future docs so “card” stops meaning four different things
 | **Otherwise card** | Failure / contingency library (family; not first-wave). |
 | **In-match hand** | What the player can arm during Program (or Execute for Adrenaline). Hidden from opponent under C64. |
 | **Shared library** | Full free catalog of buildable non-signature cards (**C64**). |
-| **Personal deck** | Pre-match constructed list from the shared library (**C64** long-term). Size **5–8**, ≤**2** copies per library card (answered 2026-08-14 — see [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md); pending **C65**). |
+| **Personal deck** | Pre-match constructed list from the shared library (**C64**/**C65**). Size **5–8**, ≤**2** copies per library card. |
 | **Cosmetic binder** | Skins for gear / Time Card backs — sellable; not gameplay unlocks (**C47**). |
 
 ---
@@ -133,7 +133,7 @@ Today resolve stops movement before a closed door / block. A full **Otherwise** 
 | **Attacker/Defender** | Still labels + spawns + Allot chooser — **not** role-locked kits (**no** deck interaction — answered 2026-08-14). |
 | **Monetization** | Entire gameplay library + all signatures **free forever** (**C64** / **C47**). Cosmetics only sellable. |
 
-Conversation record: [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md). Sizing answers: [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) (pending Integrator **C65**).
+Conversation record: [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md). Sizing: [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) / **C65**.
 
 ### 5.2 Historical options (pre-C64 research — kept for context)
 
@@ -166,7 +166,7 @@ Adding a **library** card is a catalog content add. Adding a **signature** is a 
 
 ## 6. In-match economy
 
-**Long-term (C64 + 2026-08-14 answers):** personal constructed deck (**5–8**, ≤2 copies) from the shared library; **always-have** that constructed hand each Program (charges limit spend; no draw RNG). Signature is **extra** outside deck cap, always available, costs TR. Played cards public at **Reveal**. Pending Integrator **C65**.
+**Long-term (C64 + C65):** personal constructed deck (**5–8**, ≤2 copies) from the shared library; **always-have** that constructed hand each Program (charges limit spend; no draw RNG). Signature is **extra** outside deck cap, always available, costs TR. Played cards public at **Reveal**.
 
 **Shipping (C62):** full hand every Program + per-card charges for first-wave staples. Do **not** build draw RNG into the Bandage HUD path; transitional full-hand is intentional until the deckbuilder layer.
 
@@ -210,13 +210,13 @@ Adding a **library** card is a catalog content add. Adding a **signature** is a 
 
 **C64 / C47:** gameplay library + signatures stay free forever — no gacha unlock for power. Cosmetic binder (Time Card backs, gear skins) is the only sellable layer.
 
-Ship order for *systems*: transitional staple resolve (Bandage…) → deckbuilder/hand rules (answers locked in [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md); **C65** promote next) → cosmetic binder.
+Ship order for *systems*: transitional staple resolve (Bandage…) → deckbuilder/hand rules (**C65** locked; UI later) → cosmetic binder.
 
 ---
 
 ## 8. Decision menu — C62 answers (2026-08-12) + C64 overlay + sizing (2026-08-14)
 
-**§8 answered 2026-08-12 → C62.** **Long-term access model answered 2026-08-13 → C64.** **Deckbuilder sizing answered 2026-08-14** → [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) (pending Integrator **C65**).
+**§8 answered 2026-08-12 → C62.** **Long-term access model answered 2026-08-13 → C64.** **Deckbuilder sizing → C65** (2026-08-14; detail [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md)).
 
 1. **Catalog scope for first gear wave** — **(a)** Bandage, Interact-as-card, Flashbang, Adrenaline only. No Otherwise card this wave. **Still holds** (shared-library under Q8-b; Adrenaline = special Execute slot).
 2. **Same deck?** — **C62 answered (a)** same legal list + Interact Strength carve-out. **C64 amends long-term:** personal decks may differ; signatures are Character-exclusive. **Transitional shipping still behaves like C62 full-hand staples.**
@@ -251,7 +251,7 @@ Ship order for *systems*: transitional staple resolve (Bandage…) → deckbuild
 - Attack/Defend labels do **not** constrain decks.
 - Gameplay library + signatures free forever (**C47**).
 - Bandage / Flashbang / Interact / Adrenaline = shared-library; Adrenaline keeps special Execute slot.
-- Detail + C65 draft: [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md).
+- Detail: [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) / **C65**.
 
 **Shipping / transitional (C62 + C63) — what ships before the deckbuilder:**
 
@@ -266,28 +266,28 @@ Ship order for *systems*: transitional staple resolve (Bandage…) → deckbuild
 
 ## 11. Recommended first-ship sequence (proposal only)
 
-Ranked by resolve risk for **library staples** under transitional full-hand (deckbuilder is a later systems layer per C64; sizing answers locked, **C65** promote next):
+Ranked by resolve risk for **library staples** under transitional full-hand (deckbuilder is a later systems layer; **C65** sizes it but does not greenlight UI):
 
 1. **Bandage** — **Sim landed (C63)**; HUD-side owned by UI seat (this dept does not touch Bandage HUD files).
 2. **Interact-as-card** — Door-like resolve; blocked on a real station target.
 3. **Flashbang** — **paused**; when resumed, re-derive brief as shared-library tech (`GEAR_FLASHBANG_AGENT_BRIEF.md`). Effect shape + numerics still OPEN.
 4. **Adrenaline (real effect)** — last; needs PLAYBACK_CONTRACT redesign.
-5. **Deckbuilder + signatures** — after staple conventions exist + **C65** promote; Bomber/Time Player still need C43/C44 prereqs.
+5. **Deckbuilder + signatures** — after staple conventions exist (**C65** rules locked); Bomber/Time Player still need C43/C44 prereqs.
 6. **Otherwise library** — separate project after the four named cards.
 
 ---
 
 ## 12. Next step
 
-→ Integrator: promote **C65** from [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) proposed row; merge this branch when human approves. Cards seat idle on deckbuilder code until then.
+→ Integrator: merge this branch to master (C65 already on branch). Cards seat idle on deckbuilder code until then.
 
 ---
 
 ## See also
 
-- [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) — C62, C63, **C64**, OPEN #16 (C65 pending Integrator)  
+- [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) — C62, C63, **C64**, **C65**, OPEN #16  
 - [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md) — hybrid conversation  
-- [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) — sizing answers + C65 draft  
+- [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md) — sizing answers (source for C65)  
 - [`GEAR_BANDAGE_AGENT_BRIEF.md`](GEAR_BANDAGE_AGENT_BRIEF.md) / [`GEAR_FLASHBANG_AGENT_BRIEF.md`](GEAR_FLASHBANG_AGENT_BRIEF.md)  
 - [`GDD.md`](../core/GDD.md) · [`UI_FLOW.md`](../ui/UI_FLOW.md) · [`PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md) · [`MONETIZATION.md`](../core/MONETIZATION.md)  
 - [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md) — Bomber / Time Player  
