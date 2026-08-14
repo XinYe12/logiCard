@@ -349,6 +349,10 @@ namespace LogiCard.Board
             {
                 queued = TrySelectOrCancelDoor(point, out reason);
             }
+            else if (Mode == ActionVerb.Bandage)
+            {
+                queued = Program.TryQueueBandage(ResolveBandageExecuteTime(point), out reason);
+            }
             else
             {
                 reason = $"Unsupported verb {Mode}.";
@@ -425,6 +429,61 @@ namespace LogiCard.Board
         public void CancelPendingDoor()
         {
             _pendingDoor = null;
+        }
+
+        /// <summary>
+        /// Places a Bandage node at an explicit Time Resource instant — the scrubber-click placement
+        /// path (Bandage HUD-side contract, C63) has no board tap point to resolve a nearest Move node
+        /// from, so it calls this directly with the scrubber's current seconds. Board taps go through
+        /// <see cref="TryTapPoint"/> instead, which resolves its own executeTime via
+        /// <see cref="ResolveBandageExecuteTime"/> before reaching <see cref="PawnProgram.TryQueueBandage"/>.
+        /// </summary>
+        public bool TryQueueBandageAt(float executeTime, out string reason)
+        {
+            if (_locked || Program == null)
+            {
+                reason = "Round is locked.";
+                ActionRejected?.Invoke(reason);
+                return false;
+            }
+
+            if (!Program.TryQueueBandage(executeTime, out reason))
+            {
+                ActionRejected?.Invoke(reason);
+                return false;
+            }
+
+            RefreshPreview();
+            QueueChanged?.Invoke(Program);
+            return true;
+        }
+
+        /// <summary>
+        /// Board-tap placement (UI_FLOW §6 item 3 / Bandage HUD-side contract): snaps to the nearest
+        /// already-booked Move node's arrival instant, or the schedule tip if none are booked yet.
+        /// </summary>
+        private float ResolveBandageExecuteTime(PlanarPosition point)
+        {
+            float bestSqrDistance = float.MaxValue;
+            float bestExecuteTime = Program.UsedSeconds;
+            IReadOnlyList<ActionNode> nodes = Program.Nodes;
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                ActionNode node = nodes[i];
+                if (node.Verb != ActionVerb.Move)
+                {
+                    continue;
+                }
+
+                float sqrDistance = node.Position.SqrDistanceTo(point);
+                if (sqrDistance < bestSqrDistance)
+                {
+                    bestSqrDistance = sqrDistance;
+                    bestExecuteTime = node.ExecuteTime;
+                }
+            }
+
+            return bestExecuteTime;
         }
 
         private void RefreshPreview()

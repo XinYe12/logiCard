@@ -1,7 +1,9 @@
 using System.Collections;
+using LogiCard.Cards;
 using LogiCard.Net;
 using LogiCard.Sim;
 using LogiCard.Timeline;
+using LogiCard.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -267,6 +269,35 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(nextRoundButtonLabel.text, Is.Not.EqualTo(aftermathLabel.text),
                 "Button must not repeat the exact same headline text.");
             Assert.That(nextRoundButton.interactable, Is.False);
+        }
+
+        /// <summary>
+        /// Bandage HUD-side contract (C63) arm → place smoke: Gear_Bandage arms, a board tap places
+        /// at the schedule tip, and the successful placement auto-clears the arm / drops Mode back to
+        /// Move and re-blocks the card (charge now spent this Program). Wound/charge gates come from
+        /// <see cref="ProgramHud.RegisterMatchState"/> — injected here as synthetic delegates rather
+        /// than driving a real wound through Sim resolve, which is out of this HUD contract's scope.
+        /// </summary>
+        [Test]
+        public void GearBandageArmsThenBoardTapPlacesABandageNode()
+        {
+            Hud.RegisterMatchState(() => 1, () => 0);
+
+            Button bandage = FindByName<Button>(GearHandView.ButtonName(CardId.Bandage));
+            Assert.That(bandage, Is.Not.Null, "HUD has no Gear_Bandage button.");
+            Assert.That(bandage.interactable, Is.True, "Bandage should be armable once wounded with an unused charge.");
+
+            bandage.onClick.Invoke();
+            Assert.That(AttackerInput.Mode, Is.EqualTo(ActionVerb.Bandage));
+
+            Assert.That(AttackerInput.TryTapPoint(Home), Is.True,
+                "With no Move booked yet, Bandage should place at the schedule tip.");
+            Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(1));
+            Assert.That(AttackerInput.Program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Bandage));
+            Assert.That(AttackerInput.Program.UsedSeconds, Is.EqualTo(PawnProgram.BandageSeconds).Within(0.0001f));
+
+            Assert.That(AttackerInput.Mode, Is.EqualTo(ActionVerb.Move), "Placement must drop Mode back to Move.");
+            Assert.That(bandage.interactable, Is.False, "Charge is spent — a Bandage node is already queued this Program.");
         }
 
         [Test]

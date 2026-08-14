@@ -53,10 +53,16 @@ namespace LogiCard.Tests.EditMode
         }
 
         [Test]
-        public void CostLabelsStayPlaceholdersUntilNumericsLock()
+        public void CostLabelsStayPlaceholdersUntilNumericsLockExceptBandage()
         {
             foreach (GearHandCardInfo info in GearHandView.FirstWave)
             {
+                if (info.Id == CardId.Bandage)
+                {
+                    Assert.That(info.CostLabel, Is.EqualTo("3s"), "Bandage's cost locked via C63.");
+                    continue;
+                }
+
                 Assert.That(info.CostLabel, Is.EqualTo("TR —"),
                     $"{info.Id} must not invent a Time Resource cost while OPEN #16 is open.");
             }

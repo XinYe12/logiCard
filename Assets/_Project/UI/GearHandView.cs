@@ -54,12 +54,14 @@ namespace LogiCard.UI
         public const string RootName = "GearHand";
 
         /// <summary>
-        /// First-wave roster in dock order. Cost labels are explicit placeholders (em dash) so a
-        /// future numeric pass cannot silently inherit invented values.
+        /// First-wave roster in dock order. Cost labels are explicit placeholders (em dash) until a
+        /// card's numerics lock — Bandage's did (C63, Bandage HUD-side contract), so it alone shows a
+        /// real cost; the rest stay em-dash so a future numeric pass cannot silently inherit invented
+        /// values.
         /// </summary>
         public static readonly GearHandCardInfo[] FirstWave =
         {
-            new GearHandCardInfo(CardId.Bandage, "Bandage", "TR —", "PROGRAM", oncePerMatch: false),
+            new GearHandCardInfo(CardId.Bandage, "Bandage", "3s", "PROGRAM", oncePerMatch: true),
             new GearHandCardInfo(CardId.Interact, "Interact", "TR —", "PROGRAM", oncePerMatch: false),
             new GearHandCardInfo(CardId.Flashbang, "Flashbang", "TR —", "PROGRAM", oncePerMatch: true),
             new GearHandCardInfo(CardId.Adrenaline, "Adrenaline", "TR —", "PLAYBACK", oncePerMatch: true),

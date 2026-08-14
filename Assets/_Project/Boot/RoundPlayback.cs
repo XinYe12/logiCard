@@ -125,6 +125,20 @@ namespace LogiCard.Boot
             return 0;
         }
 
+        /// <summary>Bandage HUD-side contract (C63) — mirrors <see cref="WoundsOf"/>.</summary>
+        public int BandageChargeOf(int pawnId)
+        {
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                if (_pawns[i].PawnId == pawnId)
+                {
+                    return _pawns[i].BandageCharge;
+                }
+            }
+
+            return 0;
+        }
+
         /// <summary>
         /// Swaps the resolver used by the next <see cref="ResolveAndArm"/> — e.g. <c>GameBootstrap</c>
         /// wires this to <see cref="AppFlowController.EnteredMatch"/> so Local Play keeps
