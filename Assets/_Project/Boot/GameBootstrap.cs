@@ -776,7 +776,9 @@ namespace LogiCard.Boot
         {
             var weatherGo = new GameObject("WeatherPocket");
             weatherGo.transform.SetParent(transform, false);
-            weatherGo.AddComponent<BoardWeatherPocket>().Build(_board);
+            // Modular weather host — cards will call ApplyWeather. Bootstrap mounts Storm for the
+            // current look pass; Fair = ApplyWeather(Fair), clear sky = ApplyWeather(Clear).
+            weatherGo.AddComponent<BoardWeatherPocket>().Build(_board, BoardWeatherMood.Storm);
         }
 
         /// <summary>
