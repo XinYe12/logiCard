@@ -2,6 +2,13 @@
 
 **For:** `MAP_PRESENTATION_STANDARD.md` §4. **One decision, one page.** Map department, 2026-08-14.
 
+**ANSWERED 2026-08-14: YES** — human confirmed the amendment via this sheet. Board surface materials move to
+flat/toon; geometry density and Atmosphere untouched, as scoped below. Human also chose, on the baseline
+conflict, to **wait for Integrator to commit/reclaim** the dirty `BoardView.cs`/`BoardSurfaceMaterials.cs`/
+`BoardReflectionProbes.cs` before Phase 2 code starts — see `departments/map/STATUS.md` for current status.
+**Still outstanding before Phase 2 code:** a `PRODUCT_MEMORY.md` C-row recording this amendment (Integrator
+writes this, not Map) and Integrator opening the Phase 2 contract.
+
 ---
 
 ## The question

@@ -34,26 +34,34 @@ on this worktree's copy — see Blocked (this is not self-registerable; flagged 
     is *also* dirty in the main tree, which explains why this worktree's copy still doesn't show Map
     registered (Integrator's registration edit, if any, is sitting uncommitted there, not merged).
 
+- **Human answered §4, 2026-08-14: YES.** Confirmed via `docs/map/C53_SURFACE_MATERIAL_DECISION.md` — amend
+  C53 for board surface materials toward flat/toon; geometry density and Atmosphere stay untouched. On the
+  baseline-conflict question (below), human chose **wait for Integrator to commit/reclaim** rather than start
+  Phase 2 against the current dirty tree. So: §4 is resolved, but Phase 2 code still does not start this
+  session — two Integrator-owned items remain outstanding (next bullet).
+
 ## In progress
 
-- None — this was a docs/decision-prep-only session per the brief. No Phase 2 code started.
+- None — this was a docs/decision-prep-only session per the brief. No Phase 2 code started. §4 is answered but
+  Phase 2 is still gated on Integrator (see below), not on any further Map-side work.
 
 ## Blocked
 
 - **This seat is still not listed in `docs/departments/INDEX.md`'s live-folders table or ownership matrix**,
   confirmed again this session by reading the file at this worktree's tip. Per `PARALLEL_OPS.md`, only
   Integrator edits that file — not self-registering.
-- **New finding this session:** the main Integrator tree has `docs/departments/INDEX.md` itself showing as
-  modified (dirty, uncommitted) in `git status`, alongside `BoardView.cs`, `BoardSurfaceMaterials.cs`,
-  `BoardReflectionProbes.cs`, `GameBootstrap.cs`, `RoundPlayback.cs`, `MatchClock.cs`, and two Interior
-  materials (`(Mat)Floor_URP.mat`, `(Mat)Glass_URP.mat`), plus `docs/DRAFT_HANDOFF.md` and
-  `docs/contracts/CURRENT.md`. This is Integrator's own in-progress work-in-flight, not this department's to
-  touch or assume a baseline from — flagging because it's the likely reason INDEX registration hasn't reached
-  this worktree yet (it may already be drafted in that dirty copy, just not committed/merged).
-- **`docs/map/MAP_PRESENTATION_STANDARD.md` §4's open question is still not resolved** — human decision sheet
-  now exists (`docs/map/C53_SURFACE_MATERIAL_DECISION.md`), but the answer itself hasn't landed. Phase 2 does
-  not start until it does, and until a new `PRODUCT_MEMORY.md` C-row records it (Integrator writes that row —
-  save-file rule).
+- **Main Integrator tree has `docs/departments/INDEX.md` itself dirty/uncommitted**, alongside `BoardView.cs`,
+  `BoardSurfaceMaterials.cs`, `BoardReflectionProbes.cs`, `GameBootstrap.cs`, `RoundPlayback.cs`,
+  `MatchClock.cs`, and two Interior materials (`(Mat)Floor_URP.mat`, `(Mat)Glass_URP.mat`), plus
+  `docs/DRAFT_HANDOFF.md` and `docs/contracts/CURRENT.md`. This is Integrator's own in-progress
+  work-in-flight, not this department's to touch or assume a baseline from — likely why INDEX registration
+  hasn't reached this worktree yet.
+- **Phase 2 code start now depends on two Integrator actions, not further Map decisions:**
+  1. Commit/reclaim the dirty `BoardView.cs`/`BoardSurfaceMaterials.cs`/`BoardReflectionProbes.cs` (human chose
+     this path explicitly over starting Map's Phase 2 against an unknown baseline — see above).
+  2. Write the `PRODUCT_MEMORY.md` C-row recording the §4 amendment (Integrator-only per the ownership
+     matrix — Map does not write PRODUCT_MEMORY rows) and open the Phase 2 contract.
+  Map has nothing further to do here until an Integrator session picks these up.
 
 ## Conflict note — Phase 2 must not assume current main-tree baseline
 
