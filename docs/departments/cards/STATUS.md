@@ -1,37 +1,37 @@
 # Cards — STATUS
 
-**Wave / Day:** Permanent seat — **C64 hybrid card-system promoted** (2026-08-13). Flashbang
-brief paused until re-derived against C64. Bandage C63 / Sim on master.
-**Branch / worktree:** `logiCard-cards-collection` / `feat/cards-collection-docs` @ `c307d77`
-(+ detail docs synced to main with C64 promote)
-**Last cross-reviewed:** 2026-08-13 — human menu closed; Integrator C64 in PRODUCT_MEMORY; detail
-doc `CARD_SYSTEM_MODEL_COMPARISON.md` on main
+**Wave / Day:** Permanent seat — C64 OPEN answers locked + **C66** merged to master (2026-08-14)
+**Branch / worktree:** `logiCard-cards-collection` / `feat/cards-collection-docs`
+**Last cross-reviewed:** 2026-08-14 — Q1–Q8 defaults locked; C66 written into PRODUCT_MEMORY and merged
+to `master` by Integrator
 
 ## Owned files (this seat)
 
-- `docs/CARD_SYSTEM_MODEL_COMPARISON.md` (conversation record; C64 source)
-- `docs/CARD_COLLECTION.md` (needs §5/§8/§10 rewrite against C64 — offer below)
-- `docs/GEAR_BANDAGE_AGENT_BRIEF.md` / `docs/GEAR_FLASHBANG_AGENT_BRIEF.md` (Flashbang **paused**)
+- `docs/cards/CARD_COLLECTION.md`
+- `docs/cards/CARD_SYSTEM_MODEL_COMPARISON.md`
+- `docs/cards/CARD_SYSTEM_OPENS.md` (answered + C66 source text)
+- `docs/core/PRODUCT_MEMORY.md` — **C66 row added on this branch** (Integrator reviews on merge)
+- Gear briefs (Flashbang **paused**)
 - This STATUS
 
 ## Done
 
-- Designed hybrid model with human; §6D draft → **C64** promoted (amends C18/C62)
-- Bandage brief → C63 → Sim merged earlier
+- Human confirmed OPEN defaults: **a / b / a / c / a / a / a / b**
+- Answers in `CARD_SYSTEM_OPENS.md`; `CARD_COLLECTION.md` synced
+- **C66** promoted into `PRODUCT_MEMORY.md` on this branch; cursor rule synced
+- Cursor rule short CONFIRMED bullet updated for C64/C66
 
 ## In progress
 
-- None hot — seat free for C64 follow-up docs (catalog rewrite or Flashbang-as-library-tech brief)
-  when human/Integrator assigns
+- Merged — idle until staffed for a deckbuilder systems brief or Flashbang re-derive
 
 ## Blocked
 
-- Flashbang numerics brief — paused until re-framed as shared-library card under C64
-- Deckbuilder / signature UX — later systems layer (C64 sequencing)
-- Bomber signature-card implementation — C43 prereqs + Character briefs
+- Deckbuilder / signature UX code — later systems layer (C66 does not greenlight UI)
+- Flashbang effect brief — paused until re-derived as library tech
+- Bandage HUD — **UI seat**
 
-## Offers
+## Offers / Integrator handoff
 
-- Rewrite `CARD_COLLECTION.md` §5/§8/§10 (or split GEAR_CATALOG / CARD_ECONOMY) to match C64
-- Unpause and re-derive Flashbang brief as shared-library tech under C64
-- Thin Bomber signature-card ↔ verb docs spike (with Character seat) when wanted
+- Review + merge `feat/cards-collection-docs` (includes C66 + catalog sync)
+- After merge: optional deckbuilder systems brief; Flashbang library re-derive when wanted

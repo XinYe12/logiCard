@@ -1,7 +1,7 @@
 # Draft Handoff — 2026-08-14
 
 **Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (Bandage carve-out via C63).  
-**Tip:** `master` @ **`a419ad4`** — rematch reset + sunny toy-diorama relight + dept bookkeeping, committed (was dirty). Prior combined batchmode green @ `7213d98` (EditMode 149/149, PlayMode 48/48) — **not re-run since**; `a419ad4` is not yet independently batchmode-verified.  
+**Tip:** `master` @ **`4a355dd`** — rematch reset + sunny relight + C65 (surface-material amendment) + Cards' C64 catalog/C66 deckbuilder-sizing merge, all committed (was dirty); plus Atmosphere's storm Zap tip + cloud energize (`feat/atmosphere-stylized`, human-signed) merged this pass. Prior combined batchmode green @ `7213d98` (EditMode 149/149, PlayMode 48/48) — **not re-run since**; nothing since is independently batchmode-verified.  
 **Ops:** Atmosphere / Cards / Character / UI / **Map** + Integrator (`PARALLEL_OPS.md`). **Coding-hot today: UI (Bandage HUD), Map (Phase 2, just unblocked).** Prefer ≤2 coding-hot.  
 **Read first next session:** this file → `PARALLEL_OPS.md` → `departments/INDEX.md` → `contracts/CURRENT.md` → Bandage HUD + Map Phase 2 contracts → `PLAYBACK_CONTRACT.md` if touching Execute.
 
@@ -9,9 +9,9 @@
 
 | Seat | Folder | Tip / state |
 |------|--------|-------------|
-| Integrator | `logiCard` | `master` @ `a419ad4` — clean (rematch/floors/lighting committed) |
-| Atmosphere | `logiCard-atmosphere-stylized` | `feat/atmosphere-stylized` @ **`fac245a`** + dirty weather polish — await human Play |
-| Cards | `logiCard-cards-collection` | `feat/cards-collection-docs` @ **`11b18c2`** — C64 catalog done; Flashbang paused |
+| Integrator | `logiCard` | `master` — clean (Atmosphere merge just landed, see commit list) |
+| Atmosphere | `logiCard-atmosphere-stylized` | `feat/atmosphere-stylized` @ **`45ccbc1`** — **merged to master**; worktree still has unrelated dirty (Floor/Glass mats, ProjectSettings, orphan pack `.meta` deletes, `_Recovery/`, debug screenshots) left out on purpose |
+| Cards | `logiCard-cards-collection` | `feat/cards-collection-docs` @ **`8b5e86d`** — **merged to master (`4a355dd`)**; idle, retire OK unless restaffed |
 | Character | `logiCard-char-select-motion` | `feat/char-select-motion` @ **`3d1d799`** — 4 briefs; needs human answers |
 | UI | `logiCard-modal-restyle` | `feat/modal-restyle` @ **`cc13209`** — **Bandage HUD in progress** (`BANDAGE_HUD_AGENT_BRIEF.md`) |
 | Map | `logiCard-map` | `dept/map` @ `d632d3b` — **Phase 2 contract open**, unblocked (Board* reclaim done, C65 written) |
@@ -26,33 +26,34 @@
 - **Docs reorg** `e07be61` — department folders; cross-links fixed.
 - **Rematch reset + sunny relight** `a419ad4` — `GameBootstrap.RequestFreshMatch`/`RoundPlayback.ResetForNewMatch`/`MatchClock.Reset` clear wound/death/door/gear carry on a fresh match; board lighting/grade moved off the wet-dusk storm key toward the bright midday Zelda-reference look; floor tints follow (Yard/Flank cool asphalt, Hall wood, Vault marble-concrete).
 - **C65**: C53 amended — board *surface materials* (floors/walls/door-tint/prop-tint) move flat/toon, human-confirmed YES (`docs/map/C53_SURFACE_MATERIAL_DECISION.md`). Geometry density and weather/atmosphere stay C53-as-written. Unblocks Map Phase 2 (contract opened below).
-- Atmosphere: fair clay weather look advanced on branch (not Integrator-merged).
+- **C66**: deckbuilder sizing + hand/Reveal rules, closes C64's parked OPENs — 5–8 deck, ≤2 copies, always-have hand, signature extra/always-on/costs TR, Reveal at flip. `feat/cards-collection-docs` merged `4a355dd` (Q1–Q8 defaults, `CARD_COLLECTION.md`/`CARD_SYSTEM_OPENS.md` sync); Flashbang brief stays paused.
+- **Atmosphere storm weather**: modular `BoardWeatherPocket` host (bootstrap mounts `BoardWeatherMood.Storm`); Zap lightning tip glued to the cloud shelf height (`FitZapHeightToCloudRise`, Yellow-only); **storm cloud energize** — Yellow Zap rim clusters on Layer-2 cloud envelopes, 2–3 chord twist groups, one random group pulsing every 1.8s. Human Play-signed ("this is good") 2026-08-14; `feat/atmosphere-stylized` merged `45ccbc1` → master.
 
 ## Verification
 
 - Combined master @ `7213d98`: EditMode 149/149, PlayMode 48/48.
-- `dcffe23` / `e07be61` / `a419ad4`: **not** re-batchmoded since `7213d98` — `a419ad4` adds a new PlayMode test (`FreshMatchClearsCarriedDeathAndReturnsPawnsToSpawn`) and a new EditMode test (`MatchClock.Reset`) that have not been run in batchmode yet; run before trusting green.
+- Everything since (`dcffe23` → current tip, incl. rematch reset + relight, C65/C66 docs merges, Atmosphere storm merge): **not** re-batchmoded — `a419ad4` adds a new PlayMode test (`FreshMatchClearsCarriedDeathAndReturnsPawnsToSpawn`) and a new EditMode test (`MatchClock.Reset`); Atmosphere's branch adds `BoardWeatherPocketPlayModeTests` coverage for `CloudEnergize`. None of it has been run in batchmode yet; run before trusting green.
+- Atmosphere storm look: **human Play signed**, not batchmode-verified this session (Editor lock / no run claimed on the branch).
 - Bandage HUD: **in flight on UI worktree** — no merge yet.
 - Map Phase 2: not started — contract just opened.
 
 ## Still unfinished
 
-- **Batchmode run on `a419ad4`** — the rematch/relight commit's new tests haven't been verified in batchmode; Editor must be closed on this exact path first.
+- **Batchmode run on current tip** — none of today's landed work (rematch/relight, C65/C66 docs, Atmosphere storm) has been verified in batchmode; Editor must be closed on this exact path first.
 - **Bandage HUD-side** (open contract, UI staffed): dock `GearHandView` → `ProgramHud`, timeline place, 3 legality gates. Brief: UI worktree `BANDAGE_HUD_AGENT_BRIEF.md`.
 - **Map Phase 2** (open contract, Map staffed): `BoardSurfaceMaterials`/`BoardView` flat/toon material swap per C65 + `MAP_PRESENTATION_STANDARD.md` §5. Human screenshot check before calling done.
 - **Healed presenter** (Integrator after HUD merge): `TapeEventType.Healed` in `RoundPlayback` + `PLAYBACK_CONTRACT` §3.
-- **Atmosphere** merge after human look (`fac245a`+ dirty).
 - **Character** Sim contracts blocked on brief answers + carve-out.
 - Interact needs station; Adrenaline real effect needs PLAYBACK redesign; Phase 2 Net paused.
 - Older unmonitored: door tape Open second; south-edge Move-click; zoom-fill/soft-rain/reflections.
+- Atmosphere worktree still carries unrelated dirty (Floor/Glass mats, ProjectSettings, orphan pack `.meta` deletes, `_Recovery/`, debug screenshots) — left out of the merge on purpose; human keep/delete call, same bucket as the main tree's `ExplosiveLLC`/`ProjectSettings` leftovers below.
 
 ## Today / next
 
 1. **UI** codes Bandage HUD per contract + brief (not Integrator on main).
 2. **Map** starts Phase 2 per contract (`docs/contracts/CURRENT.md`) — material swap only, no geometry/Sim touch.
-3. Integrator: run batchmode on `a419ad4`; monitor UI + Map; merge HUD/Map Phase 2 when Ready + green.
-4. Atmosphere: human Play → merge when cleared.
-5. Cards/Character: idle unless staffed for docs-only.
+3. Integrator: run batchmode on current tip; monitor UI + Map; merge HUD/Map Phase 2 when Ready + green.
+4. Cards: idle, merged — restaff only for deckbuilder systems brief or Flashbang re-derive. Character: idle until human answers briefs. Atmosphere: idle post-merge unless restaffed for a new weather mood.
 
 ## Blockers / notes
 

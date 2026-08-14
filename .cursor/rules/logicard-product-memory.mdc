@@ -52,7 +52,8 @@ One **shared** match Time Resource pool (demo **900s**). Each round one side pla
 ## Other CONFIRMED (short)
 
 - Unity; long-term Fusion Host + Win+Android; **demo ship = polished Windows 1v1 local**
-- Move + Shoot = base verbs; gear cards = Bandage / Interact-as-card / Flashbang / Adrenaline (**C62** catalog; economy = full hand + charges; same deck **C18**; Adrenaline effect still stub)
+- Move + Shoot = base verbs; gear cards = Bandage / Interact-as-card / Flashbang / Adrenaline (**C62** catalog; transitional full-hand + charges). Long-term **C64** hybrid: signature cards + personal decks from shared library (**C66**: 5–8 deck, ≤2 copies, always-have hand, signature extra/always-on/costs TR, Reveal at flip; Adrenaline stays Execute slot). Adrenaline effect still stub.
+- Board surface materials moving flat/toon per **C65** (amends C53 for surfaces only; Map Phase 2 implements).
 - Juggernaut pays +1 tick switching Snap↔Hold Angle (mirrors stance penalty); Scout pays 0 (C25)
 - Slice 1 first: visible Move + Shoot on Time Resource scrubber
 - Desk-Lamp Diorama art (**C29**) is a **ship requirement** under C34, not optional polish
