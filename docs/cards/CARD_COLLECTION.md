@@ -1,7 +1,7 @@
 # Card Collection & Gear Deck — Design Research
 
-**Status:** **C62** first-wave rules (2026-08-12) + **C64** long-term hybrid model (2026-08-13).  
-Shipping staples use **transitional full-hand** (C62/C63). Long-term target = personal decks from a shared library + Character **signature cards** (C64). Gear **numerics** (§6A, except Bandage/C63) and Adrenaline real-effect redesign remain OPEN. Deckbuilder sizing → [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md).  
+**Status:** **C64 hybrid is the long-term target** (2026-08-13). First-wave staples still ship on **transitional full-hand** (**C62**/**C63**) until a deckbuilder lands. Gear **numerics** (§6A, except Bandage/C63) and Adrenaline real-effect redesign remain OPEN. Deckbuilder sizing → [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md).  
+**Flashbang:** effect brief **paused** — when resumed, re-derive as **shared-library** tech under C64 (not a signature). No Flashbang architecture work in this seat today.  
 **Worktree:** `D:\projects\Game\logiCard-cards-collection` / `feat/cards-collection-docs`  
 **Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C15**, **C18** *(amended by C64)*, **C33**, **C42–C44**, **C47**, **C62**, **C63**, **C64**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`GDD.md`](../core/GDD.md); [`CORE_LOOP.md`](../core/CORE_LOOP.md); [`UI_FLOW.md`](../ui/UI_FLOW.md); [`MONETIZATION.md`](../core/MONETIZATION.md); [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md).
 
@@ -9,12 +9,12 @@ Shipping staples use **transitional full-hand** (C62/C63). Long-term target = pe
 
 ## 1. Why this doc exists
 
-Gear cards need a catalog, an access model, and an in-match economy before HUD/Sim work sprawls. This file holds taxonomy + first-wave answers (**C62**) and overlays the long-term hybrid direction (**C64**). It does **not** implement code.
+Gear cards need a catalog, an access model, and an in-match economy before HUD/Sim work sprawls. This file is the Cards-department catalog: **C64 hybrid** as the long-term frame, with **C62**/**C63** as the shipping transitional layer. It does **not** implement code.
 
 Live questions this doc answers (with which C# owns the answer):
 
-1. What cards exist in the first wave? → **C62** catalog  
-2. Same universal gear list forever? → **C64** amends: long-term **no**; transitional shipping **yes**  
+1. What cards exist in the first wave? → **C62** catalog (library candidates under C64)  
+2. Same universal gear list forever? → **C64**: long-term **no** (personal decks + signatures); transitional shipping **yes** (full-hand staples)  
 3. Hold / draw / spend? → transitional full-hand+charges (**C62**); long-term deckbuilder OPENs in [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md)  
 4. Meta collection / paywall? → none for gameplay; free library + signatures (**C64** / **C47**)
 
@@ -29,19 +29,19 @@ Live questions this doc answers (with which C# owns the answer):
 | **C33** | **Time Card** commits match-pool seconds — **not** a gear card. |
 | **C21 / C25** | No Walk card, no Snap/Hold card. Stance and shoot mode are direct picks on base verbs. |
 | **C34 / C46** | Named gear was roadmap under demo framing; C46 removed the calendar gate. Bandage Sim has since landed (**C63**); other first-wave cards still staged. |
-| **C42–C44** | Unique-verb Characters (Bomber / Time Player) — long-term; event-stream only. |
+| **C42–C44** | Unique-verb Characters (Bomber / Time Player) — long-term; event-stream only. Under C64 the exclusive power is still a unique verb, **armed by playing a signature card**. |
 | **C47** | F2P cosmetic-only IAP. Gameplay cards / signatures / unique verbs are **not** sellable power. |
-| **C62** | First-wave catalog + transitional economy (full hand + charges; no binder; Interact = future stations; Adrenaline Execute stub). |
-| **C63** | Bandage: 3s TR, 1×/Character/match; HUD-gated not-mid-Sprint; Sim carve-out for Bandage. |
-| **C64** | Long-term = **hybrid**: signature cards (verb armed by card) + personal decks from shared library; hands/decks hidden; free forever. |
+| **C62** | First-wave catalog + **transitional** economy (full hand + charges; no binder; Interact = future stations; Adrenaline Execute stub). Long-term "same deck / verbs-not-cards" clauses superseded by **C64**. |
+| **C63** | Bandage: 3s TR, 1×/Character/match; HUD-gated not-mid-Sprint; Sim carve-out for Bandage. Unaffected by C64. |
+| **C64** | Long-term = **hybrid**: Character **signature** cards (unique verb armed by card) + **personal decks** built from a **shared library**; deck/hand hidden; Character pick public; library + signatures free forever. Shipping staples stay on transitional full-hand until deckbuilder. |
 | **PLAYBACK_CONTRACT** | Adrenaline today = Execute-only UI gate + **stub** effect. |
 
 **Two horizons (read every section with this split):**
 
 | Horizon | Access model |
 |---------|----------------|
-| **Shipping / transitional** | Full visible hand of first-wave staples + charges (**C62**/**C63**) — Bandage HUD etc. |
-| **Long-term (C64)** | Constructed personal deck from shared library + Character signature card(s); opponent does not see deck/hand |
+| **Long-term (C64)** | Constructed **personal deck** from shared **library** + Character **signature** card(s); players may bring different cards; opponent does not see deck/hand |
+| **Shipping / transitional** | Full visible hand of first-wave staples + charges (**C62**/**C63**) — Bandage etc. — until deckbuilder ships |
 
 ---
 
@@ -122,15 +122,16 @@ Today resolve stops movement before a closed door / block. A full **Otherwise** 
 
 ---
 
-## 5. Access model — transitional vs C64 hybrid
+## 5. Access model — C64 hybrid (+ transitional full-hand)
 
 ### 5.1 What is locked now
 
 | Layer | Rule |
 |-------|------|
-| **Long-term (C64)** | Shared **library** + **personal deck** + Character **signature** card. Players **may bring different cards**. Deck/hand **hidden**. |
-| **Shipping (C62/C63)** | First-wave staples on **transitional full-hand** — both sides see the same Bandage/Flashbang/Interact/Adrenaline set until a deckbuilder ships. Bandage numerics locked (C63). |
-| **Attacker/Defender** | Still labels + spawns + Allot chooser — **not** role-locked kits (unchanged by C64). |
+| **Long-term (C64)** | Shared **library** → each player builds a **personal deck** before the match; Character also brings **signature** card(s). Players **may bring different cards**. Deck/hand **hidden**; Character select (hence which signature exists) stays **public**. Reveal timing for *played* cards is OPEN. |
+| **Shipping (C62/C63)** | First-wave staples on **transitional full-hand** — both sides see the same Bandage / Flashbang / Interact / Adrenaline set until a deckbuilder ships. Bandage numerics locked (C63). Does **not** wait on deckbuilder UX. |
+| **Attacker/Defender** | Still labels + spawns + Allot chooser — **not** role-locked kits (C64 leaves role↔deck interaction OPEN; default spirit = no lock). |
+| **Monetization** | Entire gameplay library + all signatures **free forever** (**C64** / **C47**). Cosmetics only sellable. |
 
 Conversation record: [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md). Sizing OPENs: [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md).
 
@@ -159,20 +160,22 @@ Conversation record: [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPA
 
 Adding a **library** card is a catalog content add. Adding a **signature** is a roster decision (Character brief + C#) that also adds a card wrapper — don't smuggle exclusives into the library without calling them signatures.
 
+**Flashbang note (paused):** do not open a Flashbang Sim/HUD contract from the parked brief. When effect design resumes, treat Flashbang as **shared-library** tech under C64 — re-derive the brief against that frame; it is not a signature.
+
 ---
 
 ## 6. In-match economy
 
-**Shipping (C62):** full hand every Program + per-card charges. Do not build draw RNG into the Bandage HUD path.
+**Long-term (C64):** personal constructed deck from the shared library (+ signature). Draw vs always-have-constructed-hand, deck size, copies, signature-in-hand, Reveal — **OPEN** → [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md).
 
-**Long-term (C64):** personal deck; draw vs always-have-constructed-hand is **OPEN** — answer in [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md).
+**Shipping (C62):** full hand every Program + per-card charges for first-wave staples. Do **not** build draw RNG into the Bandage HUD path; transitional full-hand is intentional until the deckbuilder layer.
 
 | Model | Role now |
 |-------|----------|
-| **1. Full hand every Program** | **Transitional shipping** (C62) |
+| **1. Full hand every Program** | **Transitional shipping** (C62) — Bandage / Flashbang / Interact / Adrenaline |
 | **2. Draw N each Program** | Long-term candidate (OPEN) |
 | **3. Match loadout / constructed deck** | **C64 long-term** (sizing OPEN) |
-| **4. Staples + flex** | Possible hybrid of transitional → C64; not locked |
+| **4. Staples + flex** | Possible bridge transitional → C64; not locked |
 
 **Adrenaline:** Execute-only, 1/match, stub effect until PLAYBACK_CONTRACT redesign.
 
@@ -238,22 +241,23 @@ Ship order for *systems*: transitional staple resolve (Bandage…) → deckbuild
 
 ---
 
-## 10. One-page direction — C62 shipping + C64 long-term
+## 10. One-page direction — C64 long-term + C62 transitional
 
-**Shipping / transitional (C62 + C63):**
+**Long-term (C64) — target model:**
 
-- Catalog staples: Bandage, Flashbang, Interact-as-card, Adrenaline (stations later for Interact).
+- **Hybrid:** shared free **library** → **personal decks**; Character **signature** = unique verb **armed by** a card.
+- Players may bring **different** cards; deck/hand **hidden**; Character pick public.
+- Gameplay library + signatures free forever (**C47**).
+- Deck size / draw / signature-in-hand / Reveal / role↔deck → [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md).
+
+**Shipping / transitional (C62 + C63) — what ships before the deckbuilder:**
+
+- Catalog staples (library candidates): Bandage, Flashbang, Interact-as-card, Adrenaline (stations later for Interact).
 - Full visible hand + charges; Bandage 3s / 1× match locked.
 - Interact cost may scale by Strength; Door/Vent/Breach stay map actions.
 - Adrenaline Execute stub until PLAYBACK redesign.
 - No gameplay unlock binder.
-
-**Long-term (C64):**
-
-- **Hybrid:** shared free library → personal decks; Character **signature** = unique verb armed by a card.
-- Players may bring **different** cards; deck/hand **hidden**; Character pick public.
-- Does **not** block Bandage HUD or other staple Sim/HUD under transitional full-hand.
-- Deck size / draw / signature-in-hand / Reveal → [`CARD_SYSTEM_OPENS.md`](CARD_SYSTEM_OPENS.md).
+- Does **not** block Bandage HUD or other staple Sim/HUD.
 
 ---
 
@@ -261,11 +265,11 @@ Ship order for *systems*: transitional staple resolve (Bandage…) → deckbuild
 
 Ranked by resolve risk for **library staples** under transitional full-hand (deckbuilder is a later systems layer per C64):
 
-1. **Bandage** — **Sim landed (C63)**; HUD-side open in `contracts/CURRENT.md`.
+1. **Bandage** — **Sim landed (C63)**; HUD-side owned by UI seat (this dept does not touch Bandage HUD files).
 2. **Interact-as-card** — Door-like resolve; blocked on a real station target.
-3. **Flashbang** — new effect design (paused brief: `GEAR_FLASHBANG_AGENT_BRIEF.md`); treat as library tech under C64.
+3. **Flashbang** — **paused**; when resumed, re-derive brief as shared-library tech (`GEAR_FLASHBANG_AGENT_BRIEF.md`). Effect shape + numerics still OPEN.
 4. **Adrenaline (real effect)** — last; needs PLAYBACK_CONTRACT redesign.
-5. **Deckbuilder + signatures** — after staple conventions exist; Bomber/Time Player still need C43/C44 prereqs.
+5. **Deckbuilder + signatures** — after staple conventions exist + OPEN menu answers; Bomber/Time Player still need C43/C44 prereqs.
 6. **Otherwise library** — separate project after the four named cards.
 
 ---

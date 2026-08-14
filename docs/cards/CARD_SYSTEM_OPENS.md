@@ -1,8 +1,8 @@
 # Card System — C64 OPEN Decision Menu
 
-**Status:** Live menu for human answers. Docs-only. Does not amend PRODUCT_MEMORY until Integrator promotes.  
-**Date:** 2026-08-13  
-**Depends on:** [`PRODUCT_MEMORY.md`](PRODUCT_MEMORY.md) **C64**, **C47**, **C62**/**C63**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`CARD_COLLECTION.md`](CARD_COLLECTION.md).
+**Status:** Live one-page menu for human answers. Docs-only. Does **not** amend PRODUCT_MEMORY until Integrator promotes.  
+**Date:** 2026-08-13 (links refreshed 2026-08-14)  
+**Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C64**, **C47**, **C62**/**C63**; [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md); [`CARD_COLLECTION.md`](CARD_COLLECTION.md).
 
 C64 locked the **hybrid** model (signature cards + shared deckbuilding library). These questions size the deckbuilder / in-match hand layer. Reply with letters / short notes.
 
@@ -41,7 +41,7 @@ C64 locked the **hybrid** model (signature cards + shared deckbuilding library).
 - (c) **Draw once at match start**, then that hand persists across rounds (charges persist)  
 - (d) Other: ___
 
-**Q4 — Signature card availability**  
+**Q4 — Signature card availability (signature-in-hand)**  
 - (a) **Always in hand** when you pick that Character (not drawn; not optional in builder)  
 - (b) **Must include** exactly one signature in the deck; drawn/accessed like other cards per Q3  
 - (c) Signature is **extra** — outside deck size cap, always available  
@@ -53,7 +53,7 @@ C64 locked the **hybrid** model (signature cards + shared deckbuilding library).
 - (c) Mix — some signatures cost TR, some don’t (state rule)  
 - (d) Defer until Bomber/Time Player briefs close  
 
-**Q6 — When does the opponent see a played card?**  
+**Q6 — Reveal — when does the opponent see a played card?**  
 - (a) At **Reveal** (with the rest of the program) — hand stays hidden through Program  
 - (b) **On place** during Program (armed card becomes public immediately)  
 - (c) Only during **Playback** when the tape event fires  
@@ -73,14 +73,15 @@ C64 locked the **hybrid** model (signature cards + shared deckbuilding library).
 
 ## Explicit non-goals
 
-- Does not greenlight Flashbang effect shape (separate brief).  
+- Does not greenlight Flashbang effect shape (brief stays paused; re-derive as library tech later).  
 - Does not start deckbuilder UI or Sim code.  
-- Does not promote Bomber/Time Player into active build.
+- Does not promote Bomber/Time Player into active build.  
+- Does not touch Bandage HUD (UI seat).
 
 ---
 
 ## See also
 
-- [`CARD_COLLECTION.md`](CARD_COLLECTION.md) — catalog + C62 transitional + C64 overlay  
+- [`CARD_COLLECTION.md`](CARD_COLLECTION.md) — catalog + C64 hybrid + C62 transitional  
 - [`CARD_SYSTEM_MODEL_COMPARISON.md`](CARD_SYSTEM_MODEL_COMPARISON.md) — hybrid conversation record  
-- [`docs/departments/cards/STATUS.md`](departments/cards/STATUS.md)
+- [`../departments/cards/STATUS.md`](../departments/cards/STATUS.md)
