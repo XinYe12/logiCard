@@ -3,10 +3,10 @@
 **Wave / Day:** Permanent seat — live `logiCard-char-select-motion`
 **Branch / worktree:** `feat/char-select-motion` @ `D:\projects\Game\logiCard-char-select-motion`
 **Last cross-reviewed:** 2026-08-18 — rebased `feat/char-select-motion` onto current master
-(`f45e986`); docs/concepts only otherwise (option C), concept backlog §3 items 1–8 filled
-(2026-08-13). Char Select UI/motion carousel work earlier in this branch's history was handed to
-**UI** dept partway through (see Mandate below) and remains mergeable history but is no longer this
-seat's active scope. See the Rebase entry under Done for what this pass touched.
+(`f45e986`); decision sheet ready / waiting on human otherwise (2026-08-14). Char Select UI/motion
+carousel work earlier in this branch's history was handed to **UI** dept partway through (see
+Mandate below) and remains mergeable history but is no longer this seat's active scope. See the
+Rebase entry under Done for what this pass touched.
 
 ## Mandate
 
@@ -57,16 +57,18 @@ seat's active scope. See the Rebase entry under Done for what this pass touched.
 | `CHARACTER_DETONATOR_VS_BOMBER.md` | C38 vs C43 split |
 | Four impl briefs (C42 / C43 / C44 / attrs) | Recommendation-not-contract |
 | `CHARACTER_ROSTER_LONGTERM.md` | Design source + links |
+| [`CHARACTER_DECISION_SHEET.md`](CHARACTER_DECISION_SHEET.md) | **New 2026-08-14** — every OPEN question across the four impl briefs, grouped, one human pass |
 
 ## In progress
 
-- Nothing drafting. Waiting on **human design answers** and Integrator org sync — not more stub volume.
+- Nothing drafting. Decision sheet ready — waiting on **human design answers** and Integrator org sync, not more stub volume.
 
 ## Waiting on human (when ready)
 
-1. `CHARACTER_FANTASY.md` §6 — Scout/Jug pitches OK? Bomber wall-only name? Time Player rewind branding?
-2. `CHARACTER_TIME_PLAYER_EPISTEMICS.md` §4 — Option **A** (rewind only) vs **B** (FF, no preview) → PRODUCT_MEMORY
-3. Cards peer review of `CHARACTER_CARDS_BOUNDARY.md` (optional)
+1. [`CHARACTER_DECISION_SHEET.md`](CHARACTER_DECISION_SHEET.md) — Parts A–D, every open question from the four impl briefs in one pass.
+2. `CHARACTER_FANTASY.md` §6 — Scout/Jug pitches OK? Bomber wall-only name? Time Player rewind branding? (tracked on the decision sheet, not re-derived there)
+3. `CHARACTER_TIME_PLAYER_EPISTEMICS.md` §4 — Option **A** (rewind only) vs **B** (FF, no preview) → PRODUCT_MEMORY (same fork as decision-sheet Part C Q1)
+4. Cards peer review of `CHARACTER_CARDS_BOUNDARY.md` (optional)
 
 ## Offers
 
