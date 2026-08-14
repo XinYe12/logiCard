@@ -131,12 +131,19 @@ namespace LogiCard.Board
         /// Card / program entry — replace the active weather module. <see cref="BoardWeatherMood.Clear"/>
         /// removes sky weather and restores pre-storm lighting. Fair/Storm spawn a self-contained
         /// child (<c>Weather_Fair</c> / <c>Weather_Storm</c>) so a future Storm card only mounts that module.
+        /// Same-mood calls are a no-op (defense in depth — <c>RoundPlayback</c> also guards the call site;
+        /// this API is now driven from a per-tick Playback presenter, so it must tolerate repeated calls).
         /// </summary>
         public void ApplyWeather(BoardWeatherMood mood)
         {
             if (!_boardBound && mood != BoardWeatherMood.Clear)
             {
                 Debug.LogWarning("BoardWeatherPocket.ApplyWeather: host not bound — call Build(board) first.");
+                return;
+            }
+
+            if (mood == _mood)
+            {
                 return;
             }
 
@@ -1527,12 +1534,15 @@ namespace LogiCard.Board
         /// <summary>
         /// Cool + dim diorama lights under a storm module. Snapshots intensities so
         /// <see cref="ClearWeather"/> / Fair can restore (card swap must not permanently crush the key).
+        /// Forces a clean baseline if a prior dim was somehow still active instead of silently skipping —
+        /// Fair↔Storm cycles must round-trip even if this ever gets called without an intervening
+        /// <see cref="ClearWeather"/> (defense in depth, same spirit as the same-mood guard above).
         /// </summary>
         private void ApplyStormLightingDim()
         {
             if (_lightingDimmed)
             {
-                return;
+                RestoreLightingIfDimmed();
             }
 
             _savedAmbient = RenderSettings.ambientLight;

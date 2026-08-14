@@ -127,5 +127,94 @@ namespace LogiCard.Tests.PlayMode
 
             yield return null;
         }
+
+        /// <summary>C67 Storm contract, Atmosphere DoD item 1 — same-mood ApplyWeather is a no-op.</summary>
+        [UnityTest]
+        public IEnumerator ApplyWeatherSameMoodKeepsCloudBankInstance()
+        {
+            var weather = Object.FindAnyObjectByType<BoardWeatherPocket>();
+            Assert.That(weather, Is.Not.Null);
+
+            weather.ApplyWeather(BoardWeatherMood.Storm);
+            Transform cloudBank = weather.transform.Find("Weather_Storm/CloudBank");
+            Assert.That(cloudBank, Is.Not.Null, "Expected CloudBank after first Storm apply.");
+            int firstId = cloudBank.GetInstanceID();
+
+            weather.ApplyWeather(BoardWeatherMood.Storm);
+            Transform again = weather.transform.Find("Weather_Storm/CloudBank");
+            Assert.That(again, Is.Not.Null, "Same-mood ApplyWeather must leave the Storm module standing.");
+            Assert.That(again.GetInstanceID(), Is.EqualTo(firstId),
+                "Same-mood ApplyWeather must early-out — CloudBank must not be destroyed/recreated.");
+            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Storm));
+
+            yield return null;
+        }
+
+        /// <summary>C67 Storm contract, Atmosphere DoD item 2 — Fair/Storm lighting round-trips cleanly
+        /// across repeated cycles (Key + ambient restore, no drift/double-apply).</summary>
+        [UnityTest]
+        public IEnumerator FairStormLightingRoundTripsAcrossRepeatedCycles()
+        {
+            var weather = Object.FindAnyObjectByType<BoardWeatherPocket>();
+            Assert.That(weather, Is.Not.Null);
+
+            // Fair = desk-lamp baseline (no mood override). Capture Key + ambient as the restore target.
+            weather.ApplyWeather(BoardWeatherMood.Fair);
+            Light key = FindBootstrapKeyLight();
+            Assert.That(key, Is.Not.Null, "Expected bootstrap Sun Key directional for lighting round-trip.");
+            Assert.That(key.enabled, Is.True);
+
+            float fairIntensity = key.intensity;
+            Color fairColor = key.color;
+            Color fairAmbient = RenderSettings.ambientLight;
+
+            for (int cycle = 0; cycle < 3; cycle++)
+            {
+                weather.ApplyWeather(BoardWeatherMood.Storm);
+                Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Storm));
+                Assert.That(RenderSettings.ambientLight.r, Is.LessThan(fairAmbient.r - 0.05f),
+                    $"Cycle {cycle}: Storm ambient should dim below Fair baseline.");
+                Assert.That(key.intensity, Is.LessThan(fairIntensity * 0.95f),
+                    $"Cycle {cycle}: Storm should dim the Key below Fair intensity.");
+
+                weather.ApplyWeather(BoardWeatherMood.Fair);
+                Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Fair));
+                Assert.That(key.enabled, Is.True, $"Cycle {cycle}: Key must be re-enabled after Fair restore.");
+                Assert.That(key.intensity, Is.EqualTo(fairIntensity).Within(0.001f),
+                    $"Cycle {cycle}: Key intensity must restore to Fair baseline after Storm.");
+                Assert.That(key.color.r, Is.EqualTo(fairColor.r).Within(0.001f));
+                Assert.That(key.color.g, Is.EqualTo(fairColor.g).Within(0.001f));
+                Assert.That(key.color.b, Is.EqualTo(fairColor.b).Within(0.001f));
+                Assert.That(RenderSettings.ambientLight.r, Is.EqualTo(fairAmbient.r).Within(0.001f));
+                Assert.That(RenderSettings.ambientLight.g, Is.EqualTo(fairAmbient.g).Within(0.001f));
+                Assert.That(RenderSettings.ambientLight.b, Is.EqualTo(fairAmbient.b).Within(0.001f));
+            }
+
+            yield return null;
+        }
+
+        private static Light FindBootstrapKeyLight()
+        {
+            Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
+            for (int i = 0; i < lights.Length; i++)
+            {
+                Light light = lights[i];
+                if (light != null && light.type == LightType.Directional && light.name.Contains("Key"))
+                {
+                    return light;
+                }
+            }
+
+            for (int i = 0; i < lights.Length; i++)
+            {
+                Light light = lights[i];
+                if (light != null && light.type == LightType.Directional)
+                {
+                    return light;
+                }
+            }
+
+            return null;
+        }
     }
 }
