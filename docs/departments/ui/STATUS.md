@@ -1,7 +1,8 @@
 # UI — STATUS
 
-**Wave / Day:** Hand Deck Drag Play (2026-08-15, human-requested mid-playtest) — **Ready for
-Integrator/human review**; chrome collection resumes after.
+**Wave / Day:** HUD Chrome Ship Pass (2026-08-15, human playtest: "the current UI is unplayable" —
+cards bleeding into verb controls, unframed queue-log strip) — **Ready for Integrator/human
+review**; chrome collection resumes after.
 **Branch / worktree:** `feat/modal-restyle` @ `D:\projects\Game\logiCard-modal-restyle`
 **Mandate:** All UI surfaces (lobby, Character Select, Map Select, HUD/dock, modals).
 **Last cross-reviewed:** 2026-08-14 — merged `master` to pick up Storm Sim-side (C67) before building UI-side
@@ -18,6 +19,54 @@ against `docs/contracts/CURRENT.md`'s Storm contract.
 - `docs/departments/ui/STATUS.md`
 
 ## Done
+
+- **HUD Chrome Ship Pass, Ready for Integrator/human review** (`HUD_CHROME_SHIP_PASS_AGENT_BRIEF.md`,
+  human playtest ask 2026-08-15: "the shadow needs to be fixed... the current UI is unplayable... the
+  cards and the bottom timeline and things needs to be separated"). Chrome only — drag-to-play logic,
+  fan positions, and the 26/48/26 column fractions are untouched. Scoped to `GearHandView.cs`,
+  `ProgramHud.cs`, `UiStyle.cs`, `UiFactory.cs`.
+  1. **Every dock region now has a real backing panel** instead of a flat color abutting its
+     neighbor. New `UiFactory.CreateBackingPanel` ports the layered-`box-shadow` technique from
+     `docs/ui-collection/normal-card.css` (Uiverse.io by adamgiebl, MIT — tagged "Candidate —
+     default card" in `UI_CHROME_COLLECTION.md`): a shadow layer, a border/rim layer, a face layer,
+     and a thin inset-color lip along the face's bottom edge — all retinted through five new
+     `UiStyle.DockPanel*` tokens (warm dark family, not the demo's cool grey) rather than forking a
+     second token system. `ProgramHud.BuildDockRegionPanel` wraps it with fixed 8px/4px margins so
+     the shadow/border layers stay inside their own zone and can't bleed into a neighboring column —
+     `ControlsColumn`, `ActionColumn`, the hand's own panel, and the queue-log strip (previously a
+     bare `PanelSunken` rect) all get one now.
+  2. **The hand's fan is clipped to its own panel** — `GearHandView.Build` adds a `FanClip` child
+     (`RectMask2D`) one level below `Root`; card cells parent under `FanClip` instead of directly
+     under `Root`, so the fan's overlap-widen math can never visually cross into ControlsColumn/
+     ActionColumn regardless of rotation/droop. The brief flagged the obvious conflict with the
+     drag-to-play gesture (a clipped card can't be dragged out) — resolved by having
+     `CardDragController.OnBeginDrag` reparent the picked-up cell from `FanClip` up to `Root`
+     (unmasked, coincides with `FanClip`'s exact rect so no anchoredPosition/visual jump) and
+     `OnEndDrag` reparent it back before restoring position/rotation/sibling-index, whether the drag
+     committed or cancelled. Resting cards stay clipped; the one card actually being dragged never is.
+  3. **Card face stack deepened** the same normal-card.css way: a second, softer, farther-thrown
+     `CardShadowFar` layer added behind the existing `CardShadow` contact shadow (new
+     `UiStyle.ModalShadowFar` token), plus a `CardInsetLip` strip along each card's bottom edge (new
+     `UiStyle.ModalCardInsetLip` token, inset a few px from the card's sides so it stays inside the
+     rounded-corner footprint). Card face/border/ink colors themselves are unchanged — the added
+     panel backing + deeper shadow stack is what gives them contrast now, not a palette change.
+  - **Not done — flagged as a human call, not blocking:** actually reskinning `HudDock`'s own
+    `PanelDark` backdrop, or porting `wallet-card-holder`/`hands-deck-comic-swatches`' hover-forward
+    motion — the brief's ask was specifically panel boundaries + fan clipping + card pop; broader
+    reskin stayed out of scope to keep this a chrome-only pass, not a second interaction/motion
+    rework riding along with it.
+  - **Tests:** no test edits needed — `GearHandViewTests`/`ProgramHudLayoutTests` assert structure/
+    behavior (button names, drag-play semantics, the `ControlsColumnContentHeight` budget), not pixel
+    colors or exact panel geometry, and none of those contracts changed. The 8px/4px panel margins
+    were sized against `ControlsColumnContentHeight`'s existing headroom (~24 UI units of slack at
+    2560×1080 ultrawide, the tightest case) to stay inside it rather than risk overflow.
+  Batchmode: EditMode **173/173**, PlayMode **53/53** (this worktree; confirmed no other `Unity.exe`
+  held this worktree's path before running — the one other running instance was batchmode PlayMode
+  tests on the separate `logiCard-map` worktree).
+  - **Human Play-mode pass is still the sign-off this brief itself calls for** — "does this look
+    mature enough to ship" wasn't verifiable through batchmode (no Game View compositing in
+    `-runTests`, same limitation noted under Hand Deck Drag Play below). Reporting back for that now
+    rather than polishing further unverified.
 
 - **Hand Deck Drag Play, Ready for Integrator/human review** (`HAND_DECK_DRAG_PLAY_AGENT_BRIEF.md`, human
   playtest ask 2026-08-15: "cut the unused space at the bottom, give the cards a separate space... hand

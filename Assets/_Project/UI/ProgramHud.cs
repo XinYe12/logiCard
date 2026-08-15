@@ -34,7 +34,6 @@ namespace LogiCard.UI
         public const float HudDockHeight = 0.34f;
 
         private const float Pad = UiStyle.Pad;
-        private const float Gap = UiStyle.Gap;
         private const float RowGap = UiStyle.RowGap;
 
         // Compacted 2026-08-10 for the shorter bottom dock + ultrawide CanvasScaler shrink:
@@ -95,7 +94,6 @@ namespace LogiCard.UI
         private static readonly Color Ink = UiStyle.Ink;
         private static readonly Color PanelDark = UiStyle.PanelDark;
         private static readonly Color PanelMid = UiStyle.PanelMid;
-        private static readonly Color PanelSunken = UiStyle.PanelSunken;
         private static readonly Color Accent = UiStyle.Accent;
         private static readonly Color MoveMarkerColor = new Color(0.55f, 0.75f, 0.95f, 1f);
         private static readonly Color ShootMarkerColor = new Color(0.95f, 0.35f, 0.30f, 1f);
@@ -472,37 +470,62 @@ namespace LogiCard.UI
             RectTransform handCol = CreateColumn(rt, "HandColumn", 0.26f, 0.74f);
             RectTransform actionCol = CreateColumn(rt, "ActionColumn", 0.74f, 1f);
 
+            // Chrome pass (HUD_CHROME_SHIP_PASS brief, 2026-08-15) — every dock region gets its own
+            // backing panel (docs/UI_CHROME_COLLECTION.md normal-card.css technique via
+            // BuildDockRegionPanel) instead of a flat color abutting its neighbor with nothing marking
+            // the boundary. Content parents under the panel's face rect, inset a few px from the
+            // column's own edges — that inset is the visible gap between regions.
+            RectTransform controlsPanel = BuildDockRegionPanel(controlsCol, "ControlsPanel", Vector2.zero, Vector2.one);
+            RectTransform actionPanel = BuildDockRegionPanel(actionCol, "ActionPanel", Vector2.zero, Vector2.one);
+
             float cursor = -Pad;
 
             // AR scrubber: cool cyan/white on a dark track — deliberate contrast vs clay board (ART_DIRECTION §4).
-            _scrubLabel = _ui.CreateText(controlsCol, "ScrubLabel", "Time Resource  0.0s / 0.0s", 22, TextAnchor.MiddleLeft, ArFill,
+            _scrubLabel = _ui.CreateText(controlsPanel, "ScrubLabel", "Time Resource  0.0s / 0.0s", 22, TextAnchor.MiddleLeft, ArFill,
                 UiTextOverflow.SingleLine);
             UiFactory.PlaceRow(_scrubLabel.rectTransform, ref cursor, ScrubLabelHeight, ScrubLabelGap);
 
-            _scrubber = _ui.CreateSlider(controlsCol, "Scrubber", ArTrack, ArFill, ArHandle);
+            _scrubber = _ui.CreateSlider(controlsPanel, "Scrubber", ArTrack, ArFill, ArHandle);
             UiFactory.PlaceRow(_scrubber.GetComponent<RectTransform>(), ref cursor, ScrubberHeight, RowGap);
             _scrubber.onValueChanged.AddListener(OnScrubberMoved);
 
-            BuildVerbRow(controlsCol, ref cursor);
-            BuildStanceRow(controlsCol, ref cursor);
+            BuildVerbRow(controlsPanel, ref cursor);
+            BuildStanceRow(controlsPanel, ref cursor);
 
             if (_showPhaseDebugControls)
             {
-                BuildPhaseDebugRow(controlsCol, ref cursor);
+                BuildPhaseDebugRow(controlsPanel, ref cursor);
             }
 
             BuildGearHand(handCol);
             BuildQueuePanel(handCol);
-            BuildActionRow(actionCol);
+            BuildActionRow(actionPanel);
+        }
+
+        /// <summary>
+        /// Layered shadow + border + face + inset-lip backing panel (<see cref="UiFactory.CreateBackingPanel"/>)
+        /// retinted through <see cref="UiStyle"/>'s warm <c>DockPanel*</c> tokens. Small fixed margins
+        /// keep the shadow/border layers inside <paramref name="zone"/>'s own bounds — this is what
+        /// keeps a region's chrome from bleeding into a neighboring dock column.
+        /// </summary>
+        private RectTransform BuildDockRegionPanel(RectTransform zone, string name, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            return _ui.CreateBackingPanel(zone, name, anchorMin, anchorMax, 8f, 4f,
+                UiStyle.DockPanelFace, UiStyle.DockPanelBorder, UiStyle.DockPanelShadow, UiStyle.DockPanelInsetLip);
         }
 
         /// <summary>
         /// Docks <see cref="GearHandView"/> into the top of the hand column — the compact queue log
-        /// below keeps the slim strip at the bottom (<see cref="GearHandAreaMinY"/>).
+        /// below keeps the slim strip at the bottom (<see cref="GearHandAreaMinY"/>). The hand gets its
+        /// own backing panel (chrome pass) and <see cref="GearHandView"/> clips the fan to it
+        /// internally (<c>FanClip</c>/<c>RectMask2D</c>) so cards can never visually cross into
+        /// ControlsColumn/ActionColumn regardless of the fan's overlap math — a card actively being
+        /// dragged still escapes that clip (see <c>CardDragController</c>).
         /// </summary>
         private void BuildGearHand(RectTransform zone)
         {
-            _gearHand = GearHandView.Build(_ui, zone, new Vector2(0f, GearHandAreaMinY), Vector2.one);
+            RectTransform handPanel = BuildDockRegionPanel(zone, "HandPanel", new Vector2(0f, GearHandAreaMinY), Vector2.one);
+            _gearHand = GearHandView.Build(_ui, handPanel, Vector2.zero, Vector2.one);
             _gearHand.CardPlayRequested += OnGearCardDragPlay;
 
             // Interact / Flashbang have no contract this wave — block rather than half-wire them.
@@ -733,10 +756,7 @@ namespace LogiCard.UI
         /// </summary>
         private void BuildQueuePanel(RectTransform zone)
         {
-            RectTransform panel = _ui.CreatePanel(zone, "QueuePanel", PanelSunken,
-                Vector2.zero, new Vector2(1f, GearHandAreaMinY));
-            panel.offsetMin = new Vector2(Gap, Pad);
-            panel.offsetMax = new Vector2(-Gap, -Pad);
+            RectTransform panel = BuildDockRegionPanel(zone, "QueuePanel", Vector2.zero, new Vector2(1f, GearHandAreaMinY));
             panel.gameObject.AddComponent<RectMask2D>();
 
             _queueText = _ui.CreateText(panel, "QueueReadout", "Used 0.0 / 0.0s", 16, TextAnchor.UpperLeft, Ink);

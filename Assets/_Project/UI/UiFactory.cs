@@ -43,6 +43,49 @@ namespace LogiCard.UI
             return rt;
         }
 
+        /// <summary>
+        /// Layered shadow + border + face + inset-lip backing panel — the default panel/card face
+        /// technique ported from docs/ui-collection/normal-card.css (Uiverse.io by adamgiebl, MIT:
+        /// lift shadow + contact shadow + inset bottom lip), retinted through <see cref="UiStyle"/>'s
+        /// warm dock tokens rather than the demo's own cool grey. Margins inset the shadow/border/face
+        /// stack from <paramref name="anchorMin"/>/<paramref name="anchorMax"/>'s own bounds so it
+        /// never bleeds into whatever sits just outside that zone (e.g. a neighboring dock column).
+        /// Returns the face rect — callers parent their content under that.
+        /// </summary>
+        public RectTransform CreateBackingPanel(
+            RectTransform parent,
+            string name,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            float marginX,
+            float marginY,
+            Color face,
+            Color border,
+            Color shadow,
+            Color insetLip)
+        {
+            RectTransform shadowRect = CreatePanel(parent, name + "Shadow", shadow, anchorMin, anchorMax, UiStyle.RoundSprite, Image.Type.Sliced);
+            shadowRect.offsetMin = new Vector2(marginX - 2f, marginY - 6f);
+            shadowRect.offsetMax = new Vector2(-marginX + 4f, -marginY + 2f);
+            shadowRect.GetComponent<Image>().raycastTarget = false;
+
+            RectTransform borderRect = CreatePanel(parent, name + "Border", border, anchorMin, anchorMax, UiStyle.RoundSprite, Image.Type.Sliced);
+            borderRect.offsetMin = new Vector2(marginX - 3f, marginY - 3f);
+            borderRect.offsetMax = new Vector2(-marginX + 3f, -marginY + 3f);
+            borderRect.GetComponent<Image>().raycastTarget = false;
+
+            RectTransform faceRect = CreatePanel(parent, name + "Face", face, anchorMin, anchorMax, UiStyle.RoundSprite, Image.Type.Sliced);
+            faceRect.offsetMin = new Vector2(marginX, marginY);
+            faceRect.offsetMax = new Vector2(-marginX, -marginY);
+
+            RectTransform lip = CreatePanel(faceRect, name + "InsetLip", insetLip, Vector2.zero, new Vector2(1f, 0f));
+            lip.offsetMin = new Vector2(marginX * 0.5f, 0f);
+            lip.offsetMax = new Vector2(-marginX * 0.5f, 5f);
+            lip.GetComponent<Image>().raycastTarget = false;
+
+            return faceRect;
+        }
+
         public Text CreateText(
             RectTransform parent,
             string name,
