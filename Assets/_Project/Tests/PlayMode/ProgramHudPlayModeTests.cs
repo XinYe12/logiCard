@@ -6,6 +6,7 @@ using LogiCard.Timeline;
 using LogiCard.UI;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 
@@ -271,61 +272,113 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(nextRoundButton.interactable, Is.False);
         }
 
+        /// <summary>Screen point guaranteed outside the built <c>GearHand</c> root's bounds, for drag-release tests.</summary>
+        private static Vector2 OutsideGearHandScreenPoint()
+        {
+            RectTransform handRoot = FindByName<RectTransform>(GearHandView.RootName);
+            Assert.That(handRoot, Is.Not.Null, "HUD has no GearHand root.");
+            var corners = new Vector3[4];
+            handRoot.GetWorldCorners(corners);
+            return new Vector2(corners[0].x, corners[0].y) - new Vector2(600f, 600f);
+        }
+
+        /// <summary>Drives one full press→drag-out→release gesture directly on a card's drag controller.</summary>
+        private static void DragCardOut(GearHandView.CardDragController drag, Vector2 releasePoint)
+        {
+            var data = new PointerEventData(EventSystem.current) { pressPosition = Vector2.zero, position = Vector2.zero };
+            drag.OnBeginDrag(data);
+            data.position = releasePoint;
+            data.delta = releasePoint;
+            drag.OnDrag(data);
+            drag.OnEndDrag(data);
+        }
+
         /// <summary>
-        /// Bandage HUD-side contract (C63) arm → place smoke: Gear_Bandage arms, a board tap places
-        /// at the schedule tip, and the successful placement auto-clears the arm / drops Mode back to
-        /// Move and re-blocks the card (charge now spent this Program). Wound/charge gates come from
+        /// Bandage HUD-side contract (C63), rewired for drag-to-play (Hand Deck Drag Play brief,
+        /// 2026-08-15): dragging Gear_Bandage out of the hand and releasing queues at the scrubber's
+        /// current seconds (0s here — nothing has moved it), same as the old click-arm-then-scrubber
+        /// path did, just via the drop. Wound/charge gates come from
         /// <see cref="ProgramHud.RegisterMatchState"/> — injected here as synthetic delegates rather
         /// than driving a real wound through Sim resolve, which is out of this HUD contract's scope.
         /// </summary>
         [Test]
-        public void GearBandageArmsThenBoardTapPlacesABandageNode()
+        public void GearBandageDragOutOfHandPlacesABandageNode()
         {
             Hud.RegisterMatchState(() => 1, () => 0);
 
             Button bandage = FindByName<Button>(GearHandView.ButtonName(CardId.Bandage));
             Assert.That(bandage, Is.Not.Null, "HUD has no Gear_Bandage button.");
-            Assert.That(bandage.interactable, Is.True, "Bandage should be armable once wounded with an unused charge.");
+            Assert.That(bandage.interactable, Is.True, "Bandage should be draggable once wounded with an unused charge.");
 
-            bandage.onClick.Invoke();
-            Assert.That(AttackerInput.Mode, Is.EqualTo(ActionVerb.Bandage));
+            GearHandView.CardDragController drag = FindByName<GearHandView.CardDragController>("Slot_Bandage");
+            Assert.That(drag, Is.Not.Null, "Bandage card must carry a drag controller.");
 
-            Assert.That(AttackerInput.TryTapPoint(Home), Is.True,
-                "With no Move booked yet, Bandage should place at the schedule tip.");
+            DragCardOut(drag, OutsideGearHandScreenPoint());
+
             Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(1));
             Assert.That(AttackerInput.Program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Bandage));
             Assert.That(AttackerInput.Program.UsedSeconds, Is.EqualTo(PawnProgram.BandageSeconds).Within(0.0001f));
-
-            Assert.That(AttackerInput.Mode, Is.EqualTo(ActionVerb.Move), "Placement must drop Mode back to Move.");
             Assert.That(bandage.interactable, Is.False, "Charge is spent — a Bandage node is already queued this Program.");
         }
 
         /// <summary>
-        /// Storm contract (C67) arm → place smoke, same shape as Bandage's above: Gear_Storm arms,
-        /// placement succeeds, and the successful placement auto-clears the arm / drops Mode back to
-        /// Move and re-blocks the card (a Storm node is already queued this Program). Storm has no
-        /// board-tap path at all (self-targeting, nothing to aim at) — production places it via the
-        /// scrubber's OnScrubberMoved handler, so this exercises the same
-        /// <see cref="BoardInputController.TryQueueStormAt"/> entry point directly rather than a
-        /// simulated slider drag. Unlike Bandage, Storm needs no <see cref="ProgramHud.RegisterMatchState"/>
-        /// wound/charge injection — its only HUD-side gate is "not already queued this Program".
+        /// Storm contract (C67), same rewire as Bandage's test above. Storm has no board-tap path at
+        /// all (self-targeting, nothing to aim at) and no scrubber-drag placement anymore either — the
+        /// drag-out-of-hand gesture is now its only placement path in production, and this exercises
+        /// exactly that instead of calling <see cref="BoardInputController.TryQueueStormAt"/> directly.
         /// </summary>
         [Test]
-        public void GearStormArmsThenScrubberPlacesAStormNode()
+        public void GearStormDragOutOfHandPlacesAStormNode()
         {
             Button storm = FindByName<Button>(GearHandView.ButtonName(CardId.Storm));
             Assert.That(storm, Is.Not.Null, "HUD has no Gear_Storm button.");
-            Assert.That(storm.interactable, Is.True, "Storm should be armable with none queued yet this Program.");
+            Assert.That(storm.interactable, Is.True, "Storm should be draggable with none queued yet this Program.");
 
-            storm.onClick.Invoke();
-            Assert.That(AttackerInput.Mode, Is.EqualTo(ActionVerb.Storm));
+            GearHandView.CardDragController drag = FindByName<GearHandView.CardDragController>("Slot_Storm");
+            Assert.That(drag, Is.Not.Null, "Storm card must carry a drag controller.");
 
-            Assert.That(AttackerInput.TryQueueStormAt(AttackerInput.Program.UsedSeconds, out string reason), Is.True, reason);
+            DragCardOut(drag, OutsideGearHandScreenPoint());
+
             Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(1));
             Assert.That(AttackerInput.Program.Nodes[0].Verb, Is.EqualTo(ActionVerb.Storm));
-
-            Assert.That(AttackerInput.Mode, Is.EqualTo(ActionVerb.Move), "Placement must drop Mode back to Move.");
             Assert.That(storm.interactable, Is.False, "A Storm node is already queued this Program.");
+        }
+
+        /// <summary>A drag that never clears the threshold must not queue anything and must leave the card armable.</summary>
+        [Test]
+        public void ShortDragOnBandageDoesNotQueueAndCardStaysInteractable()
+        {
+            Hud.RegisterMatchState(() => 1, () => 0);
+
+            Button bandage = FindByName<Button>(GearHandView.ButtonName(CardId.Bandage));
+            GearHandView.CardDragController drag = FindByName<GearHandView.CardDragController>("Slot_Bandage");
+            Assert.That(drag, Is.Not.Null);
+
+            var data = new PointerEventData(EventSystem.current) { pressPosition = Vector2.zero, position = Vector2.zero };
+            drag.OnBeginDrag(data);
+            data.position = new Vector2(5f, 0f);
+            data.delta = data.position;
+            drag.OnDrag(data);
+            drag.OnEndDrag(data);
+
+            Assert.That(AttackerInput.Program.Nodes, Is.Empty, "A short drag must not queue a Bandage node.");
+            Assert.That(bandage.interactable, Is.True, "Card must stay armable after a cancelled drag.");
+        }
+
+        /// <summary>Dragging an already-blocked card (SetSpent via legality gate) out of the hand must be a no-op.</summary>
+        [Test]
+        public void DragOnAlreadyQueuedStormCardIsANoOp()
+        {
+            Assert.That(AttackerInput.TryQueueStormAt(AttackerInput.Program.UsedSeconds, out string reason), Is.True, reason);
+
+            Button storm = FindByName<Button>(GearHandView.ButtonName(CardId.Storm));
+            Assert.That(storm.interactable, Is.False, "Storm should already be blocked — one is queued this Program.");
+
+            GearHandView.CardDragController drag = FindByName<GearHandView.CardDragController>("Slot_Storm");
+            DragCardOut(drag, OutsideGearHandScreenPoint());
+
+            Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(1),
+                "Dragging an already-blocked Storm card must not add a second node.");
         }
 
         [Test]

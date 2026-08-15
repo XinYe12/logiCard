@@ -1,7 +1,7 @@
 # UI — STATUS
 
-**Wave / Day:** Bandage HUD-side (C63) + Storm HUD-side (C67) — **both Ready for Integrator merge**; chrome
-collection resumes after.
+**Wave / Day:** Hand Deck Drag Play (2026-08-15, human-requested mid-playtest) — **Ready for
+Integrator/human review**; chrome collection resumes after.
 **Branch / worktree:** `feat/modal-restyle` @ `D:\projects\Game\logiCard-modal-restyle`
 **Mandate:** All UI surfaces (lobby, Character Select, Map Select, HUD/dock, modals).
 **Last cross-reviewed:** 2026-08-14 — merged `master` to pick up Storm Sim-side (C67) before building UI-side
@@ -18,6 +18,89 @@ against `docs/contracts/CURRENT.md`'s Storm contract.
 - `docs/departments/ui/STATUS.md`
 
 ## Done
+
+- **Hand Deck Drag Play, Ready for Integrator/human review** (`HAND_DECK_DRAG_PLAY_AGENT_BRIEF.md`, human
+  playtest ask 2026-08-15: "cut the unused space at the bottom, give the cards a separate space... hand
+  deck style like hearthstone... play the card means tap→hold→drag it out of the handdeck area→release").
+  Two changes, both scoped to `GearHandView.cs`/`ProgramHud.cs`:
+  1. **Dock layout rework.** `BuildProgramControls`'s three dock columns changed from
+     `ControlsColumn 0–38% / QueueColumn 38–70% / ActionColumn 70–100%` to
+     `ControlsColumn 0–26% / HandColumn 26–74% / ActionColumn 74–100%` — the hand's column nearly doubled
+     (32%→48% of the dock's width). Inside that column, `GearHandAreaMinY` flipped from `0.60` (hand got
+     the top 40%, queue log got the bottom 60% — a mostly-empty box once you'd queued 1-2 nodes, the
+     human's literal complaint) to `0.20` (hand now gets the top 80%, queue log a slim 20% strip with a
+     `RectMask2D` so overflow clips instead of bleeding past the dock's bottom edge). `ControlsColumn`'s
+     row budget (`ControlsColumnContentHeight`) is unchanged — it's a stacked-height sum, not
+     width-dependent, so `ProgramHudLayoutTests` needed no edits (verified: still 173/173 green).
+  2. **Hearthstone-style fan.** `GearHandView.Build` widens each of the 5 card slots to ~1/5×1.18 of the
+     hand's width (evenly stepped so the first card's left edge sits at 0 and the last's right edge at 1,
+     regardless of count) instead of an even 1/5 split with a 2% gutter — neighbors now overlap ~18%
+     instead of sitting in separate boxes. Each card also gets a small per-step rotation (±5°×step from
+     center) and vertical droop (9px×|step| from center) — a simplified center-pivot fan rather than a
+     bottom-pivot rig, cosmetic only and doesn't touch drag math (thresholds/bounds are measured against
+     `Root`, not the rotated cell). Cards are also taller now (5% vertical inset vs. the old 6%/94% split
+     inside a much shorter column before).
+  3. **Drag-to-play replaces click-to-arm for Bandage/Storm only** (Interact/Flashbang/Adrenaline
+     untouched — still the original click-to-arm scaffold; Interact/Flashbang stay permanently blocked,
+     Adrenaline's real trigger stays the separate `AdrenalineButton`). Bandage/Storm no longer register an
+     `onClick` listener at all — instead each gets a `GearHandView.CardDragController` (nested public
+     class implementing `IPointerDownHandler`/`IBeginDragHandler`/`IDragHandler`/`IEndDragHandler`, living
+     on the card's cell so drag resolution finds it once `Button`/`Selectable` declines — it never
+     implements drag interfaces). Drag math: `OnDrag` converts the screen-space pointer delta into the
+     hand's local space via `RectTransformUtility.ScreenPointToLocalPointInRectangle` (correct under the
+     CanvasScaler, not a raw 1:1 pixel-to-unit assumption); `OnEndDrag` checks
+     `Vector2.Distance(pressPosition, position) >= GearHandView.DragThresholdPixels` (60px) AND
+     `!RectTransformUtility.RectangleContainsScreenPoint(Root, position, camera)` — both must hold to
+     raise the new `CardPlayRequested` event; either condition failing snaps the card back with no event
+     at all (a plain click below threshold never even reaches `OnBeginDrag`, since Unity's own drag
+     threshold gates it first). `ProgramHud.OnGearCardDragPlay` is the single subscriber — it calls
+     `_input.TryQueueBandageAt`/`TryQueueStormAt(_clock.CurrentSeconds, out _)`, the exact same Sim-adjacent
+     entry points the old scrubber-tap path called, just triggered by the drop instead of a slider drag.
+     Success/failure feedback reuses existing plumbing unchanged: a queued node fires `QueueChanged` →
+     `RefreshGearHandLegality` → `SetSpent`, which greys the card (no new "played" animation — noted as a
+     nice-to-have, not done); a rejection fires the existing `BoardInputController.ActionRejected` → HUD
+     outcome banner. The card's position/rotation snap back to rest unconditionally in `OnEndDrag` before
+     either outcome runs, so a rejected play never leaves a card stranded off-hand.
+  4. **Removed as dead once Mode is never set to Bandage/Storm from the HUD again:** `OnGearCardArmed`/
+     `OnGearArmCleared` (ProgramHud), `_bandageModeControls`/`_stormModeControls` GameObjects + labels +
+     their `RefreshBandageModeControls`/`RefreshStormModeControls` methods, and `OnScrubberMoved`'s
+     Bandage/Storm placement branch (the brief explicitly called this one out — two ways to trigger the
+     same queue call in different states). `_input.Mode` now only ever takes Move/Shoot/Door from the HUD;
+     `ActionVerb.Bandage`/`.Storm` still exist and are still read (node-verb tagging, `HasNodeQueued`),
+     just never written by `ProgramHud` anymore.
+  - **Flagged for Integrator, not fixed (out of this seat's file scope):**
+    `BoardInputController.TryTapPoint`'s Bandage-mode board-tap branch (`ResolveBandageExecuteTime`) is now
+    unreachable from the HUD in practice, since nothing sets `Mode = ActionVerb.Bandage` anymore. Left
+    alone per the brief's boundary (Sim/Net-adjacent, frozen contract, call-don't-change) — flagging in
+    case Integrator wants to prune the now-dead branch in a later pass.
+  - **Tests updated:** `GearHandViewTests.cs` — `ProgramPhaseArmsBandageAndIgnoresAdrenaline` /
+    `ArmedCardUsesModalPrimaryFace` re-based on `CardId.Interact` (Bandage no longer arms via click);
+    added `ClickingBandageOrStormDoesNothing`, `BandageAndStormCarryADragControllerOthersDoNot`,
+    `DragPastThresholdAndReleaseOutsideHandRequestsPlay`, `ShortDragCancelsWithNoPlayRequest`,
+    `PastThresholdDragReleasedInsideHandCancels`, `DragOnSpentCardIsANoOp`,
+    `BeginDragHighlightsTheCardLikeAnArmedOne` — drive `CardDragController.OnBeginDrag`/`OnDrag`/
+    `OnEndDrag` directly with hand-built `PointerEventData`, per the brief's suggested approach (no real
+    OS input, no live `EventSystem` needed since we call the interface methods directly).
+    `ProgramHudPlayModeTests.cs` — `GearBandageArmsThenBoardTapPlacesABandageNode` /
+    `GearStormArmsThenScrubberPlacesAStormNode` rewritten as `GearBandageDragOutOfHandPlacesABandageNode`
+    / `GearStormDragOutOfHandPlacesAStormNode` (drag through the real built HUD/`BoardInputController`
+    instead of click+board-tap/direct `TryQueueStormAt`); added
+    `ShortDragOnBandageDoesNotQueueAndCardStaysInteractable` and `DragOnAlreadyQueuedStormCardIsANoOp` for
+    the brief's minimum-coverage list (a/b/c: commit, cancel, blocked-card no-op).
+  - **Bug found + fixed during batchmode verification:** `CardDragController` originally cached its
+    `RectTransform` in `Awake()` — `NullReferenceException` in the 4 new EditMode drag tests, because
+    `AddComponent` doesn't reliably run `Awake` before a directly-invoked interface method in EditMode
+    (no live player loop tick between `AddComponent` and the test calling `OnBeginDrag`). Fixed with a
+    lazily-resolved `Rect` property instead of an `Awake`-cached field.
+  - **Screenshot capture attempted, not usable:** wrote a temporary PlayMode test calling
+    `ScreenCapture.CaptureScreenshot` at rest and mid-drag; the test passed but produced no PNG — batchmode
+    `-runTests` doesn't actually composite a Game View window to capture (confirmed a D3D12 device exists
+    in the log; the missing piece is the window surface, not the GPU). Deleted the temp test rather than
+    leave a screenshot-less stub in the suite. **Human Play-mode pass is the only way to sign off on the
+    fan/spacing/hover feel** — this was already flagged as unavoidable in the brief itself.
+  Batchmode: EditMode **173/173**, PlayMode **53/53** (this worktree, Editor closed on it during the run —
+  confirmed the only two `Unity.exe` processes present belonged to the main `D:\projects\Game\logiCard`
+  checkout, not this worktree, before running).
 
 - **Bandage HUD-side (C63), Ready for Integrator merge** — `PawnProgram.TryQueueBandage`/`IsMidSprintAt`/`BandageSeconds`
   (mid-Sprint gate: strictly inside a Sprint leg only; arrival/departure instants are legal); `RoundPlayback.BandageChargeOf`
@@ -52,6 +135,11 @@ against `docs/contracts/CURRENT.md`'s Storm contract.
 
 ## Deviations from contract (flag for Integrator)
 
+- **Hand Deck Drag Play (2026-08-15): `BoardInputController.TryTapPoint`'s Bandage-mode board-tap branch
+  is now unreachable from the HUD** — drag-to-play never sets `Mode = ActionVerb.Bandage` (see Done above),
+  so the `ResolveBandageExecuteTime` board-tap path in that Sim/Net-adjacent file has no caller left in
+  production. Left alone (out of this seat's file scope, frozen contract) — flagging in case Integrator
+  wants to prune it in a later pass rather than carry dead-in-practice code indefinitely.
 - **`RoundPlayback` reference avoided in `ProgramHud`** — `LogiCard.UI` cannot reference `LogiCard.Boot` (Boot already
   depends on UI, not the reverse), so `RegisterMatchState` takes `Func<int> woundsOf, Func<int> bandageChargeOf`
   delegates instead of a `RoundPlayback` param ("or equivalent" per the contract). **One-line `GameBootstrap` hook
