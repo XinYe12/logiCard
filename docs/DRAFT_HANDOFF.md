@@ -1,59 +1,52 @@
 # Draft Handoff — 2026-08-14
 
-**Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (Bandage carve-out via C63).  
-**Tip:** Map worktree `dept/map` — **Phase 2 Ready for merge** (human look signed). Main `master` tip moves with Integrator merges (Atmosphere/Cards already on this worktree via prior merges). Prior combined batchmode green @ `7213d98` — **not re-run** for rematch/relight/C65/Atmosphere/Map Phase 2.  
-**Ops:** Atmosphere / Cards / Character / UI / **Map** + Integrator. Prefer ≤2 coding-hot.  
-**Read first next session:** this file → `PARALLEL_OPS.md` → `departments/INDEX.md` → `contracts/CURRENT.md` → Bandage HUD contract; Map Phase 2 is Ready (merge).
+**Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (Bandage carve-out via C63, extended to C67).  
+**Tip:** `master` @ **`24bf725`** — Storm gear (C67) fully landed; Bandage HUD-side (C63) landed same UI merge; **Map Phase 2** merged (`a76f006` ← `dept/map` `565583f`). Prior combined batchmode green @ `7213d98` — **not independently re-run** on current tip (UI reported 166/166 EditMode, 51/51 PlayMode on their worktree only).  
+**Ops:** Atmosphere / Cards / Character / UI / **Map** + Integrator. **No department coding-hot** — Storm wave + Map Phase 2 closed.  
+**Read first next session:** this file → `PARALLEL_OPS.md` → `departments/INDEX.md` → `contracts/CURRENT.md` → `PLAYBACK_CONTRACT.md` if touching Execute / Healed.
 
 ## Live folders
 
 | Seat | Folder | Tip / state |
 |------|--------|-------------|
-| Integrator | `logiCard` | `master` — merge Map Phase 2 from `logiCard-map` / `dept/map` when ready |
-| Atmosphere | `logiCard-atmosphere-stylized` | storm Zap + cloud energize **merged**; worktree may still hold unrelated dirty |
-| Cards | `logiCard-cards-collection` | C64/C66 docs **merged**; idle unless restaffed |
+| Integrator | `logiCard` | `master` @ `24bf725` — clean enough; leftover ProjectSettings / ExplosiveLLC noise uncommitted |
+| Atmosphere | `logiCard-atmosphere-stylized` | Storm DoD merged. **Uncommitted Sunny weather mood** held back — human decision pending |
+| Cards | `logiCard-cards-collection` | @ `3e77925` — merged, idle; Storm numerics + C68 packaging await human lock |
 | Character | `logiCard-char-select-motion` | 4 briefs; needs human answers |
-| UI | `logiCard-modal-restyle` | Bandage HUD in progress (`BANDAGE_HUD_AGENT_BRIEF.md`) |
-| Map | `logiCard-map` | `dept/map` — **Phase 2 Ready**; human signed `screenshots/image copy 15.png` |
+| UI | `logiCard-modal-restyle` | @ `31c55e8` — Bandage + Storm HUD merged, idle; icon-catalog dirty uncommitted |
+| Map | `logiCard-map` | `dept/map` @ **`565583f`** — Phase 2 **merged** (`a76f006`), idle |
 | (retire OK) | `logiCard-gear-bandage-sim` | merged @ `0b11031` |
 
 ## Implemented
 
-- **C62/C63** Bandage Sim-side merged; UI HUD dock still open on UI seat.
-- **C64/C66** hybrid card system + deckbuilder sizing docs on master.
-- **Rematch reset + sunny relight** (`a419ad4` lineage) on master.
-- **C65** surface-material amendment (flat/toon for board surfaces).
-- **Atmosphere** storm weather + cloud energize — human Play-signed, merged.
-- **Map Phase 2 (this worktree, Ready):**
-  - `BoardSurfaceMaterials` — Solid floors/walls; Gradient*_URP door/prop tint; wet-PBR kept unused for board roles.
-  - `BoardView` — map-aware dressing; door/prop reskin; **toy fence walls** (posts + rails + cream panel).
-  - EditMode `BoardSurfaceMaterialsTests`.
-  - Human look OK: `screenshots/image copy 15.png` (“nice floor” → fences edited → “good!”).
+- **C62/C63** Bandage (Sim + HUD). **C64/C66** hybrid cards + deckbuilder sizing. **C68** Character 8-card packaging (docs; lock pending where noted).
+- **Rematch reset + sunny relight**; **C65** + **Map Phase 2** — flat/toon floors, Gradient prop/door tint, map-aware dressing, toy fence walls; human look `image copy 15.png`.
+- **Atmosphere** storm Zap tip + cloud energize (human Play-signed).
+- **C67 Storm gear — fully landed:** Sim (`ActionVerb.Storm`, `StormCast`, Fair boot + SyncWeather presenter), Cards catalog/brief, UI arm/place with Bandage, Atmosphere ApplyWeather idempotency. Storm once-per-match is HUD-only this wave; transition polish deferred.
 
 ## Verification
 
-- Combined master @ `7213d98`: EditMode 149/149, PlayMode 48/48 (historical).
-- Map Phase 2: **human Play signed**; **batchmode not run** — do not claim green.
-- Atmosphere storm: human Play signed earlier; batchmode still open for current tip.
+- Historical combined green: `7213d98` EditMode 149/149, PlayMode 48/48.
+- UI own-worktree after Bandage+Storm: EditMode 166/166, PlayMode 51/51 — **not** Integrator re-run on master tip.
+- Map Phase 2: human Play signed; batchmode not claimed on Map branch.
 
 ## Still unfinished
 
-- **Integrator merge Map Phase 2** from `dept/map` (this handoff’s Ready item).
-- **Batchmode** on tip after Map (+ prior untested rematch/Atmosphere) lands — Editor closed on path.
-- **Bandage HUD-side** (UI seat) — open contract.
-- **Healed presenter** after HUD merge.
-- Optional: Integrator lighting/`BuildDioramaVolume` re-grade vs new materials (Map flagged; human already likes current Play).
+- **Independent batchmode** on current `master` tip (Editor closed on `D:\projects\Game\logiCard`).
+- **Healed presenter** — `TapeEventType.Healed` in `RoundPlayback` + `PLAYBACK_CONTRACT` §3 (unblocked now that Bandage HUD merged).
+- **Atmosphere Sunny mood** — uncommitted in atmosphere worktree; land vs drop (boot mood must stay Fair-reconciled).
+- **Storm numerics lock** — Cards recommends real TR cost + 1×/match; needs human → C-row; optional charge-carry like Bandage.
+- Optional lighting/`BuildDioramaVolume` re-grade vs Map materials (human already likes look).
 - Character briefs unanswered; Interact station; Adrenaline PLAYBACK; Phase 2 Net paused.
-- Leftover dirty elsewhere: `ProjectSettings` UNITY_POST_PROCESSING_STACK_V2 define noise, orphan pack `.meta` deletes, `ExplosiveLLC/` — keep out of feature merges.
+- Older unmonitored: door tape Open second; south-edge Move-click; zoom-fill/soft-rain/reflections.
 
 ## Tomorrow
 
-1. Integrator merges Map Phase 2; run batchmode; optional lighting polish.
-2. UI finishes Bandage HUD → merge when Ready.
-3. Character idle until brief answers.
+1. Integrator: batchmode on tip; Healed presenter; ask human about Atmosphere Sunny + Storm numerics.
+2. Departments idle unless restaffed — UI may resume icon-catalog; Character blocked on answers.
 
 ## Blockers / notes
 
-- Map did **not** commit `ProjectSettings.asset` or orphan `.unitypackage.meta` deletes (side-effect noise).
+- Map worktree still has local dirty noise (ProjectSettings UNITY_POST_PROCESSING_STACK_V2, orphan pack `.meta` deletes, `image copy 13` pre-sync screenshot) — **do not** fold into feature merges.
+- Main: `ExplosiveLLC/`, same ProjectSettings define noise — human keep/delete.
 - No push unless asked.
-- Capacity ≤2 coding-hot (UI + Integrator merge/verify).

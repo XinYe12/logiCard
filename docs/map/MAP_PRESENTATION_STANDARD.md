@@ -4,6 +4,8 @@
 Integrator lighting/grade re-pass (`GameBootstrap.BuildLighting` / `BuildDioramaVolume`, not Map-owned).
 **Depends on:** [GDD.md](../core/GDD.md) §8/§11, [ART_DIRECTION.md](../core/ART_DIRECTION.md), [MAP_AUTHORING.md](MAP_AUTHORING.md),
 [ART_PACK_RESEARCH.md](ART_PACK_RESEARCH.md), [PRODUCT_MEMORY.md](../core/PRODUCT_MEMORY.md) **C29 / C45 / C53 / C54 / C57 / C58 / C60 / C65**.
+**§6 (2026-08-15):** docs-only camera-framing recommendation for `docs/ui/MATCH_SHELL_LAYOUT.md`'s
+MapViewport rect — see `MATCH_SHELL_LAYOUT_AGENT_BRIEF.md`. Recommendation only; Camera/Integrator implement.
 **Does not amend** C57 (hand-authored map geometry) — see §0. **§4 resolved by C65** (human YES) — board
 *surface materials* only move flat/toon; geometry density and Atmosphere untouched.
 
@@ -176,4 +178,76 @@ This doc is not that row. Framed as a direct question:
 2. ~~Re-skin nappin door/prop materials via Gradient*_URP / Solid…~~ done (`BoardView` runtime reskin; import tool remains the duplicate writer).
 3. ~~Make `PlaceRoomDressing` map-aware…~~ done (Freight Yard / Rail Platform / Vault Complex).
 4. **Integrator:** re-run `BuildDioramaVolume`/`BuildLighting` grading *after* this material swap — Map flagged, did not edit `GameBootstrap`.
-5. **Human:** screenshot check against the Link's Awakening reference (`ART_DIRECTION.md` Moodboard) before calling Phase 2 Done.
+5. **Human:** screenshot check against the **§2 flat/toon material-family table** (and the Link's
+   Awakening / soft-clay language in §1–§2) before calling Phase 2 Done.
+   **Doc mismatch to fix (flagged 2026-08-15 look-check):** this checklist historically pointed at
+   `ART_DIRECTION.md`'s Moodboard image, but that hero ref was rewritten under **C53** to a photoreal
+   floating city-block chunk — the opposite surface-material direction from **C65** / this doc's §2.
+   Do **not** judge Phase 2 surfaces against that moodboard photo. Judge against §2. Integrator (or a
+   later ART_DIRECTION pass) should update the Moodboard section so it no longer contradicts C65 for
+   board *surfaces* (geometry density / weather bar can stay C53).
+
+---
+
+## 6. Match Shell Layout — MapViewport framing (docs-only recommendation, 2026-08-15)
+
+`docs/ui/MATCH_SHELL_LAYOUT.md` locks a vertical band stack where **MapViewport is a mid-screen
+rectangle (~48–55% window height), not the full window** — InfoBar above it, HandBand/ToolBar/
+TimelineSchedule below. This section is Map's recommendation for how the board should read inside
+that hole, per that doc's brief. **Recommendation only** — Camera slice / Integrator own
+`GameBootstrap.ConfigureCamera` and `BoardCameraRig`; nothing in this section is implemented here.
+
+### 6.1 Camera framing
+
+`ConfigureCamera` already renders the board through a `cam.rect` sub-region, not the full window
+(`cam.rect = new Rect(0f, ProgramHud.HudDockHeight, 1f, 1f - HudDockHeight - TopStripHeight)`) — a
+MapViewport rect is the same mechanism, not a new one. What changes is magnitude: that rect was sized
+against a full-width band leaving only a bottom dock + top strip cut out (most of the window height);
+MapViewport's ~48–55% is a much tighter vertical crop. The current default
+`orthographicSize = 3.4f` and `BoardCameraRig`'s `[MinOrthographicSize 2.6, MaxOrthographicSize 8.0]`
+bounds were calibrated against that taller region (see `BoardCameraRig.cs`'s own worked comments) and
+should **not** carry over unchecked — re-derive against the new rect height using the same
+aspect-independent formula already in that file (`depth * sin(52°) / (2 * orthographicSize)` for
+vertical coverage), once the MapViewport rect is real.
+
+**Readability priority when trading zoom for fit** (tightest region wins, so order the trade-offs
+this way, not evenly): **doors > flank/corridor sightline shape > full room-floor edge**. It's
+acceptable for outer void or a room's far floor edge to crop slightly at default zoom before it's
+acceptable for a door gap or a flank mouth to clip out of frame — those are the things a player
+must read every round to plan a program.
+
+**Tall-map risk gets worse, not new:** `MAP_AUTHORING.md` §2's own watch-out already flags that
+camera framing is map-agnostic and taller boards (Rail Platform, depth 13) aren't individually
+verified. A ~48–55%-height rect shrinks the margin for that same problem — Rail Platform is the one
+to human-check first once the real rect lands, before assuming the Freight Yard framing generalizes.
+
+**Pitch/yaw:** no change recommended. Fixed 52° pitch + free yaw (`BoardCameraRig`) already reads as
+a diorama at any rect aspect; a shorter rect is a framing/zoom problem, not a reason to revisit pitch.
+
+### 6.2 Full-bleed dressing check
+
+Audited Map-owned placement code (`BoardView`, `BoardSurfaceMaterials`, room floors/walls/door and
+prop dressing) — everything is positioned in board-local world space keyed off `ArenaBoard` bounds,
+not screen space. **No Map-owned dressing assumes a full window.** Two flags for Camera/Atmosphere,
+not Map fixes:
+
+- **Weather (`BoardWeatherPocket`, Atmosphere-owned):** already world-space and deliberately
+  "contained to the board, not an infinite horizon" per `ART_DIRECTION.md`'s Moodboard section — not
+  full-bleed by design. But `cam.rect` **crops** rather than rescales, so a shorter MapViewport rect
+  can clip the top of that above-board storm/cloud geometry out of frame even though the system
+  itself was never full-bleed. Once the real rect lands, Atmosphere should re-check the storm cloud
+  cap still sits inside frame at default zoom, and adjust cloud-pocket height together with
+  Camera's zoom/rect change rather than each side compensating separately.
+- **Void-edge dressing** (`BoardView.PlaceVoidCityProp`, Cartoon_City fragments at the board's outer
+  edge): same crop risk at max zoom-out. Low priority — decorative periphery, not a readability item.
+- **Post-process vignette/DoF** (`GameBootstrap.BuildDioramaVolume`) is inherently screen-space on the
+  camera's own output, so it automatically scopes to whatever rect the camera renders through —
+  no change or flag needed there.
+
+### 6.3 No second "card battlefield" layer — explicit
+
+`BoardView` (pawns, doors, room geometry) stays the **only** board representation inside
+MapViewport. Per `MATCH_SHELL_LAYOUT.md`'s own explicit rejects: no Hearthstone-style card/minion
+lane overlay drawn over or inside the diorama — card-language chrome (hand fan, schedule blocks)
+belongs in HandBand/TimelineSchedule, not layered onto the map. Restated here so it's visible from
+the map-doc side, not only the shell-layout doc.
