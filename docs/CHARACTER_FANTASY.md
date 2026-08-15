@@ -118,10 +118,43 @@ Full Detonator concept doc is still backlog (`CHARACTER_PLAN.md` §3 item 6).
 | Surface | What fantasy needs | Owner |
 |---------|-------------------|--------|
 | Character Select blurb | One-line pitch + attr tell | **UI** chrome; Character owns copy truth |
+| In-match **InfoBar** | Side + archetype + wound ladder + TR (see §4.1) | **Character** field meaning; **UI** chrome |
 | In-match scrubber | Costs that match the tell (Agility/Strength real) | Character rules → UI present |
 | Unique verb prompt | Identity / live state / confirm | UI board-anchored; Character legality |
 | Collection / store | Cosmetics only; verbs free | Cards + Monetization — Character enforces "not P2W kit" |
 | Pawn silhouette | Scout light/fast vs Jug heavy/planted (art) | Art / Phase 5 — fantasy can request, not mandate packs |
+
+### 4.1 In-match InfoBar field sheet (Match Shell Layout — 2026-08-15)
+
+**Owner:** Character (content meaning) · **UI** builds the band · **Integrator** wires readers.  
+**Layout target:** [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) region **InfoBar** (~6–8% height).  
+**Reject:** mock “LORD VEXAR / 22 HP / mana orbs.” No fantasy HP bars, no mana.
+
+**Bar shape (recommend):** **one combined InfoBar** — two side columns (Attacker | Defender) inside a single band, plus a shared match strip (phase / round / pool). Do **not** stack two full-height bars; the region budget is too thin.
+
+| Field | Attacker | Defender | Source (today) | Notes |
+|-------|----------|----------|----------------|-------|
+| **Side label** | `ATTACKER` | `DEFENDER` | `MatchSide` (**C18**) | Spawn / allotment labels only — not kit locks. |
+| **Character name / archetype** | e.g. Scout | e.g. Juggernaut | Roster + `CharacterData.displayName`; local pick via `AppFlowController.SelectedArchetype` | Demo cast = Scout / Juggernaut. Show **display name**, not asset filename. |
+| **Wounds** | Healthy / Wounded / Dead | same | `RoundPlayback.WoundsOf(pawnId)` + `GhostResolver.WoundsUntilDead` (= 2) | Map `0 → Healthy`, `1 → Wounded`, `≥2 → Dead`. **Discrete ladder labels or 0–2 pips — not an HP bar.** |
+| **Time Resource (shared)** | Match pool remaining + round index (+ chooser during Allot) | *(same strip — not per-side)* | `MatchClock.RemainingSeconds`, `RoundIndex`, `CurrentChooser` | Display only. Round budget / scrubber used-seconds stay on TimelineSchedule / ToolBar — InfoBar carries **match-pool** truth (**C33**). |
+| **Phase** | Shared | Shared | `RoundPhaseController` / existing HUD phase string | ALLOT / PROGRAM / REVEAL / EXECUTE / … — match identity, not Character fantasy. |
+
+**Optional / OPEN (post-demo — do not block shell):**
+
+| Field | Status | Notes |
+|-------|--------|-------|
+| Signature card / deck size | **OPEN** | **C64** hybrid signatures + personal decks — no in-match reader yet; omit until Cards + Integrator freeze a display contract. |
+| Attr tell (Speed/Agility/Strength numbers) | **Out of InfoBar** | Belongs on Character Select / a deepen panel, not the always-on status strip. |
+| Unique-verb charge / bomb-armed icon | **Out of v1 InfoBar** | Bomber / Time Player not demo shell scope; revisit when those contracts open. |
+
+**Integrator flags — Sim / Boot readers that are thin or missing:**
+
+1. **Per-side archetype mid-match** — `SelectedArchetype` is the local player's Char Select string only. Defender (and any second local / net pawn) archetype is **not** exposed as a clean dual reader today; Boot often hardcodes speeds/art (`CHARACTER_ATTRS` D4 wiring gap). InfoBar needs an Integrator-owned `ArchetypeOf(pawnId)` (or side→`CharacterData`) before both columns can be truthful.
+2. **Wound ladder enum** — only raw int via `WoundsOf`; UI (or a one-line helper) maps to Healthy/Wounded/Dead. No separate Sim API required if UI owns the map against `WoundsUntilDead`.
+3. **No InfoBar widget yet** — content sheet only; UI seats the band. Character does not invent chrome.
+
+**Copy tone:** desk-lamp heist status (side · name · wound word · pool clock), not MOBA portrait chrome.
 
 ---
 
@@ -159,3 +192,4 @@ Answers here feed PRODUCT_MEMORY later; this doc stays a concept scratch until y
 - [`CHARACTER_CARDS_BOUNDARY.md`](CHARACTER_CARDS_BOUNDARY.md) — gear vs verb vs attrs
 - [`CHARACTER_ATTRS_SCOUT_JUGGERNAUT_BRIEF.md`](CHARACTER_ATTRS_SCOUT_JUGGERNAUT_BRIEF.md) — wiring reality
 - [`CHARACTER_ROSTER_LONGTERM.md`](CHARACTER_ROSTER_LONGTERM.md) — Bomber / Time Player design source
+- [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) — InfoBar region geometry (UI); §4.1 is Character content for that band
