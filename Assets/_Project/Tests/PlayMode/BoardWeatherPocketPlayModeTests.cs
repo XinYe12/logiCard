@@ -138,12 +138,11 @@ namespace LogiCard.Tests.PlayMode
             weather.ApplyWeather(BoardWeatherMood.Storm);
             Transform cloudBank = weather.transform.Find("Weather_Storm/CloudBank");
             Assert.That(cloudBank, Is.Not.Null, "Expected CloudBank after first Storm apply.");
-            int firstId = cloudBank.GetInstanceID();
 
             weather.ApplyWeather(BoardWeatherMood.Storm);
             Transform again = weather.transform.Find("Weather_Storm/CloudBank");
             Assert.That(again, Is.Not.Null, "Same-mood ApplyWeather must leave the Storm module standing.");
-            Assert.That(again.GetInstanceID(), Is.EqualTo(firstId),
+            Assert.That(again == cloudBank, Is.True,
                 "Same-mood ApplyWeather must early-out — CloudBank must not be destroyed/recreated.");
             Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Storm));
 
