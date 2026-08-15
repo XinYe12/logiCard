@@ -1,58 +1,57 @@
-# Draft Handoff — 2026-08-14
+# Draft Handoff — 2026-08-15
 
-**Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (Bandage carve-out via C63, extended to C67).  
-**Tip:** `master` — Storm gear card (C67) fully landed: Sim-side, Cards catalog, UI HUD wiring, Atmosphere idempotency fix. Bandage HUD-side (C63) also landed, same UI commit. Prior combined batchmode green @ `7213d98` (EditMode 149/149, PlayMode 48/48) — **not independently re-run since**, though UI reported a real batchmode run on their own worktree (166/166 EditMode, 51/51 PlayMode) after building Bandage+Storm.  
-**Ops:** Atmosphere / Cards / Character / UI / **Map** + Integrator (`PARALLEL_OPS.md`). **No department coding-hot right now** — Storm card wave closed out today.  
-**Read first next session:** this file → `PARALLEL_OPS.md` → `departments/INDEX.md` → `contracts/CURRENT.md` → `PLAYBACK_CONTRACT.md` if touching Execute.
+**Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (C63/C67 gear carve-out).  
+**Integrator tip:** `master` @ `164012f` (hand-deck drag-to-play + Storm/Bandage HUD + Fair-lightning).  
+**Active wave:** **Match Shell Layout** — vertical in-match stack (layout only; not per-widget chrome).  
+Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [`docs/contracts/CURRENT.md`](contracts/CURRENT.md) (open section at top).
+
+**Locked stack (top → bottom):** InfoBar → MapViewport (diorama, **not** HS battleground) → HandBand → ToolBar → TimelineSchedule (YOU/ENEMY/EFFECTS; playhead = TR scrubber).  
+**Refs:** `screenshots/image copy 18.png` / `19.png`.  
+**Pending human:** PRODUCT_MEMORY C-row to lock this stack (provisional `UI_FLOW.md` §4 amend; C48 landscape canvas kept unless portrait reopened).
+
+**Read first next session:** this file → `PARALLEL_OPS.md` → `departments/INDEX.md` → `contracts/CURRENT.md` → `ui/MATCH_SHELL_LAYOUT.md` → UI worktree STATUS / uncommitted `ProgramHud`.
 
 ## Live folders
 
 | Seat | Folder | Tip / state |
 |------|--------|-------------|
-| Integrator | `logiCard` | `master` — clean, all Storm-card merges landed |
-| Atmosphere | `logiCard-atmosphere-stylized` | Storm DoD 1–2 merged (ported by hand). **Uncommitted "Sunny weather mood" work still in the worktree** — human confirmed it stays out of this merge; separate decision pending |
-| Cards | `logiCard-cards-collection` | `feat/cards-collection-docs` @ `3e77925` — merged, idle. Storm numerics recommendation + C68 packaging await human lock |
-| Character | `logiCard-char-select-motion` | `feat/char-select-motion` — 4 briefs; needs human answers |
-| UI | `logiCard-modal-restyle` | `feat/modal-restyle` @ `31c55e8` — Bandage + Storm HUD-side merged, idle. Icon-catalog work resumes, uncommitted |
-| Map | `logiCard-map` | `dept/map` @ `565583f` — Phase 2 merged, idle |
-| (retire OK) | `logiCard-gear-bandage-sim` | merged @ `0b11031` |
+| Integrator | `logiCard` | `master` @ `164012f` — layout docs/contracts dirty uncommitted |
+| **UI** | `logiCard-modal-restyle` | `feat/modal-restyle` @ `3f77b6c` + **uncommitted Match Shell code — Ready**, EditMode 174/174 / PlayMode 53/53 (Editor closed to batchmode, human-approved) |
+| Atmosphere | `logiCard-atmosphere-stylized` | Docs **Ready** — `docs/departments/atmosphere/WEATHER_MAP_VIEWPORT.md` (uncommitted); Sunny mood still held back |
+| Cards | `logiCard-cards-collection` | Docs **Ready** — `CARD_COLLECTION.md` §13 schedule chip taxonomy (uncommitted) |
+| Character | `logiCard-char-select-motion` | Docs **Ready** — `CHARACTER_FANTASY.md` §4.1 InfoBar field sheet (uncommitted) |
+| Map | `logiCard-map` | Docs **Ready** — `MAP_PRESENTATION_STANDARD.md` §6 MapViewport framing (uncommitted) |
+| Camera | `logiCard-camera-control` | `feat/camera-freecam-tps` @ `2b06a3a` (freecam+TPS **already committed**); brief said pause for MapViewport — reconcile before merge |
 
 ## Implemented
 
-- **C62/C63** first-wave gear + Bandage numerics. **C64/C66** hybrid card system + deckbuilder sizing. **C68** Character 8-card play-deck packaging (Cards, same-day human conversation).
-- **Rematch reset + sunny relight**, **C65** (board surface materials flat/toon, implemented by Map Phase 2), **Atmosphere storm weather** (Zap tip + cloud energize) — all from earlier today, human Play-signed where applicable.
-- **C67 / Storm gear card — fully landed:**
-  - **Sim-side** (Integrator): `ActionVerb.Storm`, `TapeEventType.StormCast`, permissive `GhostResolver` emission, `RoundPlayback.SyncWeatherToSeconds` (continuous presenter driving `BoardWeatherPocket.ApplyWeather`, double-guarded against restarting the expensive cloud/rain/lightning rebuild). `GameBootstrap` now boots on **Fair**, not Storm, so casting the card is a visible change. Rematch resets weather to Fair.
-  - **Cards**: `CARD_COLLECTION.md` entry + `GEAR_STORM_AGENT_BRIEF.md` (TR —, 1×/Character/match recommended — numerics stay OPEN pending human lock).
-  - **UI**: `PawnProgram.TryQueueStorm`, `BoardInputController.TryQueueStormAt`, `GearHandView` 5th slot, `ProgramHud` arm/place/legality wiring — built in the same pass as **Bandage HUD-side (C63)**, which is also now closed.
-  - **Atmosphere**: `ApplyWeather` same-mood early-out + `ApplyStormLightingDim` clean-baseline-on-restore, ported by hand onto master (their branch also had an unrelated "Sunny mood" feature that did NOT merge — see Blockers).
-  - **Known deviation**: Storm's once-per-match gate is HUD-side "not already queued this Program" only — per-round, not a true cross-round counter. Accepted for this wave (TR cost is 0, recasting an already-active mood is a harmless no-op). Atmosphere's "storm rolling in" transition (DoD item 3) was explicitly deferred, still an instant swap.
+- **On master:** C62–C68 gear/deck packaging; Storm + Bandage HUD; hand-deck drag-to-play (`164012f`); Fair no-lightning (`561e7fd`); chrome ship pass **not** on master (`3f77b6c` on UI branch only — absorbed into layout).
+- **Match Shell wave opened by Integrator:** plan doc, contract, `MATCH_SHELL_LAYOUT_AGENT_BRIEF.md` in every worktree; INDEX/HANDOFF updated.
+- **Docs peers (in their worktrees, not merged to master):** Atmosphere viewport framing; Cards schedule language; Character InfoBar sheet; Map camera-framing §6.
+- **UI Match Shell — Ready (uncommitted on `feat/modal-restyle`):** `ProgramHud` rebuilt to five locked bands, fractions 0.07/0.48/0.14/0.17/0.14 (InfoBar/MapViewport/HandBand/ToolBar/TimelineSchedule — MapViewport largest). `MapViewport` is a real empty UI hole with a new public `ProgramHud.MapViewport` rect for Camera/Integrator letterboxing later; `GameBootstrap.ConfigureCamera` needed **zero edits** (`HudDockHeight`/`TopStripHeight` repurposed, numerically equal to the new rect). InfoBar gained real wounds + TR-used/budget fields (stubbed pending the `RegisterMatchState` wiring below). ToolBar merges old Controls+Action columns into one row (SET PATH folded into stance row as 4th cell). TimelineSchedule reuses the YOU-track scrubber code verbatim plus stub ENEMY/EFFECTS rows; queue readout moved here from HandBand. All existing GameObject names tests depend on (`Gear_Bandage`, `QueueReadout`, etc.) preserved — no drag-play test behavior changes. Only `ProgramHudLayoutTests.cs` (rewritten for new geometry) + `AppFlowPlayModeTests.cs` (two assertions) changed. **Verified:** Editor was closed on this worktree (human-approved) — EditMode 174/174, PlayMode 53/53, 0 failures including all Hand Deck Drag Play tests. STATUS.md updated to Ready. **Still open before merge:** one-line `GameBootstrap` hook to wire `RegisterMatchState` (delegates, not a `RoundPlayback` param — UI can't reference `Boot`) — flagged by UI as Integrator-dirty file, not made.
 
 ## Verification
 
-- Combined master @ `7213d98`: EditMode 149/149, PlayMode 48/48 (last independently-run baseline).
-- UI reported a real batchmode run on their own worktree after Bandage+Storm: EditMode 166/166, PlayMode 51/51. **Not independently re-run by Integrator on the combined master tip.**
-- Everything else landed today (rematch/relight, C65/C66/C68 docs, Atmosphere storm, Map Phase 2, Storm Sim-side): still not independently re-batchmoded.
+- Master @ `164012f`: EditMode 173/173, PlayMode 56/56 (hand-deck cherry-pick verify earlier today).
+- Match Shell UI: EditMode 174/174, PlayMode 53/53 — **UI-reported**, Editor closed on that worktree for the run; **not yet independently re-run by Integrator**; no human Play on new stack yet.
+- Docs peers: content written in worktrees; not independently reviewed/merged.
 
 ## Still unfinished
 
-- **Independent batchmode run on current master tip** — UI's own-worktree green is encouraging but not a substitute; Editor must be closed on `D:\projects\Game\logiCard` first.
-- **Healed presenter** (Integrator): `TapeEventType.Healed` in `RoundPlayback` + `PLAYBACK_CONTRACT` §3 — not started, now unblocked since Bandage HUD-side merged.
-- **Atmosphere's Sunny weather mood** — real, apparently-working feature (new mood, toggle, cloud drift) sitting uncommitted in `logiCard-atmosphere-stylized`, held back because it silently changed the boot mood away from Fair. Needs a human decision: land it as its own feature (with boot mood reconciled), or drop it.
-- **Storm numerics lock** — Cards recommends `TR —`→a real cost, 1×/Character/match; needs human confirm → follow-up C-row (same C62→C63 shape), then Sim-side would need real charge-carry plumbing (mirroring `BandageChargeOf`) if strict once-per-match enforcement is wanted.
-- **Optional**: `GameBootstrap.BuildLighting`/`BuildDioramaVolume` re-grade against Map's new saturated flat materials — not required, human already likes the current look.
-- **Character** Sim contracts blocked on brief answers + carve-out.
-- Interact needs station; Adrenaline real effect needs PLAYBACK redesign; Phase 2 Net paused.
-- Older unmonitored: door tape Open second; south-edge Move-click; zoom-fill/soft-rain/reflections.
+1. ~~UI finish Match Shell~~ — **done**, reported Ready 2026-08-15 (see Implemented above).
+2. **Human Play sign-off** on shell layout → Integrator merges UI (+ fold peer docs) → wire one-line `GameBootstrap.RegisterMatchState` hook → camera letterbox to `MapViewport` (Atmosphere: do **not** let Sunny/`Camera.main.backgroundColor` wash HUD chrome).
+3. **Camera branch reconcile** — `2b06a3a` landed freecam/TPS while shell was opening; gate merge on MapViewport API + human Play.
+4. Backlog: Healed presenter; Atmosphere Sunny keep/drop; Storm numerics lock; prune dead Bandage/Storm Mode board-tap paths in `BoardInputController`; URP shadow tune on main (uncommitted `LogiCardURP.asset` 50→20 distance, 2048→4096 map) — not Play-verified.
 
-## Today / next
+## Tomorrow
 
-1. Integrator: run independent batchmode on current tip; decide/ask about Atmosphere's Sunny mode; start Healed presenter if picking up more work.
-2. All departments idle unless restaffed — Character needs human answers to unblock; UI has icon-catalog work uncommitted and ready to resume.
+1. **Human Play** the Match Shell stack in `logiCard-modal-restyle` (Editor will need to be closed again for any further batchmode) — sign off or flag issues.
+2. Integrator: after sign-off, cherry-pick/merge shell to master; wire the one-line `RegisterMatchState` hook + `ConfigureCamera` to `MapViewport`; pull docs peer deliverables (Cards §13, Character §4.1, Map §6, Atmosphere `WEATHER_MAP_VIEWPORT.md`).
+3. Only then resume Camera freecam merge / chrome-collection backlog.
 
 ## Blockers / notes
 
-- Main Editor lock → batchmode on other worktrees; avoid multiple Unity instances.
-- Atmosphere worktree still carries unrelated dirty (Floor/Glass mats, ProjectSettings, orphan pack `.meta` deletes, `_Recovery/`, debug screenshots, **and now the uncommitted Sunny-mode work**) — none of it part of any merge; human keep/delete/decide calls pending.
-- Untracked junk on main: `Assets/ExplosiveLLC/`, screenshot copies — human keep/delete. `ProjectSettings.asset` also has an uncommitted scripting-define change (`UNITY_POST_PROCESSING_STACK_V2`) that looks like a side effect of the untracked `ExplosiveLLC` import — left uncommitted pending that decision. Same noise showed up independently in other worktrees; nobody has committed it anywhere.
+- **You are Integrator on main** unless continuing UI coding in the modal-restyle worktree — never two agents on the same tree.
+- Main dirty (do not commit unless asked): `LogiCardURP.asset`, `BoardInputController.cs` (friendlier Storm rejection string), `ProjectSettings.asset`, docs (`DRAFT_HANDOFF`, `INDEX`, `contracts/CURRENT`, untracked `MATCH_SHELL_LAYOUT.md`), `ExplosiveLLC/`, extra screenshots.
+- UI worktree also has unrelated pack `.meta` deletes + `ProjectSettings` noise — don’t ship those with the shell.
 - No push unless asked.
