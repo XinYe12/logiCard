@@ -1,5 +1,7 @@
 using LogiCard.Board;
+using LogiCard.Sim;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace LogiCard.Tests.PlayMode
 {
@@ -73,6 +75,62 @@ namespace LogiCard.Tests.PlayMode
 
             rig.ZoomBy(100f);
             Assert.That(rig.OrthographicSize, Is.EqualTo(BoardCameraRig.MaxOrthographicSize).Within(0.001f));
+        }
+
+        [Test]
+        public void PanningIsClampedToTheRealMapsBounds()
+        {
+            // ConfigureCamera wires SetPanBounds from the actual built ArenaBoard (2026-08-15) — this
+            // exercises that wiring against the real map, not a synthetic bounds rect like the EditMode
+            // coverage does.
+            BoardCameraRig rig = Bootstrap.CameraRig;
+            Vector3 maxCorner = BoardVisual.WorldFromPlanar(
+                new PlanarPosition(BoardVisual.Model.MaxX, BoardVisual.Model.MaxY));
+
+            rig.PanBy(new Vector3(10_000f, 0f, 10_000f));
+
+            Assert.That(rig.transform.position.x, Is.LessThanOrEqualTo(maxCorner.x + BoardCameraRig.DistanceFromCenter));
+            Assert.That(rig.transform.position.z, Is.LessThanOrEqualTo(maxCorner.z + BoardCameraRig.DistanceFromCenter));
+        }
+
+        [Test]
+        public void CyclingTpsLockStepsThroughAttackerThenDefenderThenOverview()
+        {
+            // GameBootstrap wires SetTpsTargets to [attacker, defender] (2026-08-15) — this is end-to-end
+            // wiring coverage, not the pure cycle-order logic already covered in EditMode.
+            BoardCameraRig rig = Bootstrap.CameraRig;
+
+            rig.CycleTpsLock();
+            Assert.That(rig.Mode, Is.EqualTo(BoardCameraRig.CameraMode.TpsLock));
+            Assert.That(rig.TpsTargetIndex, Is.EqualTo(0));
+
+            rig.CycleTpsLock();
+            Assert.That(rig.Mode, Is.EqualTo(BoardCameraRig.CameraMode.TpsLock));
+            Assert.That(rig.TpsTargetIndex, Is.EqualTo(1));
+
+            rig.CycleTpsLock();
+            Assert.That(rig.Mode, Is.EqualTo(BoardCameraRig.CameraMode.Overview));
+            Assert.That(rig.TpsTargetIndex, Is.EqualTo(-1));
+            Assert.That(Camera.main.orthographic, Is.True);
+        }
+
+        [Test]
+        public void TpsLock_SuppressesProgramPhaseBoardClicks_OverviewDoesNot()
+        {
+            // Same south-Yard screen-click shape BoardInputPlayModeTests already exercises for the
+            // ortho camera — here the point is the camera-mode gate (2026-08-15), not the raycast math.
+            BoardCameraRig rig = Bootstrap.CameraRig;
+            var yardPoint = new PlanarPosition(4f, 2f);
+            Vector3 screen = Camera.main.WorldToScreenPoint(BoardVisual.WorldFromPlanar(yardPoint));
+
+            Assert.That(AttackerInput.TryClickAtScreenPosition(screen), Is.True,
+                "Overview mode must still accept board clicks (unchanged behavior).");
+
+            rig.CycleTpsLock();
+            Assert.That(rig.Mode, Is.EqualTo(BoardCameraRig.CameraMode.TpsLock));
+
+            Assert.That(AttackerInput.TryClickAtScreenPosition(screen), Is.False,
+                "Program-phase board clicks must be scoped out while TPS-locked.");
         }
     }
 }

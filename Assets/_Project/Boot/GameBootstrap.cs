@@ -48,6 +48,8 @@ namespace LogiCard.Boot
         private MatchClock _matchClock;
         private IFoleyPlayer _foley;
         private BoardCameraRig _cameraRig;
+        private PawnView _attackerView;
+        private PawnView _defenderView;
         private ProgramHud _programHud;
         private MapId _activeMap = MapId.FreightYard;
         private bool _matchSceneBuilt;
@@ -509,6 +511,8 @@ namespace LogiCard.Boot
             // the visual build follows the same archetype so silhouette and movement read together.
             PawnView attacker = SpawnPawn("Pawn_Attacker", new Color(0.90f, 0.35f, 0.28f), attackerHome, attackerSecondsPerTile, PawnBuild.Scout);
             PawnView defender = SpawnPawn("Pawn_Defender", new Color(0.32f, 0.58f, 0.86f), defenderSpawn, DefenderSecondsPerTile, PawnBuild.Juggernaut);
+            _attackerView = attacker;
+            _defenderView = defender;
 
             _attackerInput = attacker.gameObject.AddComponent<BoardInputController>();
             _attackerInput.Init(attacker, _phase, attackerHome, attackerSecondsPerTile, 0f, _board);
@@ -693,6 +697,25 @@ namespace LogiCard.Boot
             }
 
             _cameraRig.Init(cam, _board.CenterWorld);
+
+            // Free pan (2026-08-15) clamps to this map's playable footprint — ArenaBoard's own
+            // Min/Max X/Y run through the same WorldFromPlanar conversion the board's own geometry
+            // uses, so this stays correct per-map without hardcoding one board's bounds (three maps,
+            // different footprints: FreightYard/VaultComplex 8x9-ish, RailPlatform 8x13).
+            _cameraRig.SetPanBounds(
+                _board.WorldFromPlanar(new PlanarPosition(_board.Model.MinX, _board.Model.MinY)),
+                _board.WorldFromPlanar(new PlanarPosition(_board.Model.MaxX, _board.Model.MaxY)));
+
+            // TPS lock (2026-08-15) cycle order: attacker, then defender, then back to Overview — see
+            // BoardCameraRig.CycleTpsLock. This project always has exactly these two pawns
+            // (AttackerPawnId/DefenderPawnId); no roster query needed.
+            _cameraRig.SetTpsTargets(new[] { _attackerView.transform, _defenderView.transform });
+
+            // Program-phase board clicks are scoped out while TPS-locked (BoardCameraRig's class doc,
+            // "Program-phase board input") — a close over-the-shoulder view can't sanely support
+            // "tap the board to draft a path." See BoardInputController.TryClickAtScreenPosition's
+            // camera-mode gate.
+            _attackerInput.SetCameraRig(_cameraRig);
 
             // Post-processing is off by default per camera (URP) even when the pipeline supports it;
             // without this the diorama Volume below has nothing to render through (playtest 2026-08-07:

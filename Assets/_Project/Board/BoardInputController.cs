@@ -25,6 +25,7 @@ namespace LogiCard.Board
         private ArenaBoard _board;
         private BoardView _boardView;
         private bool _locked;
+        private BoardCameraRig _cameraRig;
         private StanceType _preferredStance = StanceType.Walk;
         private ShootMode _preferredShootMode = ShootMode.SnapShot;
         private Door _pendingDoor;
@@ -124,6 +125,18 @@ namespace LogiCard.Board
 
             _phase.PhaseChanged += OnPhaseChanged;
             ResetProgram();
+        }
+
+        /// <summary>
+        /// Wires the camera-mode gate (2026-08-15, free-pan + TPS-lock wave): <see cref="TryClickAtScreenPosition"/>
+        /// is suppressed while <paramref name="cameraRig"/> reports <see cref="BoardCameraRig.CameraMode.TpsLock"/>
+        /// — a close over-the-shoulder view can't sanely support "tap the board to draft a path."
+        /// <see cref="TryTapPoint"/> stays ungated (see that method's doc). Optional — a null/never-set
+        /// rig leaves Program input exactly as it was.
+        /// </summary>
+        public void SetCameraRig(BoardCameraRig cameraRig)
+        {
+            _cameraRig = cameraRig;
         }
 
         /// <summary>Updates the carried start point and round budget before Program rebuilds (C33).</summary>
@@ -276,11 +289,25 @@ namespace LogiCard.Board
         /// Full click pipeline (UI absorb → ground ray / plane → <see cref="TryTapPoint"/>) at an
         /// explicit screen position. <see cref="Update"/> uses the live pointer; PlayMode tests drive
         /// south-edge / HUD-overlap cases without synthesizing <c>Input.mousePosition</c>.
+        ///
+        /// Gated on camera mode too (2026-08-15): while <see cref="SetCameraRig"/>'s rig reports
+        /// <see cref="BoardCameraRig.CameraMode.TpsLock"/>, this returns false without raycasting —
+        /// a close over-the-shoulder view can't sanely support "tap the board to draft a path," and
+        /// gating here (not just in <see cref="Update"/>) means this is the one choke point for every
+        /// caller, live pointer or programmatic. <see cref="TryTapPoint"/> stays ungated — it takes an
+        /// already-resolved <see cref="PlanarPosition"/>, not a screen tap, so it's a scheduling
+        /// primitive rather than "player interacting with the board through the current camera view."
         /// </summary>
         public bool TryClickAtScreenPosition(Vector3 screenPosition)
         {
             if (_locked || _phase.Phase != RoundPhase.Program)
             {
+                return false;
+            }
+
+            if (_cameraRig != null && _cameraRig.Mode == BoardCameraRig.CameraMode.TpsLock)
+            {
+                Debug.Log("[logiCard] Board click ignored: camera is TPS-locked (Program input scoped out while locked).");
                 return false;
             }
 
