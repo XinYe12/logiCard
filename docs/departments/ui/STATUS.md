@@ -1,12 +1,84 @@
 # UI — STATUS
 
-**Wave / Day:** HUD Chrome Ship Pass (2026-08-15, human playtest: "the current UI is unplayable" —
-cards bleeding into verb controls, unframed queue-log strip) — **Ready for Integrator/human
-review**; chrome collection resumes after.
+**Wave / Day:** Match Shell Layout (2026-08-15, `MATCH_SHELL_LAYOUT_AGENT_BRIEF.md` /
+`docs/ui/MATCH_SHELL_LAYOUT.md`) — **Ready for Integrator/human review**; supersedes the HUD Chrome
+Ship Pass below (that chrome pass is not merging alone — this layout absorbs it, per the brief).
 **Branch / worktree:** `feat/modal-restyle` @ `D:\projects\Game\logiCard-modal-restyle`
 **Mandate:** All UI surfaces (lobby, Character Select, Map Select, HUD/dock, modals).
 **Last cross-reviewed:** 2026-08-14 — merged `master` to pick up Storm Sim-side (C67) before building UI-side
 against `docs/contracts/CURRENT.md`'s Storm contract.
+
+## Done — Match Shell Layout (2026-08-15)
+
+Restructured the in-match HUD from the old 3-column bottom dock into the locked vertical stack:
+**InfoBar → MapViewport → HandBand → ToolBar → TimelineSchedule** (`docs/ui/MATCH_SHELL_LAYOUT.md`).
+Layout/region geometry only — no card-face/icon/button-art restyle this wave. Scoped entirely to
+`Assets/_Project/UI/ProgramHud.cs` + its EditMode/PlayMode tests; `GearHandView.cs`/`UiStyle.cs`/
+`UiFactory.cs` untouched (`GearHandView.Build` already took an arbitrary parent rect, so it slots into
+the shorter, full-width HandBand unchanged).
+
+- **Five full-width bands**, top→bottom, each its own named GameObject: `InfoBar` (0.07),
+  `MapViewport` (0.48, the largest — enforced by an EditMode test), `HandBand` (0.14), `ToolBar`
+  (0.17), `TimelineSchedule` (0.14). `HandBand`+`ToolBar`+`TimelineSchedule` live inside one
+  `BottomStack` GameObject (renamed from the old dock's `HudDock`) so Allot/Aftermath can still
+  overlay the same rect by phase, same mutually-exclusive `SetActive` pattern as before.
+- **`ProgramHud.MapViewport`** (new public `RectTransform`) exposes the empty UI hole — deliberately
+  no `Image` component, so the 3D board shows through undecorated — for Camera/Integrator to letterbox
+  `cam.rect` to directly in a later pass. This wave keeps `GameBootstrap.ConfigureCamera` untouched
+  (not this seat's file): `HudDockHeight`/`TopStripHeight` are kept as public constants (repurposed,
+  not renamed) and now equal the bottom-stack total / InfoBar height respectively, so the camera rect
+  they already compute is numerically identical to the new `MapViewport` rect — zero Boot/Camera edits
+  needed to keep the board framed correctly.
+- **InfoBar** carries phase, round+chooser (existing `MatchLabel`), a new **wounds** field (stub
+  `WOUNDS —` until `RegisterMatchState` wires a real read, refreshed in `Update()`), and a new **TR
+  used/budget** field (`TrLabel`, refreshed in `OnQueueChanged` from the same `Program.UsedSeconds/
+  BudgetSeconds` the queue readout already tracked) — no invented HP/mana per the doc's content
+  contract. The camera-rotate hint moved from the old TopStrip into a non-interactive
+  (`raycastTarget=false`) overlay inside MapViewport itself.
+- **ToolBar** merges the old dock's ControlsColumn+ActionColumn side by side in one full-width row
+  (verb+stance/shoot/door context left ~62%, Lock In/Adrenaline+transport right ~38%) instead of two
+  of three narrow dock columns. Compacted to fit the shorter band: SET PATH folded into the stance
+  row as a fourth split cell (was its own row below SPRINT/WALK/CRAWL); row height constants shrunk
+  (verb 48→40, stance/context 44→34, action 56→40, etc.). All existing GameObject names
+  (`Mode_Move/Shoot/Door`, `Stance_Sprint/Walk/Crawl`, `SetPathButton`, `Shoot_Snap/Hold`,
+  `LockInButton`, `AdrenalineButton`, transport buttons) are unchanged, so no PlayMode test needed a
+  behavioral rewrite — only relocation.
+- **TimelineSchedule** is the Time Resource cinema as a schedule shell: a YOU track (the *same*
+  `Scrubber` Slider + per-node colored markers the old dock used, just relocated and relabeled — so
+  "scrubbing must work" holds by construction, not by new code) plus stub ENEMY (`locked until
+  Reveal`) and EFFECTS rows, and the queue readout migrated out of HandColumn into a right-hand
+  compact panel (same `QueueReadout` GameObject name/content logic, unchanged). Expand/collapse and
+  ticket-style chip chrome are explicitly stub-OK this wave per the doc — not built.
+- **HandBand** now gets the whole band (no more `GearHandAreaMinY` split with a queue-log strip) since
+  the queue readout moved to TimelineSchedule — `GearHandView` unchanged.
+- **New EditMode coverage** (`ProgramHudLayoutTests.cs`, rewritten): band fractions sum to 1 and
+  MapViewport is strictly largest; `HudDockHeight`/`TopStripHeight` stay numerically equal to the
+  MapViewport rect (the camera-compat contract above); ToolBar/TimelineSchedule content-height budgets
+  fit their bands' UI-unit size at 1920×1080 / 1280×720 / 2560×1080 (ultrawide is tightest — all three
+  budgets clear it with margin). `AppFlowPlayModeTests.cs`'s two dock-geometry assertions updated to
+  the new band names/constants relationship instead of the old hardcoded `0.34f`.
+- **Batchmode (this worktree, Editor closed on it before running): EditMode 174/174, PlayMode
+  53/53 — 0 failures**, including all Hand Deck Drag Play tests
+  (`GearBandageDragOutOfHandPlacesABandageNode`, `GearStormDragOutOfHandPlacesAStormNode`, short-drag
+  and already-queued no-op cases) and `QueueReadoutShowsDraftThenCommittedActions` unchanged.
+
+### Deviations from the brief (flag for Integrator/human)
+
+- **ToolBar fits in one context row instead of two** — SET PATH now shares a 4-way split cell with
+  SPRINT/WALK/CRAWL rather than sitting on its own row below them; functional, slightly denser than
+  the old dock. Flagging as a deliberate compaction call (the shorter full-width ToolBar band has less
+  vertical room than the old narrow ControlsColumn had), not a missed spec item.
+- **ENEMY/EFFECTS TimelineSchedule rows are static stub text**, not wired to ghost-tape reveal or
+  live wound/weather/door state — the brief marks this explicitly stub-OK this wave ("mechanize
+  first" applies to YOU/playhead, which is real; "toy later" for the rest).
+- **Camera letterboxing still reads `HudDockHeight`/`TopStripHeight`, not `ProgramHud.MapViewport`
+  directly** — numerically identical today by construction (see above), but if a future pass makes
+  MapViewport asymmetric (e.g. side margins), `GameBootstrap.ConfigureCamera` will need updating to
+  read the rect directly instead. Flagging so that coupling isn't forgotten.
+- Expand/collapse toggle for TimelineSchedule (image 18 ↔ 19 in the brief) not built — brief listed it
+  as optional nice-to-have this wave.
+
+## Previous wave
 
 ## Owned files (this seat)
 

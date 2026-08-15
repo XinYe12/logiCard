@@ -14,78 +14,88 @@ using UnityEngine.UI;
 namespace LogiCard.UI
 {
     /// <summary>
-    /// Landscape desktop Program HUD (C48 / UI_FLOW.md). Slim full-width top status strip,
-    /// board dominant in the remaining center (camera viewport), and a bottom-band HUD dock
-    /// holding Time Resource scrubber, stance/shoot selectors, and Lock In.
-    /// Owns Allot (Time Card) and Aftermath panels for the match loop (C33), plus the
-    /// minimal pre-match AppFlow shell (Boot → Character Select → Lobby).
+    /// Landscape desktop Program HUD (C48 / UI_FLOW.md → Match Shell Layout, 2026-08-15).
+    /// Five full-width vertical bands top→bottom: InfoBar, MapViewport (camera hole — the board
+    /// shows through), HandBand, ToolBar, TimelineSchedule (docs/ui/MATCH_SHELL_LAYOUT.md). Owns
+    /// Allot (Time Card) and Aftermath panels for the match loop (C33), plus the minimal pre-match
+    /// AppFlow shell (Boot → Character Select → Lobby).
     /// </summary>
     public sealed class ProgramHud : MonoBehaviour
     {
-        /// <summary>Fraction of frame height for the slim top status strip (full width).</summary>
-        public const float TopStripHeight = 0.08f;
+        // Match Shell Layout band fractions (MATCH_SHELL_LAYOUT.md strawman, 2026-08-15) — tunable
+        // ±4% so long as MapViewport stays the single largest region and TimelineHeight never drops
+        // under ~0.12. HudDockHeight/TopStripHeight are kept (not renamed) because
+        // GameBootstrap.ConfigureCamera reads them to size cam.rect to the MapViewport hole without
+        // this UI-only wave having to touch Boot/Camera code (Camera slice + Integrator own that).
+        public const float InfoBarHeight = 0.07f;
+        public const float HandBandHeight = 0.14f;
+        public const float ToolBarHeight = 0.17f;
+        public const float TimelineHeight = 0.14f;
+
+        /// <summary>Fraction of frame height for the slim top InfoBar (full width).</summary>
+        public const float TopStripHeight = InfoBarHeight;
 
         /// <summary>
-        /// Fraction of frame height for the bottom HUD dock (moved from a right-edge margin to a
-        /// bottom band, 2026-08-10 — general vertical alignment: board dominant, controls anchored to
-        /// the bottom edge, full width). Integrator must rewire <c>GameBootstrap.ConfigureCamera</c>'s
-        /// <c>cam.rect</c> if this constant moves again.
+        /// Fraction of frame height for the combined bottom stack (HandBand + ToolBar +
+        /// TimelineSchedule) — <c>GameBootstrap</c>'s <c>ConfigureCamera</c> still reads this
+        /// (with <see cref="TopStripHeight"/>) to compute <c>cam.rect</c> as exactly the
+        /// <see cref="MapViewport"/> rect.
         /// </summary>
-        public const float HudDockHeight = 0.34f;
+        public const float HudDockHeight = HandBandHeight + ToolBarHeight + TimelineHeight;
+
+        /// <summary>Fraction of frame height for MapViewport — must stay the largest single band.</summary>
+        public const float MapViewportHeight = 1f - HudDockHeight - TopStripHeight;
 
         private const float Pad = UiStyle.Pad;
         private const float RowGap = UiStyle.RowGap;
 
-        // Compacted 2026-08-10 for the shorter bottom dock + ultrawide CanvasScaler shrink:
-        // prior tall-dock values (Verb 56 / Stance 50 / Action 64, Pad 20, RowGap 12) summed past
-        // the dock's UI-unit height at 2560×1080. Keep ControlsColumnContentHeight under
-        // DockHeightInUiUnits(ultrawide) — EditMode locks that.
-        private const float VerbRowHeight = 48f;
-        private const float StanceRowHeight = 44f;
-        private const float DebugRowHeight = 36f;
-        private const float ActionRowHeight = 56f;
-        private const float ScrubLabelHeight = 26f;
+        // Compacted 2026-08-15 for the Match Shell Layout ToolBar band (shorter than the old
+        // 3-column dock, but full width instead of a narrow column) — verb + stance/shoot/door
+        // context collapse to two rows instead of the old dock's stacked three; SET PATH folds into
+        // the stance row as a fourth split cell instead of a separate row. Keep the *ContentHeight
+        // properties below under BandHeightInUiUnits(ultrawide) — EditMode locks that.
+        private const float VerbRowHeight = 40f;
+        private const float ContextRowHeight = 34f;
+        private const float DebugRowHeight = 32f;
+        private const float ActionRowHeight = 40f;
+        private const float ScrubLabelHeight = 22f;
         private const float ScrubLabelGap = 4f;
-        private const float ScrubberHeight = 28f;
-        private const float ContextLabelHeight = 40f;
+        private const float ScrubberHeight = 24f;
+        private const float ContextLabelHeight = 26f;
         private const float ContextLabelGap = 4f;
-        private const float StanceInnerGap = 4f;
+        private const float TimelineTrackLabelHeight = 20f;
 
-        /// <summary>
-        /// Fraction of the hand column's height given to the compact queue log (bottom);
-        /// <see cref="GearHandView"/> keeps the rest above it. Reworked 2026-08-15 (Hand Deck Drag
-        /// Play brief) — the queue log used to keep 60% of this column as a mostly-empty box while
-        /// the hand was squeezed into a thin strip; that's inverted now so the hand reads like an
-        /// actual Hearthstone-style hand and the log is a slim strip sized for its typical 1-4 line
-        /// content, not the whole remaining column. Lives in HandColumn, not ControlsColumn, so it
-        /// never touches <see cref="ControlsColumnContentHeight"/> (Bandage HUD-side contract — must
-        /// not break <c>ProgramHudLayoutTests</c>).
-        /// </summary>
-        private const float GearHandAreaMinY = 0.20f;
+        /// <summary>UI-unit height consumed by the ToolBar's left (verb + stance/context) zone.</summary>
+        public static float ToolBarControlsContentHeight =>
+            Pad
+            + VerbRowHeight + RowGap
+            + ContextLabelHeight + ContextLabelGap
+            + ContextRowHeight + RowGap;
 
-        /// <summary>
-        /// UI-unit height consumed by the Program controls column (scrub + verbs + stance/context).
-        /// Must stay ≤ <see cref="DockHeightInUiUnits"/> at the ultrawide reference size.
-        /// </summary>
-        public static float ControlsColumnContentHeight =>
+        /// <summary>UI-unit height consumed by the ToolBar's right (Lock In/Adrenaline + transport) zone.</summary>
+        public static float ToolBarActionsContentHeight =>
+            Pad
+            + ActionRowHeight + RowGap
+            + ActionRowHeight;
+
+        /// <summary>UI-unit height consumed by the TimelineSchedule band's YOU/ENEMY/EFFECTS + playhead column.</summary>
+        public static float TimelineScheduleContentHeight =>
             Pad
             + ScrubLabelHeight + ScrubLabelGap
             + ScrubberHeight + RowGap
-            + VerbRowHeight + RowGap
-            + ContextLabelHeight + ContextLabelGap
-            + StanceRowHeight + StanceInnerGap
-            + StanceRowHeight + RowGap;
+            + TimelineTrackLabelHeight + RowGap
+            + TimelineTrackLabelHeight;
 
         /// <summary>
-        /// Dock's height in CanvasScaler UI units for a given window — the quantity row budgets
-        /// must fit, not the raw pixel band.
+        /// A band's height in CanvasScaler UI units for a given window — the quantity content-height
+        /// budgets above must fit, not the raw pixel band.
         /// </summary>
-        public static float DockHeightInUiUnits(float screenWidth, float screenHeight)
+        public static float BandHeightInUiUnits(float heightFraction, float screenWidth, float screenHeight)
         {
             float widthScale = screenWidth / UiStyle.ReferenceResolution.x;
             float heightScale = screenHeight / UiStyle.ReferenceResolution.y;
             float scaleFactor = Mathf.Lerp(widthScale, heightScale, UiStyle.CanvasMatchWidthOrHeight);
-            return (screenHeight * HudDockHeight) / scaleFactor;
+            return (screenHeight * heightFraction) / scaleFactor;
         }
 
         private static readonly float[] TimeCardPresets = { 30f, 60f, 120f };
@@ -118,7 +128,11 @@ namespace LogiCard.UI
         private Text _phaseLabel;
         private Text _programTimerLabel;
         private Text _matchLabel;
+        private Text _woundsLabel;
+        private Text _trLabel;
         private Text _scrubLabel;
+        private Text _timelineEnemyLabel;
+        private Text _timelineEffectsLabel;
         private Slider _scrubber;
         private readonly List<GameObject> _scrubberMarkers = new List<GameObject>();
         private Button _playButton;
@@ -176,6 +190,14 @@ namespace LogiCard.UI
         public AppFlowController AppFlow => _appFlow;
 
         /// <summary>
+        /// The MapViewport band's rect (empty UI hole — no Image, so the 3D board shows through).
+        /// Camera/Integrator can letterbox <c>cam.rect</c> to this later; this UI-only wave keeps
+        /// <c>GameBootstrap</c>'s existing <c>HudDockHeight</c>/<c>TopStripHeight</c> read
+        /// exactly equivalent to this rect instead (see those constants' docs).
+        /// </summary>
+        public RectTransform MapViewport { get; private set; }
+
+        /// <summary>
         /// Raised once the payload is built and input is locked, so the composition root can run the
         /// resolve. The HUD deliberately knows nothing about the resolver.
         /// </summary>
@@ -218,8 +240,9 @@ namespace LogiCard.UI
             _matchChrome.SetParent(root, false);
             UiFactory.Stretch(_matchChrome, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
-            BuildTopStrip(_matchChrome);
-            BuildHudDock(_matchChrome);
+            BuildInfoBar(_matchChrome);
+            BuildMapViewport(_matchChrome);
+            BuildBottomStack(_matchChrome);
             BuildOutcomeBanner(_matchChrome);
             BuildDoorPrompt(_matchChrome);
 
@@ -289,7 +312,20 @@ namespace LogiCard.UI
 
         private void OnAppFlowEnteredMatch(bool viaRelay)
         {
+            // MatchChrome stays hidden until GameBootstrap.EnsureMatchSceneBuilt finishes and calls
+            // ShowMatchChrome — otherwise the first frame can show Unity's Editor cyan async-shader
+            // placeholder in the board viewport (image copy 17) while the Time Card UI is already up.
             _adrenalineUsedThisMatch = false;
+            RefreshPrimaryActions();
+        }
+
+        /// <summary>
+        /// Reveals the in-match HUD after the board/camera exist. Called from
+        /// <c>GameBootstrap</c>'s <c>EnteredMatch</c> handler (not from <see cref="OnAppFlowEnteredMatch"/>)
+        /// so scene build always wins the race against chrome visibility.
+        /// </summary>
+        public void ShowMatchChrome()
+        {
             SetMatchChromeVisible(true);
             RefreshPrimaryActions();
         }
@@ -350,6 +386,13 @@ namespace LogiCard.UI
                 ? $"PROGRAM  {_phase.ProgramSecondsRemaining:0}s"
                 : "real-world";
 
+            // InfoBar wounds field (docs/ui/MATCH_SHELL_LAYOUT.md) — stub em dash until
+            // RegisterMatchState wires a real read, never an invented number.
+            if (_woundsLabel != null)
+            {
+                _woundsLabel.text = _woundsOf != null ? $"WOUNDS {_woundsOf()}" : "WOUNDS —";
+            }
+
             if (_playButtonLabel != null)
             {
                 _playButtonLabel.text = _clock.IsPlaying ? "Pause" : "Play";
@@ -401,41 +444,73 @@ namespace LogiCard.UI
             return root;
         }
 
-        private void BuildTopStrip(RectTransform root)
+        /// <summary>
+        /// InfoBar (Match Shell Layout band 1) — read-only match identity/status: phase, round +
+        /// chooser, wounds, Time Resource used/budget. Stubs to an em dash rather than the old mock's
+        /// fantasy HP/mana (docs/ui/MATCH_SHELL_LAYOUT.md).
+        /// </summary>
+        private void BuildInfoBar(RectTransform root)
         {
-            RectTransform strip = _ui.CreatePanel(root, "TopStrip", PanelDark,
-                new Vector2(0f, 1f - TopStripHeight), new Vector2(1f, 1f));
+            RectTransform strip = _ui.CreatePanel(root, "InfoBar", PanelDark,
+                new Vector2(0f, 1f - InfoBarHeight), new Vector2(1f, 1f));
 
-            _phaseLabel = _ui.CreateText(strip, "PhaseLabel", "ALLOT", 32, TextAnchor.MiddleLeft, Accent);
-            UiFactory.Stretch(_phaseLabel.rectTransform, new Vector2(0f, 0.45f), new Vector2(0.32f, 1f), new Vector2(24f, 0f), Vector2.zero);
+            _phaseLabel = _ui.CreateText(strip, "PhaseLabel", "ALLOT", 24, TextAnchor.MiddleLeft, Accent, UiTextOverflow.SingleLine);
+            UiFactory.Stretch(_phaseLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0.16f, 1f), new Vector2(Pad, 0f), Vector2.zero);
 
-            _matchLabel = _ui.CreateText(strip, "MatchLabel", "MATCH", 22, TextAnchor.MiddleLeft, Ink);
-            UiFactory.Stretch(_matchLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0.32f, 0.55f), new Vector2(24f, 0f), Vector2.zero);
+            _matchLabel = _ui.CreateText(strip, "MatchLabel", "MATCH", 18, TextAnchor.MiddleLeft, Ink, UiTextOverflow.SingleLine);
+            UiFactory.Stretch(_matchLabel.rectTransform, new Vector2(0.16f, 0f), new Vector2(0.48f, 1f), Vector2.zero, Vector2.zero);
 
-            // Camera rotation itself is direct right-mouse-drag on BoardCameraRig (2026-08-10 — smooth,
-            // not a discrete-step button; see BoardCameraRig's own doc comment). Right-drag isn't a
-            // self-discoverable gesture, so a small non-interactive hint replaces what used to be a
-            // button here — no event, no click target, just a label.
-            Text rotateHint = _ui.CreateText(strip, "CameraRotateHint", "RIGHT-DRAG TO ROTATE VIEW", 16, TextAnchor.MiddleCenter, Ink);
-            UiFactory.Stretch(rotateHint.rectTransform, new Vector2(0.34f, 0.25f), new Vector2(0.60f, 0.75f));
+            _woundsLabel = _ui.CreateText(strip, "WoundsLabel", "WOUNDS —", 18, TextAnchor.MiddleLeft, Ink, UiTextOverflow.SingleLine);
+            UiFactory.Stretch(_woundsLabel.rectTransform, new Vector2(0.48f, 0f), new Vector2(0.66f, 1f), Vector2.zero, Vector2.zero);
 
-            _programTimerLabel = _ui.CreateText(strip, "ProgramTimer", "real-world", 24, TextAnchor.MiddleRight, Ink);
-            UiFactory.Stretch(_programTimerLabel.rectTransform, new Vector2(0.68f, 0f), new Vector2(1f, 1f), Vector2.zero, new Vector2(-24f, 0f));
+            _trLabel = _ui.CreateText(strip, "TrLabel", "TR 0.0 / 0.0s", 18, TextAnchor.MiddleLeft, ArFill, UiTextOverflow.SingleLine);
+            UiFactory.Stretch(_trLabel.rectTransform, new Vector2(0.66f, 0f), new Vector2(0.86f, 1f), Vector2.zero, Vector2.zero);
+
+            _programTimerLabel = _ui.CreateText(strip, "ProgramTimer", "real-world", 18, TextAnchor.MiddleRight, Ink, UiTextOverflow.SingleLine);
+            UiFactory.Stretch(_programTimerLabel.rectTransform, new Vector2(0.86f, 0f), new Vector2(1f, 1f), Vector2.zero, new Vector2(-Pad, 0f));
         }
 
         /// <summary>
-        /// Bottom-band HUD dock (C48, 2026-08-10 — moved off the right edge for a general vertical
-        /// alignment: board dominant above, controls anchored full-width along the bottom). Holds
-        /// Allot / Aftermath / Program controls. GameObject name stays HudDock across the move.
+        /// MapViewport (Match Shell Layout band 2) — an empty UI hole, deliberately no Image, so the
+        /// existing 3D board shows through undecorated. <c>GameBootstrap.ConfigureCamera</c>
+        /// still derives <c>cam.rect</c> from <see cref="HudDockHeight"/>/<see cref="TopStripHeight"/>
+        /// rather than reading this rect directly this wave (not this UI seat's file to touch) — the
+        /// two stay numerically identical by construction, see those constants' docs.
         /// </summary>
-        private void BuildHudDock(RectTransform root)
+        private void BuildMapViewport(RectTransform root)
         {
-            RectTransform dock = _ui.CreatePanel(root, "HudDock", PanelDark,
+            var go = new GameObject("MapViewport", typeof(RectTransform));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(root, false);
+            UiFactory.Stretch(rt, new Vector2(0f, HudDockHeight), new Vector2(1f, 1f - InfoBarHeight), Vector2.zero, Vector2.zero);
+            MapViewport = rt;
+
+            // Camera rotation itself is direct right-mouse-drag on BoardCameraRig (2026-08-10 — smooth,
+            // not a discrete-step button). Right-drag isn't a self-discoverable gesture, so a small
+            // non-interactive hint overlays the board — no event, no click target, raycastTarget off
+            // so it never blocks a board tap underneath it (docs/UI_BOARD_ANCHORED_COMPONENTS.md class
+            // of bug — OutcomeBanner shipped this exact mistake once already, 2026-08-11).
+            Text rotateHint = _ui.CreateText(rt, "CameraRotateHint", "RIGHT-DRAG TO ROTATE VIEW", 16, TextAnchor.UpperCenter, Ink,
+                UiTextOverflow.SingleLine);
+            UiFactory.Stretch(rotateHint.rectTransform, new Vector2(0.25f, 0.92f), new Vector2(0.75f, 1f));
+            rotateHint.raycastTarget = false;
+        }
+
+        /// <summary>
+        /// Combined bottom stack (HandBand + ToolBar + TimelineSchedule, bands 3–5) plus the
+        /// mutually-exclusive Allot/Aftermath overlays that share its rect by phase. GameObject name
+        /// changed from the old dock's <c>HudDock</c> to <c>BottomStack</c> (Match Shell Layout,
+        /// 2026-08-15) — see <c>ProgramHudLayoutTests</c>/<c>AppFlowPlayModeTests</c> for the updated
+        /// geometry assertions.
+        /// </summary>
+        private void BuildBottomStack(RectTransform root)
+        {
+            RectTransform stack = _ui.CreatePanel(root, "BottomStack", PanelDark,
                 new Vector2(0f, 0f), new Vector2(1f, HudDockHeight));
 
-            BuildAllotPanel(dock);
-            BuildAftermathPanel(dock);
-            BuildProgramControls(dock);
+            BuildAllotPanel(stack);
+            BuildAftermathPanel(stack);
+            BuildMatchControls(stack);
         }
 
         /// <summary>Creates a full-height column occupying a horizontal fraction range of <paramref name="parent"/>.</summary>
@@ -448,47 +523,58 @@ namespace LogiCard.UI
             return rt;
         }
 
-        /// <summary>
-        /// Three columns across the full-width bottom dock: verb/stance controls (left), the gear
-        /// hand + compact queue log (middle), primary Lock In/Adrenaline + transport (right).
-        /// Reworked 2026-08-15 (Hand Deck Drag Play brief) — the middle column widened from 32% to
-        /// 48% of the dock, at Controls' and Action's expense, so the hand has real Hearthstone-style
-        /// room instead of a cramped 5-button strip; Controls/Action shrinking doesn't touch either
-        /// column's vertical row budget (<see cref="ControlsColumnContentHeight"/> is a stacked-height
-        /// sum, not width-dependent). The row-building helpers below (<see cref="BuildVerbRow"/>,
-        /// <see cref="BuildStanceRow"/>) already lay out relative to whatever zone they're given, so
-        /// they work unchanged against a narrower column.
-        /// </summary>
-        private void BuildProgramControls(RectTransform zone)
+        /// <summary>Creates a full-width row occupying a vertical fraction range of <paramref name="parent"/>.</summary>
+        private static RectTransform CreateRowZone(RectTransform parent, string name, float yMin, float yMax)
         {
-            _programControls = new GameObject("ProgramControls", typeof(RectTransform));
+            var go = new GameObject(name, typeof(RectTransform));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(parent, false);
+            UiFactory.Stretch(rt, new Vector2(0f, yMin), new Vector2(1f, yMax), Vector2.zero, Vector2.zero);
+            return rt;
+        }
+
+        /// <summary>
+        /// Splits the <see cref="BuildBottomStack"/> zone into TimelineSchedule (bottom) / ToolBar /
+        /// HandBand (top) — the three lower Match Shell Layout bands, all full width, stacked instead
+        /// of the old dock's three side-by-side columns. GameObject name stays
+        /// <c>ProgramControls</c>'s successor: renamed <c>MatchControls</c>, still the one
+        /// <see cref="_programControls"/> tracks for the existing phase SetActive gate.
+        /// </summary>
+        private void BuildMatchControls(RectTransform zone)
+        {
+            _programControls = new GameObject("MatchControls", typeof(RectTransform));
             var rt = _programControls.GetComponent<RectTransform>();
             rt.SetParent(zone, false);
             UiFactory.Stretch(rt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
-            RectTransform controlsCol = CreateColumn(rt, "ControlsColumn", 0f, 0.26f);
-            RectTransform handCol = CreateColumn(rt, "HandColumn", 0.26f, 0.74f);
-            RectTransform actionCol = CreateColumn(rt, "ActionColumn", 0.74f, 1f);
+            // Local fractions within this zone (whose own height is HudDockHeight of the full frame).
+            float timelineLocal = TimelineHeight / HudDockHeight;
+            float toolBarLocal = ToolBarHeight / HudDockHeight;
 
-            // Chrome pass (HUD_CHROME_SHIP_PASS brief, 2026-08-15) — every dock region gets its own
-            // backing panel (docs/UI_CHROME_COLLECTION.md normal-card.css technique via
-            // BuildDockRegionPanel) instead of a flat color abutting its neighbor with nothing marking
-            // the boundary. Content parents under the panel's face rect, inset a few px from the
-            // column's own edges — that inset is the visible gap between regions.
-            RectTransform controlsPanel = BuildDockRegionPanel(controlsCol, "ControlsPanel", Vector2.zero, Vector2.one);
-            RectTransform actionPanel = BuildDockRegionPanel(actionCol, "ActionPanel", Vector2.zero, Vector2.one);
+            RectTransform timelineZone = CreateRowZone(rt, "TimelineSchedule", 0f, timelineLocal);
+            RectTransform toolBarZone = CreateRowZone(rt, "ToolBar", timelineLocal, timelineLocal + toolBarLocal);
+            RectTransform handZone = CreateRowZone(rt, "HandBand", timelineLocal + toolBarLocal, 1f);
+
+            BuildHandBand(handZone);
+            BuildToolBar(toolBarZone);
+            BuildTimelineSchedule(timelineZone);
+        }
+
+        /// <summary>
+        /// ToolBar (Match Shell Layout band 4) — Move/Shoot/Door + stance/shoot/door context on the
+        /// left, Lock In/Adrenaline + transport on the right. Same content as the old dock's
+        /// ControlsColumn + ActionColumn, now side by side in one full-width row instead of two of
+        /// three dock columns.
+        /// </summary>
+        private void BuildToolBar(RectTransform zone)
+        {
+            RectTransform controlsCol = CreateColumn(zone, "ToolBarControls", 0f, 0.62f);
+            RectTransform actionCol = CreateColumn(zone, "ToolBarActions", 0.62f, 1f);
+
+            RectTransform controlsPanel = BuildDockRegionPanel(controlsCol, "ToolBarControlsPanel", Vector2.zero, Vector2.one);
+            RectTransform actionPanel = BuildDockRegionPanel(actionCol, "ToolBarActionsPanel", Vector2.zero, Vector2.one);
 
             float cursor = -Pad;
-
-            // AR scrubber: cool cyan/white on a dark track — deliberate contrast vs clay board (ART_DIRECTION §4).
-            _scrubLabel = _ui.CreateText(controlsPanel, "ScrubLabel", "Time Resource  0.0s / 0.0s", 22, TextAnchor.MiddleLeft, ArFill,
-                UiTextOverflow.SingleLine);
-            UiFactory.PlaceRow(_scrubLabel.rectTransform, ref cursor, ScrubLabelHeight, ScrubLabelGap);
-
-            _scrubber = _ui.CreateSlider(controlsPanel, "Scrubber", ArTrack, ArFill, ArHandle);
-            UiFactory.PlaceRow(_scrubber.GetComponent<RectTransform>(), ref cursor, ScrubberHeight, RowGap);
-            _scrubber.onValueChanged.AddListener(OnScrubberMoved);
-
             BuildVerbRow(controlsPanel, ref cursor);
             BuildStanceRow(controlsPanel, ref cursor);
 
@@ -497,9 +583,48 @@ namespace LogiCard.UI
                 BuildPhaseDebugRow(controlsPanel, ref cursor);
             }
 
-            BuildGearHand(handCol);
-            BuildQueuePanel(handCol);
             BuildActionRow(actionPanel);
+        }
+
+        /// <summary>
+        /// TimelineSchedule (Match Shell Layout band 5) — Time Resource cinema as a schedule. Left
+        /// zone: YOU track (the existing AR scrubber/playhead + per-node markers, unchanged logic,
+        /// just relocated and relabeled) plus stub ENEMY/EFFECTS rows; right zone: the compact queue
+        /// readout migrated out of the old dock's HandColumn. Playful chrome (ticket chips, toy
+        /// playhead diamond, expand/collapse) is explicitly stub-OK this wave — scrubbing must work,
+        /// and it does, because it is the same <see cref="Slider"/> the old dock used.
+        /// </summary>
+        private void BuildTimelineSchedule(RectTransform zone)
+        {
+            RectTransform scheduleCol = CreateColumn(zone, "ScheduleColumn", 0f, 0.62f);
+            RectTransform queueCol = CreateColumn(zone, "QueueColumn", 0.62f, 1f);
+
+            RectTransform schedulePanel = BuildDockRegionPanel(scheduleCol, "SchedulePanel", Vector2.zero, Vector2.one);
+            RectTransform queuePanel = BuildDockRegionPanel(queueCol, "QueuePanel", Vector2.zero, Vector2.one);
+            queuePanel.gameObject.AddComponent<RectMask2D>();
+
+            float cursor = -Pad;
+
+            // AR scrubber: cool cyan/white on a dark track — deliberate contrast vs clay board (ART_DIRECTION §4).
+            _scrubLabel = _ui.CreateText(schedulePanel, "ScrubLabel", "YOU · Time Resource 0.0s / 0.0s", 18, TextAnchor.MiddleLeft, ArFill,
+                UiTextOverflow.SingleLine);
+            UiFactory.PlaceRow(_scrubLabel.rectTransform, ref cursor, ScrubLabelHeight, ScrubLabelGap);
+
+            _scrubber = _ui.CreateSlider(schedulePanel, "Scrubber", ArTrack, ArFill, ArHandle);
+            UiFactory.PlaceRow(_scrubber.GetComponent<RectTransform>(), ref cursor, ScrubberHeight, RowGap);
+            _scrubber.onValueChanged.AddListener(OnScrubberMoved);
+
+            _timelineEnemyLabel = _ui.CreateText(schedulePanel, "EnemyTrackLabel", "ENEMY · locked until Reveal", 15,
+                TextAnchor.MiddleLeft, Ink, UiTextOverflow.SingleLine);
+            UiFactory.PlaceRow(_timelineEnemyLabel.rectTransform, ref cursor, TimelineTrackLabelHeight, RowGap);
+
+            _timelineEffectsLabel = _ui.CreateText(schedulePanel, "EffectsTrackLabel", "EFFECTS · wounds / weather / doors", 15,
+                TextAnchor.MiddleLeft, Ink, UiTextOverflow.SingleLine);
+            UiFactory.PlaceRow(_timelineEffectsLabel.rectTransform, ref cursor, TimelineTrackLabelHeight, 0f);
+
+            _queueText = _ui.CreateText(queuePanel, "QueueReadout", "Used 0.0 / 0.0s", 16, TextAnchor.UpperLeft, Ink);
+            UiFactory.Stretch(_queueText.rectTransform, Vector2.zero, Vector2.one, new Vector2(12f, 8f), new Vector2(-12f, -8f));
+            _queueText.lineSpacing = 1.1f;
         }
 
         /// <summary>
@@ -515,16 +640,17 @@ namespace LogiCard.UI
         }
 
         /// <summary>
-        /// Docks <see cref="GearHandView"/> into the top of the hand column — the compact queue log
-        /// below keeps the slim strip at the bottom (<see cref="GearHandAreaMinY"/>). The hand gets its
-        /// own backing panel (chrome pass) and <see cref="GearHandView"/> clips the fan to it
-        /// internally (<c>FanClip</c>/<c>RectMask2D</c>) so cards can never visually cross into
-        /// ControlsColumn/ActionColumn regardless of the fan's overlap math — a card actively being
-        /// dragged still escapes that clip (see <c>CardDragController</c>).
+        /// HandBand (Match Shell Layout band 3) — hosts <see cref="GearHandView"/> at full band size;
+        /// the compact queue log that used to share this column moved to TimelineSchedule
+        /// (<see cref="BuildTimelineSchedule"/>), so the hand gets the whole band instead of splitting
+        /// it (<c>GearHandAreaMinY</c> is gone). The hand gets its own backing panel (chrome pass) and
+        /// <see cref="GearHandView"/> clips the fan to it internally (<c>FanClip</c>/<c>RectMask2D</c>)
+        /// so cards can never visually cross into ToolBar regardless of the fan's overlap math — a
+        /// card actively being dragged still escapes that clip (see <c>CardDragController</c>).
         /// </summary>
-        private void BuildGearHand(RectTransform zone)
+        private void BuildHandBand(RectTransform zone)
         {
-            RectTransform handPanel = BuildDockRegionPanel(zone, "HandPanel", new Vector2(0f, GearHandAreaMinY), Vector2.one);
+            RectTransform handPanel = BuildDockRegionPanel(zone, "HandPanel", Vector2.zero, Vector2.one);
             _gearHand = GearHandView.Build(_ui, handPanel, Vector2.zero, Vector2.one);
             _gearHand.CardPlayRequested += OnGearCardDragPlay;
 
@@ -616,7 +742,9 @@ namespace LogiCard.UI
         /// <summary>
         /// Move shows a direct Sprint/Walk/Crawl pick; Shoot shows Snap / Hold Angle. Both are
         /// direct choices with automatic cost — no time-allotment slider for either (C21, amended
-        /// 2026-08-03; C25).
+        /// 2026-08-03; C25). Compacted to one context row (Match Shell Layout, 2026-08-15 — the
+        /// ToolBar band is shorter than the old dock's ControlsColumn): SET PATH folds into the
+        /// stance picks as a fourth split cell instead of a separate row below them.
         /// </summary>
         private void BuildStanceRow(RectTransform zone, ref float cursor)
         {
@@ -628,26 +756,25 @@ namespace LogiCard.UI
             UiFactory.Stretch(moveRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             float moveCursor = rowTop;
-            _stanceLabel = _ui.CreateText(moveRt, "StanceLabel", "STANCE  Walk", 18, TextAnchor.MiddleLeft, Ink);
+            _stanceLabel = _ui.CreateText(moveRt, "StanceLabel", "STANCE  Walk", 16, TextAnchor.MiddleLeft, Ink, UiTextOverflow.SingleLine);
             UiFactory.PlaceRow(_stanceLabel.rectTransform, ref moveCursor, ContextLabelHeight, ContextLabelGap);
 
-            // Three equal stance cells (was a broken 5/4-column mix that cramped SET PATH).
-            _sprintButton = _ui.CreateButton(moveRt, "Stance_Sprint", "SPRINT", PanelMid, Ink, 20,
+            // Four equal cells — SPRINT/WALK/CRAWL plus SET PATH sharing the same row.
+            _sprintButton = _ui.CreateButton(moveRt, "Stance_Sprint", "SPRINT", PanelMid, Ink, 16,
                 () => SetStanceBand(StanceType.Sprint));
-            UiFactory.PlaceSplitCell(_sprintButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 0, 3);
+            UiFactory.PlaceSplitCell(_sprintButton.GetComponent<RectTransform>(), moveCursor, ContextRowHeight, 0, 4);
 
-            _walkButton = _ui.CreateButton(moveRt, "Stance_Walk", "WALK", PanelMid, Ink, 20,
+            _walkButton = _ui.CreateButton(moveRt, "Stance_Walk", "WALK", PanelMid, Ink, 16,
                 () => SetStanceBand(StanceType.Walk));
-            UiFactory.PlaceSplitCell(_walkButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 1, 3);
+            UiFactory.PlaceSplitCell(_walkButton.GetComponent<RectTransform>(), moveCursor, ContextRowHeight, 1, 4);
 
-            _crawlButton = _ui.CreateButton(moveRt, "Stance_Crawl", "CRAWL", PanelMid, Ink, 20,
+            _crawlButton = _ui.CreateButton(moveRt, "Stance_Crawl", "CRAWL", PanelMid, Ink, 16,
                 () => SetStanceBand(StanceType.Crawl));
-            UiFactory.PlaceSplitCell(_crawlButton.GetComponent<RectTransform>(), moveCursor, StanceRowHeight, 2, 3);
-            moveCursor -= StanceRowHeight + StanceInnerGap;
+            UiFactory.PlaceSplitCell(_crawlButton.GetComponent<RectTransform>(), moveCursor, ContextRowHeight, 2, 4);
 
-            _setPathButton = _ui.CreateButton(moveRt, "SetPathButton", "SET PATH", Accent, UiStyle.InkDark, 22,
+            _setPathButton = _ui.CreateButton(moveRt, "SetPathButton", "SET PATH", Accent, UiStyle.InkDark, 16,
                 () => _input.TryCommitDraftPath());
-            UiFactory.PlaceRow(_setPathButton.GetComponent<RectTransform>(), ref moveCursor, StanceRowHeight, 0f);
+            UiFactory.PlaceSplitCell(_setPathButton.GetComponent<RectTransform>(), moveCursor, ContextRowHeight, 3, 4);
 
             _shootModeControls = new GameObject("ShootModeControls", typeof(RectTransform));
             var shootRt = _shootModeControls.GetComponent<RectTransform>();
@@ -655,16 +782,17 @@ namespace LogiCard.UI
             UiFactory.Stretch(shootRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             float shootCursor = rowTop;
-            _shootModeLabel = _ui.CreateText(shootRt, "ShootModeLabel", "SNAP  2s — free-aim on the board", 18, TextAnchor.MiddleLeft, Ink);
+            _shootModeLabel = _ui.CreateText(shootRt, "ShootModeLabel", "SNAP  2s — free-aim on the board", 16, TextAnchor.MiddleLeft, Ink,
+                UiTextOverflow.SingleLine);
             UiFactory.PlaceRow(_shootModeLabel.rectTransform, ref shootCursor, ContextLabelHeight, ContextLabelGap);
 
-            _snapButton = _ui.CreateButton(shootRt, "Shoot_Snap", "SNAP  2s", PanelMid, Ink, 22,
+            _snapButton = _ui.CreateButton(shootRt, "Shoot_Snap", "SNAP  2s", PanelMid, Ink, 18,
                 () => SetShootMode(ShootMode.SnapShot));
-            UiFactory.PlaceSplitCell(_snapButton.GetComponent<RectTransform>(), shootCursor, StanceRowHeight, 0, 2);
+            UiFactory.PlaceSplitCell(_snapButton.GetComponent<RectTransform>(), shootCursor, ContextRowHeight, 0, 2);
 
-            _holdButton = _ui.CreateButton(shootRt, "Shoot_Hold", "HOLD  3s", PanelMid, Ink, 22,
+            _holdButton = _ui.CreateButton(shootRt, "Shoot_Hold", "HOLD  3s", PanelMid, Ink, 18,
                 () => SetShootMode(ShootMode.HoldAngle));
-            UiFactory.PlaceSplitCell(_holdButton.GetComponent<RectTransform>(), shootCursor, StanceRowHeight, 1, 2);
+            UiFactory.PlaceSplitCell(_holdButton.GetComponent<RectTransform>(), shootCursor, ContextRowHeight, 1, 2);
 
             _doorModeControls = new GameObject("DoorModeControls", typeof(RectTransform));
             var doorRt = _doorModeControls.GetComponent<RectTransform>();
@@ -674,7 +802,8 @@ namespace LogiCard.UI
             float doorCursor = rowTop;
             // OPEN/CLOSE spawn as a board-anchored prompt (BuildDoorPrompt/RefreshDoorPrompt) —
             // not a fixed row in the dock disconnected from the door itself.
-            _doorModeLabel = _ui.CreateText(doorRt, "DoorModeLabel", "DOOR — click near a door to select it", 18, TextAnchor.MiddleLeft, Ink);
+            _doorModeLabel = _ui.CreateText(doorRt, "DoorModeLabel", "DOOR — click near a door to select it", 16, TextAnchor.MiddleLeft, Ink,
+                UiTextOverflow.SingleLine);
             UiFactory.PlaceRow(_doorModeLabel.rectTransform, ref doorCursor, ContextLabelHeight, ContextLabelGap);
 
             // Bandage/Storm no longer have a Mode-driven context row here (Hand Deck Drag Play
@@ -683,11 +812,7 @@ namespace LogiCard.UI
             // BandageModeControls/StormModeControls block here would never activate — removed rather
             // than leaving dead UI state that nothing ever enters or exits.
 
-            // Move uses two control rows (stances + SET PATH); Shoot/Door share that taller envelope.
-            cursor = rowTop
-                - ContextLabelHeight - ContextLabelGap
-                - StanceRowHeight - StanceInnerGap
-                - StanceRowHeight - RowGap;
+            cursor = rowTop - ContextLabelHeight - ContextLabelGap - ContextRowHeight - RowGap;
             RefreshVerbContextControls(_input != null ? _input.Program : null);
         }
 
@@ -744,24 +869,6 @@ namespace LogiCard.UI
 
             _input.TryUndoLastStep();
             RefreshUndoButton(_input.Program);
-        }
-
-        /// <summary>
-        /// The queue log is now a slim strip at the bottom of the hand column (see
-        /// <see cref="GearHandAreaMinY"/>) instead of the 60%-of-column box it used to be — most
-        /// rounds only ever queue 1-4 nodes, so the old allocation was mostly dead space (the
-        /// complaint this whole brief started from). A <see cref="RectMask2D"/> caps what actually
-        /// shows if a round queues enough nodes to overflow the strip, rather than letting text bleed
-        /// past the dock's bottom edge.
-        /// </summary>
-        private void BuildQueuePanel(RectTransform zone)
-        {
-            RectTransform panel = BuildDockRegionPanel(zone, "QueuePanel", Vector2.zero, new Vector2(1f, GearHandAreaMinY));
-            panel.gameObject.AddComponent<RectMask2D>();
-
-            _queueText = _ui.CreateText(panel, "QueueReadout", "Used 0.0 / 0.0s", 16, TextAnchor.UpperLeft, Ink);
-            UiFactory.Stretch(_queueText.rectTransform, Vector2.zero, Vector2.one, new Vector2(12f, 8f), new Vector2(-12f, -8f));
-            _queueText.lineSpacing = 1.1f;
         }
 
         /// <summary>
@@ -1223,6 +1330,13 @@ namespace LogiCard.UI
             if (_queueText == null || program == null)
             {
                 return;
+            }
+
+            // InfoBar TR field (docs/ui/MATCH_SHELL_LAYOUT.md) — same Used/Budget the queue readout
+            // already tracks, mirrored into the read-only status strip.
+            if (_trLabel != null)
+            {
+                _trLabel.text = $"TR {program.UsedSeconds:0.0} / {program.BudgetSeconds:0.0}s";
             }
 
             string text = $"Used {program.UsedSeconds:0.0} / {program.BudgetSeconds:0.0}s";
