@@ -147,12 +147,19 @@ namespace LogiCard.Board
         /// removes sky weather and restores mood lighting. Fair/Storm/Sunny spawn self-contained
         /// children (<c>Weather_Fair</c> / <c>Weather_Storm</c> / <c>Weather_Sunny</c>).
         /// Sunny = Sunshine / 万里无云 — cloudless, bright mood lighting (Atmosphere-owned).
+        /// Same-mood calls are a no-op (defense in depth — RoundPlayback also guards the call site).
         /// </summary>
         public void ApplyWeather(BoardWeatherMood mood)
         {
             if (!_boardBound && mood != BoardWeatherMood.Clear)
             {
                 Debug.LogWarning("BoardWeatherPocket.ApplyWeather: host not bound — call Build(board) first.");
+                return;
+            }
+
+            // Same-mood early-out — do not tear down / rebuild CloudBank, Zap loops, or lighting.
+            if (mood == _mood)
+            {
                 return;
             }
 
@@ -1565,10 +1572,17 @@ namespace LogiCard.Board
 
         /// <summary>
         /// Cool + dim diorama lights under a storm module. Snapshots baseline so
-        /// <see cref="ClearWeather"/> / other moods can restore (card swap must not permanently crush the key).
+        /// <see cref="ClearWeather"/> / Fair / Sunny can restore via <see cref="RestoreLightingIfOverridden"/>
+        /// (card swap must not permanently crush the key). Forces a clean baseline if a prior mood
+        /// override was somehow still active — Fair↔Storm cycles must round-trip.
         /// </summary>
         private void ApplyStormLightingDim()
         {
+            if (_lightingOverridden)
+            {
+                RestoreLightingIfOverridden();
+            }
+
             if (!CaptureLightingBaseline())
             {
                 return;
@@ -1729,6 +1743,11 @@ namespace LogiCard.Board
         /// </summary>
         private void ApplySunnyLighting()
         {
+            if (_lightingOverridden)
+            {
+                RestoreLightingIfOverridden();
+            }
+
             if (!CaptureLightingBaseline())
             {
                 return;

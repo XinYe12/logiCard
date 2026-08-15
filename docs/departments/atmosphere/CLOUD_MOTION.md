@@ -46,3 +46,7 @@ Per `Puff_*` under a mass: very small **scale pulse** (XZ + slight Y) on a slowe
 ## Toggle note
 
 Look-pass **Weather: Sunny / Storm** button lives on `BoardWeatherPocket` (`WeatherToggleUi`) so Atmosphere can A/B moods without editing `ProgramHud`.
+
+## Match Shell note
+
+When HUD chrome covers the bottom ~45%, weather must stay MapViewport-local — see `WEATHER_MAP_VIEWPORT.md` (do not treat camera clear as full-screen sky).
