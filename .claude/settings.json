@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git merge-base *)",
+      "Bash(tasklist *)",
+      "Bash(\"/c/Program Files/7-Zip/7z.exe\" l *)"
+    ]
+  }
+}
