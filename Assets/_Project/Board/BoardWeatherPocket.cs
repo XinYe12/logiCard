@@ -52,14 +52,12 @@ namespace LogiCard.Board
         private static GameObject _fogMainPrefab;
         private static GameObject _fogDistantPrefab;
         private static GameObject _rainMistPrefab;
-        private static GameObject _lightningWhitePrefab;
         private static GameObject _lightningYellowPrefab;
 
         private const string RainSystemResourcePath = "Weather/PF_RainSystem";
         private const string FogMainResourcePath = "Weather/PF_Fog_Main";
         private const string FogDistantResourcePath = "Weather/PF_Fog_Distant";
         private const string RainMistResourcePath = "Weather/PF_RainMist";
-        private const string LightningWhiteResourcePath = "Weather/VFX_Zap_White";
         private const string LightningYellowResourcePath = "Weather/VFX_Zap_Yellow";
 
         private BoardWeatherMood _mood = BoardWeatherMood.Clear;
@@ -1294,38 +1292,21 @@ namespace LogiCard.Board
             }
         }
 
-        /// <summary>Fair weather — occasional single strike.</summary>
-        private const float FairLightningIntervalMinSeconds = 12f;
-        private const float FairLightningIntervalMaxSeconds = 22f;
-
         /// <summary>Storm — many more pack Zap plays (human 2026-08-13).</summary>
         private const float StormLightningIntervalMinSeconds = 0.9f;
         private const float StormLightningIntervalMaxSeconds = 2.8f;
         private const int StormLightningRigCount = 6;
 
+        /// <summary>Lightning is a Storm-only signal — Fair/Sunny get no thunder (human 2026-08-15:
+        /// "the normal cloud (white) should not have thunder").</summary>
         private void PlaceLightning(float width, float depth)
         {
-            if (_mood == BoardWeatherMood.Storm)
-            {
-                PlaceStormLightning(width, depth);
-                return;
-            }
-
-            GameObject prefab = LoadPrefab(ref _lightningWhitePrefab, LightningWhiteResourcePath);
-            if (prefab == null)
+            if (_mood != BoardWeatherMood.Storm)
             {
                 return;
             }
 
-            ParticleSystem ps = SpawnZapRig(
-                prefab,
-                "Lightning",
-                new Vector3(width * 0.18f, 0.05f, -depth * 0.12f),
-                targetTipWorldY: null);
-            if (ps != null)
-            {
-                StartCoroutine(LightningLoop(ps, FairLightningIntervalMinSeconds, FairLightningIntervalMaxSeconds, doubleStrikeChance: 0f));
-            }
+            PlaceStormLightning(width, depth);
         }
 
         /// <summary>

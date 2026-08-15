@@ -152,5 +152,24 @@ namespace LogiCard.Tests.PlayMode
 
             yield return null;
         }
+
+        [UnityTest]
+        public IEnumerator WeatherPocketFairModuleHasNoLightning()
+        {
+            var weather = Object.FindAnyObjectByType<BoardWeatherPocket>();
+            Assert.That(weather, Is.Not.Null, "Bootstrap built no BoardWeatherPocket.");
+
+            weather.ApplyWeather(BoardWeatherMood.Fair);
+            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Fair));
+
+            Transform module = weather.transform.Find("Weather_Fair");
+            Assert.That(module, Is.Not.Null, "Expected Weather_Fair module child (card-swappable).");
+            Assert.That(module.Find("Lightning"), Is.Null,
+                "Fair must not spawn a white Lightning rig — thunder/lightning is a Storm-only signal.");
+            Assert.That(module.Find("LightningStorm"), Is.Null,
+                "Fair must not spawn LightningStorm.");
+
+            yield return null;
+        }
     }
 }
