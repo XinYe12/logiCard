@@ -53,12 +53,16 @@ namespace LogiCard.UI
         private const float StanceInnerGap = 4f;
 
         /// <summary>
-        /// Fraction of the queue column's height given to <see cref="GearHandView"/> (top); the queue
-        /// readout keeps the rest. Lives in QueueColumn, not ControlsColumn, so it never touches
-        /// <see cref="ControlsColumnContentHeight"/> (Bandage HUD-side contract — must not break
-        /// <c>ProgramHudLayoutTests</c>).
+        /// Fraction of the hand column's height given to the compact queue log (bottom);
+        /// <see cref="GearHandView"/> keeps the rest above it. Reworked 2026-08-15 (Hand Deck Drag
+        /// Play brief) — the queue log used to keep 60% of this column as a mostly-empty box while
+        /// the hand was squeezed into a thin strip; that's inverted now so the hand reads like an
+        /// actual Hearthstone-style hand and the log is a slim strip sized for its typical 1-4 line
+        /// content, not the whole remaining column. Lives in HandColumn, not ControlsColumn, so it
+        /// never touches <see cref="ControlsColumnContentHeight"/> (Bandage HUD-side contract — must
+        /// not break <c>ProgramHudLayoutTests</c>).
         /// </summary>
-        private const float GearHandAreaMinY = 0.60f;
+        private const float GearHandAreaMinY = 0.20f;
 
         /// <summary>
         /// UI-unit height consumed by the Program controls column (scrub + verbs + stance/context).
@@ -136,13 +140,9 @@ namespace LogiCard.UI
         private GameObject _moveStanceControls;
         private GameObject _shootModeControls;
         private GameObject _doorModeControls;
-        private GameObject _bandageModeControls;
-        private GameObject _stormModeControls;
         private Text _stanceLabel;
         private Text _shootModeLabel;
         private Text _doorModeLabel;
-        private Text _bandageModeLabel;
-        private Text _stormModeLabel;
         private GearHandView _gearHand;
         private Func<int> _woundsOf;
         private Func<int> _bandageChargeOf;
@@ -451,11 +451,15 @@ namespace LogiCard.UI
         }
 
         /// <summary>
-        /// Three columns across the full-width bottom dock: verb/stance controls (left), queue
-        /// readout (middle), primary Lock In/Adrenaline + transport (right). Each column is narrower
-        /// than the old tall right-edge dock but the row-building helpers below (<see cref="BuildVerbRow"/>,
+        /// Three columns across the full-width bottom dock: verb/stance controls (left), the gear
+        /// hand + compact queue log (middle), primary Lock In/Adrenaline + transport (right).
+        /// Reworked 2026-08-15 (Hand Deck Drag Play brief) — the middle column widened from 32% to
+        /// 48% of the dock, at Controls' and Action's expense, so the hand has real Hearthstone-style
+        /// room instead of a cramped 5-button strip; Controls/Action shrinking doesn't touch either
+        /// column's vertical row budget (<see cref="ControlsColumnContentHeight"/> is a stacked-height
+        /// sum, not width-dependent). The row-building helpers below (<see cref="BuildVerbRow"/>,
         /// <see cref="BuildStanceRow"/>) already lay out relative to whatever zone they're given, so
-        /// they work unchanged against a column instead of the full dock width.
+        /// they work unchanged against a narrower column.
         /// </summary>
         private void BuildProgramControls(RectTransform zone)
         {
@@ -464,9 +468,9 @@ namespace LogiCard.UI
             rt.SetParent(zone, false);
             UiFactory.Stretch(rt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
-            RectTransform controlsCol = CreateColumn(rt, "ControlsColumn", 0f, 0.38f);
-            RectTransform queueCol = CreateColumn(rt, "QueueColumn", 0.38f, 0.70f);
-            RectTransform actionCol = CreateColumn(rt, "ActionColumn", 0.70f, 1f);
+            RectTransform controlsCol = CreateColumn(rt, "ControlsColumn", 0f, 0.26f);
+            RectTransform handCol = CreateColumn(rt, "HandColumn", 0.26f, 0.74f);
+            RectTransform actionCol = CreateColumn(rt, "ActionColumn", 0.74f, 1f);
 
             float cursor = -Pad;
 
@@ -487,20 +491,19 @@ namespace LogiCard.UI
                 BuildPhaseDebugRow(controlsCol, ref cursor);
             }
 
-            BuildGearHand(queueCol);
-            BuildQueuePanel(queueCol);
+            BuildGearHand(handCol);
+            BuildQueuePanel(handCol);
             BuildActionRow(actionCol);
         }
 
         /// <summary>
-        /// Docks <see cref="GearHandView"/> into the top of the queue column (Bandage HUD-side
-        /// contract) — the queue readout below keeps the rest of the column.
+        /// Docks <see cref="GearHandView"/> into the top of the hand column — the compact queue log
+        /// below keeps the slim strip at the bottom (<see cref="GearHandAreaMinY"/>).
         /// </summary>
         private void BuildGearHand(RectTransform zone)
         {
             _gearHand = GearHandView.Build(_ui, zone, new Vector2(0f, GearHandAreaMinY), Vector2.one);
-            _gearHand.CardArmed += OnGearCardArmed;
-            _gearHand.ArmCleared += OnGearArmCleared;
+            _gearHand.CardPlayRequested += OnGearCardDragPlay;
 
             // Interact / Flashbang have no contract this wave — block rather than half-wire them.
             _gearHand.SetSpent(CardId.Interact, true);
@@ -651,28 +654,11 @@ namespace LogiCard.UI
             _doorModeLabel = _ui.CreateText(doorRt, "DoorModeLabel", "DOOR — click near a door to select it", 18, TextAnchor.MiddleLeft, Ink);
             UiFactory.PlaceRow(_doorModeLabel.rectTransform, ref doorCursor, ContextLabelHeight, ContextLabelGap);
 
-            _bandageModeControls = new GameObject("BandageModeControls", typeof(RectTransform));
-            var bandageRt = _bandageModeControls.GetComponent<RectTransform>();
-            bandageRt.SetParent(zone, false);
-            UiFactory.Stretch(bandageRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-
-            float bandageCursor = rowTop;
-            // Arm happens on the Gear_Bandage card, not a verb-row button (Bandage HUD-side contract) —
-            // this is context/status only, mirroring Shoot/Door's cost+hint line.
-            _bandageModeLabel = _ui.CreateText(bandageRt, "BandageModeLabel", "BANDAGE", 18, TextAnchor.MiddleLeft, Ink);
-            UiFactory.PlaceRow(_bandageModeLabel.rectTransform, ref bandageCursor, ContextLabelHeight, ContextLabelGap);
-
-            _stormModeControls = new GameObject("StormModeControls", typeof(RectTransform));
-            var stormRt = _stormModeControls.GetComponent<RectTransform>();
-            stormRt.SetParent(zone, false);
-            UiFactory.Stretch(stormRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-
-            float stormCursor = rowTop;
-            // Arm happens on the Gear_Storm card, not a verb-row button (Storm contract, C67) —
-            // context/status only, same shape as Bandage's line above. Storm has no board-tap path
-            // at all (self-targeting, nothing to aim at), so the copy says "scrubber" only.
-            _stormModeLabel = _ui.CreateText(stormRt, "StormModeLabel", "STORM", 18, TextAnchor.MiddleLeft, Ink);
-            UiFactory.PlaceRow(_stormModeLabel.rectTransform, ref stormCursor, ContextLabelHeight, ContextLabelGap);
+            // Bandage/Storm no longer have a Mode-driven context row here (Hand Deck Drag Play
+            // brief, 2026-08-15): both play by dragging the Gear_Bandage/Gear_Storm card out of the
+            // hand and releasing, which never sets _input.Mode to Bandage/Storm anymore, so a
+            // BandageModeControls/StormModeControls block here would never activate — removed rather
+            // than leaving dead UI state that nothing ever enters or exits.
 
             // Move uses two control rows (stances + SET PATH); Shoot/Door share that taller envelope.
             cursor = rowTop
@@ -738,8 +724,12 @@ namespace LogiCard.UI
         }
 
         /// <summary>
-        /// The queue readout now owns its own dock column (middle third), so it just fills that
-        /// column with padding instead of sharing a zone with the action buttons underneath it.
+        /// The queue log is now a slim strip at the bottom of the hand column (see
+        /// <see cref="GearHandAreaMinY"/>) instead of the 60%-of-column box it used to be — most
+        /// rounds only ever queue 1-4 nodes, so the old allocation was mostly dead space (the
+        /// complaint this whole brief started from). A <see cref="RectMask2D"/> caps what actually
+        /// shows if a round queues enough nodes to overflow the strip, rather than letting text bleed
+        /// past the dock's bottom edge.
         /// </summary>
         private void BuildQueuePanel(RectTransform zone)
         {
@@ -747,10 +737,11 @@ namespace LogiCard.UI
                 Vector2.zero, new Vector2(1f, GearHandAreaMinY));
             panel.offsetMin = new Vector2(Gap, Pad);
             panel.offsetMax = new Vector2(-Gap, -Pad);
+            panel.gameObject.AddComponent<RectMask2D>();
 
-            _queueText = _ui.CreateText(panel, "QueueReadout", "Used 0.0 / 0.0s", 18, TextAnchor.UpperLeft, Ink);
+            _queueText = _ui.CreateText(panel, "QueueReadout", "Used 0.0 / 0.0s", 16, TextAnchor.UpperLeft, Ink);
             UiFactory.Stretch(_queueText.rectTransform, Vector2.zero, Vector2.one, new Vector2(12f, 8f), new Vector2(-12f, -8f));
-            _queueText.lineSpacing = 1.15f;
+            _queueText.lineSpacing = 1.1f;
         }
 
         /// <summary>
@@ -870,35 +861,32 @@ namespace LogiCard.UI
         }
 
         /// <summary>
-        /// Arming Bandage (the only wired first-wave card this wave) switches board input into
-        /// Bandage placement mode via the same <see cref="SetMode"/> Move/Shoot/Door already use, so
-        /// a pending Move draft commits first here too — otherwise a board-tap/scrubber place right
-        /// after arming would resolve against a stale pre-commit <c>UsedSeconds</c>.
+        /// Bandage/Storm drag-out-of-hand-and-release play (Hand Deck Drag Play brief, 2026-08-15) —
+        /// <see cref="GearHandView.CardPlayRequested"/> fires once per completed drag-out gesture, and
+        /// this is the entire play trigger for these two cards now; there is no separate arm step and
+        /// no <c>_input.Mode</c> switch. Queues at whatever the Time scrubber currently reads — the
+        /// same instant the old scrubber-tap path used, just triggered by the drop instead of a slider
+        /// drag. Failure reason surfaces through the existing <see cref="BoardInputController.ActionRejected"/>
+        /// banner (<see cref="OnActionRejected"/>); success surfaces through <see cref="OnQueueChanged"/>
+        /// → <see cref="RefreshGearHandLegality"/> greying the card out via <c>SetSpent</c>, same gate
+        /// as any other already-queued card. The card itself has already snapped back to its hand
+        /// position by the time this runs (<see cref="GearHandView.CardDragController.OnEndDrag"/>),
+        /// so a rejected play never leaves it stranded off-hand.
         /// </summary>
-        private void OnGearCardArmed(CardId id)
+        private void OnGearCardDragPlay(CardId id)
         {
+            if (_input == null || _clock == null)
+            {
+                return;
+            }
+
             if (id == CardId.Bandage)
             {
-                SetMode(ActionVerb.Bandage);
+                _input.TryQueueBandageAt(_clock.CurrentSeconds, out _);
             }
             else if (id == CardId.Storm)
             {
-                SetMode(ActionVerb.Storm);
-            }
-        }
-
-        /// <summary>
-        /// Fires on manual re-click cancel, phase swap, AND a successful Bandage placement (see
-        /// <see cref="OnQueueChanged"/>, which clears the arm once its node lands) — one path handles
-        /// DoD gate 6's "after place: clear arm, Mode → Move" for every way the arm can end.
-        /// </summary>
-        private void OnGearArmCleared()
-        {
-            if (_input != null && (_input.Mode == ActionVerb.Bandage || _input.Mode == ActionVerb.Storm))
-            {
-                _input.Mode = ActionVerb.Move;
-                RefreshModeButtons();
-                RefreshVerbContextControls(_input.Program);
+                _input.TryQueueStormAt(_clock.CurrentSeconds, out _);
             }
         }
 
@@ -1011,16 +999,6 @@ namespace LogiCard.UI
                 _doorModeControls.SetActive(mode == ActionVerb.Door);
             }
 
-            if (_bandageModeControls != null)
-            {
-                _bandageModeControls.SetActive(mode == ActionVerb.Bandage);
-            }
-
-            if (_stormModeControls != null)
-            {
-                _stormModeControls.SetActive(mode == ActionVerb.Storm);
-            }
-
             // The floating door prompt only makes sense in Door mode — hide it unconditionally here
             // so leaving Door mode always clears it, regardless of which refresh path got here
             // (RefreshDoorModeControls only re-shows it when there's still something pending).
@@ -1037,40 +1015,13 @@ namespace LogiCard.UI
             {
                 RefreshDoorModeControls(program);
             }
-            else if (mode == ActionVerb.Bandage)
-            {
-                RefreshBandageModeControls();
-            }
-            else if (mode == ActionVerb.Storm)
-            {
-                RefreshStormModeControls();
-            }
             else
             {
+                // Bandage/Storm never reach here anymore — dragging a card out of the hand never
+                // sets _input.Mode (Hand Deck Drag Play brief, 2026-08-15); Move is the only other
+                // mode that lands on the stance controls.
                 RefreshStanceControls(program);
             }
-        }
-
-        private void RefreshBandageModeControls()
-        {
-            if (_bandageModeLabel == null)
-            {
-                return;
-            }
-
-            _bandageModeLabel.text = $"BANDAGE  {PawnProgram.BandageSeconds:0}s — tap board or scrubber to place";
-        }
-
-        private void RefreshStormModeControls()
-        {
-            if (_stormModeLabel == null)
-            {
-                return;
-            }
-
-            // No numeric cost shown — TR — is still OPEN (Cards' C67 recommendation), and there is no
-            // board-tap path to mention (self-targeting, nothing to aim at).
-            _stormModeLabel.text = "STORM — scrubber to place";
         }
 
         private void RefreshShootModeControls(PawnProgram program)
@@ -1296,19 +1247,9 @@ namespace LogiCard.UI
             RefreshUndoButton(program);
             RefreshScrubberMarkers(program);
 
-            // A Bandage/Storm node landing while still armed means TryQueueBandage/TryQueueStorm just
-            // succeeded (armed is the only way one gets added to the tail) — clear arm / Mode here
-            // (DoD gate 6, same shape for both cards).
-            if (_gearHand != null && program.Nodes.Count > 0)
-            {
-                ActionVerb lastVerb = program.Nodes[program.Nodes.Count - 1].Verb;
-                if ((_gearHand.ArmedId == CardId.Bandage && lastVerb == ActionVerb.Bandage)
-                    || (_gearHand.ArmedId == CardId.Storm && lastVerb == ActionVerb.Storm))
-                {
-                    _gearHand.ClearArm();
-                }
-            }
-
+            // Bandage/Storm no longer arm (Hand Deck Drag Play brief) — a successful drag-play greys
+            // the card purely through RefreshGearHandLegality's "already queued this Program" gate
+            // below, no arm-clearing step needed.
             RefreshGearHandLegality();
         }
 
@@ -1567,22 +1508,11 @@ namespace LogiCard.UI
             _clock.Pause();
             _clock.SetNormalized(value);
 
-            // Scrubber-click placement while Bandage or Storm is armed (Bandage HUD-side contract item
-            // 3; Storm contract, C67, item 2 — Storm's only placement path). Self-limiting against
-            // drag repeats: the first successful place clears the arm via OnQueueChanged, so later
-            // onValueChanged ticks in the same drag fall through to a plain scrub with no further
-            // placement attempt.
-            if (_gearHand != null && _input != null)
-            {
-                if (_gearHand.ArmedId == CardId.Bandage)
-                {
-                    _input.TryQueueBandageAt(_clock.CurrentSeconds, out _);
-                }
-                else if (_gearHand.ArmedId == CardId.Storm)
-                {
-                    _input.TryQueueStormAt(_clock.CurrentSeconds, out _);
-                }
-            }
+            // Bandage/Storm placement used to piggyback on a scrubber drag while the card was armed
+            // (Bandage HUD-side contract item 3; Storm contract, C67, item 2). Removed 2026-08-15
+            // (Hand Deck Drag Play brief): dragging the card itself out of the hand is now the only
+            // placement path for both — keeping this branch too would have left two ways to trigger
+            // the same queue call in different states.
         }
 
         private void OnClockTime(float seconds)
