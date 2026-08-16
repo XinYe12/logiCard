@@ -1,43 +1,58 @@
 # Cross-Dept Contracts — Current Wave
 
-**Updated:** 2026-08-15 by Integrator — **Match Shell Layout wave OPEN** (human-directed). Vertical
-in-match stack: InfoBar → MapViewport → HandBand → ToolBar → TimelineSchedule. Plan:
-[`docs/ui/MATCH_SHELL_LAYOUT.md`](../ui/MATCH_SHELL_LAYOUT.md). **UI coding-hot**; Cards / Character /
-Map / Atmosphere = docs peers; Camera freecam **paused** until MapViewport rect freezes. Prior Storm /
-Bandage / hand-deck / chrome contracts remain closed or superseded as noted below. Gear pause (C63/C67)
-and Map C57 carve-out still apply; Net / other Sim stay paused.
+**Updated:** 2026-08-16 by Integrator — **Match Shell Layout wave CLOSED**, merged to master
+(`c9925b1` UI code + `a21b29c` docs peers). Human Play-signed; post-merge batchmode independently
+re-verified (EditMode 174/174, PlayMode 56/56). First all-department collaboration wave — done.
+**Next open concern:** Camera — `ProgramHud.MapViewport` rect now exists on master; wire
+`GameBootstrap.ConfigureCamera` letterbox, then reconcile the paused `feat/camera-freecam-tps`
+(`2b06a3a`) against it. No other seat is coding-hot right now.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
-## Open — Match Shell Layout (2026-08-15)
+## Closed — Match Shell Layout (opened 2026-08-15, closed 2026-08-16)
 
 **Human ask:** layout only (not per-component chrome). Refs `screenshots/image copy 18.png` /
 `19.png` for region order + playful schedule timeline — **reject** Hearthstone minion battlefield;
-keep our diorama map. Provisional amend of `UI_FLOW.md` §4 stacking; **C48 landscape canvas stays**
-until human confirms a PRODUCT_MEMORY C-row.
+keep our diorama map. **Landed exactly as scoped** — no card-lane overlay, diorama map kept.
 
-| Seat | Mode | Brief |
-|------|------|-------|
-| **UI** | Coding | `logiCard-modal-restyle` / `MATCH_SHELL_LAYOUT_AGENT_BRIEF.md` |
-| **Cards** | Docs | `logiCard-cards-collection` / same brief name |
-| **Character** | Docs | `logiCard-char-select-motion` / same |
-| **Map** | Docs | `logiCard-map` / same |
-| **Atmosphere** | Docs | `logiCard-atmosphere-stylized` / same |
-| **Camera** | Pause | `logiCard-camera-control` / same — resume after MapViewport API |
+| Seat | Mode | Result |
+|------|------|--------|
+| **UI** | Coding | Landed — five-band `ProgramHud`, merged `c9925b1` |
+| **Cards** | Docs | Landed — `CARD_COLLECTION.md` §13, merged `a21b29c` |
+| **Character** | Docs | Landed — `CHARACTER_FANTASY.md` §4.1, merged `a21b29c` |
+| **Map** | Docs | Landed — `MAP_PRESENTATION_STANDARD.md` §6, merged `a21b29c` |
+| **Atmosphere** | Docs | Landed — `WEATHER_MAP_VIEWPORT.md`/`CLOUD_MOTION.md`, merged `a21b29c` |
+| **Camera** | Was paused | **Now unblocked** — MapViewport API exists; resume freecam reconcile |
 
-**Frozen for UI implementers**
+**Landed signatures**
 
-1. Region order is locked (see plan doc). Do not reorder.
-2. Expose `RectTransform` (or documented equivalent) named for **MapViewport** so Camera/Integrator can
-   letterbox `cam.rect` / `BoardCameraRig` later. Supersedes the old bottom-dock-only camera math in the
-   closed Phase-1 `HudDockHeight` contract once shell lands.
+1. Region order locked as planned: InfoBar → MapViewport → HandBand → ToolBar → TimelineSchedule.
+2. `ProgramHud.MapViewport` — public rect Camera/Integrator letterbox against. Supersedes the old
+   bottom-dock-only camera math (`HudDockHeight`/`TopStripHeight`, closed Phase-1 contract below) —
+   those constants stayed numerically equal to the new rect, so `GameBootstrap.ConfigureCamera` needed
+   zero edits to keep rendering correctly *at the old geometry*; retuning for MapViewport's shorter
+   height (Map §6: doors > flank sightline > floor edge priority; Rail Platform is the tall-map risk
+   case) is the still-open Camera work.
 3. Timeline tracks: **YOU / ENEMY / EFFECTS** — playhead = existing Time Resource scrubber seconds
    (C28 continuous — not a 12-tick clock).
 4. Drag-to-play + verb Sim entry points unchanged (`TryQueueBandageAt` / `TryQueueStormAt` / Move/Shoot/Door).
-5. HUD Chrome Ship Pass (`3f77b6c`) **does not merge alone** — layout wave absorbs panel tokens.
+5. `GameBootstrap.RegisterMatchState(() => playback.WoundsOf(id), () => playback.BandageChargeOf(id))`
+   — the one-line Integrator hook flagged as still-open at UI Ready — wired at merge time; InfoBar
+   wounds/charge reads are live, not stubbed.
+6. HUD Chrome Ship Pass (`3f77b6c`) did not merge alone — absorbed into the Match Shell merge.
 
-**Integrator follow-up after UI Ready:** wire camera to MapViewport; human Play sign-off; optional C-row
-locking this stack in PRODUCT_MEMORY; playful timeline polish pass (second wave).
+**Deviations, documented not hidden:** master had independently grown its own `GearHandView.cs`/
+`ProgramHud.cs` hand-deck-drag-play implementation (`164012f`) in parallel with the UI worktree's own
+version of the same feature (built on before HUD chrome + Match Shell). The merge took the UI
+worktree's version wholesale for both files (the fully tested superset the human actually reviewed),
+not a line-by-line reconciliation of the two independent implementations — functionally equivalent,
+confirmed by the full green batchmode re-run above, but worth knowing if a future diff between the two
+looks unfamiliar.
+
+**Character and Atmosphere docs peers each have separate, larger unmerged work sitting in their
+worktrees that was explicitly NOT pulled by this merge** (Character: an older Char Select carousel
+feature, 12 commits; Atmosphere: the rejected Sunny weather mood + a stray recovery scene) — only the
+Match Shell-scoped doc file(s) from each landed.
 
 ## Frozen contracts this wave (prior)
 
