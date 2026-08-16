@@ -1072,23 +1072,29 @@ namespace LogiCard.Board
             float halfLen = worldLen * 0.5f;
 
             // Cream panel — soft plaster fill (readable LoS blocker without looking like a brick slab).
+            // Shadows off — thin overlapping fence cubes were self/cross-shadowing into a jet-black
+            // "burst" of acne at dense wall junctions (2026-08-15 look-check, candidate #1). Posts stay
+            // shadow-casting; they're the thick members and read fine in the captures.
             PlaceFencePart(
                 root.transform, "Panel",
                 new Vector3(0f, panelH * 0.5f, 0f),
                 new Vector3(Mathf.Max(worldLen - postW * 0.85f, worldLen * 0.55f), panelH, SegmentThickness * WorldScale * 0.85f),
-                BoardSurfaceMaterials.BrickWall);
+                BoardSurfaceMaterials.BrickWall,
+                castShadows: false);
 
-            // Top + mid rails.
+            // Top + mid rails — thin, same acne source as Panel. Shadows off.
             PlaceFencePart(
                 root.transform, "Rail_Top",
                 new Vector3(0f, fenceH - (railH * 0.5f), 0f),
                 new Vector3(worldLen, railH, postDepth * 0.95f),
-                BoardSurfaceMaterials.FenceRail);
+                BoardSurfaceMaterials.FenceRail,
+                castShadows: false);
             PlaceFencePart(
                 root.transform, "Rail_Mid",
                 new Vector3(0f, panelH * 0.72f, 0f),
                 new Vector3(worldLen, railH * 0.85f, postDepth * 0.85f),
-                BoardSurfaceMaterials.FenceRail);
+                BoardSurfaceMaterials.FenceRail,
+                castShadows: false);
 
             // End posts.
             PlaceFencePart(
@@ -1118,14 +1124,27 @@ namespace LogiCard.Board
         }
 
         private static void PlaceFencePart(
-            Transform parent, string name, Vector3 localPosition, Vector3 localScale, Material material)
+            Transform parent,
+            string name,
+            Vector3 localPosition,
+            Vector3 localScale,
+            Material material,
+            bool castShadows = true)
         {
             var part = GameObject.CreatePrimitive(PrimitiveType.Cube);
             part.name = name;
             part.transform.SetParent(parent, false);
             part.transform.localPosition = localPosition;
             part.transform.localScale = localScale;
-            part.GetComponent<MeshRenderer>().sharedMaterial = material;
+            var renderer = part.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            // Panel + Rail parts pass castShadows: false — thin, overlapping fence cubes self/cross-
+            // shadow into a jet-black acne "burst" at dense junctions (2026-08-15 look-check). Posts
+            // keep the default (cast) since they're thicker and weren't implicated.
+            if (!castShadows)
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
             StripCollider(part);
         }
 

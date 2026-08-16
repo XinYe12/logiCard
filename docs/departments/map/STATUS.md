@@ -37,17 +37,12 @@ tuning / lighting grade — not a revert-to-photo-PBR problem.
 
 ### Candidate tweaks (for human review — do not auto-apply)
 
-1. **Fence soft-shadow “black burst” (Map-owned, high priority).** All three captures show a jet-black
-   spike/burst at wall junctions (especially dense corners). Almost certainly soft-shadow acne from
-   overlapping thin fence cubes (`PlaceFencePart` defaults to casting shadows). **Candidate:** turn
-   shadow casting off on Panel + thin Rails (keep posts casting, or none); optionally `receiveShadows`
-   only on floors. One-line renderer flags in `PlaceFencePart` — no lighting edit.
-2. **Yard vs Hall chroma separation (Map-owned, low).** Yard `(0.94, 0.78, 0.48)` and Hall
-   `(0.90, 0.68, 0.42)` are too close under warm lamps — rooms don’t read as distinct roles at a glance.
-   **Candidate:** push Hall cooler/darker or more orange; leave Yard sandy; keep Vault blue + Flank green
-   (those already separate well).
-3. **Vault floor smoothness (Map-owned, low).** Vault `0.22` is the shiniest Solid floor — under point
-   lamps it pools more than Yard/Flank. **Candidate:** drop toward `0.12–0.14` to match siblings.
+1. ~~**Fence soft-shadow “black burst” (Map-owned, high priority).**~~ **Fixed 2026-08-16** — see
+   "Done — fence shadow-acne fix" below. Still awaiting human visual sign-off.
+2. ~~**Yard vs Hall chroma separation (Map-owned, low).**~~ **Fixed 2026-08-16** — see "Done — Hall
+   chroma + Vault smoothness fix" below. Still awaiting human visual sign-off.
+3. ~~**Vault floor smoothness (Map-owned, low).**~~ **Fixed 2026-08-16** — see "Done — Hall chroma +
+   Vault smoothness fix" below. Still awaiting human visual sign-off.
 4. **Warm lamp radial wash (Integrator-owned, already flagged).** Soft point-light gradients on flat
    floors fight the “painted miniature” read. Map materials are correct; this is still the optional
    `BuildLighting` / `BuildDioramaVolume` re-pass after C65 — not a Map material regress.
@@ -55,9 +50,72 @@ tuning / lighting grade — not a revert-to-photo-PBR problem.
    now says: judge surfaces against §2, not the C53 photoreal moodboard image. Someone should amend
    `ART_DIRECTION.md` Moodboard so board *surfaces* cite C65 flat/toon (geometry/weather bar can stay).
 
+## Done — fence shadow-acne fix (2026-08-16)
+
+Candidate tweak #1 above, green-lit and landed. `PlaceFencePart` (`Assets/_Project/Board/BoardView.cs`)
+gained an optional `castShadows` parameter (default `true`, so all other/future callers are unaffected).
+`PlaceWallFence` now passes `castShadows: false` for the `Panel` and both `Rail` parts (`Rail_Top`,
+`Rail_Mid`) — these are the thin, overlapping fence cubes whose self/cross-shadowing produced the
+jet-black "burst" acne at dense wall junctions seen in all three 2026-08-15 look-check captures. Posts
+(`Post_A`, `Post_B`, `Post_M*`) were left at the default (still cast shadows) — they're the thick
+members, weren't visually implicated in the acne, and the brief called for leaving them alone absent
+evidence otherwise. No material colors, smoothness values, or other renderer flags were touched
+(candidate #2 chroma / #3 smoothness stay untouched and still await a separate human art-direction call).
+
+Fresh look-check screenshots were **not** recaptured. The 2026-08-15 diagnostic tool
+(`MapLookCheckCapture.cs`) was throwaway and, per `git log` on this branch, was never actually
+committed to `dept/map` — it exists only as a description in this STATUS doc, not as a reachable
+commit, so there's no exact pattern left to reuse. Reconstructing it from scratch was judged more
+effort than this one-line fix warrants, so it was skipped rather than inventing a fragile substitute.
+**A human should eyeball this in-Editor or in-Play before the acne is called fixed** — shadow artifacts
+are inherently a visual call that batchmode green cannot validate.
+
+Verified: independent batchmode run on this branch post-fix — EditMode 158/158 passed, PlayMode 49/49
+passed, 0 failed, 0 inconclusive, 0 skipped.
+
+## Done — Hall chroma + Vault smoothness fix (2026-08-16)
+
+Candidate tweaks #2 and #3 above, green-lit and landed in the same session as the shadow-acne fix.
+Both are one-line value changes in `Assets/_Project/Board/BoardSurfaceMaterials.cs`:
+
+- **Hall floor color (#2):** `HallFloor` pushed from `(0.90, 0.68, 0.42)` to `(0.80, 0.52, 0.30)` —
+  darker and more saturated/orange (terracotta wood), so it separates from Yard's pale sandy
+  `(0.94, 0.78, 0.48)` at a glance under warm lamps instead of nearly matching it. Yard, Vault, and
+  Flank floor colors are untouched (Vault blue / Flank green already separated fine per the original
+  look-check).
+- **Vault floor smoothness (#3):** `VaultFloor` smoothness dropped from `0.22` to `0.13` — now in the
+  same range as its siblings (Yard `0.12`, Hall `0.14`, Flank `0.10`), so it should stop pooling harder
+  than the other rooms under point lamps. Vault's color, `(0.78, 0.88, 0.96)`, is untouched.
+
+No other materials, renderer flags, or fence geometry were touched — this is scoped to exactly the two
+value changes the human approved. `BoardSurfaceMaterialsTests` (EditMode) only asserts reference
+identity / role mapping, not literal color/smoothness values, so it's unaffected and still passes.
+
+**Fresh look-check screenshots were attempted but not kept.** Since `MapLookCheckCapture.cs` no longer
+exists in this branch's history (confirmed via `git log`, see the shadow-fix entry above), a throwaway
+reflection-based capture tool was written from scratch (`Assets/_Project/Editor/_LookCheckCapture.cs`,
+temporary) that drove `GameBootstrap`'s real `EnsureMatchSceneBuilt` flow per map via reflection and
+rendered `Camera.main` to a PNG. The **first** capture (FreightYard) rendered correctly, but the
+**second and third** (RailPlatform, VaultComplex) came back with the floor material replaced by
+Unity's magenta "shader error" fallback — almost certainly a stale/destroyed-material artifact from
+reusing `BoardSurfaceMaterials`' static-cached `Material` fields across repeated
+`EditorSceneManager.NewScene()` calls in the same process/domain (a known Unity gotcha: `??=` doesn't
+respect `UnityEngine.Object`'s fake-null semantics, so a stale field can point at a destroyed material
+after asset cleanup between scene loads). This is an artifact of the improvised capture harness, not a
+regression in the color/smoothness change itself — but rather than publish misleading broken renders,
+the three `screenshots/lookcheck/*.png` were reverted to their prior (2026-08-15) committed versions
+and the throwaway capture script was deleted, matching the "don't invent a fragile substitute" guidance.
+**A human should look at this in-Editor/in-Play** — that's the only reliable way to judge the Hall/Yard
+chroma separation and Vault shine right now; screenshots in this repo do not yet reflect this change.
+
+Verified: independent batchmode run on this branch post-fix — EditMode 158/158 passed, PlayMode 49/49
+passed, 0 failed, 0 inconclusive, 0 skipped.
+
 ## In progress
 
-- None — seat idle pending human decision on the candidate tweaks above (or explicit “park”).
+- None — seat idle pending human visual sign-off on all three landed fixes above (shadow-acne, Hall
+  chroma, Vault smoothness). No further candidate tweaks outstanding from the 2026-08-15 look-check
+  except #4 (Integrator-owned lighting re-pass, optional) and #5 (doc-only Moodboard update).
 
 ## Done — Match Shell Layout docs recommendation (2026-08-15)
 
@@ -87,9 +145,17 @@ brief, Camera slice / Integrator own that code.
 ## Verification
 
 - **Independent batchmode run on this branch (`dept/map` @ `565583f`), 2026-08-15:** EditMode 158/158 passed, PlayMode 49/49 passed, 0 failed, no compile errors. Confirmed green — first independent run on this branch.
-- Look-check PNGs kept at `screenshots/lookcheck/` for human review; diagnostic test deleted after use.
+- **Independent batchmode run post fence-shadow fix, 2026-08-16:** EditMode 158/158 passed, PlayMode
+  49/49 passed, 0 failed, 0 inconclusive, 0 skipped. Confirmed green.
+- **Independent batchmode run post Hall-chroma/Vault-smoothness fix, 2026-08-16:** EditMode 158/158
+  passed, PlayMode 49/49 passed, 0 failed, 0 inconclusive, 0 skipped. Confirmed green.
+- Look-check PNGs kept at `screenshots/lookcheck/` for human review — still the original 2026-08-15
+  captures. Not refreshed for either 2026-08-16 fix; see the two "Done" entries above for why in each
+  case (no reusable capture pattern existed; an ad-hoc rebuild attempt for the chroma/smoothness fix
+  hit a rendering artifact and was discarded rather than published misleading).
 
 ## Offers
 
-- If human green-lights #1 (fence shadow) and/or #2–#3 (albedo/smoothness), Map can land those in a
-  small follow-up on this worktree. Otherwise park this seat.
+- All three candidate tweaks from the 2026-08-15 look-check (#1 shadow-acne, #2 Hall chroma, #3 Vault
+  smoothness) are now landed on this branch, pending human visual sign-off on all three together.
+  Otherwise park this seat pending that sign-off, or pending #4/#5 (Integrator/doc, not Map-owned).
