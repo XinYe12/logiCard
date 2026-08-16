@@ -120,50 +120,62 @@ namespace LogiCard.Board
         public const float DegreesPerPixel = 0.25f;
 
         /// <summary>
-        /// Zoom-in floor. Deliberately below the yaw-0 full-width fit
-        /// (<c>width / (2 * aspect) = 8 / 2 = 4.0</c> at the narrowest landscape aspect this project
-        /// supports — `aspect == 1`, `docs/SCOPE.md` C48) so the player can fill the board in frame.
-        /// At 2.6, board width covers <c>8 / (2 * 2.6) ≈ 1.54×</c> the frame horizontally at yaw 0 /
-        /// aspect 1 — edges clip; that is the point of a zoom-in-to-fill control (human feedback
-        /// 2026-08-11: prior floor 4.2 left almost no zoom-in headroom against a ~5.0 default).
+        /// Zoom-in floor. Re-derived 2026-08-16 for the Match Shell Layout wave (five-band HUD,
+        /// `docs/ui/MATCH_SHELL_LAYOUT.md`), which shrank <c>ProgramHud.MapViewport</c> from ~58% to
+        /// ~48% of window height while <c>cam.rect</c> stays full window *width* — see
+        /// <c>GameBootstrap.ConfigureCamera</c>'s comment for why that specific change (not window
+        /// aspect ratio, which this formula was already independent of) forces a re-derivation:
+        /// shrinking only the rect's height fraction widens the camera's auto-computed <c>aspect</c>
+        /// (<c>= windowAspect / rectHeightFraction</c>), which widens the *horizontal* world extent
+        /// shown for a fixed <c>orthographicSize</c> — the board's width fills a smaller fraction of
+        /// frame than before even though vertical coverage (below) is untouched by this. Scaling every
+        /// zoom constant by the same ratio the rect height shrank
+        /// (<c>0.48 / 0.58 ≈ 0.828</c>) exactly restores the pre-wave horizontal fill fraction while
+        /// proportionally tightening vertical coverage too (more floor-edge crop, the accepted
+        /// trade-off — see <see cref="MaxOrthographicSize"/>'s doc for the worked coverage numbers).
+        ///
+        /// Was 2.6 (pre-wave floor, itself derived from the yaw-0 full-width-fit case
+        /// <c>width / (2 * aspect) = 8 / 2 = 4.0</c> at aspect 1, `docs/SCOPE.md` C48). New floor
+        /// <c>2.6 * 0.828 ≈ 2.15</c> — the same full-width-fit target now needs a smaller
+        /// <c>orthographicSize</c> to reach, since the wider post-wave <c>aspect</c> already shows more
+        /// width per unit of <c>orthographicSize</c>.
         ///
         /// Hard constraint vs ConfigureCamera: <see cref="Init"/> clamps the camera's starting
-        /// <c>orthographicSize</c> into <c>[Min, Max]</c>. Whatever default ConfigureCamera ships
-        /// (historically 5.0; later waves may lower toward fill around ~3.4) must be ≥ this floor,
-        /// or Init silently forces it back up. 2.6 leaves clear headroom under a 3.4-class default.
+        /// <c>orthographicSize</c> into <c>[Min, Max]</c>. ConfigureCamera's default (now 2.8, see its
+        /// own comment) must be ≥ this floor, or Init silently forces it back up.
         ///
-        /// Board *depth* still varies by map (FreightYard 10, VaultComplex 9, RailPlatform 13);
-        /// vertical fit needed is <c>depth * sin(52°) / 2</c> — 3.94 / 3.55 / 5.12 respectively.
-        /// All three already exceed this floor (and RailPlatform's 5.12 already exceeded the old
-        /// 5.0 baseline), so max zoom-in can run the far/near edge past the top/bottom of frame —
-        /// accepted, same as C61. No per-map zoom floors.
-        ///
-        /// Yaw makes this worse still: at 45°-ish diagonal yaw the board's on-screen footprint is its
-        /// full bounding-box diagonal — for RailPlatform,
-        /// <c>sqrt((width/2)² + (depth/2)²) = sqrt(4² + 6.5²) ≈ 7.63</c>, well above this floor.
-        /// Guaranteeing zero clipping at every yaw would require raising the zoom-in floor above the
-        /// zoom-out ceiling below, which defeats the control — accepted trade-off, documented since C61.
+        /// Board *depth* still varies by map (FreightYard 10, VaultComplex 9, RailPlatform 13); the
+        /// exact-fit <c>orthographicSize</c> for each (<c>depth * sin(52°) / 2</c> — 3.94 / 3.55 / 5.12,
+        /// unaffected by the rect-height change since it's a purely vertical, rect-fraction-independent
+        /// quantity) all exceed this new floor too, so max zoom-in still runs the far/near edge past the
+        /// top/bottom of frame — accepted, same as C61. No per-map zoom floors.
         /// </summary>
-        public const float MinOrthographicSize = 2.6f;
+        public const float MinOrthographicSize = 2.15f;
 
         /// <summary>
-        /// Zoom-out ceiling. Vertical board coverage is <c>depth * sin(52°) / (2 * orthographicSize)</c>
-        /// (aspect-independent, per the DRAFT_HANDOFF derivation). The smallest board, VaultComplex
-        /// (depth 9), is the binding case — smaller boards read as proportionally smaller still as you
-        /// zoom out. At <c>orthographicSize = 8</c> VaultComplex covers
-        /// <c>9 * sin(52°) / 16 ≈ 9 * 0.788 / 16 ≈ 44.3%</c> of the frame vertically — still readable
-        /// as a tactical board, not a speck, while tighter than the prior 10.0 ceiling now that the
-        /// ConfigureCamera default is moving closer to the board (a 10× speck from a ~3.4 default
-        /// would feel worse than the same ceiling did against a 5.0 baseline). FreightYard /
-        /// RailPlatform read larger still at this same bound since their depth is bigger
-        /// (~49% / ~64% vertical coverage respectively).
+        /// Zoom-out ceiling. Re-derived 2026-08-16 alongside <see cref="MinOrthographicSize"/> for the
+        /// same Match Shell Layout MapViewport shrink (~58% → ~48% window height) — scaled by the same
+        /// <c>0.48 / 0.58 ≈ 0.828</c> ratio for consistency (the horizontal-fill argument on
+        /// <see cref="MinOrthographicSize"/> applies here too: an unscaled ceiling would let the player
+        /// zoom out to a relatively narrower-looking board than before the wave).
+        ///
+        /// Vertical board coverage is <c>depth * sin(52°) / (2 * orthographicSize)</c>
+        /// (aspect-independent — a function of <c>orthographicSize</c> and depth only, not of the
+        /// rect's height fraction, per the DRAFT_HANDOFF derivation). Was 8.0, giving VaultComplex
+        /// (depth 9, the smallest board and binding case) ~44.3% vertical coverage. New ceiling
+        /// <c>8.0 * 0.828 ≈ 6.6</c> gives VaultComplex <c>9 * sin(52°) / (2 * 6.6) ≈ 53.6%</c> — *more*
+        /// generous than before (a smaller absolute viewport has less room to spare, so the max-zoom-out
+        /// speck risk is tightened, not just carried over). FreightYard / RailPlatform read larger still
+        /// at this same bound (~59.5% / ~77.4% vertical coverage respectively).
         /// </summary>
-        public const float MaxOrthographicSize = 8.0f;
+        public const float MaxOrthographicSize = 6.6f;
 
         /// <summary>orthographicSize units removed per positive notch of <c>Input.mouseScrollDelta.y</c>
         /// (scroll up/away = zoom in = smaller size, hence the sign flip in <see cref="Update"/>).
-        /// Full travel <c>(Max - Min) / 0.45 = 5.4 / 0.45 = 12</c> notches — usable across the wider
-        /// magnification span without feeling sluggish or twitchy.</summary>
+        /// Full travel <c>(Max - Min) / 0.45 ≈ 4.45 / 0.45 ≈ 10</c> notches post Match Shell Layout
+        /// re-derivation (was 12 notches over the pre-wave 5.4 span) — still a usable magnification
+        /// range without feeling sluggish or twitchy; left unscaled since the "how many notches feel
+        /// right" judgment isn't a function of the Min/Max re-derivation itself.</summary>
         public const float SizePerScrollNotch = 0.45f;
 
         /// <summary>orthographicSize units per second the camera eases toward its scroll-set target —

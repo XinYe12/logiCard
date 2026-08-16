@@ -702,10 +702,29 @@ namespace LogiCard.Boot
             // Framing history: 9.0 over-zoomed out (board ~43% of region, 2026-08-09); 5.0 was the
             // first recalibration toward ~75-80% coverage. Screenshot `image copy 13.png` (2026-08-11)
             // still showed the board as a small island in a large void — portrait/tall Game view +
-            // bottom HUD dock leave less usable height than that earlier estimate assumed. Drop to
+            // bottom HUD dock leave less usable height than that earlier estimate assumed. Dropped to
             // 3.4 so the board fills the play region by default; runtime zoom bounds (closer min) are
-            // owned by BoardCameraRig / feat/camera-zoom-fill this wave, not this line.
-            cam.orthographicSize = 3.4f;
+            // owned by BoardCameraRig / feat/camera-zoom-fill.
+            //
+            // Re-derived to 2.8 (2026-08-16, Match Shell Layout wave, `docs/ui/MATCH_SHELL_LAYOUT.md` /
+            // `docs/map/MAP_PRESENTATION_STANDARD.md` §6.1): the five-band HUD shrank
+            // ProgramHud.MapViewport — and therefore this cam.rect, which is defined to exactly match
+            // it — from ~58% to ~48% of window height (HudDockHeight 0.34→0.45, TopStripHeight
+            // 0.08→0.07) while cam.rect stays full window *width*. That's not just "a smaller hole" —
+            // because the rect's width fraction didn't shrink with its height, Unity's auto-computed
+            // camera.aspect (screenAspect / rectHeightFraction) widens, which widens the horizontal
+            // world extent shown for a fixed orthographicSize, so the board's width would fill a
+            // *smaller* fraction of the (already smaller) frame than before if this value were left
+            // unscaled. Scaling the old 3.4 by the same ratio the rect height shrank by
+            // (0.48 / 0.58 ≈ 0.828 → 3.4 * 0.828 ≈ 2.8) exactly restores the pre-wave horizontal fill
+            // fraction; the accompanying tighter vertical coverage (more crop of the far floor edge,
+            // not doors — verified against each map's actual door/corridor y-positions, worst case
+            // Rail Platform's Corridor Door North at y=9 vs. a visible range of roughly [3.0, 10.0])
+            // is the accepted trade-off per MAP_PRESENTATION_STANDARD.md §6.1's readability order:
+            // doors > flank/corridor sightline > full room-floor edge. BoardCameraRig's
+            // MinOrthographicSize/MaxOrthographicSize bounds were re-derived by the identical ratio —
+            // see that file's doc comments for the per-map coverage numbers this produces.
+            cam.orthographicSize = 2.8f;
             // Dark void only — never a painted sky / brand color clear (playtest 2026-08-12: sky-blue
             // clear looked like a UI backdrop). Focus comes from tilt-shift DoF on the board chunk
             // (GDD §8 / ART_DIRECTION), not from the camera clear color. Weather stays a contained
