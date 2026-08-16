@@ -112,10 +112,15 @@ namespace LogiCard.Boot
             _programHud.transform.SetParent(transform, false);
             _programHud.Init(_clock, _phase, null, _matchClock, showPhaseDebugControls, _foley);
             _programHud.AppFlow.MapSelected += OnMapSelected;
+            // Build the board before MatchChrome is shown. ProgramHud's EnteredMatch handler only
+            // resets match-UI state; ShowMatchChrome runs here after EnsureMatchSceneBuilt so the
+            // first visible frame isn't Unity's Editor cyan async-shader placeholder over an empty
+            // viewport (playtest screenshot image copy 17).
             _programHud.AppFlow.EnteredMatch += viaRelay =>
             {
                 EnsureMatchSceneBuilt();
                 BeginFreshMatch(viaRelay);
+                _programHud.ShowMatchChrome();
             };
 
             // Find Match -> C52's resolve relay; Local Play -> same-process (unchanged). Board layout
@@ -202,14 +207,34 @@ namespace LogiCard.Boot
                 return;
             }
 
-            BuildBoard(_activeMap);
-            BuildPawns();
-            ConfigureCamera();
-            BuildLighting();
-            BuildWeatherPocket();
-            BuildReflectionProbes();
+            // Editor-only: Unity's async shader compilation draws uncompiled variants as plain
+            // Color.cyan. Match geometry is created here for the first time (runtime URP Lit/Unlit
+            // materials + weather), so the first Game view frame after Local Play would otherwise be
+            // a solid cyan board with working Overlay UI on top — exactly image copy 17. Force
+            // sync compile for this build so reflection probes and the first Allot frame see real
+            // materials. Player builds are unaffected (async compilation is Editor-only).
+#if UNITY_EDITOR
+            bool prevAsyncShaders = UnityEditor.ShaderUtil.allowAsyncCompilation;
+            UnityEditor.ShaderUtil.allowAsyncCompilation = false;
+            try
+            {
+#endif
+                BuildBoard(_activeMap);
+                BuildPawns();
+                ConfigureCamera();
+                BuildLighting();
+                BuildWeatherPocket();
+                BuildReflectionProbes();
+#if UNITY_EDITOR
+            }
+            finally
+            {
+                UnityEditor.ShaderUtil.allowAsyncCompilation = prevAsyncShaders;
+            }
+#endif
 
             _programHud.RegisterInput(_attackerInput);
+            _programHud.RegisterMatchState(() => _playback.WoundsOf(AttackerPawnId), () => _playback.BandageChargeOf(AttackerPawnId));
             _programHud.LockedIn += _playback.ResolveAndArm;
             _programHud.TimeCardPlayed += OnTimeCardPlayed;
             _programHud.NextRoundRequested += OnNextRoundRequested;

@@ -6,19 +6,44 @@ using UnityEngine.UI;
 namespace LogiCard.Tests.EditMode
 {
     /// <summary>
-    /// Landscape geometry constants for Integrator camera-rect wiring (C48 / Phase 1), plus the
-    /// shared UI factory overflow defaults and the bottom-dock vertical budget this polish pass locked.
+    /// Match Shell Layout geometry (docs/ui/MATCH_SHELL_LAYOUT.md, 2026-08-15): the five
+    /// InfoBar/MapViewport/HandBand/ToolBar/TimelineSchedule band fractions, the camera-rect
+    /// constants they still feed (<c>GameBootstrap.ConfigureCamera</c> reads
+    /// <see cref="ProgramHud.HudDockHeight"/>/<see cref="ProgramHud.TopStripHeight"/> unchanged), plus
+    /// the shared UI factory overflow defaults.
     /// </summary>
     [TestFixture]
     public sealed class ProgramHudLayoutTests
     {
         [Test]
-        public void HudDockIsBottomBandNotRightEdge()
+        public void MatchShellBandsStackInLockedOrderAndSumToFullHeight()
         {
-            Assert.That(ProgramHud.HudDockHeight, Is.EqualTo(0.34f));
-            Assert.That(ProgramHud.TopStripHeight, Is.EqualTo(0.08f));
-            Assert.That(ProgramHud.HudDockHeight + ProgramHud.TopStripHeight, Is.LessThan(1f),
-                "Board region must remain the majority of the frame.");
+            float sum = ProgramHud.InfoBarHeight + ProgramHud.MapViewportHeight + ProgramHud.HandBandHeight
+                + ProgramHud.ToolBarHeight + ProgramHud.TimelineHeight;
+            Assert.That(sum, Is.EqualTo(1f).Within(0.0001f),
+                "InfoBar + MapViewport + HandBand + ToolBar + TimelineSchedule must cover the full frame.");
+
+            Assert.That(ProgramHud.MapViewportHeight, Is.GreaterThan(ProgramHud.InfoBarHeight),
+                "MapViewport must stay the single largest region (MATCH_SHELL_LAYOUT.md).");
+            Assert.That(ProgramHud.MapViewportHeight, Is.GreaterThan(ProgramHud.HandBandHeight));
+            Assert.That(ProgramHud.MapViewportHeight, Is.GreaterThan(ProgramHud.ToolBarHeight));
+            Assert.That(ProgramHud.MapViewportHeight, Is.GreaterThan(ProgramHud.TimelineHeight));
+
+            Assert.That(ProgramHud.TimelineHeight, Is.GreaterThanOrEqualTo(0.12f),
+                "TimelineSchedule must not collapse under ~12% when expanded (MATCH_SHELL_LAYOUT.md).");
+        }
+
+        [Test]
+        public void CameraRectConstantsStillMatchMapViewportRect()
+        {
+            // GameBootstrap.ConfigureCamera computes cam.rect from these two constants alone (it is
+            // not this UI seat's file to touch this wave) — they must stay numerically equivalent to
+            // the MapViewport band so the camera hole and the UI hole line up without a Boot change.
+            Assert.That(ProgramHud.TopStripHeight, Is.EqualTo(ProgramHud.InfoBarHeight));
+            Assert.That(ProgramHud.HudDockHeight,
+                Is.EqualTo(ProgramHud.HandBandHeight + ProgramHud.ToolBarHeight + ProgramHud.TimelineHeight).Within(0.0001f));
+            Assert.That(1f - ProgramHud.HudDockHeight - ProgramHud.TopStripHeight,
+                Is.EqualTo(ProgramHud.MapViewportHeight).Within(0.0001f));
         }
 
         [Test]
@@ -32,21 +57,27 @@ namespace LogiCard.Tests.EditMode
         }
 
         [Test]
-        public void ControlsColumnFitsDockAtReferenceAndUltrawide()
+        public void ToolBarAndTimelineContentFitTheirBandsAtReferenceAndUltrawide()
         {
-            float content = ProgramHud.ControlsColumnContentHeight;
-            Assert.That(content, Is.GreaterThan(200f), "Budget should reflect a real stacked column.");
+            AssertFits(ProgramHud.ToolBarControlsContentHeight, ProgramHud.ToolBarHeight, "ToolBar controls zone");
+            AssertFits(ProgramHud.ToolBarActionsContentHeight, ProgramHud.ToolBarHeight, "ToolBar actions zone");
+            AssertFits(ProgramHud.TimelineScheduleContentHeight, ProgramHud.TimelineHeight, "TimelineSchedule column");
+        }
 
-            float refDock = ProgramHud.DockHeightInUiUnits(1920f, 1080f);
-            float hdDock = ProgramHud.DockHeightInUiUnits(1280f, 720f);
-            float ultraDock = ProgramHud.DockHeightInUiUnits(2560f, 1080f);
+        private static void AssertFits(float content, float bandHeightFraction, string label)
+        {
+            Assert.That(content, Is.GreaterThan(0f), $"{label} budget should reflect real stacked content.");
 
-            Assert.That(content, Is.LessThanOrEqualTo(refDock),
-                $"Controls column {content:0.#} must fit 1920×1080 dock {refDock:0.#} UI units.");
-            Assert.That(content, Is.LessThanOrEqualTo(hdDock),
-                $"Controls column {content:0.#} must fit 1280×720 dock {hdDock:0.#} UI units.");
-            Assert.That(content, Is.LessThanOrEqualTo(ultraDock),
-                $"Controls column {content:0.#} must fit 2560×1080 dock {ultraDock:0.#} UI units — this is the overflow that shipped with the dock move.");
+            float refBand = ProgramHud.BandHeightInUiUnits(bandHeightFraction, 1920f, 1080f);
+            float hdBand = ProgramHud.BandHeightInUiUnits(bandHeightFraction, 1280f, 720f);
+            float ultraBand = ProgramHud.BandHeightInUiUnits(bandHeightFraction, 2560f, 1080f);
+
+            Assert.That(content, Is.LessThanOrEqualTo(refBand),
+                $"{label} content {content:0.#} must fit 1920×1080 band {refBand:0.#} UI units.");
+            Assert.That(content, Is.LessThanOrEqualTo(hdBand),
+                $"{label} content {content:0.#} must fit 1280×720 band {hdBand:0.#} UI units.");
+            Assert.That(content, Is.LessThanOrEqualTo(ultraBand),
+                $"{label} content {content:0.#} must fit 2560×1080 band {ultraBand:0.#} UI units — the tightest case.");
         }
 
         [Test]

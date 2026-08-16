@@ -42,6 +42,28 @@ namespace LogiCard.UI
         /// <summary>Secondary / cancel — deeper paper chip, dark ink label.</summary>
         public static readonly Color ModalSecondaryButton = new Color(0.86f, 0.78f, 0.64f, 1f);
 
+        // Chrome pass (HUD_CHROME_SHIP_PASS brief, 2026-08-15) — layered shadow tokens ported from
+        // docs/ui-collection/normal-card.css (Uiverse.io by adamgiebl, MIT): a soft far-thrown lift
+        // shadow behind ModalShadow's tighter contact shadow, plus an inset bottom-edge lip. Retinted
+        // through this project's warm cardstock family rather than the demo's cool grey.
+        /// <summary>Softer, farther-thrown lift shadow layered behind <see cref="ModalShadow"/>'s tighter contact shadow.</summary>
+        public static readonly Color ModalShadowFar = new Color(0.04f, 0.03f, 0.02f, 0.30f);
+        /// <summary>Inset strip along a card's bottom edge — the "contact" lip from normal-card.css.</summary>
+        public static readonly Color ModalCardInsetLip = new Color(0.70f, 0.60f, 0.44f, 0.9f);
+
+        // Dock region backing panels (same brief) — every HUD dock region (Controls/Hand/Action
+        // columns, queue log strip) gets its own bounded panel instead of a flat color abutting its
+        // neighbor. Warm-tinted so it reads as the same family as Modal* rather than a second
+        // cool-neutral system bolted on next to it.
+        /// <summary>Warm dark face for a dock region's own backing panel.</summary>
+        public static readonly Color DockPanelFace = new Color(0.14f, 0.12f, 0.10f, 0.97f);
+        /// <summary>Warm rim around a dock region panel — same amber family as <see cref="ModalCardBorder"/>, dialed down for a dark backing.</summary>
+        public static readonly Color DockPanelBorder = new Color(0.40f, 0.32f, 0.21f, 0.85f);
+        /// <summary>Contact shadow directly under a dock region panel.</summary>
+        public static readonly Color DockPanelShadow = new Color(0.03f, 0.02f, 0.02f, 0.55f);
+        /// <summary>Subtle inset strip along a dock region panel's bottom edge.</summary>
+        public static readonly Color DockPanelInsetLip = new Color(0.07f, 0.06f, 0.05f, 0.55f);
+
         private static Sprite _roundSprite;
         private const int RoundSpriteSize = 32;
         private const int RoundSpriteRadius = 10;
