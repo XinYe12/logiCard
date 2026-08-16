@@ -2,7 +2,7 @@
 
 **Wave / Day:** Permanent seat — live `logiCard-char-select-motion`
 **Branch / worktree:** `feat/char-select-motion` @ `D:\projects\Game\logiCard-char-select-motion`
-**Last cross-reviewed:** 2026-08-15 — (1) decision-sheet Part A closed; walk still paused at **B1**. (2) Match Shell Layout **InfoBar field sheet** landed in `CHARACTER_FANTASY.md` §4.1.
+**Last cross-reviewed:** 2026-08-16 — (1) **Decision sheet fully answered** — human accepted every Agent recommendation across Part A–D in one pass; promoted to `PRODUCT_MEMORY.md` **C70–C73**. (2) Match Shell Layout **InfoBar field sheet** landed in `CHARACTER_FANTASY.md` §4.1 (merged to master 2026-08-16).
 
 ## Mandate
 
@@ -31,10 +31,8 @@
 
 ## In progress
 
-- Decision-sheet walk with human — **paused at B1** (Part A fully closed: A1–A5). B1 not yet answered.
-- 2026-08-15: agent legwork pass added an **Agent recommendation** column across every still-open
-  row (B1–B9, C2–C7, D1–D6) so the human's resume pass is pick-one-or-override instead of a
-  cold read. Nothing promoted; Decision column untouched by the agent for open rows.
+- Nothing — decision sheet is done. Next real step is Integrator opening the actual C36 geometry-breach
+  contract (both Bomber and Time Player depend on it per C70/A1's build order), not a Character task.
 
 ## Done this session (Match Shell Layout — docs)
 
