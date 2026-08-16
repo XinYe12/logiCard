@@ -1,33 +1,60 @@
 # Cross-Dept Contracts — Current Wave
 
-**Wave:** Look-and-feel + UI, started 2026-08-09. Core-gameplay/networking work explicitly paused by the
-human until this wave lands — see `SCHEDULE.md`'s Cadence section. **UI side landed and merged three times**
-(`feat/ui-component-system`, a same-session dock move right-edge → bottom band, then `feat/ui-dock-polish`'s
-ultrawide-overflow fix + dialog tightening) — `Assets/_Project/UI/**` is closed out again, no worker
-assigned. **Environment side: all three checkpoints merged** — checkpoint 1 (2026-08-09, weather/lighting),
-checkpoint 2 (2026-08-10, real Poly Haven PBR board-surface textures), checkpoint 3 (2026-08-10, Quaternius
-door/prop meshes replacing tinted boxes, per C54). **Rendering: URP post-processing gap closed** — real
-Volume Profile, SSAO, MSAA, soft shadows all landed 2026-08-10, plus a C54 photo-mode stretch goal
-(`PhotoModeController`, `F9`). **Integrator also landed, in the main tree directly:** camera rotation
-(`BoardCameraRig`, smooth right-drag), an interim cloud-size fix, and dropping stepped stop-motion pawn
-animation for smooth interpolation (**C55**, human-confirmed as an improvement). **Character-model
-research** landed real findings (genre-clash outfit, flat materials); human picked the minimal fix
-(**C56**), landed as **Scout re-outfitted Adventurer→Worker** within the existing CC0 pack. **Wet-surface
-reflections**: first pass (Reflection Probes + retune) shipped but a human screenshot showed no visible
-change — root-caused directly (probe `clearFlags` never set, rendering the wrong environment) and fixed.
-**Clouds**: replaced primitive spheres with real textured particle clouds (Kenney CC0 sprite atlas). Both
-worker slots closed again after C60/C61 (2026-08-11). **Still open:** human sighted pass on C60 vibrancy
-(runtime grade actually warm now) + C61 scroll zoom feel + earlier reflection/clouds/Scout outfit items.
-**Updated:** 2026-08-14 by Integrator — **Storm card contract closed**: Cards (catalog + numerics brief),
-UI (HUD dock/arm/place), and Atmosphere (idempotency + lighting round-trip; roll-in transition deferred)
-all merged. **Bandage HUD-side contract closed** too (UI built both in one pass). **Map Phase 2** and the
-dirty rematch/floors/lighting commit are also merged (see their sections below). Gear pause carve-out (C63,
-extended to C67) and Map's C57 carve-out (map/terrain) still apply; Net / other Sim stay paused. No
-department is coding-hot right now — all three Storm seats plus UI/Map are idle pending new work.
+**Updated:** 2026-08-16 by Integrator — **Match Shell Layout wave CLOSED**, merged to master
+(`c9925b1` UI code + `a21b29c` docs peers). Human Play-signed; post-merge batchmode independently
+re-verified (EditMode 174/174, PlayMode 56/56). First all-department collaboration wave — done.
+**Next open concern:** Camera — `ProgramHud.MapViewport` rect now exists on master; wire
+`GameBootstrap.ConfigureCamera` letterbox, then reconcile the paused `feat/camera-freecam-tps`
+(`2b06a3a`) against it. No other seat is coding-hot right now.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
-## Frozen contracts this wave
+## Closed — Match Shell Layout (opened 2026-08-15, closed 2026-08-16)
+
+**Human ask:** layout only (not per-component chrome). Refs `screenshots/image copy 18.png` /
+`19.png` for region order + playful schedule timeline — **reject** Hearthstone minion battlefield;
+keep our diorama map. **Landed exactly as scoped** — no card-lane overlay, diorama map kept.
+
+| Seat | Mode | Result |
+|------|------|--------|
+| **UI** | Coding | Landed — five-band `ProgramHud`, merged `c9925b1` |
+| **Cards** | Docs | Landed — `CARD_COLLECTION.md` §13, merged `a21b29c` |
+| **Character** | Docs | Landed — `CHARACTER_FANTASY.md` §4.1, merged `a21b29c` |
+| **Map** | Docs | Landed — `MAP_PRESENTATION_STANDARD.md` §6, merged `a21b29c` |
+| **Atmosphere** | Docs | Landed — `WEATHER_MAP_VIEWPORT.md`/`CLOUD_MOTION.md`, merged `a21b29c` |
+| **Camera** | Was paused | **Now unblocked** — MapViewport API exists; resume freecam reconcile |
+
+**Landed signatures**
+
+1. Region order locked as planned: InfoBar → MapViewport → HandBand → ToolBar → TimelineSchedule.
+2. `ProgramHud.MapViewport` — public rect Camera/Integrator letterbox against. Supersedes the old
+   bottom-dock-only camera math (`HudDockHeight`/`TopStripHeight`, closed Phase-1 contract below) —
+   those constants stayed numerically equal to the new rect, so `GameBootstrap.ConfigureCamera` needed
+   zero edits to keep rendering correctly *at the old geometry*; retuning for MapViewport's shorter
+   height (Map §6: doors > flank sightline > floor edge priority; Rail Platform is the tall-map risk
+   case) is the still-open Camera work.
+3. Timeline tracks: **YOU / ENEMY / EFFECTS** — playhead = existing Time Resource scrubber seconds
+   (C28 continuous — not a 12-tick clock).
+4. Drag-to-play + verb Sim entry points unchanged (`TryQueueBandageAt` / `TryQueueStormAt` / Move/Shoot/Door).
+5. `GameBootstrap.RegisterMatchState(() => playback.WoundsOf(id), () => playback.BandageChargeOf(id))`
+   — the one-line Integrator hook flagged as still-open at UI Ready — wired at merge time; InfoBar
+   wounds/charge reads are live, not stubbed.
+6. HUD Chrome Ship Pass (`3f77b6c`) did not merge alone — absorbed into the Match Shell merge.
+
+**Deviations, documented not hidden:** master had independently grown its own `GearHandView.cs`/
+`ProgramHud.cs` hand-deck-drag-play implementation (`164012f`) in parallel with the UI worktree's own
+version of the same feature (built on before HUD chrome + Match Shell). The merge took the UI
+worktree's version wholesale for both files (the fully tested superset the human actually reviewed),
+not a line-by-line reconciliation of the two independent implementations — functionally equivalent,
+confirmed by the full green batchmode re-run above, but worth knowing if a future diff between the two
+looks unfamiliar.
+
+**Character and Atmosphere docs peers each have separate, larger unmerged work sitting in their
+worktrees that was explicitly NOT pulled by this merge** (Character: an older Char Select carousel
+feature, 12 commits; Atmosphere: the rejected Sunny weather mood + a stray recovery scene) — only the
+Match Shell-scoped doc file(s) from each landed.
+
+## Frozen contracts this wave (prior)
 
 ### Storm card — cross-dept (closed 2026-08-14 — **Cards + UI + Atmosphere**, human-directed)
 

@@ -144,6 +144,15 @@ namespace LogiCard.UI
             }
 
             RectTransform root = ui.CreatePanel(parent, RootName, new Color(0f, 0f, 0f, 0f), areaMin, areaMax);
+
+            // Clip the resting fan to the hand's own bounds (chrome pass, HUD_CHROME_SHIP_PASS
+            // brief, 2026-08-15) — cards used to widen past the fan's own footprint with nothing
+            // containing them, bleeding visually into whatever dock region sat next to the hand.
+            // The mask lives one level below Root (not on Root itself) specifically so a card being
+            // actively dragged can escape it by reparenting up to Root — see CardDragController.
+            RectTransform fanClip = ui.CreatePanel(root, "FanClip", new Color(0f, 0f, 0f, 0f), Vector2.zero, Vector2.one);
+            fanClip.gameObject.AddComponent<RectMask2D>();
+
             var hand = new GearHandView { Root = root };
 
             int count = FirstWave.Length;
@@ -168,14 +177,23 @@ namespace LogiCard.UI
                 float x0 = i * step;
                 float x1 = x0 + cardFrac;
 
-                RectTransform cell = ui.CreatePanel(root, $"Slot_{info.Id}", new Color(0f, 0f, 0f, 0f),
+                RectTransform cell = ui.CreatePanel(fanClip, $"Slot_{info.Id}", new Color(0f, 0f, 0f, 0f),
                     new Vector2(x0, insetY), new Vector2(x1, 1f - insetY));
 
                 float fanStep = i - centerIndex;
                 cell.localEulerAngles = new Vector3(0f, 0f, -fanStep * fanRotationDegreesPerStep);
                 cell.anchoredPosition += new Vector2(0f, -Mathf.Abs(fanStep) * fanDropPixelsPerStep);
 
-                // Soft shadow / paper rim / face — same stack language as ModalDialog.
+                // Layered shadow / paper rim / face — normal-card.css technique (lift shadow +
+                // contact shadow + inset lip, docs/ui-collection/normal-card.css), same stack
+                // language as ModalDialog, deepened with a softer far-thrown layer behind the
+                // original contact shadow so cards read with more pop against the dock backing.
+                RectTransform shadowFar = ui.CreatePanel(cell, "CardShadowFar", UiStyle.ModalShadowFar,
+                    Vector2.zero, Vector2.one, UiStyle.RoundSprite, Image.Type.Sliced);
+                shadowFar.offsetMin = new Vector2(6f, -11f);
+                shadowFar.offsetMax = new Vector2(9f, -4f);
+                shadowFar.GetComponent<Image>().raycastTarget = false;
+
                 RectTransform shadow = ui.CreatePanel(cell, "CardShadow", UiStyle.ModalShadow,
                     Vector2.zero, Vector2.one, UiStyle.RoundSprite, Image.Type.Sliced);
                 shadow.offsetMin = new Vector2(4f, -6f);
@@ -224,6 +242,15 @@ namespace LogiCard.UI
                     12, TextAnchor.MiddleCenter, UiStyle.ModalDivider, UiTextOverflow.SingleLine);
                 UiFactory.Stretch(hint.rectTransform, new Vector2(0.08f, 0.06f), new Vector2(0.92f, 0.28f));
 
+                // Contact lip — normal-card.css's inset-color bottom edge, ported. Inset a few px
+                // from the card's own left/right so it stays inside the rounded footprint instead of
+                // poking past the corner radius.
+                RectTransform insetLip = ui.CreatePanel(button.GetComponent<RectTransform>(), "InsetLip",
+                    UiStyle.ModalCardInsetLip, Vector2.zero, new Vector2(1f, 0f));
+                insetLip.offsetMin = new Vector2(6f, 0f);
+                insetLip.offsetMax = new Vector2(-6f, 4f);
+                insetLip.GetComponent<Image>().raycastTarget = false;
+
                 // Bandage/Storm play by drag-out-of-hand-and-release (Hand Deck Drag Play brief) —
                 // no click-to-arm for these two anymore, so they carry a drag controller instead of
                 // an onClick listener. Interact/Flashbang/Adrenaline are untouched this wave: still
@@ -236,6 +263,8 @@ namespace LogiCard.UI
                     dragController = cell.gameObject.AddComponent<CardDragController>();
                     dragController.Owner = hand;
                     dragController.CardId = info.Id;
+                    dragController.ClipParent = fanClip;
+                    dragController.EscapeParent = root;
                 }
                 else
                 {
@@ -444,6 +473,20 @@ namespace LogiCard.UI
             /// <summary>Which card this cell represents. Set once by <see cref="Build"/>.</summary>
             public CardId CardId;
 
+            /// <summary>
+            /// The fan's masked container (<c>FanClip</c>, chrome pass). Resting cards live here so
+            /// the hand's clip bounds the fan; set once by <see cref="Build"/>.
+            /// </summary>
+            public RectTransform ClipParent;
+
+            /// <summary>
+            /// Unmasked reparent target for the duration of a drag (<c>Root</c>, chrome pass) — shares
+            /// <see cref="ClipParent"/>'s exact rect (both stretch 0..1 within the hand root), so
+            /// moving between the two is a pure hierarchy change with no anchoredPosition/visual jump.
+            /// Set once by <see cref="Build"/>.
+            /// </summary>
+            public RectTransform EscapeParent;
+
             private RectTransform _rect;
             private Vector2 _startAnchoredPosition;
             private Quaternion _startLocalRotation;
@@ -479,6 +522,16 @@ namespace LogiCard.UI
                 _startAnchoredPosition = Rect.anchoredPosition;
                 _startLocalRotation = Rect.localRotation;
                 _startSiblingIndex = Rect.GetSiblingIndex();
+
+                // Escape the resting fan's RectMask2D clip (chrome pass, HUD_CHROME_SHIP_PASS brief)
+                // for the duration of the drag — the fan is clipped to its own panel bounds, but a
+                // card actively being dragged out must stay visible past that boundary rather than
+                // getting cut off mid-gesture. ClipParent/EscapeParent share the same rect, so this is
+                // a pure hierarchy change with no anchoredPosition jump.
+                if (ClipParent != null && EscapeParent != null)
+                {
+                    Rect.SetParent(EscapeParent, true);
+                }
 
                 // Bring the picked-up card in front of its fanned neighbors and straighten it out of
                 // its resting tilt — reads as "lifted out of the hand" while dragging.
@@ -531,7 +584,14 @@ namespace LogiCard.UI
 
                 // Snap back unconditionally — even a committed play only clears the card via SetSpent
                 // once TryQueueBandageAt/TryQueueStormAt actually lands (see ProgramHud); if it gets
-                // rejected the card must already be back home, not stranded off-hand.
+                // rejected the card must already be back home, not stranded off-hand. Re-enter the
+                // fan's clip before restoring position/rotation/sibling so a rejected play card is
+                // masked to the hand again like any other resting card.
+                if (ClipParent != null)
+                {
+                    Rect.SetParent(ClipParent, true);
+                }
+
                 Rect.anchoredPosition = _startAnchoredPosition;
                 Rect.localRotation = _startLocalRotation;
                 Rect.SetSiblingIndex(_startSiblingIndex);

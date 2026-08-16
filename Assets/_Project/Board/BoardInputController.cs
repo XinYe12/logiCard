@@ -380,6 +380,13 @@ namespace LogiCard.Board
             {
                 queued = Program.TryQueueBandage(ResolveBandageExecuteTime(point), out reason);
             }
+            else if (Mode == ActionVerb.Storm)
+            {
+                // Storm is self-targeting weather, not a board-aimed verb — it has no board-tap
+                // placement path (see TryQueueStormAt). Give a pointer instead of a dead-end error.
+                reason = "Storm places via the Time scrubber, not the board — drag it to choose when.";
+                queued = false;
+            }
             else
             {
                 reason = $"Unsupported verb {Mode}.";

@@ -50,7 +50,13 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(flow.IsInMatch, Is.True);
 
             Assert.That(FindByName<Button>("LockInButton"), Is.Not.Null);
-            Assert.That(FindByName<Transform>("HudDock"), Is.Not.Null);
+            // Match Shell Layout (2026-08-15): the old single "HudDock" GameObject split into five
+            // named bands — check the ones that replaced it exist post-flow.
+            Assert.That(FindByName<Transform>("InfoBar"), Is.Not.Null);
+            Assert.That(FindByName<Transform>("MapViewport"), Is.Not.Null);
+            Assert.That(FindByName<Transform>("HandBand"), Is.Not.Null);
+            Assert.That(FindByName<Transform>("ToolBar"), Is.Not.Null);
+            Assert.That(FindByName<Transform>("TimelineSchedule"), Is.Not.Null);
             yield return null;
         }
 
@@ -77,8 +83,11 @@ namespace LogiCard.Tests.PlayMode
         [Test]
         public void LandscapeDockConstantsExposeBottomBandGeometry()
         {
-            Assert.That(ProgramHud.HudDockHeight, Is.EqualTo(0.34f),
-                "Dock moved to a bottom band (2026-08-10) — this is the real dock extent now.");
+            // Match Shell Layout (2026-08-15): HudDockHeight now represents the combined
+            // HandBand+ToolBar+TimelineSchedule stack rather than the old single 3-column dock — see
+            // ProgramHudLayoutTests for the full band-fraction assertions.
+            Assert.That(ProgramHud.HudDockHeight,
+                Is.EqualTo(ProgramHud.HandBandHeight + ProgramHud.ToolBarHeight + ProgramHud.TimelineHeight).Within(0.0001f));
             Assert.That(ProgramHud.TopStripHeight, Is.GreaterThan(0f));
             Assert.That(ProgramHud.HudDockHeight + ProgramHud.TopStripHeight, Is.LessThan(1f),
                 "Board region must remain the majority of the frame.");

@@ -290,6 +290,39 @@ Ranked by resolve risk for **library staples** under transitional full-hand (dec
 
 ---
 
+## 13. TimelineSchedule & HandBand — schedule language (Match Shell Layout wave)
+
+**Status:** Docs / recommendations only — no Sim verbs, no `CardId`/cost changes, no `Assets/_Project/UI/**` edits (per [`MATCH_SHELL_LAYOUT_AGENT_BRIEF.md`](../../MATCH_SHELL_LAYOUT_AGENT_BRIEF.md)). Answers "how do gear/play cards show up in the new **TimelineSchedule** (YOU / ENEMY / EFFECTS)" and "what should **HandBand** communicate vs the schedule" for [`MATCH_SHELL_LAYOUT.md`](../ui/MATCH_SHELL_LAYOUT.md).
+
+### 13.1 Per-card track + chip + visibility
+
+All five first-wave cards keep the **same** Reveal/Playback visibility rule as Move/Shoot legs — nothing invents an exception, even where the effect is cosmetic (Storm) or currently a stub (Adrenaline). That uniformity is itself the point: a card that behaved differently on the schedule would be a tell.
+
+| Card | Track | Chip label (short) | Program-phase visibility | Playback visibility |
+|---|---|---|---|---|
+| **Bandage** | **YOU** | `Bandage` | Booked block appears on your own YOU track the instant you arm + place it on the scrubber second (§4.2); opponent's schedule shows nothing on their view of your track until Reveal — same face-down rule as a path leg. | At Reveal the block appears as ghost tape on the opponent's read of your row; when the playhead crosses it during Execute, it plays the Wounded→Healthy beat. |
+| **Interact-as-card** | **YOU** | `Interact` (placeholder icon until a real station exists) | Same booked-on-placement / hidden-until-Reveal behavior as Bandage. Today this row can stay empty or greyed — Interact has no legal target yet (§4.2/§4.4), so don't pre-build a populated mock for it. | Ghost block plays an interact tick at its second — shares Door's resolve shape once a station target exists. |
+| **Flashbang** | **YOU** (cast tick only, this wave) | `Flashbang` | Cast block on your own YOU track, hidden from opponent until Reveal. **Do not** pre-render an EFFECTS band for blast radius/duration — effect shape and numerics are still OPEN (§6A), so a schedule mock that implies a shape would over-promise. | Cast plays on YOU track at its second. An EFFECTS-track ghost band for the actual "soft control" window is future scope, gated on the effect design landing — not this wave. |
+| **Adrenaline** | **YOU** — live-authored only, no Program-phase presence | `Adrenaline` | **No Program placement.** The ToolBar Adrenaline control is live-only in Execute while the scrubber is inside an active booked segment (`PLAYBACK_CONTRACT` §1/§4). TimelineSchedule shows nothing for it before that click — there is nothing to hide because nothing was booked. | The instant it's used mid-cinema, stamp a one-shot marker on YOU track at the current playhead second, matching the `AdrenalineUsed` tape event. This is the one card whose schedule mark is authored **live**, not pre-booked — see 13.3 for why it should *look* different too. |
+| **Storm** | Cast tick on **YOU**; ongoing mood lives on **EFFECTS** | `Storm` | Cast block on your own YOU track at its scrubber second, hidden from opponent until Reveal (same uniform rule — presentation-only is not a reason to special-case it). EFFECTS track shows nothing yet in Program; the mood hasn't flipped. | Ghost cast block appears on the opponent's read of your row at Reveal. When the playhead crosses the cast second during Execute, EFFECTS paints **one persistent Storm band** running from that second to the end of the timeline (Fair→Storm, remainder-of-match, `TapeEventType.StormCast`) — a single band, not a repeating tick, since it's recommended 1×/Character/match (§6A). |
+
+**ENEMY track, all cards:** empty/locked during Program (nothing to show — you can't see their plan); populates only once Reveal flips both programs face-up, then plays as ghost tape during Execute — this is the existing Reveal≠Execution split (`PLAYBACK_CONTRACT` §1), not a new rule invented for this doc.
+
+### 13.2 Hand vs schedule — the two questions each region answers
+
+- **HandBand answers "what can I still play."** It shows unplaced cards from the current hand/play deck with charges remaining (e.g. Bandage "1 left"), draggable onto the board or scrubber. A card leaves the fan the moment it's placed.
+- **TimelineSchedule answers "what have I already booked this round."** It shows placed chips at their scrubbed second. Once Lock In happens the row is frozen until Reveal flips it into ghost tape and Execute plays it.
+- The **drag from HandBand to TimelineSchedule is the tell**: a chip disappearing from the fan and materializing on YOU track at a second is the same "I committed this" language the schedule already uses for Move/Shoot legs — gear cards should not get a separate metaphor.
+
+### 13.3 Playful presentation notes (Desk-Lamp toy feel — no code)
+
+- **Ticket-stub chips** for anything booked in Program (Bandage, Interact, Flashbang cast, Storm cast): small torn-edge stub with a hole-punch dot at one corner, matching the "ticket / toy-block" direction in `MATCH_SHELL_LAYOUT.md` and the `resource-bank-card-flip` / comic-swatch collection pieces. These are cards you *filed*, so they should read as printed and placed, not stamped.
+- **Adrenaline breaks that pattern on purpose**: since it's the one live-authored mark (13.1), give it a rubber-stamp / "USED" sticker treatment instead of a ticket stub — visually distinct from the pre-printed chips so a player scanning the schedule can tell "planned in advance" from "reacted in the moment" at a glance, without reading the label.
+- **Storm's EFFECTS band** should read as a background wash (sky-swatch strip) rather than another chip — it's the one track entry that isn't a discrete event but a state change lasting the rest of the match; a repeating icon would misread as recurring casts.
+- Keep chip iconography legible at the collapsed strip size (image 19 "▼ TIMELINE ▼") — a torn-stub silhouette should still read at that scale even before expand.
+
+---
+
 ## See also
 
 - [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) — C62, C63, **C64**, **C66**, **C67** (Storm), **C68**, OPEN #16  
@@ -300,3 +333,4 @@ Ranked by resolve risk for **library staples** under transitional full-hand (dec
 - [`GEAR_BANDAGE_AGENT_BRIEF.md`](GEAR_BANDAGE_AGENT_BRIEF.md) / [`GEAR_FLASHBANG_AGENT_BRIEF.md`](GEAR_FLASHBANG_AGENT_BRIEF.md)  
 - [`GDD.md`](../core/GDD.md) · [`UI_FLOW.md`](../ui/UI_FLOW.md) · [`PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md) · [`MONETIZATION.md`](../core/MONETIZATION.md)  
 - [`CHARACTER_ROSTER_LONGTERM.md`](../character/CHARACTER_ROSTER_LONGTERM.md) — Bomber / Time Player  
+- [`../ui/MATCH_SHELL_LAYOUT.md`](../ui/MATCH_SHELL_LAYOUT.md) — TimelineSchedule/HandBand shell this doc's §13 recommends into  
