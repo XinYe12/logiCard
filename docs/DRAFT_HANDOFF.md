@@ -44,16 +44,15 @@ Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [
 1. UI finish Match Shell / Human Play sign-off / Integrator merge UI + fold peer docs — all done.
 2. Storm numerics — locked C69 (free, 1×/Character/match).
 3. Character decision sheet — fully answered, C70–C73.
-4. Map fence-shadow bug — fixed (`83d875a` on `dept/map`, EditMode 158/158 / PlayMode 49/49), not yet human-eyeballed.
-5. **Camera reconcile — in flight.** Dispatched worker merged master into `feat/camera-freecam-tps`, edited `BoardCameraRig.cs`/`GameBootstrap.cs` for the retune. EditMode passed (188/188); PlayMode batchmode failed to start (stale-lockfile suspect) — sent back to retry. Nothing merged to master yet.
-6. **Map's two remaining tweaks — in flight.** Yard/Hall chroma separation + Vault floor smoothness dispatched to the same Map worker; not yet reported back.
-7. Backlog: Healed presenter; prune dead Bandage/Storm Mode board-tap paths in `BoardInputController`; URP shadow tune on main (uncommitted `LogiCardURP.asset` 50→20 distance, 2048→4096 map) — not Play-verified; Storm's HUD-side cast gate is still per-round not a true per-match counter (flagged in C69, unstarted).
+4. **Camera reconcile — done, awaiting human Play check.** Worker merged master into `feat/camera-freecam-tps` (`14a6261`), re-derived `orthographicSize` default (3.4→2.8) and `BoardCameraRig` min/max bounds (2.6→2.15 / 8.0→6.6) by the exact ratio the MapViewport rect's height shrank (0.48/0.58≈0.828) — correctly reasoned that shrinking only rect *height* (not width) widens camera aspect and would otherwise narrow horizontal fill. Verified against real door/corridor coordinates for all three maps. Integrator-reviewed the diff: exactly in-lane (`BoardCameraRig.cs`, `GameBootstrap.ConfigureCamera`, one mechanical test-pin fix). Commit `23290cb` on `feat/camera-freecam-tps`. EditMode 188/188, PlayMode 59/59. **Not merged** — needs a human Play look, especially Rail Platform framing (tall-map case) and freecam/TPS feel.
+5. **Map's two remaining tweaks — done, awaiting human look.** Hall floor darkened/more saturated `(0.90,0.68,0.42)→(0.80,0.52,0.30)` to separate from Yard; Vault floor smoothness `0.22→0.13` to match siblings. Commit `1065116` on `dept/map` (stacks on `83d875a`'s fence-shadow fix). EditMode 158/158, PlayMode 49/49. **Screenshot attempt failed and was discarded** (worker's throwaway capture harness hit a stale-material caching bug across repeated scene rebuilds — a harness artifact, not a regression; worker reverted `screenshots/lookcheck/*.png` rather than publish misleading magenta-shader renders) — no fresh visual reference exists, human needs to eyeball Hall-vs-Yard and Vault floor specular directly in-Editor.
+6. Backlog: Healed presenter; prune dead Bandage/Storm Mode board-tap paths in `BoardInputController`; URP shadow tune on main (uncommitted `LogiCardURP.asset` 50→20 distance, 2048→4096 map) — not Play-verified; Storm's HUD-side cast gate is still per-round not a true per-match counter (flagged in C69, unstarted).
 
 ## Tomorrow
 
-1. Check back on the Camera and Map workers' reports; review diffs against their briefs before merging either.
-2. Human Play/look pass needed on three things once workers report: Camera framing (esp. Rail Platform) + freecam feel; Map's fence-shadow fix; Map's chroma/floor-smoothness tweaks. None mergeable on batchmode-green alone.
-3. Once Camera merges, this dispatch round is fully closed out.
+1. **Human Play/look pass** on both: Camera framing (esp. Rail Platform) + freecam feel in `logiCard-camera-control`; Map's fence-shadow fix + Hall/Vault material changes in `logiCard-map`. Neither is mergeable on batchmode-green alone — this is the only thing blocking both.
+2. Once approved: Integrator merges Camera (`23290cb`) and Map (`1065116`) to master, batchmode-reverifies the combined tip, updates INDEX/contracts.
+3. After that, this dispatch round is fully closed out — no paused dept work outstanding.
 
 ## Blockers / notes
 
