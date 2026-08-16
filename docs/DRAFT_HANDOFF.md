@@ -2,8 +2,14 @@
 
 **Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (C63/C67 gear carve-out).  
 **Integrator tip:** `master` @ `a21b29c` — **Match Shell Layout merged**, human Play-signed off.  
-**Active wave:** Match Shell Layout is closed as a cross-dept collaboration. Next: Camera letterbox to `MapViewport`, then reconcile the paused freecam/TPS branch.  
+**Active wave:** Match Shell Layout closed. Follow-up dispatch round opened same day: Camera (letterbox + freecam reconcile) and Map (fence-shadow fix, done; chroma/floor-smoothness tweaks in flight) are coding-hot; four blocking human decisions resolved (Storm numerics, Sunny mode, Map tweaks, Character decision sheet).  
 Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [`docs/contracts/CURRENT.md`](contracts/CURRENT.md).
+
+**2026-08-16 decisions locked (all human-confirmed):**
+- **Storm numerics** — free (0s), 1×/Character/match. `PRODUCT_MEMORY.md` **C69**.
+- **Character decision sheet** — fully answered, human accepted every agent recommendation across Parts A–D. `PRODUCT_MEMORY.md` **C70–C73**. Unblocks nothing to code yet — still gated on C36 landing first, per C70/A1's build order.
+- **Atmosphere Sunny mode** — stays dropped/parked, not merged. No change from prior state, just confirmed rather than left open.
+- **Map's other two look-check tweaks** (Yard/Hall chroma separation, Vault floor smoothness) — approved; dispatched alongside the already-landed fence-shadow fix.
 
 **Locked stack (top → bottom, live on master):** InfoBar → MapViewport (diorama) → HandBand → ToolBar → TimelineSchedule (YOU/ENEMY/EFFECTS; playhead = TR scrubber).  
 **Human sign-off:** Played the five-band `ProgramHud` in the UI worktree 2026-08-16 — "quite good, satisfied preliminary design." First all-department collaboration wave (UI coding + Cards/Character/Map/Atmosphere docs + Camera paused) called a success.
@@ -35,19 +41,19 @@ Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [
 
 ## Still unfinished
 
-1. ~~UI finish Match Shell~~ — done.
-2. ~~Human Play sign-off~~ — done 2026-08-16.
-3. ~~Integrator merge UI + fold peer docs~~ — done.
-4. **Camera letterbox to `MapViewport`** — `ProgramHud.MapViewport` rect now exists on master; wire `GameBootstrap.ConfigureCamera` to it, then re-derive `orthographicSize`/`BoardCameraRig` min/max zoom against the new, shorter rect height (Map's §6 priority order: doors > flank sightline > floor edge; Rail Platform is the tall-map risk case to check first).
-5. **Camera branch reconcile** — `2b06a3a` (freecam/TPS) can now proceed against the real `MapViewport` API; still needs review + human Play before merge.
-6. **Atmosphere Sunny-mood decision** — still uncommitted in the Atmosphere worktree, explicitly not part of this merge; needs its own human call (keep/drop) before anyone touches it again.
-7. Backlog: Healed presenter; Storm numerics lock; prune dead Bandage/Storm Mode board-tap paths in `BoardInputController`; URP shadow tune on main (uncommitted `LogiCardURP.asset` 50→20 distance, 2048→4096 map) — not Play-verified; Map's fence soft-shadow "black burst" bug (candidate fix: stop shadow-casting on fence Panel/Rails).
+1. UI finish Match Shell / Human Play sign-off / Integrator merge UI + fold peer docs — all done.
+2. Storm numerics — locked C69 (free, 1×/Character/match).
+3. Character decision sheet — fully answered, C70–C73.
+4. Map fence-shadow bug — fixed (`83d875a` on `dept/map`, EditMode 158/158 / PlayMode 49/49), not yet human-eyeballed.
+5. **Camera reconcile — in flight.** Dispatched worker merged master into `feat/camera-freecam-tps`, edited `BoardCameraRig.cs`/`GameBootstrap.cs` for the retune. EditMode passed (188/188); PlayMode batchmode failed to start (stale-lockfile suspect) — sent back to retry. Nothing merged to master yet.
+6. **Map's two remaining tweaks — in flight.** Yard/Hall chroma separation + Vault floor smoothness dispatched to the same Map worker; not yet reported back.
+7. Backlog: Healed presenter; prune dead Bandage/Storm Mode board-tap paths in `BoardInputController`; URP shadow tune on main (uncommitted `LogiCardURP.asset` 50→20 distance, 2048→4096 map) — not Play-verified; Storm's HUD-side cast gate is still per-round not a true per-match counter (flagged in C69, unstarted).
 
 ## Tomorrow
 
-1. Wire `ConfigureCamera` → `MapViewport` letterbox; retune ortho size per Map §6 guidance.
-2. Reconcile/merge Camera freecam+TPS branch once letterbox lands.
-3. Human decision on Atmosphere Sunny mood (merge as its own feature, or drop for good).
+1. Check back on the Camera and Map workers' reports; review diffs against their briefs before merging either.
+2. Human Play/look pass needed on three things once workers report: Camera framing (esp. Rail Platform) + freecam feel; Map's fence-shadow fix; Map's chroma/floor-smoothness tweaks. None mergeable on batchmode-green alone.
+3. Once Camera merges, this dispatch round is fully closed out.
 
 ## Blockers / notes
 
