@@ -3,11 +3,13 @@
 **Wave / Day:** Permanent seat — live `logiCard-char-select-motion`
 **Branch / worktree:** `feat/char-select-motion` @ `D:\projects\Game\logiCard-char-select-motion`
 **Last cross-reviewed:** 2026-08-18 — rebased `feat/char-select-motion` onto current master
-(`f45e986`); otherwise (1) 2026-08-15 decision-sheet Part A closed, walk still paused at **B1**,
-(2) Match Shell Layout **InfoBar field sheet** landed in `CHARACTER_FANTASY.md` §4.1. Char Select
-UI/motion carousel work earlier in this branch's history was handed to **UI** dept partway through
-(see Mandate below) and remains mergeable history but is no longer this seat's active scope. See
-the Rebase entry under Done for what this pass touched.
+(`f45e986`); otherwise (1) 2026-08-16 **decision sheet fully answered** — human accepted every
+Agent recommendation across Part A–D in one pass, promoted to `PRODUCT_MEMORY.md` **C70–C73**,
+(2) Match Shell Layout **InfoBar field sheet** landed in `CHARACTER_FANTASY.md` §4.1 (merged to
+master 2026-08-16, separately from this branch). Char Select UI/motion carousel work earlier in
+this branch's history was handed to **UI** dept partway through (see Mandate below) and remains
+mergeable history but is no longer this seat's active scope. See the Rebase entry under Done for
+what this pass touched.
 
 ## Mandate
 
@@ -63,10 +65,8 @@ the Rebase entry under Done for what this pass touched.
 
 ## In progress
 
-- Decision-sheet walk with human — **paused at B1** (Part A fully closed: A1–A5). B1 not yet answered.
-- 2026-08-15: agent legwork pass added an **Agent recommendation** column across every still-open
-  row (B1–B9, C2–C7, D1–D6) so the human's resume pass is pick-one-or-override instead of a
-  cold read. Nothing promoted; Decision column untouched by the agent for open rows.
+- Nothing — decision sheet is done. Next real step is Integrator opening the actual C36 geometry-breach
+  contract (both Bomber and Time Player depend on it per C70/A1's build order), not a Character task.
 
 ## Done this session (Match Shell Layout — docs)
 
