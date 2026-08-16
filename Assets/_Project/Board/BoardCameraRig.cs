@@ -41,7 +41,9 @@ namespace LogiCard.Board
     /// <item><b>Free pan</b> (<see cref="PanBy"/>, WASD/arrows/edge-of-screen, League of Legends
     /// style) — translates the orbit pivot (<c>_boardCenter</c>) across the board's ground plane,
     /// clamped to <see cref="SetPanBounds"/>. A third independent axis alongside yaw/zoom, same
-    /// pivot-mutation shape <c>Apply()</c> already had; not a rewrite.</item>
+    /// pivot-mutation shape <c>Apply()</c> already had; not a rewrite. (2026-08-16: the right-drag
+    /// gesture's vertical component now drives this same primitive too — see <see cref="HandleDrag"/>,
+    /// which reuses <see cref="GroundPlaneForward"/> rather than a second movement model.)</item>
     /// <item><b>TPS lock</b> (<see cref="EnterTpsLock"/>/<see cref="ExitTpsLock"/>/<see cref="CycleTpsLock"/>,
     /// <see cref="TpsCycleKey"/>) — a real mode switch to perspective, positioned behind/above one
     /// pawn, Resident-Evil style. Reuses the one live <c>Camera.main</c> (toggles
@@ -119,6 +121,15 @@ namespace LogiCard.Board
         /// <summary>Degrees of yaw per pixel of horizontal mouse drag.</summary>
         public const float DegreesPerPixel = 0.25f;
 
+        /// <summary>World units of ground-plane pan per pixel of the same right-drag's vertical
+        /// component (2026-08-16) — same pixel-direct shape as <see cref="DegreesPerPixel"/> for the
+        /// drag's horizontal axis, pixels-to-world instead of pixels-to-degrees, and deliberately not
+        /// <see cref="PanUnitsPerSecond"/>'s held-key pace (dragging should feel like pushing the world
+        /// directly, not like holding a key). At this rate a 400px vertical drag (roughly a third of a
+        /// 1080p viewport) crosses ~8 world units — close to a full board depth on the smallest map
+        /// (VaultComplex, depth 9).</summary>
+        public const float WorldUnitsPerPixel = 0.02f;
+
         /// <summary>
         /// Zoom-in floor. Re-derived 2026-08-16 for the Match Shell Layout wave (five-band HUD,
         /// `docs/ui/MATCH_SHELL_LAYOUT.md`), which shrank <c>ProgramHud.MapViewport</c> from ~58% to
@@ -193,6 +204,7 @@ namespace LogiCard.Board
         private float _yawDegrees;
         private bool _dragging;
         private float _lastMouseX;
+        private float _lastMouseY;
         private float _orthographicSize;
         private float _targetOrthographicSize;
 
@@ -451,7 +463,7 @@ namespace LogiCard.Board
                 return;
             }
 
-            HandleYawDrag();
+            HandleDrag();
             HandleZoomScroll();
             HandlePan();
         }
@@ -480,7 +492,7 @@ namespace LogiCard.Board
             var pixelRect = new Rect(camRect.x, Screen.height - camRect.y - camRect.height, camRect.width, camRect.height);
             string hint = _mode == CameraMode.TpsLock
                 ? "T: Cycle / Exit Lock View"
-                : "Right-drag: Rotate  ·  Scroll: Zoom  ·  WASD: Pan  ·  T: Lock View";
+                : "Right-drag: Rotate / Pan  ·  Scroll: Zoom  ·  WASD: Pan  ·  T: Lock View";
 
             var style = new GUIStyle(GUI.skin.label)
             {
@@ -497,12 +509,19 @@ namespace LogiCard.Board
             GUI.Label(new Rect(boxRect.x + 6f, boxRect.y + 4f, size.x, size.y), hint, style);
         }
 
-        private void HandleYawDrag()
+        /// <summary>
+        /// One combined two-axis right-drag gesture (2026-08-16): horizontal delta still rotates
+        /// (<see cref="RotateBy"/>, unchanged), vertical delta now also pans forward/back along the
+        /// ground plane (<see cref="PanBy"/>, reusing <see cref="GroundPlaneForward"/> — the same
+        /// direction <see cref="HandlePan"/>'s W/S keys already use) — not a second mode/mouse-button.
+        /// </summary>
+        private void HandleDrag()
         {
             if (Input.GetMouseButtonDown(1))
             {
                 _dragging = true;
                 _lastMouseX = Input.mousePosition.x;
+                _lastMouseY = Input.mousePosition.y;
                 return;
             }
 
@@ -518,13 +537,22 @@ namespace LogiCard.Board
                 return;
             }
 
-            float mouseX = Input.mousePosition.x;
-            float deltaPixels = mouseX - _lastMouseX;
-            _lastMouseX = mouseX;
+            Vector3 mousePos = Input.mousePosition;
+            float deltaX = mousePos.x - _lastMouseX;
+            float deltaY = mousePos.y - _lastMouseY;
+            _lastMouseX = mousePos.x;
+            _lastMouseY = mousePos.y;
 
-            if (deltaPixels != 0f)
+            if (deltaX != 0f)
             {
-                RotateBy(deltaPixels * DegreesPerPixel);
+                RotateBy(deltaX * DegreesPerPixel);
+            }
+
+            if (deltaY != 0f)
+            {
+                // Mouse-up drives +forward, matching HandlePan's W/Up-Arrow mapping (dir.y = +1 =>
+                // +forward) — dragging up feels like pushing the camera forward, same as holding W.
+                PanBy(GroundPlaneForward() * (deltaY * WorldUnitsPerPixel));
             }
         }
 
@@ -550,10 +578,13 @@ namespace LogiCard.Board
 
         /// <summary>
         /// WASD/arrow keys plus edge-of-screen pointer panning, League of Legends style — camera-relative
-        /// (projected onto the ground plane), not fixed world axes, so "up" still pans away from the
-        /// player at any yaw. Suppressed during an active right-drag (<see cref="_dragging"/>): panning
-        /// while also orbiting would fight the drag's own screen-space intent. Deferred for v1: no
-        /// ease/momentum on release (matches yaw drag's already-instant feel), no camera collision.
+        /// (projected onto the ground plane, see <see cref="GroundPlaneForward"/>), not fixed world axes,
+        /// so "up" still pans away from the player at any yaw. Suppressed during an active right-drag
+        /// (<see cref="_dragging"/>) — not because dragging forbids panning (2026-08-16: it doesn't
+        /// anymore, see <see cref="HandleDrag"/>'s own vertical-delta pan) but so a held WASD key doesn't
+        /// add a second, independently-paced pan on top of the drag's pixel-direct one while both are
+        /// active at once. Deferred for v1: no ease/momentum on release (matches yaw drag's already-instant
+        /// feel), no camera collision.
         /// </summary>
         private void HandlePan()
         {
@@ -594,9 +625,7 @@ namespace LogiCard.Board
                 dir.Normalize();
             }
 
-            Vector3 forward = _camera.transform.forward;
-            forward.y = 0f;
-            forward = forward.sqrMagnitude > 0.0001f ? forward.normalized : Vector3.forward;
+            Vector3 forward = GroundPlaneForward();
 
             Vector3 right = _camera.transform.right;
             right.y = 0f;
@@ -638,6 +667,19 @@ namespace LogiCard.Board
             }
 
             return dir;
+        }
+
+        /// <summary>Camera-relative forward, projected onto the ground plane and normalized (falls
+        /// back to world +Z on the degenerate case of a straight-down/up look, which fixed
+        /// <see cref="PitchDegrees"/> never actually produces — kept only so this stays a safe general
+        /// helper). Shared by <see cref="HandlePan"/>'s keyboard/edge pan and <see cref="HandleDrag"/>'s
+        /// vertical-drag pan so both read "forward" the same way instead of each having its own
+        /// movement model.</summary>
+        private Vector3 GroundPlaneForward()
+        {
+            Vector3 forward = _camera.transform.forward;
+            forward.y = 0f;
+            return forward.sqrMagnitude > 0.0001f ? forward.normalized : Vector3.forward;
         }
 
         private void Apply()
