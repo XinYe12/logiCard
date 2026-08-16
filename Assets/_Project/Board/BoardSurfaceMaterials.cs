@@ -32,9 +32,15 @@ namespace LogiCard.Board
         // the material, not via a third grading pass on photographic PBR (see MAP_PRESENTATION_STANDARD §1).
         public static Material YardFloor => _yard ??= Solid(new Color(0.94f, 0.78f, 0.48f), 0.12f);
 
-        public static Material HallFloor => _hall ??= Solid(new Color(0.90f, 0.68f, 0.42f), 0.14f);
+        // 2026-08-16 look-check candidate #2: original (0.90, 0.68, 0.42) sat too close to Yard's sandy
+        // (0.94, 0.78, 0.48) under warm lamps — rooms didn't read as distinct roles. Pushed darker +
+        // more saturated/orange (terracotta wood) so Hall separates from Yard at a glance; Yard left
+        // untouched (sandy is correct for Yard).
+        public static Material HallFloor => _hall ??= Solid(new Color(0.80f, 0.52f, 0.30f), 0.14f);
 
-        public static Material VaultFloor => _vault ??= Solid(new Color(0.78f, 0.88f, 0.96f), 0.22f);
+        // 2026-08-16 look-check candidate #3: smoothness dropped 0.22 -> 0.13 (was the shiniest Solid
+        // floor, pooled more than its siblings under point lamps). Now matches Yard/Flank's range.
+        public static Material VaultFloor => _vault ??= Solid(new Color(0.78f, 0.88f, 0.96f), 0.13f);
 
         public static Material FlankFloor => _flank ??= Solid(new Color(0.62f, 0.78f, 0.48f), 0.10f);
 
