@@ -1,6 +1,6 @@
 # Storm — Gear Numerics Recommendation
 
-**Status:** Recommendation only (2026-08-14) — Cards Storm contract DoD. **Numerics stay OPEN** until human confirms → follow-up C# (same two-step as C62→C63 for Bandage).  
+**Status:** **Locked 2026-08-16 — C69.** Human confirmed the recommendations below as-is: Time Resource cost free (0s), charges 1×/Character/match. HUD-side true per-match enforcement (a real `StormCastCountOf` counter, mirroring `BandageChargeOf`) remains unstarted follow-up — see C69's implementation note.  
 **Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C67**; [`CARD_COLLECTION.md`](CARD_COLLECTION.md) §4.2 / §6A; [`../contracts/CURRENT.md`](../contracts/CURRENT.md) Storm contract.  
 **Does not touch:** `CardData.cs` (`CardId.Storm = 4` already landed); combat/mechanical effects; UI/Atmosphere seats.
 
@@ -16,15 +16,15 @@
 | No combat effect (visibility, blind, damage) without a new C# + PLAYBACK redesign | Storm contract out-of-scope |
 | Sim-side closed: `ActionVerb.Storm`, `TapeEventType.StormCast`, permissive resolve | **C67** |
 | Boot weather = **Fair** so casting Storm is visible | **C67** |
-| Charge / TR cost **OPEN** — this brief proposes defaults only | **C67** |
+| Charge / TR cost — **locked** | **C69** |
 
 ---
 
-## 2. Recommended defaults (OPEN — for human lock)
+## 2. Locked defaults (C69, 2026-08-16)
 
 | Field | Recommendation | Why |
 |-------|----------------|-----|
-| **Time Resource cost** | **`TR —`** (no invented number) | Same convention as other unlocked first-wave cards (C62); Integrator/human lock later. |
+| **Time Resource cost** | **Free (0s)** | Storm is a presentation-only mood switch, not a Program-budget action. |
 | **Charges** | **1× per Character per match** | C67: once cast, Storm persists for the **remainder of the match**. Unlimited casts would be no-ops after the first Fair→Storm switch. Mirrors Bandage's per-Character/match charge shape for HUD gating. |
 | **Phase** | **Program** (locked) | Arm → place on scrubber Time Resource second only. |
 | **`effectSummary` (one line)** | `Switch board weather to Storm for the rest of the match. Presentation only — no combat effect.` | Catalog / `CardData` copy; not a mechanical claim. |
