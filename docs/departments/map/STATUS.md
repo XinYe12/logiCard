@@ -37,11 +37,8 @@ tuning / lighting grade — not a revert-to-photo-PBR problem.
 
 ### Candidate tweaks (for human review — do not auto-apply)
 
-1. **Fence soft-shadow “black burst” (Map-owned, high priority).** All three captures show a jet-black
-   spike/burst at wall junctions (especially dense corners). Almost certainly soft-shadow acne from
-   overlapping thin fence cubes (`PlaceFencePart` defaults to casting shadows). **Candidate:** turn
-   shadow casting off on Panel + thin Rails (keep posts casting, or none); optionally `receiveShadows`
-   only on floors. One-line renderer flags in `PlaceFencePart` — no lighting edit.
+1. ~~**Fence soft-shadow “black burst” (Map-owned, high priority).**~~ **Fixed 2026-08-16** — see
+   "Done — fence shadow-acne fix" below. Still awaiting human visual sign-off.
 2. **Yard vs Hall chroma separation (Map-owned, low).** Yard `(0.94, 0.78, 0.48)` and Hall
    `(0.90, 0.68, 0.42)` are too close under warm lamps — rooms don’t read as distinct roles at a glance.
    **Candidate:** push Hall cooler/darker or more orange; leave Yard sandy; keep Vault blue + Flank green
@@ -55,9 +52,34 @@ tuning / lighting grade — not a revert-to-photo-PBR problem.
    now says: judge surfaces against §2, not the C53 photoreal moodboard image. Someone should amend
    `ART_DIRECTION.md` Moodboard so board *surfaces* cite C65 flat/toon (geometry/weather bar can stay).
 
+## Done — fence shadow-acne fix (2026-08-16)
+
+Candidate tweak #1 above, green-lit and landed. `PlaceFencePart` (`Assets/_Project/Board/BoardView.cs`)
+gained an optional `castShadows` parameter (default `true`, so all other/future callers are unaffected).
+`PlaceWallFence` now passes `castShadows: false` for the `Panel` and both `Rail` parts (`Rail_Top`,
+`Rail_Mid`) — these are the thin, overlapping fence cubes whose self/cross-shadowing produced the
+jet-black "burst" acne at dense wall junctions seen in all three 2026-08-15 look-check captures. Posts
+(`Post_A`, `Post_B`, `Post_M*`) were left at the default (still cast shadows) — they're the thick
+members, weren't visually implicated in the acne, and the brief called for leaving them alone absent
+evidence otherwise. No material colors, smoothness values, or other renderer flags were touched
+(candidate #2 chroma / #3 smoothness stay untouched and still await a separate human art-direction call).
+
+Fresh look-check screenshots were **not** recaptured. The 2026-08-15 diagnostic tool
+(`MapLookCheckCapture.cs`) was throwaway and, per `git log` on this branch, was never actually
+committed to `dept/map` — it exists only as a description in this STATUS doc, not as a reachable
+commit, so there's no exact pattern left to reuse. Reconstructing it from scratch was judged more
+effort than this one-line fix warrants, so it was skipped rather than inventing a fragile substitute.
+**A human should eyeball this in-Editor or in-Play before the acne is called fixed** — shadow artifacts
+are inherently a visual call that batchmode green cannot validate.
+
+Verified: independent batchmode run on this branch post-fix — EditMode 158/158 passed, PlayMode 49/49
+passed, 0 failed, 0 inconclusive, 0 skipped.
+
 ## In progress
 
-- None — seat idle pending human decision on the candidate tweaks above (or explicit “park”).
+- None — seat idle pending human visual sign-off on the shadow-acne fix above, and pending human
+  decision on the remaining candidate tweaks (#2 Yard/Hall chroma, #3 Vault smoothness — untouched,
+  still awaiting a separate human art-direction call).
 
 ## Done — Match Shell Layout docs recommendation (2026-08-15)
 
@@ -87,9 +109,13 @@ brief, Camera slice / Integrator own that code.
 ## Verification
 
 - **Independent batchmode run on this branch (`dept/map` @ `565583f`), 2026-08-15:** EditMode 158/158 passed, PlayMode 49/49 passed, 0 failed, no compile errors. Confirmed green — first independent run on this branch.
+- **Independent batchmode run post fence-shadow fix, 2026-08-16:** EditMode 158/158 passed, PlayMode
+  49/49 passed, 0 failed, 0 inconclusive, 0 skipped. Confirmed green.
 - Look-check PNGs kept at `screenshots/lookcheck/` for human review; diagnostic test deleted after use.
+  Not refreshed for the shadow fix — see "Done — fence shadow-acne fix" above for why.
 
 ## Offers
 
-- If human green-lights #1 (fence shadow) and/or #2–#3 (albedo/smoothness), Map can land those in a
-  small follow-up on this worktree. Otherwise park this seat.
+- Fence shadow-acne fix (#1) is landed on this branch, pending human visual sign-off. If human
+  green-lights #2–#3 (Yard/Hall chroma, Vault smoothness), Map can land those in a small follow-up on
+  this worktree. Otherwise park this seat.
