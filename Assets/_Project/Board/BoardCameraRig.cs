@@ -14,9 +14,11 @@ namespace LogiCard.Board
     ///
     /// Smooth, continuous yaw via right-mouse-drag (2026-08-10 — supersedes an earlier discrete
     /// 8-step-button version, direct feedback: "needs to be smoothly rotated, not with button to
-    /// rotate at a few fixed angle"). Pitch is deliberately never touched — this is the mechanism that
-    /// keeps the camera "on top of the map," never able to rotate underneath it, without needing a
-    /// separate clamp: yaw around the vertical axis cannot change how high the camera sits.
+    /// rotate at a few fixed angle"). Yaw around the vertical axis alone cannot rotate the camera
+    /// underneath the board. Pitch (2026-08-17) is now also player-controlled via the same drag's
+    /// vertical component — see <see cref="TiltBy"/>/<see cref="MinPitchDegrees"/>/
+    /// <see cref="MaxPitchDegrees"/> — but is clamped well short of vertical/horizontal so it can never
+    /// reach underneath the board either.
     ///
     /// Zoom (2026-08-11) is mouse-scroll-wheel only, no pinch/touch path — `docs/SCOPE.md` C48 has this
     /// project as landscape-desktop-first for Steam, with Android/portrait explicitly deferred
@@ -41,9 +43,10 @@ namespace LogiCard.Board
     /// <item><b>Free pan</b> (<see cref="PanBy"/>, WASD/arrows/edge-of-screen, League of Legends
     /// style) — translates the orbit pivot (<c>_boardCenter</c>) across the board's ground plane,
     /// clamped to <see cref="SetPanBounds"/>. A third independent axis alongside yaw/zoom, same
-    /// pivot-mutation shape <c>Apply()</c> already had; not a rewrite. (2026-08-16: the right-drag
-    /// gesture's vertical component now drives this same primitive too — see <see cref="HandleDrag"/>,
-    /// which reuses <see cref="GroundPlaneForward"/> rather than a second movement model.)</item>
+    /// pivot-mutation shape <c>Apply()</c> already had; not a rewrite. Keyboard/edge-pan only — a
+    /// 2026-08-16 experiment that routed the right-drag gesture's vertical component through this same
+    /// primitive was replaced 2026-08-17 by pitch-tilt (<see cref="TiltBy"/>) instead, see
+    /// <see cref="HandleDrag"/>.</item>
     /// <item><b>TPS lock</b> (<see cref="EnterTpsLock"/>/<see cref="ExitTpsLock"/>/<see cref="CycleTpsLock"/>,
     /// <see cref="TpsCycleKey"/>) — a real mode switch to perspective, positioned behind/above one
     /// pawn, Resident-Evil style. Reuses the one live <c>Camera.main</c> (toggles
@@ -77,6 +80,24 @@ namespace LogiCard.Board
 
         public const float PitchDegrees = 52f;
         public const float DistanceFromCenter = 14f;
+
+        /// <summary>Pitch (degrees, x-axis) at the "front view" (前视图) end of the vertical-drag tilt
+        /// range — a low, near-horizontal grazing angle looking across the board rather than down onto
+        /// it. Kept above 0 so the camera never looks dead-level/below horizontal (would clip into board
+        /// geometry at this fixed <see cref="DistanceFromCenter"/>).</summary>
+        public const float MinPitchDegrees = 20f;
+
+        /// <summary>Pitch (degrees) at the "top view" (顶视图) end of the vertical-drag tilt range —
+        /// nearly straight down, but kept short of 90 to avoid the gimbal-flip singularity a true
+        /// top-down look-rotation hits.</summary>
+        public const float MaxPitchDegrees = 85f;
+
+        /// <summary>Fraction of screen height a vertical drag needs to cross to sweep the entire
+        /// <see cref="MinPitchDegrees"/>..<see cref="MaxPitchDegrees"/> range — "a half-screen-length
+        /// vertical slide" per the brief. Drag down (pointer moves toward the bottom of the screen, i.e.
+        /// deltaY negative in Unity's y-up mouse space) tilts toward <see cref="MaxPitchDegrees"/> (top
+        /// view); drag up tilts toward <see cref="MinPitchDegrees"/> (front view).</summary>
+        public const float PitchDragScreenFraction = 0.5f;
 
         /// <summary>World units of pan per second of full keyboard/edge-pan input (League of Legends
         /// style, 2026-08-15). Board footprints run roughly 8x9 to 8x13 world units (three maps,
@@ -120,15 +141,6 @@ namespace LogiCard.Board
 
         /// <summary>Degrees of yaw per pixel of horizontal mouse drag.</summary>
         public const float DegreesPerPixel = 0.25f;
-
-        /// <summary>World units of ground-plane pan per pixel of the same right-drag's vertical
-        /// component (2026-08-16) — same pixel-direct shape as <see cref="DegreesPerPixel"/> for the
-        /// drag's horizontal axis, pixels-to-world instead of pixels-to-degrees, and deliberately not
-        /// <see cref="PanUnitsPerSecond"/>'s held-key pace (dragging should feel like pushing the world
-        /// directly, not like holding a key). At this rate a 400px vertical drag (roughly a third of a
-        /// 1080p viewport) crosses ~8 world units — close to a full board depth on the smallest map
-        /// (VaultComplex, depth 9).</summary>
-        public const float WorldUnitsPerPixel = 0.02f;
 
         /// <summary>
         /// Zoom-in floor. Re-derived 2026-08-16 for the Match Shell Layout wave (five-band HUD,
@@ -202,6 +214,7 @@ namespace LogiCard.Board
         private Camera _camera;
         private Vector3 _boardCenter;
         private float _yawDegrees;
+        private float _pitchDegrees;
         private bool _dragging;
         private float _lastMouseX;
         private float _lastMouseY;
@@ -251,6 +264,7 @@ namespace LogiCard.Board
             _camera = camera;
             _boardCenter = boardCenter;
             _yawDegrees = startingYawDegrees;
+            _pitchDegrees = PitchDegrees;
             _orthographicSize = Mathf.Clamp(camera.orthographicSize, MinOrthographicSize, MaxOrthographicSize);
             _targetOrthographicSize = _orthographicSize;
             camera.orthographicSize = _orthographicSize;
@@ -298,6 +312,31 @@ namespace LogiCard.Board
             }
 
             _yawDegrees = Mathf.Repeat(_yawDegrees + deltaDegrees, 360f);
+            Apply();
+            Rotated?.Invoke();
+        }
+
+        /// <summary>
+        /// Core pitch-tilt primitive (2026-08-17, replaces the short-lived vertical-drag-pans
+        /// experiment) — any delta, applied immediately and clamped to
+        /// <see cref="MinPitchDegrees"/>/<see cref="MaxPitchDegrees"/>, same shape as
+        /// <see cref="RotateBy"/>/<see cref="ZoomBy"/>. <see cref="HandleDrag"/> is the only caller in
+        /// normal play; exposed publicly so tests can drive it directly.
+        /// </summary>
+        public void TiltBy(float deltaDegrees)
+        {
+            if (_camera == null || deltaDegrees == 0f || _mode != CameraMode.Overview)
+            {
+                return;
+            }
+
+            float clamped = Mathf.Clamp(_pitchDegrees + deltaDegrees, MinPitchDegrees, MaxPitchDegrees);
+            if (clamped == _pitchDegrees)
+            {
+                return;
+            }
+
+            _pitchDegrees = clamped;
             Apply();
             Rotated?.Invoke();
         }
@@ -492,7 +531,7 @@ namespace LogiCard.Board
             var pixelRect = new Rect(camRect.x, Screen.height - camRect.y - camRect.height, camRect.width, camRect.height);
             string hint = _mode == CameraMode.TpsLock
                 ? "T: Cycle / Exit Lock View"
-                : "Right-drag: Rotate / Pan  ·  Scroll: Zoom  ·  WASD: Pan  ·  T: Lock View";
+                : "Right-drag: Rotate / Tilt  ·  Scroll: Zoom  ·  WASD: Pan  ·  T: Lock View";
 
             var style = new GUIStyle(GUI.skin.label)
             {
@@ -510,13 +549,25 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// One combined two-axis right-drag gesture (2026-08-16): horizontal delta still rotates
-        /// (<see cref="RotateBy"/>, unchanged), vertical delta now also pans forward/back along the
-        /// ground plane (<see cref="PanBy"/>, reusing <see cref="GroundPlaneForward"/> — the same
-        /// direction <see cref="HandlePan"/>'s W/S keys already use) — not a second mode/mouse-button.
+        /// One combined two-axis right-drag gesture: horizontal delta rotates (<see cref="RotateBy"/>),
+        /// vertical delta tilts pitch (<see cref="TiltBy"/>, 2026-08-17) between
+        /// <see cref="MinPitchDegrees"/> (front view, drag up) and <see cref="MaxPitchDegrees"/> (top
+        /// view, drag down) over <see cref="PitchDragScreenFraction"/> of screen height — replaces an
+        /// earlier vertical-drag-pans-forward/back experiment (2026-08-16), which didn't match the
+        /// intended "swipe to change viewpoint" gesture. Guarded against phantom drag input: requires
+        /// <see cref="Application.isFocused"/> (an unfocused game view can report a stale/default mouse
+        /// position, e.g. (0,0), that would otherwise read as a huge one-frame delta) and only starts
+        /// dragging on an explicit <c>GetMouseButtonDown</c>, never by inferring a held button from
+        /// stale state.
         /// </summary>
         private void HandleDrag()
         {
+            if (!Application.isFocused)
+            {
+                _dragging = false;
+                return;
+            }
+
             if (Input.GetMouseButtonDown(1))
             {
                 _dragging = true;
@@ -550,9 +601,11 @@ namespace LogiCard.Board
 
             if (deltaY != 0f)
             {
-                // Mouse-up drives +forward, matching HandlePan's W/Up-Arrow mapping (dir.y = +1 =>
-                // +forward) — dragging up feels like pushing the camera forward, same as holding W.
-                PanBy(GroundPlaneForward() * (deltaY * WorldUnitsPerPixel));
+                float pitchRange = MaxPitchDegrees - MinPitchDegrees;
+                float dragPixelsForFullRange = Mathf.Max(1f, Screen.height * PitchDragScreenFraction);
+                // Drag down (deltaY negative, y-up mouse space) -> +pitch (top view); drag up -> -pitch
+                // (front view) — hence the sign flip.
+                TiltBy(-deltaY / dragPixelsForFullRange * pitchRange);
             }
         }
 
@@ -684,7 +737,7 @@ namespace LogiCard.Board
 
         private void Apply()
         {
-            var rotation = Quaternion.Euler(PitchDegrees, _yawDegrees, 0f);
+            var rotation = Quaternion.Euler(_pitchDegrees, _yawDegrees, 0f);
             _camera.transform.rotation = rotation;
             _camera.transform.position = _boardCenter - (rotation * Vector3.forward * DistanceFromCenter);
         }
