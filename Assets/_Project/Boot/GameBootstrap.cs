@@ -48,6 +48,8 @@ namespace LogiCard.Boot
         private MatchClock _matchClock;
         private IFoleyPlayer _foley;
         private BoardCameraRig _cameraRig;
+        private PawnView _attackerView;
+        private PawnView _defenderView;
         private ProgramHud _programHud;
         private MapId _activeMap = MapId.FreightYard;
         private bool _matchSceneBuilt;
@@ -534,6 +536,8 @@ namespace LogiCard.Boot
             // the visual build follows the same archetype so silhouette and movement read together.
             PawnView attacker = SpawnPawn("Pawn_Attacker", new Color(0.90f, 0.35f, 0.28f), attackerHome, attackerSecondsPerTile, PawnBuild.Scout);
             PawnView defender = SpawnPawn("Pawn_Defender", new Color(0.32f, 0.58f, 0.86f), defenderSpawn, DefenderSecondsPerTile, PawnBuild.Juggernaut);
+            _attackerView = attacker;
+            _defenderView = defender;
 
             _attackerInput = attacker.gameObject.AddComponent<BoardInputController>();
             _attackerInput.Init(attacker, _phase, attackerHome, attackerSecondsPerTile, 0f, _board);
@@ -698,10 +702,29 @@ namespace LogiCard.Boot
             // Framing history: 9.0 over-zoomed out (board ~43% of region, 2026-08-09); 5.0 was the
             // first recalibration toward ~75-80% coverage. Screenshot `image copy 13.png` (2026-08-11)
             // still showed the board as a small island in a large void — portrait/tall Game view +
-            // bottom HUD dock leave less usable height than that earlier estimate assumed. Drop to
+            // bottom HUD dock leave less usable height than that earlier estimate assumed. Dropped to
             // 3.4 so the board fills the play region by default; runtime zoom bounds (closer min) are
-            // owned by BoardCameraRig / feat/camera-zoom-fill this wave, not this line.
-            cam.orthographicSize = 3.4f;
+            // owned by BoardCameraRig / feat/camera-zoom-fill.
+            //
+            // Re-derived to 2.8 (2026-08-16, Match Shell Layout wave, `docs/ui/MATCH_SHELL_LAYOUT.md` /
+            // `docs/map/MAP_PRESENTATION_STANDARD.md` §6.1): the five-band HUD shrank
+            // ProgramHud.MapViewport — and therefore this cam.rect, which is defined to exactly match
+            // it — from ~58% to ~48% of window height (HudDockHeight 0.34→0.45, TopStripHeight
+            // 0.08→0.07) while cam.rect stays full window *width*. That's not just "a smaller hole" —
+            // because the rect's width fraction didn't shrink with its height, Unity's auto-computed
+            // camera.aspect (screenAspect / rectHeightFraction) widens, which widens the horizontal
+            // world extent shown for a fixed orthographicSize, so the board's width would fill a
+            // *smaller* fraction of the (already smaller) frame than before if this value were left
+            // unscaled. Scaling the old 3.4 by the same ratio the rect height shrank by
+            // (0.48 / 0.58 ≈ 0.828 → 3.4 * 0.828 ≈ 2.8) exactly restores the pre-wave horizontal fill
+            // fraction; the accompanying tighter vertical coverage (more crop of the far floor edge,
+            // not doors — verified against each map's actual door/corridor y-positions, worst case
+            // Rail Platform's Corridor Door North at y=9 vs. a visible range of roughly [3.0, 10.0])
+            // is the accepted trade-off per MAP_PRESENTATION_STANDARD.md §6.1's readability order:
+            // doors > flank/corridor sightline > full room-floor edge. BoardCameraRig's
+            // MinOrthographicSize/MaxOrthographicSize bounds were re-derived by the identical ratio —
+            // see that file's doc comments for the per-map coverage numbers this produces.
+            cam.orthographicSize = 2.8f;
             // Dark void only — never a painted sky / brand color clear (playtest 2026-08-12: sky-blue
             // clear looked like a UI backdrop). Focus comes from tilt-shift DoF on the board chunk
             // (GDD §8 / ART_DIRECTION), not from the camera clear color. Weather stays a contained
@@ -718,6 +741,25 @@ namespace LogiCard.Boot
             }
 
             _cameraRig.Init(cam, _board.CenterWorld);
+
+            // Free pan (2026-08-15) clamps to this map's playable footprint — ArenaBoard's own
+            // Min/Max X/Y run through the same WorldFromPlanar conversion the board's own geometry
+            // uses, so this stays correct per-map without hardcoding one board's bounds (three maps,
+            // different footprints: FreightYard/VaultComplex 8x9-ish, RailPlatform 8x13).
+            _cameraRig.SetPanBounds(
+                _board.WorldFromPlanar(new PlanarPosition(_board.Model.MinX, _board.Model.MinY)),
+                _board.WorldFromPlanar(new PlanarPosition(_board.Model.MaxX, _board.Model.MaxY)));
+
+            // TPS lock (2026-08-15) cycle order: attacker, then defender, then back to Overview — see
+            // BoardCameraRig.CycleTpsLock. This project always has exactly these two pawns
+            // (AttackerPawnId/DefenderPawnId); no roster query needed.
+            _cameraRig.SetTpsTargets(new[] { _attackerView.transform, _defenderView.transform });
+
+            // Program-phase board clicks are scoped out while TPS-locked (BoardCameraRig's class doc,
+            // "Program-phase board input") — a close over-the-shoulder view can't sanely support
+            // "tap the board to draft a path." See BoardInputController.TryClickAtScreenPosition's
+            // camera-mode gate.
+            _attackerInput.SetCameraRig(_cameraRig);
 
             // Post-processing is off by default per camera (URP) even when the pipeline supports it;
             // without this the diorama Volume below has nothing to render through (playtest 2026-08-07:

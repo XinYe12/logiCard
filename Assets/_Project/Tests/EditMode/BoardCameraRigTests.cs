@@ -216,5 +216,198 @@ namespace LogiCard.Tests.EditMode
             _rig.ZoomBy(2f);
             Assert.That(_rig.YawDegrees, Is.EqualTo(40f).Within(0.001f));
         }
+
+        [Test]
+        public void PanBy_MovesCameraAlongDelta_KeepingDistanceFromNewCenter()
+        {
+            var boardCenter = new Vector3(4f, 0f, 5f);
+            _rig.Init(_cameraGo.GetComponent<Camera>(), boardCenter);
+
+            _rig.PanBy(new Vector3(1.5f, 0f, -0.5f));
+
+            Vector3 expectedCenter = boardCenter + new Vector3(1.5f, 0f, -0.5f);
+            Assert.That(Vector3.Distance(_cameraGo.transform.position, expectedCenter),
+                Is.EqualTo(BoardCameraRig.DistanceFromCenter).Within(0.01f));
+        }
+
+        [Test]
+        public void PanBy_IgnoresYComponent()
+        {
+            _rig.PanBy(new Vector3(0f, 5f, 0f));
+
+            Assert.That(_cameraGo.transform.position.y,
+                Is.EqualTo(Mathf.Sin(BoardCameraRig.PitchDegrees * Mathf.Deg2Rad) * BoardCameraRig.DistanceFromCenter).Within(0.01f));
+        }
+
+        [Test]
+        public void PanBy_ZeroDelta_DoesNotRaiseRotated()
+        {
+            int fired = 0;
+            _rig.Rotated += () => fired++;
+
+            _rig.PanBy(Vector3.zero);
+
+            Assert.That(fired, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void PanBy_NonZeroDelta_RaisesRotatedOnce()
+        {
+            int fired = 0;
+            _rig.Rotated += () => fired++;
+
+            _rig.PanBy(new Vector3(1f, 0f, 0f));
+
+            Assert.That(fired, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void PanBy_ClampsToPanBounds()
+        {
+            _rig.SetPanBounds(new Vector3(-2f, 0f, -2f), new Vector3(2f, 0f, 2f));
+
+            _rig.PanBy(new Vector3(100f, 0f, 100f));
+
+            Vector3 expectedCenter = new Vector3(2f, 0f, 2f);
+            Assert.That(Vector3.Distance(_cameraGo.transform.position, expectedCenter),
+                Is.EqualTo(BoardCameraRig.DistanceFromCenter).Within(0.01f));
+        }
+
+        [Test]
+        public void PanBy_AtBoundClamp_DoesNotRaiseRotated()
+        {
+            _rig.SetPanBounds(new Vector3(-2f, 0f, -2f), new Vector3(2f, 0f, 2f));
+            _rig.PanBy(new Vector3(100f, 0f, 100f)); // drive to the corner
+            int fired = 0;
+            _rig.Rotated += () => fired++;
+
+            _rig.PanBy(new Vector3(100f, 0f, 100f)); // still clamped to the same corner
+
+            Assert.That(fired, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void EnterTpsLock_SwitchesToPerspective()
+        {
+            var target = new GameObject("TpsTarget").transform;
+            target.position = new Vector3(3f, 0f, 3f);
+
+            _rig.EnterTpsLock(target);
+
+            Assert.That(_rig.Mode, Is.EqualTo(BoardCameraRig.CameraMode.TpsLock));
+            Assert.That(_cameraGo.GetComponent<Camera>().orthographic, Is.False);
+
+            Object.DestroyImmediate(target.gameObject);
+        }
+
+        [Test]
+        public void EnterTpsLock_PositionsCameraBehindAndAboveTarget()
+        {
+            var target = new GameObject("TpsTarget").transform;
+            target.position = new Vector3(3f, 0f, 3f);
+
+            _rig.EnterTpsLock(target);
+
+            Vector3 camPos = _cameraGo.transform.position;
+            // Default facing is world +Z until the target moves — camera sits behind (lower Z) and
+            // above (higher Y) the target.
+            Assert.That(camPos.z, Is.LessThan(target.position.z));
+            Assert.That(camPos.y, Is.GreaterThan(target.position.y));
+
+            Object.DestroyImmediate(target.gameObject);
+        }
+
+        [Test]
+        public void ExitTpsLock_RestoresOrthographicAndPriorOrbitFraming()
+        {
+            var boardCenter = new Vector3(4f, 0f, 5f);
+            _rig.Init(_cameraGo.GetComponent<Camera>(), boardCenter);
+            _rig.RotateBy(30f);
+            var target = new GameObject("TpsTarget").transform;
+
+            _rig.EnterTpsLock(target);
+            _rig.ExitTpsLock();
+
+            Assert.That(_rig.Mode, Is.EqualTo(BoardCameraRig.CameraMode.Overview));
+            Assert.That(_cameraGo.GetComponent<Camera>().orthographic, Is.True);
+            Assert.That(_rig.YawDegrees, Is.EqualTo(30f).Within(0.001f));
+            float distance = Vector3.Distance(_cameraGo.transform.position, boardCenter);
+            Assert.That(distance, Is.EqualTo(BoardCameraRig.DistanceFromCenter).Within(0.01f));
+
+            Object.DestroyImmediate(target.gameObject);
+        }
+
+        [Test]
+        public void RotateBy_NoOpWhileTpsLocked()
+        {
+            var target = new GameObject("TpsTarget").transform;
+            _rig.EnterTpsLock(target);
+            float yawBefore = _rig.YawDegrees;
+
+            _rig.RotateBy(45f);
+
+            Assert.That(_rig.YawDegrees, Is.EqualTo(yawBefore).Within(0.001f));
+            Object.DestroyImmediate(target.gameObject);
+        }
+
+        [Test]
+        public void ZoomBy_NoOpWhileTpsLocked()
+        {
+            var target = new GameObject("TpsTarget").transform;
+            _rig.EnterTpsLock(target);
+            float sizeBefore = _rig.OrthographicSize;
+
+            _rig.ZoomBy(1f);
+
+            Assert.That(_rig.OrthographicSize, Is.EqualTo(sizeBefore).Within(0.001f));
+            Object.DestroyImmediate(target.gameObject);
+        }
+
+        [Test]
+        public void PanBy_NoOpWhileTpsLocked()
+        {
+            var boardCenter = new Vector3(4f, 0f, 5f);
+            _rig.Init(_cameraGo.GetComponent<Camera>(), boardCenter);
+            var target = new GameObject("TpsTarget").transform;
+            _rig.EnterTpsLock(target);
+            int fired = 0;
+            _rig.Rotated += () => fired++;
+
+            _rig.PanBy(new Vector3(5f, 0f, 0f));
+
+            Assert.That(fired, Is.EqualTo(0));
+            Object.DestroyImmediate(target.gameObject);
+        }
+
+        [Test]
+        public void CycleTpsLock_WithNoTargets_IsNoOp()
+        {
+            _rig.CycleTpsLock();
+
+            Assert.That(_rig.Mode, Is.EqualTo(BoardCameraRig.CameraMode.Overview));
+        }
+
+        [Test]
+        public void CycleTpsLock_StepsThroughTargetsThenBackToOverview()
+        {
+            var targetA = new GameObject("TpsTargetA").transform;
+            var targetB = new GameObject("TpsTargetB").transform;
+            _rig.SetTpsTargets(new[] { targetA, targetB });
+
+            _rig.CycleTpsLock();
+            Assert.That(_rig.Mode, Is.EqualTo(BoardCameraRig.CameraMode.TpsLock));
+            Assert.That(_rig.TpsTargetIndex, Is.EqualTo(0));
+
+            _rig.CycleTpsLock();
+            Assert.That(_rig.Mode, Is.EqualTo(BoardCameraRig.CameraMode.TpsLock));
+            Assert.That(_rig.TpsTargetIndex, Is.EqualTo(1));
+
+            _rig.CycleTpsLock();
+            Assert.That(_rig.Mode, Is.EqualTo(BoardCameraRig.CameraMode.Overview));
+            Assert.That(_rig.TpsTargetIndex, Is.EqualTo(-1));
+
+            Object.DestroyImmediate(targetA.gameObject);
+            Object.DestroyImmediate(targetB.gameObject);
+        }
     }
 }

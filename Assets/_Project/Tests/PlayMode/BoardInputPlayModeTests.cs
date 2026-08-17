@@ -255,10 +255,15 @@ namespace LogiCard.Tests.PlayMode
 
             Camera cam = Camera.main;
             Assert.That(cam, Is.Not.Null);
-            Assert.That(cam.orthographicSize, Is.EqualTo(3.4f).Within(0.05f),
+            // 2026-08-16 (Match Shell Layout wave): ConfigureCamera's fill-zoom default was
+            // re-derived from 3.4 to 2.8 (see GameBootstrap.ConfigureCamera's comment) to compensate
+            // for MapViewport shrinking from ~58% to ~48% of window height. This pin tracks whatever
+            // that default currently is — the test's actual point is "the Yard probe isn't absorbed
+            // by OutcomeBanner," not the specific zoom number.
+            Assert.That(cam.orthographicSize, Is.EqualTo(2.8f).Within(0.05f),
                 "Fixture must keep ConfigureCamera's fill zoom — that is what exposes the bug.");
 
-            // Heart of the Yard soil floor: on-screen this sits inside the OutcomeBanner band at ortho 3.4.
+            // Heart of the Yard soil floor: on-screen this sits inside the OutcomeBanner band at ortho 2.8.
             PlanarPosition yardPoint = new PlanarPosition(4f, 2f);
             Assert.That(BoardVisual.Model.InBounds(yardPoint), Is.True);
             Assert.That(yardPoint.DistanceTo(Home), Is.GreaterThan(0.5f),

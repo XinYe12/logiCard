@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace LogiCard.Board
@@ -13,9 +14,11 @@ namespace LogiCard.Board
     ///
     /// Smooth, continuous yaw via right-mouse-drag (2026-08-10 — supersedes an earlier discrete
     /// 8-step-button version, direct feedback: "needs to be smoothly rotated, not with button to
-    /// rotate at a few fixed angle"). Pitch is deliberately never touched — this is the mechanism that
-    /// keeps the camera "on top of the map," never able to rotate underneath it, without needing a
-    /// separate clamp: yaw around the vertical axis cannot change how high the camera sits.
+    /// rotate at a few fixed angle"). Yaw around the vertical axis alone cannot rotate the camera
+    /// underneath the board. Pitch (2026-08-17) is now also player-controlled via the same drag's
+    /// vertical component — see <see cref="TiltBy"/>/<see cref="MinPitchDegrees"/>/
+    /// <see cref="MaxPitchDegrees"/> — but is clamped well short of vertical/horizontal so it can never
+    /// reach underneath the board either.
     ///
     /// Zoom (2026-08-11) is mouse-scroll-wheel only, no pinch/touch path — `docs/SCOPE.md` C48 has this
     /// project as landscape-desktop-first for Steam, with Android/portrait explicitly deferred
@@ -34,60 +37,168 @@ namespace LogiCard.Board
     /// dragging or scrolling*, not just once per discrete step. See <see cref="Rotated"/>, which fires
     /// for zoom changes too (not just yaw) so every existing subscriber gets the same invalidation
     /// treatment without a second event or any change to how <c>GameBootstrap</c> wires it up.
+    ///
+    /// (2026-08-15) Two additive features, both gated on <see cref="CameraMode"/>:
+    /// <list type="bullet">
+    /// <item><b>Free pan</b> (<see cref="PanBy"/>, WASD/arrows/edge-of-screen, League of Legends
+    /// style) — translates the orbit pivot (<c>_boardCenter</c>) across the board's ground plane,
+    /// clamped to <see cref="SetPanBounds"/>. A third independent axis alongside yaw/zoom, same
+    /// pivot-mutation shape <c>Apply()</c> already had; not a rewrite. Keyboard/edge-pan only — a
+    /// 2026-08-16 experiment that routed the right-drag gesture's vertical component through this same
+    /// primitive was replaced 2026-08-17 by pitch-tilt (<see cref="TiltBy"/>) instead, see
+    /// <see cref="HandleDrag"/>.</item>
+    /// <item><b>TPS lock</b> (<see cref="EnterTpsLock"/>/<see cref="ExitTpsLock"/>/<see cref="CycleTpsLock"/>,
+    /// <see cref="TpsCycleKey"/>) — a real mode switch to perspective, positioned behind/above one
+    /// pawn, Resident-Evil style. Reuses the one live <c>Camera.main</c> (toggles
+    /// <c>orthographic</c>/position/rotation) rather than a second Camera. <c>RotateBy</c>/<c>ZoomBy</c>/
+    /// <c>PanBy</c> are no-ops while locked — orbit state (yaw/zoom/pivot) is frozen, not reset, so
+    /// exiting TPS lock returns to exactly where Overview was left.</item>
+    /// </list>
+    /// Program-phase board input (path drafting) is intentionally scoped out while TPS-locked rather
+    /// than silently kept — see <c>BoardInputController.TryClickAtScreenPosition</c>'s camera-mode
+    /// gate — because a close over-the-shoulder view can't sanely support "tap the board to draft a
+    /// path." TPS lock
+    /// itself is legal in any phase (it's an observation mode, not a phase gate); only the live-mouse
+    /// click-to-draft path is suppressed. Deferred for v1: pan momentum/easing, camera collision
+    /// against props/walls, and any blend/transition between Overview and TPS lock (both cuts are an
+    /// instant snap today).
     /// </summary>
     public sealed class BoardCameraRig : MonoBehaviour
     {
+        /// <summary>
+        /// Overview = today's orthographic diorama orbit (yaw/zoom/pan). TpsLock = perspective,
+        /// positioned behind/above one pawn (2026-08-15 free-pan + TPS-lock wave). A real mode
+        /// switch, not a zoom level — orbit's yaw-drag/zoom-scroll/pan primitives are no-ops while
+        /// locked (see the mode guards in <see cref="RotateBy"/>/<see cref="ZoomBy"/>/<see cref="PanBy"/>),
+        /// and <see cref="Update"/> drives TPS follow instead of orbit input while locked.
+        /// </summary>
+        public enum CameraMode
+        {
+            Overview,
+            TpsLock,
+        }
+
         public const float PitchDegrees = 52f;
         public const float DistanceFromCenter = 14f;
+
+        /// <summary>Pitch (degrees, x-axis) at the "front view" (前视图) end of the vertical-drag tilt
+        /// range — a low, near-horizontal grazing angle looking across the board rather than down onto
+        /// it. Kept above 0 so the camera never looks dead-level/below horizontal (would clip into board
+        /// geometry at this fixed <see cref="DistanceFromCenter"/>).</summary>
+        public const float MinPitchDegrees = 20f;
+
+        /// <summary>Pitch (degrees) at the "top view" (顶视图) end of the vertical-drag tilt range —
+        /// nearly straight down, but kept short of 90 to avoid the gimbal-flip singularity a true
+        /// top-down look-rotation hits.</summary>
+        public const float MaxPitchDegrees = 85f;
+
+        /// <summary>Fraction of screen height a vertical drag needs to cross to sweep the entire
+        /// <see cref="MinPitchDegrees"/>..<see cref="MaxPitchDegrees"/> range — "a half-screen-length
+        /// vertical slide" per the brief. Drag down (pointer moves toward the bottom of the screen, i.e.
+        /// deltaY negative in Unity's y-up mouse space) tilts toward <see cref="MaxPitchDegrees"/> (top
+        /// view); drag up tilts toward <see cref="MinPitchDegrees"/> (front view).</summary>
+        public const float PitchDragScreenFraction = 0.5f;
+
+        /// <summary>World units of pan per second of full keyboard/edge-pan input (League of Legends
+        /// style, 2026-08-15). Board footprints run roughly 8x9 to 8x13 world units (three maps,
+        /// <c>MapDefinitions</c>), so this crosses a board in ~1.5-2s — fast enough to feel responsive,
+        /// slow enough not to overshoot the clamp every frame.</summary>
+        public const float PanUnitsPerSecond = 6f;
+
+        /// <summary>Screen-space pixels from a viewport edge that trigger edge-pan, LoL-style. Measured
+        /// against full-screen <c>Input.mousePosition</c>/<c>Screen.width/height</c>, not the camera's
+        /// carved-out <c>rect</c> — the mouse can edge-pan from the strip/dock margins too.</summary>
+        public const float EdgePanMarginPixels = 18f;
+
+        /// <summary>Hotkey that cycles Overview -> Pawn 1 TPS lock -> Pawn 2 TPS lock -> ... -> Overview,
+        /// in the order <see cref="SetTpsTargets"/> was given. Unused elsewhere in this project (only
+        /// other bound key is <c>PhotoModeController.ToggleKey</c>, F9).</summary>
+        public const KeyCode TpsCycleKey = KeyCode.T;
+
+        /// <summary>Perspective FOV while TPS-locked. Orthographic (Overview) has no FOV concept;
+        /// this only applies once <see cref="EnterTpsLock"/> flips <c>camera.orthographic</c> off.</summary>
+        public const float TpsFieldOfViewDegrees = 55f;
+
+        /// <summary>World units behind the locked pawn's root the camera eye sits (Resident-Evil-style
+        /// close over-the-shoulder, not a wide follow cam) — tuned against <c>PawnView.TargetVisualHeight</c>
+        /// (1.0, pawn root is at ground/feet level), not this rig's orbit <see cref="DistanceFromCenter"/>.</summary>
+        public const float TpsFollowDistance = 2.1f;
+
+        /// <summary>World units above the locked pawn's root the camera eye sits.</summary>
+        public const float TpsFollowHeight = 1.6f;
+
+        /// <summary>World units above the locked pawn's root the camera looks at (roughly chest/head
+        /// height on a ~1.0-unit-tall pawn) — the eye sits higher still (<see cref="TpsFollowHeight"/>),
+        /// so this pitches the view down slightly onto the pawn, matching an over-the-shoulder read.</summary>
+        public const float TpsLookHeightOffset = 0.9f;
+
+        /// <summary>Minimum ground-plane movement (world units) between frames before TPS facing
+        /// re-derives from it. <see cref="PawnView"/> never stores a facing/rotation of its own (it
+        /// only translates), so TPS lock derives "which way is forward" from recent motion instead —
+        /// below this threshold (near-stationary pawn) the last derived facing is kept rather than
+        /// snapping to a near-zero, noisy direction.</summary>
+        public const float TpsFacingUpdateThreshold = 0.01f;
 
         /// <summary>Degrees of yaw per pixel of horizontal mouse drag.</summary>
         public const float DegreesPerPixel = 0.25f;
 
         /// <summary>
-        /// Zoom-in floor. Deliberately below the yaw-0 full-width fit
-        /// (<c>width / (2 * aspect) = 8 / 2 = 4.0</c> at the narrowest landscape aspect this project
-        /// supports — `aspect == 1`, `docs/SCOPE.md` C48) so the player can fill the board in frame.
-        /// At 2.6, board width covers <c>8 / (2 * 2.6) ≈ 1.54×</c> the frame horizontally at yaw 0 /
-        /// aspect 1 — edges clip; that is the point of a zoom-in-to-fill control (human feedback
-        /// 2026-08-11: prior floor 4.2 left almost no zoom-in headroom against a ~5.0 default).
+        /// Zoom-in floor. Re-derived 2026-08-16 for the Match Shell Layout wave (five-band HUD,
+        /// `docs/ui/MATCH_SHELL_LAYOUT.md`), which shrank <c>ProgramHud.MapViewport</c> from ~58% to
+        /// ~48% of window height while <c>cam.rect</c> stays full window *width* — see
+        /// <c>GameBootstrap.ConfigureCamera</c>'s comment for why that specific change (not window
+        /// aspect ratio, which this formula was already independent of) forces a re-derivation:
+        /// shrinking only the rect's height fraction widens the camera's auto-computed <c>aspect</c>
+        /// (<c>= windowAspect / rectHeightFraction</c>), which widens the *horizontal* world extent
+        /// shown for a fixed <c>orthographicSize</c> — the board's width fills a smaller fraction of
+        /// frame than before even though vertical coverage (below) is untouched by this. Scaling every
+        /// zoom constant by the same ratio the rect height shrank
+        /// (<c>0.48 / 0.58 ≈ 0.828</c>) exactly restores the pre-wave horizontal fill fraction while
+        /// proportionally tightening vertical coverage too (more floor-edge crop, the accepted
+        /// trade-off — see <see cref="MaxOrthographicSize"/>'s doc for the worked coverage numbers).
+        ///
+        /// Was 2.6 (pre-wave floor, itself derived from the yaw-0 full-width-fit case
+        /// <c>width / (2 * aspect) = 8 / 2 = 4.0</c> at aspect 1, `docs/SCOPE.md` C48). New floor
+        /// <c>2.6 * 0.828 ≈ 2.15</c> — the same full-width-fit target now needs a smaller
+        /// <c>orthographicSize</c> to reach, since the wider post-wave <c>aspect</c> already shows more
+        /// width per unit of <c>orthographicSize</c>.
         ///
         /// Hard constraint vs ConfigureCamera: <see cref="Init"/> clamps the camera's starting
-        /// <c>orthographicSize</c> into <c>[Min, Max]</c>. Whatever default ConfigureCamera ships
-        /// (historically 5.0; later waves may lower toward fill around ~3.4) must be ≥ this floor,
-        /// or Init silently forces it back up. 2.6 leaves clear headroom under a 3.4-class default.
+        /// <c>orthographicSize</c> into <c>[Min, Max]</c>. ConfigureCamera's default (now 2.8, see its
+        /// own comment) must be ≥ this floor, or Init silently forces it back up.
         ///
-        /// Board *depth* still varies by map (FreightYard 10, VaultComplex 9, RailPlatform 13);
-        /// vertical fit needed is <c>depth * sin(52°) / 2</c> — 3.94 / 3.55 / 5.12 respectively.
-        /// All three already exceed this floor (and RailPlatform's 5.12 already exceeded the old
-        /// 5.0 baseline), so max zoom-in can run the far/near edge past the top/bottom of frame —
-        /// accepted, same as C61. No per-map zoom floors.
-        ///
-        /// Yaw makes this worse still: at 45°-ish diagonal yaw the board's on-screen footprint is its
-        /// full bounding-box diagonal — for RailPlatform,
-        /// <c>sqrt((width/2)² + (depth/2)²) = sqrt(4² + 6.5²) ≈ 7.63</c>, well above this floor.
-        /// Guaranteeing zero clipping at every yaw would require raising the zoom-in floor above the
-        /// zoom-out ceiling below, which defeats the control — accepted trade-off, documented since C61.
+        /// Board *depth* still varies by map (FreightYard 10, VaultComplex 9, RailPlatform 13); the
+        /// exact-fit <c>orthographicSize</c> for each (<c>depth * sin(52°) / 2</c> — 3.94 / 3.55 / 5.12,
+        /// unaffected by the rect-height change since it's a purely vertical, rect-fraction-independent
+        /// quantity) all exceed this new floor too, so max zoom-in still runs the far/near edge past the
+        /// top/bottom of frame — accepted, same as C61. No per-map zoom floors.
         /// </summary>
-        public const float MinOrthographicSize = 2.6f;
+        public const float MinOrthographicSize = 2.15f;
 
         /// <summary>
-        /// Zoom-out ceiling. Vertical board coverage is <c>depth * sin(52°) / (2 * orthographicSize)</c>
-        /// (aspect-independent, per the DRAFT_HANDOFF derivation). The smallest board, VaultComplex
-        /// (depth 9), is the binding case — smaller boards read as proportionally smaller still as you
-        /// zoom out. At <c>orthographicSize = 8</c> VaultComplex covers
-        /// <c>9 * sin(52°) / 16 ≈ 9 * 0.788 / 16 ≈ 44.3%</c> of the frame vertically — still readable
-        /// as a tactical board, not a speck, while tighter than the prior 10.0 ceiling now that the
-        /// ConfigureCamera default is moving closer to the board (a 10× speck from a ~3.4 default
-        /// would feel worse than the same ceiling did against a 5.0 baseline). FreightYard /
-        /// RailPlatform read larger still at this same bound since their depth is bigger
-        /// (~49% / ~64% vertical coverage respectively).
+        /// Zoom-out ceiling. Re-derived 2026-08-16 alongside <see cref="MinOrthographicSize"/> for the
+        /// same Match Shell Layout MapViewport shrink (~58% → ~48% window height) — scaled by the same
+        /// <c>0.48 / 0.58 ≈ 0.828</c> ratio for consistency (the horizontal-fill argument on
+        /// <see cref="MinOrthographicSize"/> applies here too: an unscaled ceiling would let the player
+        /// zoom out to a relatively narrower-looking board than before the wave).
+        ///
+        /// Vertical board coverage is <c>depth * sin(52°) / (2 * orthographicSize)</c>
+        /// (aspect-independent — a function of <c>orthographicSize</c> and depth only, not of the
+        /// rect's height fraction, per the DRAFT_HANDOFF derivation). Was 8.0, giving VaultComplex
+        /// (depth 9, the smallest board and binding case) ~44.3% vertical coverage. New ceiling
+        /// <c>8.0 * 0.828 ≈ 6.6</c> gives VaultComplex <c>9 * sin(52°) / (2 * 6.6) ≈ 53.6%</c> — *more*
+        /// generous than before (a smaller absolute viewport has less room to spare, so the max-zoom-out
+        /// speck risk is tightened, not just carried over). FreightYard / RailPlatform read larger still
+        /// at this same bound (~59.5% / ~77.4% vertical coverage respectively).
         /// </summary>
-        public const float MaxOrthographicSize = 8.0f;
+        public const float MaxOrthographicSize = 6.6f;
 
         /// <summary>orthographicSize units removed per positive notch of <c>Input.mouseScrollDelta.y</c>
         /// (scroll up/away = zoom in = smaller size, hence the sign flip in <see cref="Update"/>).
-        /// Full travel <c>(Max - Min) / 0.45 = 5.4 / 0.45 = 12</c> notches — usable across the wider
-        /// magnification span without feeling sluggish or twitchy.</summary>
+        /// Full travel <c>(Max - Min) / 0.45 ≈ 4.45 / 0.45 ≈ 10</c> notches post Match Shell Layout
+        /// re-derivation (was 12 notches over the pre-wave 5.4 span) — still a usable magnification
+        /// range without feeling sluggish or twitchy; left unscaled since the "how many notches feel
+        /// right" judgment isn't a function of the Min/Max re-derivation itself.</summary>
         public const float SizePerScrollNotch = 0.45f;
 
         /// <summary>orthographicSize units per second the camera eases toward its scroll-set target —
@@ -103,14 +214,33 @@ namespace LogiCard.Board
         private Camera _camera;
         private Vector3 _boardCenter;
         private float _yawDegrees;
+        private float _pitchDegrees;
         private bool _dragging;
         private float _lastMouseX;
+        private float _lastMouseY;
         private float _orthographicSize;
         private float _targetOrthographicSize;
+
+        private bool _panBoundsSet;
+        private Vector3 _panMinWorld;
+        private Vector3 _panMaxWorld;
+
+        private CameraMode _mode = CameraMode.Overview;
+        private IReadOnlyList<Transform> _tpsTargets = Array.Empty<Transform>();
+        private int _tpsTargetIndex = -1;
+        private Transform _tpsPawnTransform;
+        private Vector3 _tpsFacing = Vector3.forward;
+        private Vector3 _tpsLastPawnPosition;
 
         public float YawDegrees => _yawDegrees;
 
         public bool IsDragging => _dragging;
+
+        public CameraMode Mode => _mode;
+
+        /// <summary>Which TPS target index is locked (0-based into <see cref="SetTpsTargets"/>'s
+        /// list), or -1 while <see cref="Mode"/> is <see cref="CameraMode.Overview"/>.</summary>
+        public int TpsTargetIndex => _tpsTargetIndex;
 
         /// <summary>Current <c>orthographicSize</c> (mirrors the camera's live value once <see cref="Init"/> has run).</summary>
         public float OrthographicSize => _orthographicSize;
@@ -134,10 +264,39 @@ namespace LogiCard.Board
             _camera = camera;
             _boardCenter = boardCenter;
             _yawDegrees = startingYawDegrees;
+            _pitchDegrees = PitchDegrees;
             _orthographicSize = Mathf.Clamp(camera.orthographicSize, MinOrthographicSize, MaxOrthographicSize);
             _targetOrthographicSize = _orthographicSize;
             camera.orthographicSize = _orthographicSize;
+            camera.orthographic = true;
+            _mode = CameraMode.Overview;
+            _tpsTargetIndex = -1;
+            _tpsPawnTransform = null;
             Apply();
+        }
+
+        /// <summary>
+        /// Clamps <see cref="PanBy"/> to the board's playable footprint on the ground plane — two
+        /// opposite world-space corners (order doesn't matter, min/max is taken per-axis here) so
+        /// callers can pass <c>BoardView.WorldFromPlanar</c> of the <c>ArenaBoard</c>'s own
+        /// Min/Max X/Y directly without pre-sorting. Per-map (three maps, different footprints,
+        /// <c>MapDefinitions</c>) — call again after rebuilding the board for a different map.
+        /// </summary>
+        public void SetPanBounds(Vector3 worldCornerA, Vector3 worldCornerB)
+        {
+            _panMinWorld = Vector3.Min(worldCornerA, worldCornerB);
+            _panMaxWorld = Vector3.Max(worldCornerA, worldCornerB);
+            _panBoundsSet = true;
+        }
+
+        /// <summary>
+        /// Pawns the TPS lock can cycle through, in cycle order — see <see cref="CycleTpsLock"/>.
+        /// GameBootstrap passes the match's two pawn Transforms (attacker, defender); this rig doesn't
+        /// know or care about pawn identity/roster beyond "a Transform to look from behind."
+        /// </summary>
+        public void SetTpsTargets(IReadOnlyList<Transform> targets)
+        {
+            _tpsTargets = targets ?? Array.Empty<Transform>();
         }
 
         /// <summary>
@@ -147,12 +306,76 @@ namespace LogiCard.Board
         /// </summary>
         public void RotateBy(float deltaDegrees)
         {
-            if (_camera == null || deltaDegrees == 0f)
+            if (_camera == null || deltaDegrees == 0f || _mode != CameraMode.Overview)
             {
                 return;
             }
 
             _yawDegrees = Mathf.Repeat(_yawDegrees + deltaDegrees, 360f);
+            Apply();
+            Rotated?.Invoke();
+        }
+
+        /// <summary>
+        /// Core pitch-tilt primitive (2026-08-17, replaces the short-lived vertical-drag-pans
+        /// experiment) — any delta, applied immediately and clamped to
+        /// <see cref="MinPitchDegrees"/>/<see cref="MaxPitchDegrees"/>, same shape as
+        /// <see cref="RotateBy"/>/<see cref="ZoomBy"/>. <see cref="HandleDrag"/> is the only caller in
+        /// normal play; exposed publicly so tests can drive it directly.
+        /// </summary>
+        public void TiltBy(float deltaDegrees)
+        {
+            if (_camera == null || deltaDegrees == 0f || _mode != CameraMode.Overview)
+            {
+                return;
+            }
+
+            float clamped = Mathf.Clamp(_pitchDegrees + deltaDegrees, MinPitchDegrees, MaxPitchDegrees);
+            if (clamped == _pitchDegrees)
+            {
+                return;
+            }
+
+            _pitchDegrees = clamped;
+            Apply();
+            Rotated?.Invoke();
+        }
+
+        /// <summary>
+        /// Translates the orbit pivot across the board's ground plane (LoL-style free pan,
+        /// 2026-08-15) — a third independent axis alongside yaw/zoom, not a replacement for either.
+        /// <paramref name="worldDelta"/>'s Y is ignored (ground-plane only; height stays the fixed
+        /// function of pitch/distance <see cref="Apply"/> always used). No-op while TPS-locked, same
+        /// as <see cref="RotateBy"/>/<see cref="ZoomBy"/> — panning an orbit pivot the TPS view isn't
+        /// using would do nothing visible but would silently move Overview out from under the player
+        /// for whenever they exit TPS lock.
+        /// </summary>
+        public void PanBy(Vector3 worldDelta)
+        {
+            if (_camera == null || _mode != CameraMode.Overview)
+            {
+                return;
+            }
+
+            worldDelta.y = 0f;
+            if (worldDelta == Vector3.zero)
+            {
+                return;
+            }
+
+            Vector3 target = _boardCenter + worldDelta;
+            if (_panBoundsSet)
+            {
+                target.x = Mathf.Clamp(target.x, _panMinWorld.x, _panMaxWorld.x);
+                target.z = Mathf.Clamp(target.z, _panMinWorld.z, _panMaxWorld.z);
+            }
+
+            if (target == _boardCenter)
+            {
+                return;
+            }
+
+            _boardCenter = target;
             Apply();
             Rotated?.Invoke();
         }
@@ -168,7 +391,7 @@ namespace LogiCard.Board
         /// </summary>
         public void ZoomBy(float deltaSize)
         {
-            if (_camera == null || deltaSize == 0f)
+            if (_camera == null || deltaSize == 0f || _mode != CameraMode.Overview)
             {
                 return;
             }
@@ -184,6 +407,81 @@ namespace LogiCard.Board
             Rotated?.Invoke();
         }
 
+        /// <summary>
+        /// Enters perspective TPS lock behind/above <paramref name="pawnTransform"/> (Resident-Evil
+        /// style, 2026-08-15) — flips the shared <c>Camera.main</c> from orthographic Overview to
+        /// perspective (see class doc: reuses the one live camera, no second <c>Camera</c>). Facing
+        /// resets to world +Z (this project's maps spawn the attacker on the low-Y edge moving toward
+        /// increasing Y, GameBootstrap.BuildPawns) until the pawn actually moves — see
+        /// <see cref="TpsFacingUpdateThreshold"/>.
+        /// </summary>
+        public void EnterTpsLock(Transform pawnTransform)
+        {
+            if (_camera == null || pawnTransform == null)
+            {
+                return;
+            }
+
+            _tpsPawnTransform = pawnTransform;
+            _tpsLastPawnPosition = pawnTransform.position;
+            _tpsFacing = Vector3.forward;
+            _mode = CameraMode.TpsLock;
+            _camera.orthographic = false;
+            _camera.fieldOfView = TpsFieldOfViewDegrees;
+            ApplyTpsLock();
+            Rotated?.Invoke();
+        }
+
+        /// <summary>Returns to Overview at the same yaw/zoom/pivot it had before TPS lock — orbit
+        /// state is untouched while locked (<see cref="RotateBy"/>/<see cref="ZoomBy"/>/<see cref="PanBy"/>
+        /// are no-ops during <see cref="CameraMode.TpsLock"/>), so this is just re-running
+        /// <see cref="Apply"/> against whatever that state already is.</summary>
+        public void ExitTpsLock()
+        {
+            if (_mode != CameraMode.TpsLock)
+            {
+                return;
+            }
+
+            _tpsPawnTransform = null;
+            _mode = CameraMode.Overview;
+            _camera.orthographic = true;
+            _camera.orthographicSize = _orthographicSize;
+            Apply();
+            Rotated?.Invoke();
+        }
+
+        /// <summary>
+        /// Overview -> target[0] TPS lock -> target[1] TPS lock -> ... -> Overview. The whole "pick a
+        /// pawn to view through" surface for v1 (brief: keep it simple) — cycling a hotkey rather than
+        /// a HUD pawn picker; <see cref="TpsCycleKey"/> is the sole binding. No-op if
+        /// <see cref="SetTpsTargets"/> was never called or given an empty list.
+        /// </summary>
+        public void CycleTpsLock()
+        {
+            if (_tpsTargets.Count == 0)
+            {
+                return;
+            }
+
+            if (_mode == CameraMode.Overview)
+            {
+                _tpsTargetIndex = 0;
+            }
+            else
+            {
+                _tpsTargetIndex++;
+                if (_tpsTargetIndex >= _tpsTargets.Count)
+                {
+                    _tpsTargetIndex = -1;
+                    ExitTpsLock();
+                    return;
+                }
+            }
+
+            EnterTpsLock(_tpsTargets[_tpsTargetIndex]);
+        }
+
         private void Update()
         {
             if (_camera == null)
@@ -191,16 +489,90 @@ namespace LogiCard.Board
                 return;
             }
 
-            HandleYawDrag();
+            if (Input.GetKeyDown(TpsCycleKey))
+            {
+                CycleTpsLock();
+            }
+
+            if (_mode == CameraMode.TpsLock)
+            {
+                // Orbit input (drag/scroll/pan) is a diorama-overview concept only — see the mode
+                // guards on RotateBy/ZoomBy/PanBy. Follow the locked pawn instead.
+                ApplyTpsLock();
+                return;
+            }
+
+            HandleDrag();
             HandleZoomScroll();
+            HandlePan();
         }
 
-        private void HandleYawDrag()
+        /// <summary>
+        /// Small always-on legend so the controls this file adds aren't undiscoverable — right-drag
+        /// especially has no other affordance anywhere on screen, and a real playtest (2026-08-16)
+        /// found a player left-drag (reserved for board taps, see <c>BoardInputController</c>) and
+        /// concluded the camera "didn't work at all." IMGUI, not uGUI: this is a self-contained,
+        /// informational-only overlay scoped to this one file, not real HUD chrome — avoids pulling a
+        /// `LogiCard.UI` dependency into `LogiCard.Board` for a placeholder that UI department should
+        /// own for real once this feature is actually signed off. Anchored to the camera's own
+        /// <c>pixelRect</c> (not the full window) so it always sits inside whatever region the camera
+        /// is actually rendering to, independent of HUD layout.
+        /// </summary>
+        private void OnGUI()
         {
+            if (_camera == null)
+            {
+                return;
+            }
+
+            // Camera.pixelRect is bottom-left-origin/y-up (standard Unity screen space); OnGUI is
+            // top-left-origin/y-down — convert, or the hint lands mirrored-vertically off the real rect.
+            Rect camRect = _camera.pixelRect;
+            var pixelRect = new Rect(camRect.x, Screen.height - camRect.y - camRect.height, camRect.width, camRect.height);
+            string hint = _mode == CameraMode.TpsLock
+                ? "T: Cycle / Exit Lock View"
+                : "Right-drag: Rotate / Tilt  ·  Scroll: Zoom  ·  WASD: Pan  ·  T: Lock View";
+
+            var style = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 13,
+                normal = { textColor = Color.white },
+            };
+            Vector2 size = style.CalcSize(new GUIContent(hint));
+            var boxRect = new Rect(pixelRect.x + 8f, pixelRect.y + 8f, size.x + 12f, size.y + 8f);
+
+            Color prevColor = GUI.color;
+            GUI.color = new Color(0f, 0f, 0f, 0.55f);
+            GUI.DrawTexture(boxRect, Texture2D.whiteTexture);
+            GUI.color = prevColor;
+            GUI.Label(new Rect(boxRect.x + 6f, boxRect.y + 4f, size.x, size.y), hint, style);
+        }
+
+        /// <summary>
+        /// One combined two-axis right-drag gesture: horizontal delta rotates (<see cref="RotateBy"/>),
+        /// vertical delta tilts pitch (<see cref="TiltBy"/>, 2026-08-17) between
+        /// <see cref="MinPitchDegrees"/> (front view, drag up) and <see cref="MaxPitchDegrees"/> (top
+        /// view, drag down) over <see cref="PitchDragScreenFraction"/> of screen height — replaces an
+        /// earlier vertical-drag-pans-forward/back experiment (2026-08-16), which didn't match the
+        /// intended "swipe to change viewpoint" gesture. Guarded against phantom drag input: requires
+        /// <see cref="Application.isFocused"/> (an unfocused game view can report a stale/default mouse
+        /// position, e.g. (0,0), that would otherwise read as a huge one-frame delta) and only starts
+        /// dragging on an explicit <c>GetMouseButtonDown</c>, never by inferring a held button from
+        /// stale state.
+        /// </summary>
+        private void HandleDrag()
+        {
+            if (!Application.isFocused)
+            {
+                _dragging = false;
+                return;
+            }
+
             if (Input.GetMouseButtonDown(1))
             {
                 _dragging = true;
                 _lastMouseX = Input.mousePosition.x;
+                _lastMouseY = Input.mousePosition.y;
                 return;
             }
 
@@ -216,13 +588,24 @@ namespace LogiCard.Board
                 return;
             }
 
-            float mouseX = Input.mousePosition.x;
-            float deltaPixels = mouseX - _lastMouseX;
-            _lastMouseX = mouseX;
+            Vector3 mousePos = Input.mousePosition;
+            float deltaX = mousePos.x - _lastMouseX;
+            float deltaY = mousePos.y - _lastMouseY;
+            _lastMouseX = mousePos.x;
+            _lastMouseY = mousePos.y;
 
-            if (deltaPixels != 0f)
+            if (deltaX != 0f)
             {
-                RotateBy(deltaPixels * DegreesPerPixel);
+                RotateBy(deltaX * DegreesPerPixel);
+            }
+
+            if (deltaY != 0f)
+            {
+                float pitchRange = MaxPitchDegrees - MinPitchDegrees;
+                float dragPixelsForFullRange = Mathf.Max(1f, Screen.height * PitchDragScreenFraction);
+                // Drag down (deltaY negative, y-up mouse space) -> +pitch (top view); drag up -> -pitch
+                // (front view) — hence the sign flip.
+                TiltBy(-deltaY / dragPixelsForFullRange * pitchRange);
             }
         }
 
@@ -246,11 +629,160 @@ namespace LogiCard.Board
             }
         }
 
+        /// <summary>
+        /// WASD/arrow keys plus edge-of-screen pointer panning, League of Legends style — camera-relative
+        /// (projected onto the ground plane, see <see cref="GroundPlaneForward"/>), not fixed world axes,
+        /// so "up" still pans away from the player at any yaw. Suppressed during an active right-drag
+        /// (<see cref="_dragging"/>) — not because dragging forbids panning (2026-08-16: it doesn't
+        /// anymore, see <see cref="HandleDrag"/>'s own vertical-delta pan) but so a held WASD key doesn't
+        /// add a second, independently-paced pan on top of the drag's pixel-direct one while both are
+        /// active at once. Deferred for v1: no ease/momentum on release (matches yaw drag's already-instant
+        /// feel), no camera collision.
+        /// </summary>
+        private void HandlePan()
+        {
+            if (_dragging)
+            {
+                return;
+            }
+
+            Vector2 dir = Vector2.zero;
+            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
+            {
+                dir.y += 1f;
+            }
+
+            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
+            {
+                dir.y -= 1f;
+            }
+
+            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
+            {
+                dir.x += 1f;
+            }
+
+            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
+            {
+                dir.x -= 1f;
+            }
+
+            dir += EdgePanDirection();
+            if (dir.sqrMagnitude < 0.0001f)
+            {
+                return;
+            }
+
+            if (dir.sqrMagnitude > 1f)
+            {
+                dir.Normalize();
+            }
+
+            Vector3 forward = GroundPlaneForward();
+
+            Vector3 right = _camera.transform.right;
+            right.y = 0f;
+            right = right.sqrMagnitude > 0.0001f ? right.normalized : Vector3.right;
+
+            Vector3 worldDir = (right * dir.x) + (forward * dir.y);
+            PanBy(worldDir * PanUnitsPerSecond * Time.deltaTime);
+        }
+
+        /// <summary>Pointer-near-edge contribution to <see cref="HandlePan"/>, measured against the
+        /// full screen (not the camera's carved-out viewport <c>rect</c>) since the pointer can sit in
+        /// the top-strip/HUD-dock margins and still mean "pan this way." Returns zero off-screen (e.g.
+        /// after an OS-level focus loss) rather than reading a stale edge position.</summary>
+        private static Vector2 EdgePanDirection()
+        {
+            Vector3 mouse = Input.mousePosition;
+            if (mouse.x < 0f || mouse.x > Screen.width || mouse.y < 0f || mouse.y > Screen.height)
+            {
+                return Vector2.zero;
+            }
+
+            Vector2 dir = Vector2.zero;
+            if (mouse.x <= EdgePanMarginPixels)
+            {
+                dir.x -= 1f;
+            }
+            else if (mouse.x >= Screen.width - EdgePanMarginPixels)
+            {
+                dir.x += 1f;
+            }
+
+            if (mouse.y <= EdgePanMarginPixels)
+            {
+                dir.y -= 1f;
+            }
+            else if (mouse.y >= Screen.height - EdgePanMarginPixels)
+            {
+                dir.y += 1f;
+            }
+
+            return dir;
+        }
+
+        /// <summary>Camera-relative forward, projected onto the ground plane and normalized (falls
+        /// back to world +Z on the degenerate case of a straight-down/up look, which fixed
+        /// <see cref="PitchDegrees"/> never actually produces — kept only so this stays a safe general
+        /// helper). Shared by <see cref="HandlePan"/>'s keyboard/edge pan and <see cref="HandleDrag"/>'s
+        /// vertical-drag pan so both read "forward" the same way instead of each having its own
+        /// movement model.</summary>
+        private Vector3 GroundPlaneForward()
+        {
+            Vector3 forward = _camera.transform.forward;
+            forward.y = 0f;
+            return forward.sqrMagnitude > 0.0001f ? forward.normalized : Vector3.forward;
+        }
+
         private void Apply()
         {
-            var rotation = Quaternion.Euler(PitchDegrees, _yawDegrees, 0f);
+            var rotation = Quaternion.Euler(_pitchDegrees, _yawDegrees, 0f);
             _camera.transform.rotation = rotation;
             _camera.transform.position = _boardCenter - (rotation * Vector3.forward * DistanceFromCenter);
+        }
+
+        /// <summary>
+        /// Continuous TPS follow: reads <c>_tpsPawnTransform</c>'s current position each frame and
+        /// repositions behind/above it — a pure function of that transform's already-updated
+        /// position, same "no restart, just re-derive" shape PLAYBACK_CONTRACT.md requires of Execute
+        /// presenters (PawnView.ApplyTime already drives that transform from the scrubber; this never
+        /// starts its own timer/tween). Facing comes from recent ground-plane movement since
+        /// <see cref="PawnView"/> never stores a rotation of its own.
+        /// </summary>
+        private void ApplyTpsLock()
+        {
+            if (_tpsPawnTransform == null)
+            {
+                ExitTpsLock();
+                return;
+            }
+
+            Vector3 pawnPos = _tpsPawnTransform.position;
+            Vector3 delta = pawnPos - _tpsLastPawnPosition;
+            delta.y = 0f;
+            if (delta.sqrMagnitude > TpsFacingUpdateThreshold * TpsFacingUpdateThreshold)
+            {
+                _tpsFacing = delta.normalized;
+            }
+
+            _tpsLastPawnPosition = pawnPos;
+
+            Vector3 eyePoint = pawnPos - (_tpsFacing * TpsFollowDistance) + (Vector3.up * TpsFollowHeight);
+            Vector3 lookPoint = pawnPos + (Vector3.up * TpsLookHeightOffset);
+            Vector3 lookDir = lookPoint - eyePoint;
+
+            bool moved = _camera.transform.position != eyePoint;
+            _camera.transform.position = eyePoint;
+            if (lookDir.sqrMagnitude > 0.0001f)
+            {
+                _camera.transform.rotation = Quaternion.LookRotation(lookDir.normalized, Vector3.up);
+            }
+
+            if (moved)
+            {
+                Rotated?.Invoke();
+            }
         }
     }
 }
