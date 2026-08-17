@@ -1,11 +1,11 @@
 # Cross-Dept Contracts — Current Wave
 
-**Updated:** 2026-08-16 by Integrator — **Match Shell Layout wave CLOSED**, merged to master
-(`c9925b1` UI code + `a21b29c` docs peers). Human Play-signed; post-merge batchmode independently
-re-verified (EditMode 174/174, PlayMode 56/56). First all-department collaboration wave — done.
-**Next open concern:** Camera — `ProgramHud.MapViewport` rect now exists on master; wire
-`GameBootstrap.ConfigureCamera` letterbox, then reconcile the paused `feat/camera-freecam-tps`
-(`2b06a3a`) against it. No other seat is coding-hot right now.
+**Updated:** 2026-08-17 by Integrator — **Match Shell Layout, Map, and Camera waves all CLOSED**, merged
+to master (`c9925b1`/`a21b29c` Match Shell, `07501d7` Map, `e594c51` Camera `--no-ff`). Camera reconciled
+`feat/camera-freecam-tps` against the Match Shell `ProgramHud.MapViewport` rect, added a control-hint
+overlay, then iterated its right-drag gesture live with the human during re-test (combined pan+rotate,
+then pitch-tilt between top/front view). Post-merge batchmode independently re-verified on master
+(EditMode 188/188, PlayMode 59/59). **No seat is coding-hot right now** — this dispatch round is closed.
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
 
