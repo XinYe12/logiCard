@@ -144,6 +144,21 @@ namespace LogiCard.Boot
             return 0;
         }
 
+        /// <summary>Storm once-per-match cast counter (C69) — mirrors <see cref="BandageChargeOf"/>
+        /// exactly, replacing the old per-round-only "already queued this Program" HUD dedup.</summary>
+        public int StormCastCountOf(int pawnId)
+        {
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                if (_pawns[i].PawnId == pawnId)
+                {
+                    return _pawns[i].StormCastCount;
+                }
+            }
+
+            return 0;
+        }
+
         /// <summary>
         /// Rematch / new Local Play after Match Over: clear carried wounds/positions back to spawn,
         /// restore doors to each <see cref="Door.InitialState"/>, drop the armed tape and hit VFX.
@@ -180,6 +195,7 @@ namespace LogiCard.Boot
                 pawn.CurrentPosition = pawn.HomePosition;
                 pawn.Wounds = 0;
                 pawn.BandageCharge = 0; // C63 — a fresh match resets gear charges too, not just wounds.
+                pawn.StormCastCount = 0; // C69 — mirrors BandageCharge above.
                 _pawns[i] = pawn;
             }
 
@@ -224,7 +240,7 @@ namespace LogiCard.Boot
             for (int i = 0; i < _pawns.Count; i++)
             {
                 PawnEntry pawn = _pawns[i];
-                _inputs.Add(new GhostInput(pawn.PawnId, pawn.CurrentPosition, pawn.BuildPayload(), pawn.Wounds, pawn.BandageCharge));
+                _inputs.Add(new GhostInput(pawn.PawnId, pawn.CurrentPosition, pawn.BuildPayload(), pawn.Wounds, pawn.BandageCharge, pawn.StormCastCount));
             }
 
             // A bare `yield return someEnumerator` does NOT drain it synchronously in Unity — it defers
@@ -317,6 +333,7 @@ namespace LogiCard.Boot
 
                 pawn.Wounds = _tape.WoundsFor(pawn.PawnId);
                 pawn.BandageCharge = _tape.BandageChargeFor(pawn.PawnId);
+                pawn.StormCastCount = _tape.StormCastCountFor(pawn.PawnId);
                 _pawns[i] = pawn;
             }
 
@@ -764,6 +781,9 @@ namespace LogiCard.Boot
             /// same way <see cref="Wounds"/> is (via GhostInput/ReplayTape).</summary>
             public int BandageCharge { get; set; }
 
+            /// <summary>C69 — 0 or 1, Storm casts spent this match. Mirrors <see cref="BandageCharge"/>.</summary>
+            public int StormCastCount { get; set; }
+
             public PawnEntry(int pawnId, PawnView view, PlanarPosition home, Func<TimelinePayload> payloadSource)
             {
                 PawnId = pawnId;
@@ -772,6 +792,7 @@ namespace LogiCard.Boot
                 CurrentPosition = home;
                 Wounds = 0;
                 BandageCharge = 0;
+                StormCastCount = 0;
                 _payloadSource = payloadSource;
             }
 

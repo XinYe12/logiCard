@@ -12,6 +12,7 @@ namespace LogiCard.Net
     {
         private static readonly IReadOnlyDictionary<int, int> NoWounds = new Dictionary<int, int>();
         private static readonly IReadOnlyDictionary<int, int> NoBandageCharge = new Dictionary<int, int>();
+        private static readonly IReadOnlyDictionary<int, int> NoStormCastCount = new Dictionary<int, int>();
 
         public IReadOnlyDictionary<int, ScheduledPath> Tracks { get; }
 
@@ -25,18 +26,24 @@ namespace LogiCard.Net
         /// carried in (C63). Mirrors <see cref="EndWounds"/>'s per-match carry-forward shape.</summary>
         public IReadOnlyDictionary<int, int> EndBandageCharge { get; }
 
+        /// <summary>Storm casts spent (0 or 1) at end of resolve, including any StartingStormCastCount
+        /// carried in (C69). Mirrors <see cref="EndBandageCharge"/>'s shape exactly.</summary>
+        public IReadOnlyDictionary<int, int> EndStormCastCount { get; }
+
         public float EndSeconds { get; }
 
         public ReplayTape(
             IReadOnlyDictionary<int, ScheduledPath> tracks,
             IReadOnlyList<TapeEvent> events,
             IReadOnlyDictionary<int, int> endWounds = null,
-            IReadOnlyDictionary<int, int> endBandageCharge = null)
+            IReadOnlyDictionary<int, int> endBandageCharge = null,
+            IReadOnlyDictionary<int, int> endStormCastCount = null)
         {
             Tracks = tracks ?? new Dictionary<int, ScheduledPath>();
             Events = events ?? new List<TapeEvent>();
             EndWounds = endWounds ?? NoWounds;
             EndBandageCharge = endBandageCharge ?? NoBandageCharge;
+            EndStormCastCount = endStormCastCount ?? NoStormCastCount;
 
             float end = 0f;
             foreach (KeyValuePair<int, ScheduledPath> track in Tracks)
@@ -79,6 +86,11 @@ namespace LogiCard.Net
         public int BandageChargeFor(int pawnId)
         {
             return EndBandageCharge.TryGetValue(pawnId, out int charge) ? charge : 0;
+        }
+
+        public int StormCastCountFor(int pawnId)
+        {
+            return EndStormCastCount.TryGetValue(pawnId, out int count) ? count : 0;
         }
     }
 }

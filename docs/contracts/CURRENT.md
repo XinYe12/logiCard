@@ -68,6 +68,9 @@ than merging their branch — see note below), with two new PlayMode tests.
 this Program" only — per-round, not a true cross-round counter (no `StormCastCountOf` the way Bandage
 has `BandageChargeOf`); harmless for now since TR cost is 0 and recasting an already-active mood is a
 no-op at the presenter level — revisit if numerics lock to a real cost or strict enforcement is wanted.
+**Closed 2026-08-18** — `RoundPlayback.StormCastCountOf` landed (mirrors `BandageChargeOf`), and
+`GhostResolver` now enforces the cast itself the same way it already enforced Bandage's charge; see the
+frozen-signatures block below, updated to match, and `docs/departments/core/STATUS.md`.
 (2) Atmosphere's DoD item 3 ("storm rolling in" transition) was explicitly skipped, still an instant
 module swap. **Not merged:** Atmosphere's branch also carried an unrelated, uncoordinated "Sunny weather
 mood" feature (new `BoardWeatherMood` value, boot-mode changed Fair→Sunny, renamed lighting fields) —
@@ -95,8 +98,10 @@ CardId.Storm = 4
 void RoundPlayback.SetWeatherPocket(BoardWeatherPocket pocket);
 ```
 
-`GhostResolver` emits `StormCast` at the node's `ExecuteTime`, fully permissive (no once-per-match
-re-check — that's a HUD-side gate, same shape as Bandage). `RoundPlayback.SyncWeatherToSeconds` derives
+`GhostResolver` emits `StormCast` at the node's `ExecuteTime`. **Updated 2026-08-18:** no longer fully
+permissive — enforces the 1×/match cast itself (`GhostInput.StartingStormCastCount` →
+`ReplayTape.StormCastCountFor`), the same shape as Bandage's charge gate. The HUD's "already queued
+this Program" dedup stays as a same-round belt-and-suspenders check on top. `RoundPlayback.SyncWeatherToSeconds` derives
 the active mood as a pure function of (arm-time snapshot + any `StormCast` ≤ scrubber second) and only
 calls `BoardWeatherPocket.ApplyWeather` when the derived mood actually changes — **do not call
 `ApplyWeather` from anywhere else per-tick**; it tears down and rebuilds the whole cloud/rain/lightning

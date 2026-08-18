@@ -236,7 +236,7 @@ namespace LogiCard.Boot
 #endif
 
             _programHud.RegisterInput(_attackerInput);
-            _programHud.RegisterMatchState(() => _playback.WoundsOf(AttackerPawnId), () => _playback.BandageChargeOf(AttackerPawnId));
+            _programHud.RegisterMatchState(() => _playback.WoundsOf(AttackerPawnId), () => _playback.BandageChargeOf(AttackerPawnId), () => _playback.StormCastCountOf(AttackerPawnId));
             _programHud.LockedIn += _playback.ResolveAndArm;
             _programHud.TimeCardPlayed += OnTimeCardPlayed;
             _programHud.NextRoundRequested += OnNextRoundRequested;

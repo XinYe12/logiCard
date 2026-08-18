@@ -304,7 +304,7 @@ namespace LogiCard.Tests.PlayMode
         [Test]
         public void GearBandageDragOutOfHandPlacesABandageNode()
         {
-            Hud.RegisterMatchState(() => 1, () => 0);
+            Hud.RegisterMatchState(() => 1, () => 0, () => 0);
 
             Button bandage = FindByName<Button>(GearHandView.ButtonName(CardId.Bandage));
             Assert.That(bandage, Is.Not.Null, "HUD has no Gear_Bandage button.");
@@ -344,11 +344,38 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(storm.interactable, Is.False, "A Storm node is already queued this Program.");
         }
 
+        /// <summary>
+        /// C69 — the real cross-round counter (<c>RoundPlayback.StormCastCountOf</c>) must keep Storm
+        /// blocked in round 2 even though round 2 starts with a fresh, empty Program (which used to be
+        /// enough to make the old per-round "already queued this Program" dedup call it legal again —
+        /// the actual bug this counter fixes).
+        /// </summary>
+        [Test]
+        public void StormStaysBlockedInASecondRoundAfterBeingCastInTheFirst()
+        {
+            Button storm = FindByName<Button>(GearHandView.ButtonName(CardId.Storm));
+            Assert.That(AttackerInput.TryQueueStormAt(0f, out string reason), Is.True, reason);
+            Assert.That(storm.interactable, Is.False, "A Storm node is already queued this Program.");
+
+            AttackerInput.CommitToPlayback();
+            Playback.ResolveAndArm();
+            Clock.Pause();
+            Clock.SetSeconds(Playback.Tape.EndSeconds);
+
+            Phase.GoTo(RoundPhase.Aftermath);
+            Bootstrap.RequestNextRound();
+            Assert.That(Bootstrap.BeginRound(60f), Is.True);
+
+            Assert.That(AttackerInput.Program.Nodes, Is.Empty, "Round 2 must start with a fresh, empty Program.");
+            Assert.That(storm.interactable, Is.False,
+                "Storm must stay blocked across rounds — it is 1x/Character/match, not 1x/Program.");
+        }
+
         /// <summary>A drag that never clears the threshold must not queue anything and must leave the card armable.</summary>
         [Test]
         public void ShortDragOnBandageDoesNotQueueAndCardStaysInteractable()
         {
-            Hud.RegisterMatchState(() => 1, () => 0);
+            Hud.RegisterMatchState(() => 1, () => 0, () => 0);
 
             Button bandage = FindByName<Button>(GearHandView.ButtonName(CardId.Bandage));
             GearHandView.CardDragController drag = FindByName<GearHandView.CardDragController>("Slot_Bandage");

@@ -22,13 +22,19 @@ namespace LogiCard.Net
         /// <summary>Bandage charges already spent this match (C63). 0 or 1 — Bandage is 1×/match.</summary>
         public int StartingBandageCharge { get; }
 
-        public GhostInput(int pawnId, PlanarPosition start, TimelinePayload payload, int startingWounds = 0, int startingBandageCharge = 0)
+        /// <summary>Storm casts already spent this match (C69). 0 or 1 — Storm is 1×/Character/match,
+        /// same shape as <see cref="StartingBandageCharge"/> — see <see cref="GhostResolver.CompileTrack"/>'s
+        /// Storm branch for the actual once-per-match enforcement this now gates.</summary>
+        public int StartingStormCastCount { get; }
+
+        public GhostInput(int pawnId, PlanarPosition start, TimelinePayload payload, int startingWounds = 0, int startingBandageCharge = 0, int startingStormCastCount = 0)
         {
             PawnId = pawnId;
             Start = start;
             Payload = payload;
             StartingWounds = startingWounds < 0 ? 0 : startingWounds;
             StartingBandageCharge = startingBandageCharge < 0 ? 0 : startingBandageCharge;
+            StartingStormCastCount = startingStormCastCount < 0 ? 0 : startingStormCastCount;
         }
     }
 
@@ -84,6 +90,7 @@ namespace LogiCard.Net
             var startPositions = new Dictionary<int, PlanarPosition>();
             var startingWoundsByPawn = new Dictionary<int, int>();
             var startingBandageChargeByPawn = new Dictionary<int, int>();
+            var startingStormCastCountByPawn = new Dictionary<int, int>();
             var events = new List<TapeEvent>();
 
             if (inputs != null)
@@ -98,6 +105,7 @@ namespace LogiCard.Net
                     startPositions[input.PawnId] = input.Start;
                     startingWoundsByPawn[input.PawnId] = input.StartingWounds;
                     startingBandageChargeByPawn[input.PawnId] = input.StartingBandageCharge;
+                    startingStormCastCountByPawn[input.PawnId] = input.StartingStormCastCount;
                     order.Add(input.PawnId);
                 }
             }
@@ -117,7 +125,7 @@ namespace LogiCard.Net
                 int pawnId = order[i];
                 tracks[pawnId] = CompileTrack(
                     pawnId, startPositions[pawnId], payloadNodes[pawnId], startingWoundsByPawn[pawnId],
-                    startingBandageChargeByPawn[pawnId], doorTransitions, events);
+                    startingBandageChargeByPawn[pawnId], startingStormCastCountByPawn[pawnId], doorTransitions, events);
             }
 
             ResolveShots(tracks, order, events);
@@ -127,15 +135,17 @@ namespace LogiCard.Net
             var paths = new Dictionary<int, ScheduledPath>();
             var endWounds = new Dictionary<int, int>();
             var endBandageCharge = new Dictionary<int, int>();
+            var endStormCastCount = new Dictionary<int, int>();
             for (int i = 0; i < order.Count; i++)
             {
                 int pawnId = order[i];
                 paths[pawnId] = tracks[pawnId].Path;
                 endWounds[pawnId] = tracks[pawnId].Wounds;
                 endBandageCharge[pawnId] = tracks[pawnId].BandageChargeUsed;
+                endStormCastCount[pawnId] = tracks[pawnId].StormCastCount;
             }
 
-            return new ReplayTape(paths, events, endWounds, endBandageCharge);
+            return new ReplayTape(paths, events, endWounds, endBandageCharge, endStormCastCount);
         }
 
         /// <summary>
@@ -307,7 +317,7 @@ namespace LogiCard.Net
 
         private GhostTrack CompileTrack(
             int pawnId, PlanarPosition start, List<ActionNode> ordered, int startingWounds, int startingBandageCharge,
-            List<DoorTransition> doorTransitions, List<TapeEvent> events)
+            int startingStormCastCount, List<DoorTransition> doorTransitions, List<TapeEvent> events)
         {
             var waypoints = new List<PlanarPosition> { start };
             var arrivals = new List<float> { 0f };
@@ -316,6 +326,7 @@ namespace LogiCard.Net
             float currentTime = 0f;
             int wounds = startingWounds;
             int bandageChargeUsed = startingBandageCharge;
+            int stormCastCount = startingStormCastCount;
 
             for (int i = 0; i < ordered.Count; i++)
             {
@@ -334,7 +345,7 @@ namespace LogiCard.Net
                         waypoints.Add(blockPoint);
                         arrivals.Add(blockTime);
                         events.Add(new TapeEvent(blockTime, pawnId, TapeEventType.MoveArrive, blockPoint));
-                        return new GhostTrack(ScheduledPath.FromTimedWaypoints(waypoints, arrivals), surviving, wounds, bandageChargeUsed);
+                        return new GhostTrack(ScheduledPath.FromTimedWaypoints(waypoints, arrivals), surviving, wounds, bandageChargeUsed, stormCastCount);
                     }
 
                     current = node.Position;
@@ -357,11 +368,16 @@ namespace LogiCard.Net
                 }
                 else if (node.Verb == ActionVerb.Storm)
                 {
-                    // C67 — self-targeting, no movement, no wound/charge effect. Resolver stays
-                    // permissive (does not re-check once-per-match) — that is a HUD-side gate per
-                    // docs/contracts/CURRENT.md's Storm contract, same shape as Bandage above.
+                    // C69 — self-targeting, no movement, no wound effect. Once-per-match now
+                    // enforced here, same shape as Bandage's charge gate above (not just a HUD-side
+                    // "already queued this Program" dedup, which was per-round only — see
+                    // ProgramHud.RefreshGearHandLegality / RoundPlayback.StormCastCountOf).
                     currentTime = node.ExecuteTime;
-                    events.Add(new TapeEvent(node.ExecuteTime, pawnId, TapeEventType.StormCast, current));
+                    if (stormCastCount < 1)
+                    {
+                        stormCastCount = 1;
+                        events.Add(new TapeEvent(node.ExecuteTime, pawnId, TapeEventType.StormCast, current));
+                    }
                 }
                 else
                 {
@@ -373,7 +389,7 @@ namespace LogiCard.Net
                 surviving.Add(node);
             }
 
-            return new GhostTrack(ScheduledPath.FromTimedWaypoints(waypoints, arrivals), surviving, wounds, bandageChargeUsed);
+            return new GhostTrack(ScheduledPath.FromTimedWaypoints(waypoints, arrivals), surviving, wounds, bandageChargeUsed, stormCastCount);
         }
 
         private void ResolveShots(Dictionary<int, GhostTrack> tracks, List<int> order, List<TapeEvent> events)
@@ -870,12 +886,13 @@ namespace LogiCard.Net
 
         private sealed class GhostTrack
         {
-            public GhostTrack(ScheduledPath path, IReadOnlyList<ActionNode> nodes, int startingWounds, int startingBandageChargeUsed = 0)
+            public GhostTrack(ScheduledPath path, IReadOnlyList<ActionNode> nodes, int startingWounds, int startingBandageChargeUsed = 0, int startingStormCastCount = 0)
             {
                 Path = path;
                 Nodes = nodes;
                 Wounds = startingWounds < 0 ? 0 : startingWounds;
                 BandageChargeUsed = startingBandageChargeUsed < 0 ? 0 : startingBandageChargeUsed;
+                StormCastCount = startingStormCastCount < 0 ? 0 : startingStormCastCount;
             }
 
             public ScheduledPath Path { get; }
@@ -886,6 +903,9 @@ namespace LogiCard.Net
 
             /// <summary>C63 — 0 or 1, Bandage is 1×/match.</summary>
             public int BandageChargeUsed { get; set; }
+
+            /// <summary>C69 — 0 or 1, Storm is 1×/Character/match. Mirrors <see cref="BandageChargeUsed"/>.</summary>
+            public int StormCastCount { get; set; }
 
             public PlanarPosition PositionAt(float seconds)
             {

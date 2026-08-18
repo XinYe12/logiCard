@@ -158,6 +158,7 @@ namespace LogiCard.UI
         private GearHandView _gearHand;
         private Func<int> _woundsOf;
         private Func<int> _bandageChargeOf;
+        private Func<int> _stormCastCountOf;
         private RectTransform _canvasRoot;
         private RectTransform _matchChrome;
         private AppFlowController _appFlow;
@@ -296,17 +297,19 @@ namespace LogiCard.UI
         }
 
         /// <summary>
-        /// Wires live wound/charge reads for the Bandage gates (DoD gate 4). Delegates rather than a
-        /// <c>RoundPlayback</c> reference — <c>LogiCard.UI</c> cannot reference <c>LogiCard.Boot</c>
-        /// (Boot already depends on UI, not the reverse) — so the Integrator's one-line
-        /// <c>GameBootstrap</c> hook is expected to read
-        /// <c>RegisterMatchState(() =&gt; playback.WoundsOf(pawnId), () =&gt; playback.BandageChargeOf(pawnId))</c>.
-        /// Until this is called, Bandage stays blocked (safe default) rather than guessing legal.
+        /// Wires live wound/charge reads for the Bandage gates (DoD gate 4) and Storm's once-per-match
+        /// counter (C69). Delegates rather than a <c>RoundPlayback</c> reference — <c>LogiCard.UI</c>
+        /// cannot reference <c>LogiCard.Boot</c> (Boot already depends on UI, not the reverse) — so the
+        /// Integrator's one-line <c>GameBootstrap</c> hook is expected to read
+        /// <c>RegisterMatchState(() =&gt; playback.WoundsOf(pawnId), () =&gt; playback.BandageChargeOf(pawnId),
+        /// () =&gt; playback.StormCastCountOf(pawnId))</c>. Until this is called, Bandage/Storm both stay
+        /// blocked (safe default) rather than guessing legal.
         /// </summary>
-        public void RegisterMatchState(Func<int> woundsOf, Func<int> bandageChargeOf)
+        public void RegisterMatchState(Func<int> woundsOf, Func<int> bandageChargeOf, Func<int> stormCastCountOf)
         {
             _woundsOf = woundsOf;
             _bandageChargeOf = bandageChargeOf;
+            _stormCastCountOf = stormCastCountOf;
             RefreshGearHandLegality();
         }
 
@@ -1039,11 +1042,14 @@ namespace LogiCard.UI
 
             _gearHand.SetSpent(CardId.Bandage, !bandageLegal);
 
-            // Storm's Sim-side stays fully permissive on once-per-match (frozen contract, C67) — this
-            // "already queued this Program" dedup is the best gate achievable HUD-side without a
-            // cross-round counter (RoundPlayback has no StormCast-count reader the way it does
-            // BandageChargeOf). Flagged as a deviation: this is per-round, not true once-per-match.
-            bool stormLegal = _input?.Program != null && !HasNodeQueued(_input.Program, ActionVerb.Storm);
+            // C69 — real cross-round counter now (RoundPlayback.StormCastCountOf, GhostResolver
+            // enforces the same 1×/match gate Bandage's charge already did). The "already queued this
+            // Program" dedup stays as a same-round belt-and-suspenders check, same shape as Bandage's
+            // own HasNodeQueued check above.
+            bool stormLegal = _stormCastCountOf != null
+                && _input?.Program != null
+                && _stormCastCountOf() == 0
+                && !HasNodeQueued(_input.Program, ActionVerb.Storm);
             _gearHand.SetSpent(CardId.Storm, !stormLegal);
         }
 

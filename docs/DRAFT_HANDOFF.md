@@ -1,5 +1,19 @@
 # Draft Handoff — 2026-08-18
 
+**2026-08-18 (later same day): Storm's real per-match counter landed** — closes the deviation C69
+flagged: the HUD gate previously only enforced "not already queued this Program" (per-round; a fresh
+round always reset it), not the actual 1×/Character/match rule. Mirrored Bandage's shape exactly:
+`RoundPlayback.StormCastCountOf` (new), `GhostResolver` now enforces the cast itself the same way it
+already enforced Bandage's charge (`GhostInput.StartingStormCastCount` → `ReplayTape.StormCastCountFor`
+→ `PawnEntry.StormCastCount`, carried round-to-round the same way wounds/Bandage charge already are),
+`ProgramHud.RegisterMatchState` grew a third `stormCastCountOf` delegate (`GameBootstrap` updated).
+New coverage: `GhostResolverStormTests` (EditMode, mirrors `GhostResolverBandageTests`) and
+`StormStaysBlockedInASecondRoundAfterBeingCastInTheFirst` (PlayMode — proves the actual bug: a fresh,
+empty round-2 Program used to make the card interactable again). Updated `contracts/CURRENT.md`,
+`PRODUCT_MEMORY.md` C69, `CARD_COLLECTION.md`, `GEAR_STORM_AGENT_BRIEF.md`, `departments/ui/STATUS.md`
+to reflect the deviation is closed rather than leaving them describing stale behavior. Batchmode-verified
+fresh, Editor closed: EditMode 190/190, PlayMode 61/61.
+
 **2026-08-18: Healed presenter landed** (backlog item from 2026-08-17, no dispatch needed — small,
 single-file-scoped, done directly on `master`). `RoundPlayback.Report` now fires a one-shot `"HEALED
 P{id} @{s}s"` banner for `TapeEventType.Healed`, same shape as Wounded/Killed. **Real finding, not just

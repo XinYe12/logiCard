@@ -277,6 +277,9 @@ the shorter, full-width HandBand unchanged).
   contract's Sim-side is fully permissive by design (no once-per-match re-check in `GhostResolver`, confirmed
   by `GhostResolverStormTests`). A new round resets the gate. If true once-per-match across rounds is wanted,
   it needs a Sim/RoundPlayback counter added — flagging rather than silently claiming full compliance.
+  **Closed 2026-08-18 by Integrator** — `RoundPlayback.StormCastCountOf` now exists (mirrors
+  `BandageChargeOf` exactly), `GhostResolver` now enforces the 1×/match cast itself (mirrors Bandage's
+  charge gate), and `RegisterMatchState` grew a third `stormCastCountOf` delegate. See `core/STATUS.md`.
 - No other deviations — signatures match the frozen contract verbatim.
 
 ## In progress

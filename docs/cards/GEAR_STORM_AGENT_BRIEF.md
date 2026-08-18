@@ -1,6 +1,6 @@
 # Storm — Gear Numerics Recommendation
 
-**Status:** **Locked 2026-08-16 — C69.** Human confirmed the recommendations below as-is: Time Resource cost free (0s), charges 1×/Character/match. HUD-side true per-match enforcement (a real `StormCastCountOf` counter, mirroring `BandageChargeOf`) remains unstarted follow-up — see C69's implementation note.  
+**Status:** **Locked 2026-08-16 — C69.** Human confirmed the recommendations below as-is: Time Resource cost free (0s), charges 1×/Character/match. **True per-match enforcement landed 2026-08-18** — `RoundPlayback.StormCastCountOf` + `GhostResolver`-side gate, mirroring `BandageChargeOf`/Bandage's charge gate exactly — see C69's implementation note.  
 **Depends on:** [`PRODUCT_MEMORY.md`](../core/PRODUCT_MEMORY.md) **C67**; [`CARD_COLLECTION.md`](CARD_COLLECTION.md) §4.2 / §6A; [`../contracts/CURRENT.md`](../contracts/CURRENT.md) Storm contract.  
 **Does not touch:** `CardData.cs` (`CardId.Storm = 4` already landed); combat/mechanical effects; UI/Atmosphere seats.
 
@@ -29,7 +29,9 @@
 | **Phase** | **Program** (locked) | Arm → place on scrubber Time Resource second only. |
 | **`effectSummary` (one line)** | `Switch board weather to Storm for the rest of the match. Presentation only — no combat effect.` | Catalog / `CardData` copy; not a mechanical claim. |
 
-**HUD gate (UI seat):** enforce the recommended once-per-match rule client-side; resolver stays permissive (same split as Bandage / Storm Sim notes).
+**HUD gate (UI seat):** enforce the recommended once-per-match rule client-side. **Updated 2026-08-18:**
+the resolver no longer stays permissive here — it enforces the same 1×/match cast Bandage's charge gate
+already did (mirrors Bandage / Storm Sim notes' original split, now closed the same way Bandage was).
 
 ---
 
