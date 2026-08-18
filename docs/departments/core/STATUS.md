@@ -66,3 +66,16 @@ see Done)
   Aftermath, Bandage-only round 2, scrub across the Healed second). Batchmode-verified on `master`:
   EditMode 188/188, PlayMode 60/60 (one unrelated flake on `BoardWeatherPocketPlayModeTests` on a prior
   run, clean on rerun — not caused by this change).
+- **Storm per-match cast counter (C69 follow-up)** landed — closes the deviation C69 flagged: the HUD
+  gate previously only enforced "not already queued this Program" (per-round; a fresh round always reset
+  it), not the actual 1×/Character/match rule. Mirrors Bandage's shape exactly:
+  `RoundPlayback.StormCastCountOf` (new), `GhostResolver` now enforces the cast itself the same way it
+  already enforced Bandage's charge (`GhostInput.StartingStormCastCount` → `ReplayTape.StormCastCountFor`
+  → `PawnEntry.StormCastCount`, carried round-to-round the same way wounds/Bandage charge already are).
+  `ProgramHud.RegisterMatchState` grew a third `stormCastCountOf` delegate (`GameBootstrap` updated).
+  Replaced the one existing `GhostResolverStormTests` test (which asserted the old, now-obsolete
+  fully-permissive behavior) with three that cover the new gate, and added a PlayMode test,
+  `StormStaysBlockedInASecondRoundAfterBeingCastInTheFirst`, that proves the actual bug this fixes (a
+  fresh, empty round-2 Program used to make the card interactable again). Updated `contracts/CURRENT.md`,
+  `PRODUCT_MEMORY.md` C69, `CARD_COLLECTION.md`, `GEAR_STORM_AGENT_BRIEF.md`, and `departments/ui/STATUS.md`
+  to reflect the deviation is closed. Batchmode-verified on `master`: EditMode 190/190, PlayMode 61/61.
