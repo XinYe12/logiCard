@@ -159,6 +159,8 @@ namespace LogiCard.UI
         private Func<int> _woundsOf;
         private Func<int> _bandageChargeOf;
         private Func<int> _stormCastCountOf;
+        private Text _cameraControlHintLabel;
+        private BoardCameraRig _cameraRig;
         private RectTransform _canvasRoot;
         private RectTransform _matchChrome;
         private AppFlowController _appFlow;
@@ -297,6 +299,19 @@ namespace LogiCard.UI
         }
 
         /// <summary>
+        /// Wires a live <see cref="BoardCameraRig"/> reference so the camera control-hint label
+        /// (<c>BuildMapViewport</c>) can read <see cref="BoardCameraRig.ControlHintText"/> every frame
+        /// (2026-08-18 — real UI-owned chrome, replacing an earlier IMGUI stopgap that lived directly
+        /// on <c>BoardCameraRig</c>). Direct reference, not a delegate like <see cref="RegisterMatchState"/>'s
+        /// — <c>LogiCard.UI</c> already references <c>LogiCard.Board</c>, so there's no backward-dependency
+        /// problem to route around here.
+        /// </summary>
+        public void RegisterCameraRig(BoardCameraRig cameraRig)
+        {
+            _cameraRig = cameraRig;
+        }
+
+        /// <summary>
         /// Wires live wound/charge reads for the Bandage gates (DoD gate 4) and Storm's once-per-match
         /// counter (C69). Delegates rather than a <c>RoundPlayback</c> reference — <c>LogiCard.UI</c>
         /// cannot reference <c>LogiCard.Boot</c> (Boot already depends on UI, not the reverse) — so the
@@ -401,6 +416,11 @@ namespace LogiCard.UI
                 _playButtonLabel.text = _clock.IsPlaying ? "Pause" : "Play";
             }
 
+            if (_cameraControlHintLabel != null && _cameraRig != null)
+            {
+                _cameraControlHintLabel.text = _cameraRig.ControlHintText;
+            }
+
             if (_phase.Phase == RoundPhase.Execute)
             {
                 RefreshAdrenalineInteractable();
@@ -488,15 +508,19 @@ namespace LogiCard.UI
             UiFactory.Stretch(rt, new Vector2(0f, HudDockHeight), new Vector2(1f, 1f - InfoBarHeight), Vector2.zero, Vector2.zero);
             MapViewport = rt;
 
-            // Camera rotation itself is direct right-mouse-drag on BoardCameraRig (2026-08-10 — smooth,
-            // not a discrete-step button). Right-drag isn't a self-discoverable gesture, so a small
-            // non-interactive hint overlays the board — no event, no click target, raycastTarget off
-            // so it never blocks a board tap underneath it (docs/UI_BOARD_ANCHORED_COMPONENTS.md class
-            // of bug — OutcomeBanner shipped this exact mistake once already, 2026-08-11).
-            Text rotateHint = _ui.CreateText(rt, "CameraRotateHint", "RIGHT-DRAG TO ROTATE VIEW", 16, TextAnchor.UpperCenter, Ink,
-                UiTextOverflow.SingleLine);
-            UiFactory.Stretch(rotateHint.rectTransform, new Vector2(0.25f, 0.92f), new Vector2(0.75f, 1f));
-            rotateHint.raycastTarget = false;
+            // Camera controls (right-drag rotate/tilt, scroll zoom, WASD pan, T lock) aren't
+            // self-discoverable gestures, so a small non-interactive hint overlays the board — no
+            // event, no click target, raycastTarget off so it never blocks a board tap underneath it
+            // (docs/UI_BOARD_ANCHORED_COMPONENTS.md class of bug — OutcomeBanner shipped this exact
+            // mistake once already, 2026-08-11). Content is refreshed live in Update() from
+            // BoardCameraRig.ControlHintText once RegisterCameraRig wires a rig — real UI-owned chrome
+            // replacing an earlier IMGUI stopgap on BoardCameraRig itself (2026-08-18; that IMGUI
+            // version existed only because a real playtest, 2026-08-16, found a player's left-drag —
+            // reserved for board taps — made them conclude the camera "didn't work at all").
+            _cameraControlHintLabel = _ui.CreateText(rt, "CameraControlHint", "Right-drag: Rotate / Tilt  ·  Scroll: Zoom  ·  WASD: Pan  ·  T: Lock View",
+                16, TextAnchor.UpperCenter, Ink, UiTextOverflow.SingleLine);
+            UiFactory.Stretch(_cameraControlHintLabel.rectTransform, new Vector2(0.25f, 0.92f), new Vector2(0.75f, 1f));
+            _cameraControlHintLabel.raycastTarget = false;
         }
 
         /// <summary>

@@ -238,6 +238,16 @@ namespace LogiCard.Board
 
         public CameraMode Mode => _mode;
 
+        /// <summary>
+        /// Live control-hint text for real UI chrome to render (<c>ProgramHud</c> reads this every
+        /// frame once <c>GameBootstrap</c> calls <c>ProgramHud.RegisterCameraRig(this)</c>) — single
+        /// source of truth so the hint can never drift out of sync with a second, independent copy of
+        /// this same mode-to-text mapping.
+        /// </summary>
+        public string ControlHintText => _mode == CameraMode.TpsLock
+            ? "T: Cycle / Exit Lock View"
+            : "Right-drag: Rotate / Tilt  ·  Scroll: Zoom  ·  WASD: Pan  ·  T: Lock View";
+
         /// <summary>Which TPS target index is locked (0-based into <see cref="SetTpsTargets"/>'s
         /// list), or -1 while <see cref="Mode"/> is <see cref="CameraMode.Overview"/>.</summary>
         public int TpsTargetIndex => _tpsTargetIndex;
@@ -505,47 +515,6 @@ namespace LogiCard.Board
             HandleDrag();
             HandleZoomScroll();
             HandlePan();
-        }
-
-        /// <summary>
-        /// Small always-on legend so the controls this file adds aren't undiscoverable — right-drag
-        /// especially has no other affordance anywhere on screen, and a real playtest (2026-08-16)
-        /// found a player left-drag (reserved for board taps, see <c>BoardInputController</c>) and
-        /// concluded the camera "didn't work at all." IMGUI, not uGUI: this is a self-contained,
-        /// informational-only overlay scoped to this one file, not real HUD chrome — avoids pulling a
-        /// `LogiCard.UI` dependency into `LogiCard.Board` for a placeholder that UI department should
-        /// own for real once this feature is actually signed off. Anchored to the camera's own
-        /// <c>pixelRect</c> (not the full window) so it always sits inside whatever region the camera
-        /// is actually rendering to, independent of HUD layout.
-        /// </summary>
-        private void OnGUI()
-        {
-            if (_camera == null)
-            {
-                return;
-            }
-
-            // Camera.pixelRect is bottom-left-origin/y-up (standard Unity screen space); OnGUI is
-            // top-left-origin/y-down — convert, or the hint lands mirrored-vertically off the real rect.
-            Rect camRect = _camera.pixelRect;
-            var pixelRect = new Rect(camRect.x, Screen.height - camRect.y - camRect.height, camRect.width, camRect.height);
-            string hint = _mode == CameraMode.TpsLock
-                ? "T: Cycle / Exit Lock View"
-                : "Right-drag: Rotate / Tilt  ·  Scroll: Zoom  ·  WASD: Pan  ·  T: Lock View";
-
-            var style = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 13,
-                normal = { textColor = Color.white },
-            };
-            Vector2 size = style.CalcSize(new GUIContent(hint));
-            var boxRect = new Rect(pixelRect.x + 8f, pixelRect.y + 8f, size.x + 12f, size.y + 8f);
-
-            Color prevColor = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.55f);
-            GUI.DrawTexture(boxRect, Texture2D.whiteTexture);
-            GUI.color = prevColor;
-            GUI.Label(new Rect(boxRect.x + 6f, boxRect.y + 4f, size.x, size.y), hint, style);
         }
 
         /// <summary>

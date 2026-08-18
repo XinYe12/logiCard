@@ -1,5 +1,25 @@
 # Draft Handoff — 2026-08-18
 
+**2026-08-18 (last item on the backlog): camera control-hint moved off IMGUI onto real UI chrome.**
+`BoardCameraRig.OnGUI()` (the always-on IMGUI legend, a deliberate stopgap since 2026-08-16 per its own
+doc comment) is gone. In its place: `BoardCameraRig.ControlHintText` (new computed property, single
+source of truth for the mode→text mapping), read live every frame by `ProgramHud.Update()` into the
+`CameraControlHint` `Text` label — which turned out to already half-exist: `BuildMapViewport` had a
+*static*, never-updated `CameraRotateHint` label ("RIGHT-DRAG TO ROTATE VIEW") sitting right next to
+where the IMGUI legend was rendering, both saying roughly the same thing. Consolidated onto the one real
+label rather than shipping two overlapping hints — renamed it, made its content dynamic (now shows the
+full command set and switches to the TPS-lock hint when locked, matching what the IMGUI version did),
+and wired it with a new `ProgramHud.RegisterCameraRig(BoardCameraRig)` call from `GameBootstrap` (a
+direct reference, not a delegate — `LogiCard.UI` already references `LogiCard.Board`, so there's no
+backward-dependency problem to route around the way `RegisterMatchState` has to for `LogiCard.Boot`).
+New PlayMode test `CameraControlHintTracksLiveCameraMode` proves the label is actually live (asserts it
+equals `ControlHintText` before and after `CycleTpsLock()`/`ExitTpsLock()`, not just present) and that
+`raycastTarget` stays off so it can never block a board tap underneath it (the exact bug class
+`docs/UI_BOARD_ANCHORED_COMPONENTS.md` warns about). Batchmode-verified fresh, Editor closed: EditMode
+190/190, PlayMode 62/62. **Not yet human/Editor-verified** — same standing caveat as every other Phase 5
+presentation change in this file; batchmode can't see pixels, and text placement/readability over the
+live 3D board is worth a real look before calling this fully done.
+
 **2026-08-18 (later still): pruned dead Bandage/Storm board-tap paths in `BoardInputController`.**
 Since the Hand Deck Drag Play brief (2026-08-15) moved both cards to drag-out-of-hand-only placement,
 `Mode` (`BoardInputController.Mode`) can never be `ActionVerb.Bandage`/`ActionVerb.Storm` anymore —
@@ -43,7 +63,7 @@ closed:** EditMode 188/188, PlayMode 60/60 (one `BoardWeatherPocketPlayModeTests
 — unrelated file, clean on immediate rerun, not caused by this change).
 
 **Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (C63/C67 gear carve-out).
-**Integrator tip:** `master` — **dead Bandage/Storm board-tap paths pruned** (see 2026-08-18 notes above), on top of Storm per-match counter `6d17776`, Healed presenter `c81aa3e`, and Camera merge `e594c51`. Batchmode-verified independently on master post-commit (EditMode 190/190, PlayMode 61/61).
+**Integrator tip:** `master` — **camera control-hint moved to real UI chrome** (see 2026-08-18 notes above, this is the last backlog item), on top of dead Bandage/Storm board-tap prune, Storm per-match counter `6d17776`, Healed presenter `c81aa3e`, and Camera merge `e594c51`. Batchmode-verified independently on master post-commit (EditMode 190/190, PlayMode 62/62). **Not yet Play-verified** — see "Still unfinished."
 **Active wave: this dispatch round is closed.** Match Shell Layout, Map, and Camera are all merged to master. Camera landed via human hands-on iteration during the actual re-test — the human found the control-hint overlay's rotate-only right-drag didn't feel right and iterated on it live: first to a combined pan+rotate gesture (`169a55f`), then further to right-drag doing pitch tilt between top/front view rather than pan (`2e2d022`, `CAMERA_VERTICAL_DRAG_PAN_BRIEF.md`). Integrator re-ran batchmode fresh against each commit as it landed and again on `master` after the merge — every pass green. No paused dept work outstanding.
 Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [`docs/contracts/CURRENT.md`](contracts/CURRENT.md).
 
@@ -87,13 +107,18 @@ Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [
 
 ## Still unfinished
 
-1. Backlog: ~~Healed presenter~~, ~~dead Bandage/Storm board-tap paths~~, ~~Storm per-match counter~~ — all landed 2026-08-18 (see above). **Correction while checking this list 2026-08-18:** the "uncommitted `LogiCardURP.asset` 50→20 distance, 2048→4096 map" item was stale — checked `git log`/`git diff` on that file and both values are already committed (landed in `bd5fad8`, a "Save draft" commit that bundled several pending changes before a prior machine switch), nothing uncommitted remains. **Still genuinely open:** human hasn't Play-verified the shadow tune looks right in the Editor (same standing caveat as everything else in Phase 5 — batchmode can't see pixels). Also still open: real on-screen control hint should eventually move to proper UI-owned chrome (current IMGUI version is a stopgap, not final presentation).
+1. Backlog: ~~Healed presenter~~, ~~dead Bandage/Storm board-tap paths~~, ~~Storm per-match counter~~,
+   ~~IMGUI control-hint → real UI chrome~~ — all landed 2026-08-18 (see above). Every code item originally
+   listed here is now closed; the URP shadow-tune item turned out to already be committed (correction
+   logged above, `bd5fad8`), not actually a pending task. **What's left is not code — it's a human/Editor
+   look:** the shadow tune, and today's control-hint chrome move, are both batchmode-green but not
+   Play-verified. Neither has been claimed as fully done for that reason.
 2. Atmosphere's Sunny mode (parked) and Character's carousel feature (separate workstream) remain uncommitted-or-unmerged in their worktrees, unchanged — their branches were pushed to origin as-is for safekeeping (human switching machines), not merged into master. Cards' branch was also pushed as-is; it's stale against master and would need real reconciliation, not a fast merge, before it could land.
 
 ## Tomorrow
 
 1. This dispatch round is closed — Match Shell, Map, and Camera all merged to master, all independently batchmode-verified. No paused dept work outstanding.
-2. Healed presenter (backlog item) closed 2026-08-18. Next open thread whenever picked back up: restaff an idle department, or the remaining backlog items above (dead board-tap path prune, URP shadow tune, Storm per-match counter, IMGUI control-hint replacement).
+2. Every backlog item from 2026-08-17 (Healed presenter, Storm per-match counter, dead board-tap prune, IMGUI control-hint → UI chrome) closed 2026-08-18. **Next actual next-step is a human Play pass** over the shadow tune + control-hint chrome (both batchmode-green, neither eyeballed yet) — after that, restaff an idle department (Atmosphere Sunny decision, Character carousel, Cards reconciliation) or open a new Phase 5 wave.
 
 ## Blockers / notes
 

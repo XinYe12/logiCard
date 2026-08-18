@@ -243,6 +243,7 @@ namespace LogiCard.Boot
             _playback.OutcomeReported += _programHud.ShowOutcome;
 
             _cameraRig.Rotated += _programHud.RefreshBoardAnchoredUI;
+            _programHud.RegisterCameraRig(_cameraRig);
             _matchSceneBuilt = true;
         }
 

@@ -85,3 +85,16 @@ see Done)
   branches for them and the `ResolveBandageExecuteTime` helper they alone called were unreachable.
   Removed all three; no test exercised them. Batchmode-verified on `master`: EditMode 190/190, PlayMode
   61/61 — unchanged counts confirm this was dead code, not a coverage gap.
+- **Camera control-hint moved off IMGUI onto real UI chrome (last backlog item).** `BoardCameraRig.
+  OnGUI()` removed; new `BoardCameraRig.ControlHintText` computed property is the single source of truth
+  for the mode→text mapping, read live by `ProgramHud.Update()`. Found and fixed a real duplication along
+  the way: `ProgramHud.BuildMapViewport` already had a *static*, never-updated `CameraRotateHint` label
+  sitting in roughly the same spot as the IMGUI legend — consolidated onto that one real label (renamed
+  `CameraControlHint`, content now dynamic) instead of shipping two overlapping hints. New
+  `ProgramHud.RegisterCameraRig(BoardCameraRig)` (direct reference — `LogiCard.UI` already references
+  `LogiCard.Board`, no delegate indirection needed the way `RegisterMatchState` requires for `Boot`),
+  wired from `GameBootstrap`. New PlayMode test `CameraControlHintTracksLiveCameraMode` asserts the label
+  text actually equals `ControlHintText` before/after `CycleTpsLock()`/`ExitTpsLock()` (proves it's live,
+  not just present) and stays non-raycast-blocking. Batchmode-verified on `master`: EditMode 190/190,
+  PlayMode 62/62. **Not yet human/Editor-verified** — flagged, not claimed done; text placement/
+  readability over the live 3D board wants a real look.

@@ -39,6 +39,37 @@ namespace LogiCard.Tests.PlayMode
         }
 
         /// <summary>
+        /// 2026-08-18 — the camera control-hint moved from an IMGUI stopgap on <c>BoardCameraRig</c>
+        /// itself to real UI-owned chrome (<c>ProgramHud.RegisterCameraRig</c> +
+        /// <c>BoardCameraRig.ControlHintText</c>, refreshed in <c>ProgramHud.Update</c>). Proves it is
+        /// live (tracks the rig's actual mode, not a static string) and never blocks a board tap.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CameraControlHintTracksLiveCameraMode()
+        {
+            Text hint = FindByName<Text>("CameraControlHint");
+            Assert.That(hint, Is.Not.Null, "HUD has no CameraControlHint label.");
+            Assert.That(hint.raycastTarget, Is.False, "Hint must never block a board tap underneath it.");
+            Assert.That(Bootstrap.CameraRig, Is.Not.Null, "Fixture must have a live BoardCameraRig.");
+
+            yield return null; // let ProgramHud.Update() run at least once
+
+            Assert.That(hint.text, Is.EqualTo(Bootstrap.CameraRig.ControlHintText));
+            Assert.That(hint.text, Does.Contain("Right-drag"));
+
+            Bootstrap.CameraRig.CycleTpsLock();
+            yield return null;
+
+            Assert.That(hint.text, Is.EqualTo(Bootstrap.CameraRig.ControlHintText));
+            Assert.That(hint.text, Does.Contain("T: Cycle"));
+
+            Bootstrap.CameraRig.ExitTpsLock();
+            yield return null;
+
+            Assert.That(hint.text, Does.Contain("Right-drag"), "Exiting TPS lock must restore the free-camera hint.");
+        }
+
+        /// <summary>
         /// BUG FOUND 2026-08-06 (playtest): a board tap used to book an Open/Close immediately
         /// against a HUD-preselected action, silently flipped to its opposite whenever it matched
         /// the door's live state — confusing/"ambiguous" since what got booked didn't always match
