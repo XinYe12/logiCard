@@ -36,18 +36,28 @@ what this pass touched.
   C64. Integrator flag carried forward: needs a per-side `ArchetypeOf(pawnId)` reader before both
   InfoBar columns can be truthful (`SelectedArchetype` is local-only today) — **still not wired**;
   see "Rebase (2026-08-18)" below for this pass's disposition on that flag.
-- **Rebase (2026-08-18):** rebased `feat/char-select-motion` onto master `f45e986` (110 commits:
-  Match Shell Layout, Map, Camera, Storm counter, Healed presenter, camera control-hint UI chrome).
-  Conflicts were docs-only (`PLAY_NOTES.md`, this STATUS file across several commits in the replay,
-  plus add/add conflicts on `Assets/_Project/Art/UI/` files both branches happened to create) —
-  resolved by keeping both sides' notes/history, no semantic changes. Code
-  (`CharacterSelectView.cs` / `UiMotion.cs` / `UiStyle.cs` CharSelect* tokens /
-  `AppFlowController.BuildCharacterSelect` / Kenney art) applied clean, no conflicts with Match
-  Shell Layout or camera control-hint touches to `ProgramHud.cs` / `GearHandView.cs` (this branch
-  never touched those files — no architectural collision found). The `ArchetypeOf(pawnId)` reader
-  was **not** wired as part of this rebase — under the mandate shift below it's UI/Integrator scope
-  regardless, and touching `ProgramHud`/InfoBar here would risk conflicting with work in flight on
-  those files outside this worktree. Flagging forward rather than silently dropping it.
+- **Rebase (2026-08-18):** rebased `feat/char-select-motion` onto master, ending at tip `7530f3d`
+  (past 110+ commits: Match Shell Layout, Map, Camera, Storm counter, Healed presenter, camera
+  control-hint UI chrome, and an Integrator Cards-docs rebase that landed mid-session). Conflicts
+  were docs-only (`PLAY_NOTES.md`, this STATUS file across several commits in the replay,
+  `docs/DRAFT_HANDOFF.md`, an add/add filename collision on root `MATCH_SHELL_LAYOUT_AGENT_BRIEF.md`
+  — this branch's own Character-facing brief kept, master's differently-scoped UI-facing brief of the
+  same name dropped, flagged below — plus add/add conflicts on `Assets/_Project/Art/UI/` files both
+  branches happened to create independently) — resolved by keeping both sides' notes/history, no
+  semantic changes. Code (`CharacterSelectView.cs` / `UiMotion.cs` / `UiStyle.cs` CharSelect*
+  tokens / `AppFlowController.BuildCharacterSelect` / Kenney art) applied clean, no conflicts with
+  Match Shell Layout or camera control-hint touches to `ProgramHud.cs` / `GearHandView.cs` (this
+  branch never touched those files — no architectural collision found). Batchmode verified on the
+  rebased tip: **EditMode 190/190, PlayMode 63/63**, both green (master baseline is 190/190 and
+  62/62 — the +1 PlayMode test is this branch's own carousel coverage,
+  `CharacterSelectNextRotatesArchetypeAfterCrossfade`). The `ArchetypeOf(pawnId)` reader was **not**
+  wired as part of this rebase — under the mandate shift below it's UI/Integrator scope regardless,
+  and touching `ProgramHud`/InfoBar here would risk conflicting with work in flight on those files
+  outside this worktree. Flagging forward rather than silently dropping it. **Also flagging for
+  Integrator:** root `MATCH_SHELL_LAYOUT_AGENT_BRIEF.md` now exists identically-named but
+  differently-scoped on master (UI-seat brief, unrelated to this branch's Character-seat brief of
+  the same name) — a real naming collision this rebase had to pick a winner for, worth moving one or
+  both into `docs/departments/<seat>/` to avoid recurring.
 
 ## Concept pack (complete for this wave)
 
