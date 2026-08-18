@@ -44,4 +44,5 @@ work outstanding. Plan: [`../ui/MATCH_SHELL_LAYOUT.md`](../ui/MATCH_SHELL_LAYOUT
 3. ~~Match Shell Layout (UI)~~ — **merged `c9925b1`**, human Play-signed, docs peers folded in `a21b29c`, batchmode green (174/174, 56/56).
 4. ~~Map fence-shadow + material tweaks~~ — **merged `07501d7`**, human-approved, batchmode green (174/174, 56/56).
 5. ~~Camera~~ — **merged `e594c51`** (`--no-ff`), human-tested and hands-on iterated live during re-test (combined pan+rotate, then pitch-tilt right-drag), batchmode green on master post-merge (188/188, 59/59).
-6. Healed presenter; Atmosphere Sunny decision (parked, not scheduled); Storm HUD-side per-match counter (flagged in C69, unstarted) — unchanged backlog. This dispatch round is closed — no coding-hot seats remain.
+6. ~~Healed presenter~~ — **landed on `master` directly (2026-08-18, no dispatch needed)** — one-shot banner only (`RoundPlayback.Report`); no board-splat leg, since `Healed` can only ever clear a wound carried in from a prior round, and this round's own wound splats are built only from this round's own Wounded/Killed events (see `PLAYBACK_CONTRACT.md` §3). Batchmode green: EditMode 188/188, PlayMode 60/60.
+7. Atmosphere Sunny decision (parked, not scheduled); Storm HUD-side per-match counter (flagged in C69, unstarted) — unchanged backlog. This dispatch round is closed — no coding-hot seats remain.

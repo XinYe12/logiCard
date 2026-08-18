@@ -16,9 +16,11 @@ namespace LogiCard.Net
         DoorOpened = 5,
         DoorClosed = 6,
 
-        /// <summary>C63 — Bandage clears one Wounded stack. Presenter not wired yet (Integrator
-        /// follow-up per docs/contracts/CURRENT.md's Bandage contract); reserved in
-        /// TapeEventPlaybackCoverageTests until it lands.</summary>
+        /// <summary>C63 — Bandage clears one Wounded stack (always one carried in from a prior
+        /// round — GhostResolver.CompileTrack resolves this from GhostInput.StartingWounds before
+        /// this round's own ResolveShots pass ever runs). Presenter: one-shot banner only
+        /// (RoundPlayback.Report) — no board splat to hide, since BuildHitVfx only ever splats
+        /// this round's own Wounded/Killed events, never a prior-round wound.</summary>
         Healed = 7,
 
         /// <summary>C67 — Storm card cast. Continuous presenter (mirrors DoorOpened/Closed): board

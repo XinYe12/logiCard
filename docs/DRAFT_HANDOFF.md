@@ -1,4 +1,21 @@
-# Draft Handoff — 2026-08-17
+# Draft Handoff — 2026-08-18
+
+**2026-08-18: Healed presenter landed** (backlog item from 2026-08-17, no dispatch needed — small,
+single-file-scoped, done directly on `master`). `RoundPlayback.Report` now fires a one-shot `"HEALED
+P{id} @{s}s"` banner for `TapeEventType.Healed`, same shape as Wounded/Killed. **Real finding, not just
+implementation:** the doc comment reserving this slot said the presenter should "hide/restore the
+specific wound splat" Bandage clears — traced the actual resolver semantics (`GhostResolver.CompileTrack`
+resolves a Bandage node's heal from `GhostInput.StartingWounds`, i.e. only wounds carried in from a
+*prior* round, entirely before this round's own `ResolveShots` pass ever applies a hit) and found that a
+`Healed` event can therefore never correspond to a splat that exists — `BuildHitVfx` only ever splats
+*this* round's own Wounded/Killed events, and those are structurally disjoint from what Bandage can heal.
+Documented the reasoning in `PLAYBACK_CONTRACT.md` §3 rather than build speculative hide/restore logic for
+a case that can't occur. `TapeEventType.Healed` moved from `ReservedNoPresenterYet` to
+`PresentedAtScrubber` in `TapeEventPlaybackCoverageTests`. New PlayMode test
+`CrossingTheHealedSecondShowsStubTextAndRewindClearsIt` (two-round flow: get wounded in round 1, commit
+via Aftermath, Bandage-only round 2, scrub across the Healed second). **Batchmode-verified fresh, Editor
+closed:** EditMode 188/188, PlayMode 60/60 (one `BoardWeatherPocketPlayModeTests` flake on an earlier run
+— unrelated file, clean on immediate rerun, not caused by this change).
 
 **Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (C63/C67 gear carve-out).
 **Integrator tip:** `master` @ `e594c51` — **Camera merged.** Match Shell Layout + Map's fence-shadow/material tweaks + Camera freecam/TPS all merged, batchmode-verified independently on master post-merge (EditMode 188/188, PlayMode 59/59).
@@ -45,13 +62,13 @@ Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [
 
 ## Still unfinished
 
-1. Backlog: Healed presenter; prune dead Bandage/Storm Mode board-tap paths in `BoardInputController`; URP shadow tune on main (uncommitted `LogiCardURP.asset` 50→20 distance, 2048→4096 map) — not Play-verified; Storm's HUD-side cast gate is still per-round not a true per-match counter (flagged in C69, unstarted); real on-screen control hint should eventually move to proper UI-owned chrome (current IMGUI version is a stopgap, not final presentation).
+1. Backlog: ~~Healed presenter~~ — landed 2026-08-18 (see above). Remaining: prune dead Bandage/Storm Mode board-tap paths in `BoardInputController`; URP shadow tune on main (uncommitted `LogiCardURP.asset` 50→20 distance, 2048→4096 map) — not Play-verified; Storm's HUD-side cast gate is still per-round not a true per-match counter (flagged in C69, unstarted); real on-screen control hint should eventually move to proper UI-owned chrome (current IMGUI version is a stopgap, not final presentation).
 2. Atmosphere's Sunny mode (parked) and Character's carousel feature (separate workstream) remain uncommitted-or-unmerged in their worktrees, unchanged — their branches were pushed to origin as-is for safekeeping (human switching machines), not merged into master. Cards' branch was also pushed as-is; it's stale against master and would need real reconciliation, not a fast merge, before it could land.
 
 ## Tomorrow
 
 1. This dispatch round is closed — Match Shell, Map, and Camera all merged to master, all independently batchmode-verified. No paused dept work outstanding.
-2. Next open thread whenever picked back up: Healed presenter, or restaff an idle department (see backlog above).
+2. Healed presenter (backlog item) closed 2026-08-18. Next open thread whenever picked back up: restaff an idle department, or the remaining backlog items above (dead board-tap path prune, URP shadow tune, Storm per-match counter, IMGUI control-hint replacement).
 
 ## Blockers / notes
 

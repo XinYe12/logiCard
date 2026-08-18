@@ -51,9 +51,17 @@ Rules:
 | `ShootFire` | Tracer (window) + muzzle + Shot foley | VFX yes / foley one-shot | `UpdateTracers` / `UpdateHitVfx` / `Report` |
 | `Wounded` / `Killed` | Wound splat + banner | Splat yes / banner one-shot | `UpdateHitVfx` / `Report` |
 | `MoveArrive` | Footstep foley | One-shot forward | `Report` |
+| `Healed` | Banner only | One-shot forward | `Report` |
 | `Invalid` | Reserved (Otherwise Stop — post-demo) | — | None yet |
 
 Vent/Breach are `DoorKind`s on the same Door tape path — not a separate Playback system.
+
+**`Healed` has no splat leg by design, not oversight (2026-08-18):** `GhostResolver.CompileTrack`
+resolves a Bandage node's heal from `GhostInput.StartingWounds` (carried in from a prior round) before
+this round's own `ResolveShots` pass ever applies a hit — a `Healed` event can therefore only ever clear
+a wound that predates this round's own `BuildHitVfx`, which only ever splats *this* round's own
+`Wounded`/`Killed` events. There is never a same-round splat for it to hide/restore. If wound splats
+are ever made to persist across rounds, revisit this row.
 
 ---
 

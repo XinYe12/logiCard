@@ -25,17 +25,18 @@ namespace LogiCard.Tests.EditMode
             // (RoundPlayback.SyncWeatherToSeconds): board weather is Storm from this event's
             // Seconds onward for the rest of the round.
             TapeEventType.StormCast,
+
+            // C63 — Bandage resolve lands here. One-shot banner only (RoundPlayback.Report) — no
+            // board splat to hide, since a Healed event can only ever clear a wound carried in from
+            // a prior round (GhostResolver.CompileTrack resolves it from GhostInput.StartingWounds
+            // before this round's own ResolveShots pass runs), and BuildHitVfx only ever splats this
+            // round's own Wounded/Killed events. See TapeEvent.cs's doc comment on this value.
+            TapeEventType.Healed,
         };
 
         private static readonly HashSet<TapeEventType> ReservedNoPresenterYet = new HashSet<TapeEventType>
         {
             TapeEventType.Invalid,
-
-            // C63 — Bandage resolve lands here; the Healed presenter (hide/restore the specific
-            // wound splat it clears) is an explicit Integrator follow-up per
-            // docs/contracts/CURRENT.md's Bandage contract, not part of this slot. Move to
-            // PresentedAtScrubber once RoundPlayback wires it.
-            TapeEventType.Healed,
         };
 
         [Test]

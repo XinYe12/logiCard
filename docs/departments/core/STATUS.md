@@ -41,12 +41,28 @@ see Done)
 - Batchmode re-verify the combined tip on `master` — UI ran batchmode on their own worktree and reported
   green, but nothing has been independently re-run on the merged combination. Editor must be closed on
   this exact path first.
-- Healed presenter (`TapeEventType.Healed` in `RoundPlayback` + `PLAYBACK_CONTRACT` §3) — not started.
 
 ## Offers
 
 - Run/coordinate a combined batchmode verification pass.
-- Healed presenter follow-up.
 - Atmosphere's Sunny-mode work needs a separate decision (merge as its own feature, or drop) — not
   blocking anything, just sitting uncommitted.
 - Map idle — restaff for a prop/dressing follow-up if wanted. Character idle until human answers briefs.
+
+## Done (2026-08-18)
+
+- **Healed presenter** (`TapeEventType.Healed`) landed — `RoundPlayback.Report` fires a one-shot
+  `"HEALED  P{id}  @{s}s"` banner, same shape as Wounded/Killed. **No board-splat leg, by design, not an
+  oversight:** `GhostResolver.CompileTrack` resolves a Bandage node's heal from `GhostInput.StartingWounds`
+  (wounds carried in from a *prior* round) before this round's own `ResolveShots` pass ever applies a hit
+  — so a `Healed` event can only ever clear a wound that predates this round's own `BuildHitVfx`, which
+  only ever splats *this* round's own `Wounded`/`Killed` events. There is structurally never a same-round
+  splat to hide/restore, so the "hide/restore the specific wound splat" framing in the original
+  `TapeEventPlaybackCoverageTests.cs` comment doesn't apply under current resolver semantics — flagged
+  rather than built speculatively. See `PLAYBACK_CONTRACT.md` §3's new `Healed` row for the reasoning, in
+  case wound splats are ever made to persist across rounds later. `TapeEventType.Healed` moved from
+  `ReservedNoPresenterYet` to `PresentedAtScrubber` in the coverage test. New PlayMode coverage:
+  `CrossingTheHealedSecondShowsStubTextAndRewindClearsIt` (two-round flow: wound in round 1, commit via
+  Aftermath, Bandage-only round 2, scrub across the Healed second). Batchmode-verified on `master`:
+  EditMode 188/188, PlayMode 60/60 (one unrelated flake on `BoardWeatherPocketPlayModeTests` on a prior
+  run, clean on rerun — not caused by this change).

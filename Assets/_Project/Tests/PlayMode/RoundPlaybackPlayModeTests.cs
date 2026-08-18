@@ -113,6 +113,55 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(banner.text, Does.Contain("WOUNDED"), "Scrubbing forward again did not re-announce.");
         }
 
+        /// <summary>
+        /// PLAYBACK_CONTRACT §3's Healed row: one-shot banner only (Bandage can only ever clear a
+        /// wound carried in from a prior round — GhostResolver.CompileTrack resolves it from
+        /// GhostInput.StartingWounds before this round's own ResolveShots pass runs — so there is
+        /// never a same-round wound splat to hide/restore, unlike Wounded/Killed above).
+        /// </summary>
+        [Test]
+        public void CrossingTheHealedSecondShowsStubTextAndRewindClearsIt()
+        {
+            Text banner = FindByName<Text>("OutcomeBanner");
+            Assert.That(banner, Is.Not.Null, "HUD has no OutcomeBanner.");
+
+            // Round 1: attacker walks into the defender's scripted Snap and gets wounded, then that
+            // wound is committed into round 2's carried state (C33).
+            ArmWithAttackerMoveTo(AmbushPoint);
+            Clock.SetSeconds(Playback.Tape.EndSeconds);
+
+            Phase.GoTo(RoundPhase.Aftermath);
+            Assert.That(Playback.WoundsOf(GameBootstrap.AttackerPawnId), Is.GreaterThan(0),
+                "Setup requires the attacker to carry a wound into round 2 (committed on Aftermath entry).");
+
+            Bootstrap.RequestNextRound();
+            Assert.That(Bootstrap.BeginRound(60f), Is.True);
+
+            // Round 2: queue only a Bandage node — no Move — at an explicit early instant. Must land
+            // strictly before the defender's own re-scripted Snap wounds the attacker again this
+            // round (attacker's carried position is still the prior round's AmbushPoint), so this
+            // test's "before/at/rewind" scrub points only ever cross the one event under test.
+            Assert.That(AttackerInput.TryQueueBandageAt(1f, out string reason), Is.True, reason);
+            AttackerInput.CommitToPlayback();
+            Playback.ResolveAndArm();
+            Clock.Pause();
+
+            TapeEvent? healed = FirstEventOfType(Playback.Tape, TapeEventType.Healed);
+            Assert.That(healed.HasValue, Is.True, "Bandage must emit a Healed event for the wound carried in from round 1.");
+
+            Clock.SetSeconds(healed.Value.Seconds - 0.5f);
+            Assert.That(banner.text, Is.Empty, "Heal announced before it happens.");
+
+            Clock.SetSeconds(healed.Value.Seconds);
+            Assert.That(banner.text, Does.Contain("HEALED"));
+
+            Clock.SetSeconds(0f);
+            Assert.That(banner.text, Is.Empty, "Rewinding did not clear the outcome.");
+
+            Clock.SetSeconds(healed.Value.Seconds);
+            Assert.That(banner.text, Does.Contain("HEALED"), "Scrubbing forward again did not re-announce.");
+        }
+
         [Test]
         public void ShootingProducesATracerSeparateFromMovement()
         {

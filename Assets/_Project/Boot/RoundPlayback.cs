@@ -562,6 +562,16 @@ namespace LogiCard.Boot
                     }
 
                     break;
+                case TapeEventType.Healed:
+                    // One-shot banner only, same shape as Wounded/Killed — no board splat to
+                    // hide/restore here. GhostResolver.CompileTrack computes a Bandage node's heal
+                    // purely from GhostInput.StartingWounds (wounds carried in from a prior round),
+                    // resolved before ResolveShots ever applies this round's own hits (see
+                    // GhostResolver.Resolve's pass order) — so a Healed event can only ever clear a
+                    // wound this round never built a splat for in the first place (BuildHitVfx only
+                    // splats this round's own Wounded/Killed events). Nothing on the board to touch.
+                    OutcomeReported?.Invoke($"HEALED  P{tapeEvent.PawnId}  @{tapeEvent.Seconds:0.0}s");
+                    break;
             }
         }
 
