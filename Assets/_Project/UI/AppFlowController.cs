@@ -40,12 +40,11 @@ namespace LogiCard.UI
         private GameObject _reveal;
         private GameObject _roundResult;
         private GameObject _matchEnd;
-        private Text _characterDetail;
         private Text _mapDetail;
         private Text _lobbyStatus;
         private Text _roundResultLabel;
         private Text _matchEndLabel;
-        private SelectionGrid _characterGrid;
+        private CharacterSelectView _characterSelectView;
         private SelectionGrid _mapGrid;
         private string _selectedArchetype = "Scout";
         private MapId _selectedMapId = MapId.FreightYard;
@@ -197,33 +196,14 @@ namespace LogiCard.UI
             GameObject screen = CreateScreen("CharacterSelect");
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            Text title = _ui.CreateText(rt, "Title", "CHARACTER SELECT", 44, TextAnchor.MiddleCenter, UiStyle.Accent,
-                UiTextOverflow.SingleLine);
-            UiFactory.Stretch(title.rectTransform, new Vector2(0.1f, 0.84f), new Vector2(0.9f, 0.95f));
-
-            // Clear vertical bands: title → grid → detail → confirm (old grid/detail edge was only 0.02 apart).
-            _characterGrid = SelectionGrid.Build(
-                _ui,
-                rt,
-                new[]
-                {
-                    new SelectionOption("Scout", "SCOUT"),
-                    new SelectionOption("Juggernaut", "JUGGERNAUT"),
-                },
-                new Vector2(0.14f, 0.50f),
-                new Vector2(0.86f, 0.78f),
-                columns: 2,
-                fontSize: 34);
-            _characterGrid.SelectionChanged += OnCharacterSelectionChanged;
-
-            _characterDetail = _ui.CreateText(rt, "Detail", string.Empty, 24, TextAnchor.MiddleCenter, UiStyle.Ink);
-            UiFactory.Stretch(_characterDetail.rectTransform, new Vector2(0.12f, 0.30f), new Vector2(0.88f, 0.46f));
+            _characterSelectView = CharacterSelectView.Build(_ui, rt);
+            _characterSelectView.SelectionChanged += OnCharacterSelectionChanged;
 
             Button confirm = _ui.CreateButton(rt, "ConfirmCharacter", "CONFIRM", UiStyle.Accent, UiStyle.InkDark, 32,
                 () => Show(Screen.MapSelect));
-            UiFactory.Stretch(confirm.GetComponent<RectTransform>(), new Vector2(0.34f, 0.10f), new Vector2(0.66f, 0.24f));
+            UiFactory.Stretch(confirm.GetComponent<RectTransform>(), new Vector2(0.34f, 0.03f), new Vector2(0.66f, 0.12f));
 
-            OnCharacterSelectionChanged(_characterGrid.SelectedId);
+            OnCharacterSelectionChanged(_characterSelectView.SelectedId);
             return screen;
         }
 
@@ -399,12 +379,6 @@ namespace LogiCard.UI
         private void OnCharacterSelectionChanged(string archetype)
         {
             _selectedArchetype = archetype;
-            if (_characterDetail != null)
-            {
-                _characterDetail.text = archetype == "Juggernaut"
-                    ? "Juggernaut — Speed: slow · Agility: stance/shoot switch costs · Strength: doors faster"
-                    : "Scout — Speed: fast · Agility: free stance/shoot switches · Strength: standard doors";
-            }
         }
 
         private void OnMapSelectionChanged(string mapId)

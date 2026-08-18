@@ -5,6 +5,15 @@ a retired calendar (updated 2026-08-08 for the **C46** scope pivot — see `PROD
 only; nothing here is scheduled or implemented. See scope note below before assuming otherwise.
 **Depends on:** [VISION.md](../core/VISION.md) (Long-Term Systems list), [PRODUCT_MEMORY.md](../core/PRODUCT_MEMORY.md) **C36–C38** (existing long-term systems this roster builds on: destructible geometry, objective win, revive/martyr), **C42–C44** (the binding pointer entries for this doc), [MONETIZATION.md](../core/MONETIZATION.md) (the guardrail below).
 
+**Implementation briefs (2026-08-13, Character dept — docs only, no Sim code):** mirror the Bandage brief shape so Integrator can open contracts once numerics/design gates clear:
+
+- [CHARACTER_UNIQUE_VERB_OPERATORS_BRIEF.md](CHARACTER_UNIQUE_VERB_OPERATORS_BRIEF.md) — **C42** shared gates
+- [CHARACTER_BOMBER_AGENT_BRIEF.md](CHARACTER_BOMBER_AGENT_BRIEF.md) — **C43**
+- [CHARACTER_TIME_PLAYER_AGENT_BRIEF.md](CHARACTER_TIME_PLAYER_AGENT_BRIEF.md) — **C44**
+- Live cast attrs (Scout/Juggernaut, not unique-verb): [CHARACTER_ATTRS_SCOUT_JUGGERNAUT_BRIEF.md](CHARACTER_ATTRS_SCOUT_JUGGERNAUT_BRIEF.md)
+
+**Pre-code concept pack (2026-08-13):** [CHARACTER_PLAN.md](CHARACTER_PLAN.md) (roadmap) · [CHARACTER_FANTASY.md](CHARACTER_FANTASY.md) · [CHARACTER_CARDS_BOUNDARY.md](CHARACTER_CARDS_BOUNDARY.md) (joint Cards seam) · [CHARACTER_C36_DEPENDENCY.md](CHARACTER_C36_DEPENDENCY.md) · [CHARACTER_TIME_PLAYER_EPISTEMICS.md](CHARACTER_TIME_PLAYER_EPISTEMICS.md) · [CHARACTER_DETONATOR_VS_BOMBER.md](CHARACTER_DETONATOR_VS_BOMBER.md).
+
 ---
 
 ## Scope note — why this is future roadmap, not active build scope
