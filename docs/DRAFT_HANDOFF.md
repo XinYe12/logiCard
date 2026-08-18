@@ -1,5 +1,16 @@
 # Draft Handoff — 2026-08-18
 
+**2026-08-18 (later still): pruned dead Bandage/Storm board-tap paths in `BoardInputController`.**
+Since the Hand Deck Drag Play brief (2026-08-15) moved both cards to drag-out-of-hand-only placement,
+`Mode` (`BoardInputController.Mode`) can never be `ActionVerb.Bandage`/`ActionVerb.Storm` anymore —
+`ProgramHud.SetMode` is only ever called with Move/Shoot/Door. Confirmed via grep (no other call site
+anywhere sets `.Mode = ActionVerb.Bandage`/`.Storm`) before removing `TryTapPoint`'s two dead branches
+and the now-unreachable `ResolveBandageExecuteTime` helper they alone called. No test exercised the
+removed paths (checked — all Bandage/Storm test coverage goes through `TryQueueBandageAt`/
+`TryQueueStormAt`/drag-out gestures, never `Mode = Bandage/Storm` + `TryTapPoint`), so no test changes
+needed. Batchmode-verified fresh, Editor closed: EditMode 190/190, PlayMode 61/61 — same counts as
+before the prune, confirming it was genuinely dead code, not a coverage gap.
+
 **2026-08-18 (later same day): Storm's real per-match counter landed** — closes the deviation C69
 flagged: the HUD gate previously only enforced "not already queued this Program" (per-round; a fresh
 round always reset it), not the actual 1×/Character/match rule. Mirrored Bandage's shape exactly:
@@ -32,7 +43,7 @@ closed:** EditMode 188/188, PlayMode 60/60 (one `BoardWeatherPocketPlayModeTests
 — unrelated file, clean on immediate rerun, not caused by this change).
 
 **Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (C63/C67 gear carve-out).
-**Integrator tip:** `master` @ `6d17776` — **Storm per-match counter landed** (see 2026-08-18 notes above), on top of Healed presenter `c81aa3e` and Camera merge `e594c51`. Batchmode-verified independently on master post-commit (EditMode 190/190, PlayMode 61/61).
+**Integrator tip:** `master` — **dead Bandage/Storm board-tap paths pruned** (see 2026-08-18 notes above), on top of Storm per-match counter `6d17776`, Healed presenter `c81aa3e`, and Camera merge `e594c51`. Batchmode-verified independently on master post-commit (EditMode 190/190, PlayMode 61/61).
 **Active wave: this dispatch round is closed.** Match Shell Layout, Map, and Camera are all merged to master. Camera landed via human hands-on iteration during the actual re-test — the human found the control-hint overlay's rotate-only right-drag didn't feel right and iterated on it live: first to a combined pan+rotate gesture (`169a55f`), then further to right-drag doing pitch tilt between top/front view rather than pan (`2e2d022`, `CAMERA_VERTICAL_DRAG_PAN_BRIEF.md`). Integrator re-ran batchmode fresh against each commit as it landed and again on `master` after the merge — every pass green. No paused dept work outstanding.
 Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [`docs/contracts/CURRENT.md`](contracts/CURRENT.md).
 

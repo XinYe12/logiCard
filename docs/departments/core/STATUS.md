@@ -79,3 +79,9 @@ see Done)
   fresh, empty round-2 Program used to make the card interactable again). Updated `contracts/CURRENT.md`,
   `PRODUCT_MEMORY.md` C69, `CARD_COLLECTION.md`, `GEAR_STORM_AGENT_BRIEF.md`, and `departments/ui/STATUS.md`
   to reflect the deviation is closed. Batchmode-verified on `master`: EditMode 190/190, PlayMode 61/61.
+- **Pruned dead Bandage/Storm board-tap paths** in `BoardInputController` — since the Hand Deck Drag
+  Play brief (2026-08-15), `Mode` can never be `ActionVerb.Bandage`/`Storm` (confirmed via grep: only
+  `ProgramHud.SetMode`, only ever called with Move/Shoot/Door, assigns `Mode`), so `TryTapPoint`'s two
+  branches for them and the `ResolveBandageExecuteTime` helper they alone called were unreachable.
+  Removed all three; no test exercised them. Batchmode-verified on `master`: EditMode 190/190, PlayMode
+  61/61 — unchanged counts confirm this was dead code, not a coverage gap.

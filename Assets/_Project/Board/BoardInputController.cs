@@ -376,17 +376,6 @@ namespace LogiCard.Board
             {
                 queued = TrySelectOrCancelDoor(point, out reason);
             }
-            else if (Mode == ActionVerb.Bandage)
-            {
-                queued = Program.TryQueueBandage(ResolveBandageExecuteTime(point), out reason);
-            }
-            else if (Mode == ActionVerb.Storm)
-            {
-                // Storm is self-targeting weather, not a board-aimed verb — it has no board-tap
-                // placement path (see TryQueueStormAt). Give a pointer instead of a dead-end error.
-                reason = "Storm places via the Time scrubber, not the board — drag it to choose when.";
-                queued = false;
-            }
             else
             {
                 reason = $"Unsupported verb {Mode}.";
@@ -466,11 +455,11 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Places a Bandage node at an explicit Time Resource instant — the scrubber-click placement
-        /// path (Bandage HUD-side contract, C63) has no board tap point to resolve a nearest Move node
-        /// from, so it calls this directly with the scrubber's current seconds. Board taps go through
-        /// <see cref="TryTapPoint"/> instead, which resolves its own executeTime via
-        /// <see cref="ResolveBandageExecuteTime"/> before reaching <see cref="PawnProgram.TryQueueBandage"/>.
+        /// Places a Bandage node at an explicit Time Resource instant — the drag-out-of-hand-and-release
+        /// gesture (Hand Deck Drag Play brief, 2026-08-15) is Bandage's only placement path today, and
+        /// calls this with the scrubber's current seconds. <see cref="Mode"/> can never be
+        /// <see cref="ActionVerb.Bandage"/> (nothing sets it there anymore — see <see cref="TryTapPoint"/>'s
+        /// verb switch), so there is no separate board-tap placement path to keep in sync with this one.
         /// </summary>
         public bool TryQueueBandageAt(float executeTime, out string reason)
         {
@@ -493,10 +482,9 @@ namespace LogiCard.Board
         }
 
         /// <summary>
-        /// Places a Storm node at an explicit Time Resource instant (Storm contract, C67) — unlike
-        /// Bandage, Storm has no board-tap placement path at all (it is self-targeting with nothing
-        /// to aim at), so this scrubber-click path is the only way in. Mirrors
-        /// <see cref="TryQueueBandageAt"/>'s shape exactly.
+        /// Places a Storm node at an explicit Time Resource instant (Storm contract, C67/C69) — like
+        /// Bandage, self-targeting with nothing to aim at, so the drag-out-of-hand-and-release gesture
+        /// is the only placement path. Mirrors <see cref="TryQueueBandageAt"/>'s shape exactly.
         /// </summary>
         public bool TryQueueStormAt(float executeTime, out string reason)
         {
@@ -516,34 +504,6 @@ namespace LogiCard.Board
             RefreshPreview();
             QueueChanged?.Invoke(Program);
             return true;
-        }
-
-        /// <summary>
-        /// Board-tap placement (UI_FLOW §6 item 3 / Bandage HUD-side contract): snaps to the nearest
-        /// already-booked Move node's arrival instant, or the schedule tip if none are booked yet.
-        /// </summary>
-        private float ResolveBandageExecuteTime(PlanarPosition point)
-        {
-            float bestSqrDistance = float.MaxValue;
-            float bestExecuteTime = Program.UsedSeconds;
-            IReadOnlyList<ActionNode> nodes = Program.Nodes;
-            for (int i = 0; i < nodes.Count; i++)
-            {
-                ActionNode node = nodes[i];
-                if (node.Verb != ActionVerb.Move)
-                {
-                    continue;
-                }
-
-                float sqrDistance = node.Position.SqrDistanceTo(point);
-                if (sqrDistance < bestSqrDistance)
-                {
-                    bestSqrDistance = sqrDistance;
-                    bestExecuteTime = node.ExecuteTime;
-                }
-            }
-
-            return bestExecuteTime;
         }
 
         private void RefreshPreview()
