@@ -18,7 +18,7 @@ closed:** EditMode 188/188, PlayMode 60/60 (one `BoardWeatherPocketPlayModeTests
 — unrelated file, clean on immediate rerun, not caused by this change).
 
 **Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (C63/C67 gear carve-out).
-**Integrator tip:** `master` @ `e594c51` — **Camera merged.** Match Shell Layout + Map's fence-shadow/material tweaks + Camera freecam/TPS all merged, batchmode-verified independently on master post-merge (EditMode 188/188, PlayMode 59/59).
+**Integrator tip:** `master` @ `c81aa3e` — **Healed presenter landed** (see 2026-08-18 note above) on top of Camera merge `e594c51`. Batchmode-verified independently on master post-commit (EditMode 188/188, PlayMode 60/60).
 **Active wave: this dispatch round is closed.** Match Shell Layout, Map, and Camera are all merged to master. Camera landed via human hands-on iteration during the actual re-test — the human found the control-hint overlay's rotate-only right-drag didn't feel right and iterated on it live: first to a combined pan+rotate gesture (`169a55f`), then further to right-drag doing pitch tilt between top/front view rather than pan (`2e2d022`, `CAMERA_VERTICAL_DRAG_PAN_BRIEF.md`). Integrator re-ran batchmode fresh against each commit as it landed and again on `master` after the merge — every pass green. No paused dept work outstanding.
 Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [`docs/contracts/CURRENT.md`](contracts/CURRENT.md).
 
