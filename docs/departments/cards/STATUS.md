@@ -2,11 +2,19 @@
 
 **Wave / Day:** Permanent seat — Match Shell Layout schedule-language recommendation (2026-08-15)
 **Branch / worktree:** `logiCard-cards-collection` / `feat/cards-collection-docs`
-**Last cross-reviewed:** 2026-08-15 — `CARD_COLLECTION.md` §13 added: per-card TimelineSchedule
-  track/chip/visibility (YOU/ENEMY/EFFECTS), HandBand-vs-schedule language, playful presentation notes,
-  per `MATCH_SHELL_LAYOUT_AGENT_BRIEF.md` (docs only — no `Assets/_Project/UI/**`, no `CardId`/cost
-  changes). Prior: 2026-08-14 — merged master (Storm Sim / **C67**); renumbered packaging → **C68**;
-  Storm `CARD_COLLECTION` + `GEAR_STORM_AGENT_BRIEF` written (Cards Storm DoD). No `CardData.cs` edit.
+**Last cross-reviewed:** 2026-08-18 — rebased branch onto current `master` (`f45e986`, picking up
+  C69–C73, Storm counter, Healed presenter, camera control-hint chrome, Match Shell Layout merges).
+  New branch tip `9751af5` — docs-only, no `Assets/_Project/**`/`CardData.cs` touched. Conflicts:
+  `MATCH_SHELL_LAYOUT_AGENT_BRIEF.md` (add/add — kept this branch's Cards-specific dispatch version,
+  identical goal to master's generic UI brief but scoped to this seat) and `docs/DRAFT_HANDOFF.md`
+  (content — took master's version wholesale, it's Integrator-owned and this seat's stale copy was
+  many sessions behind). `docs/cards/CARD_COLLECTION.md` and `PRODUCT_MEMORY.md` auto-merged clean —
+  their C68 content was already folded into master (per DRAFT_HANDOFF's "Docs peers folded in" note),
+  so no renumbering was needed on this pass. Batchmode-verified fresh on the rebased tip, Editor
+  closed: EditMode 190/190, PlayMode 62/62 — matches master's current baseline exactly. Branch is
+  current against master; **not merged, not pushed** (Integrator's call). Prior: 2026-08-14 — merged
+  master (Storm Sim / **C67**); renumbered packaging → **C68**; Storm `CARD_COLLECTION` +
+  `GEAR_STORM_AGENT_BRIEF` written (Cards Storm DoD). No `CardData.cs` edit.
 
 ## Owned files (this seat)
 

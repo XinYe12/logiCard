@@ -110,9 +110,8 @@ Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [
 1. Backlog: ~~Healed presenter~~, ~~dead Bandage/Storm board-tap paths~~, ~~Storm per-match counter~~,
    ~~IMGUI control-hint → real UI chrome~~ — all landed 2026-08-18 (see above). Every code item originally
    listed here is now closed; the URP shadow-tune item turned out to already be committed (correction
-   logged above, `bd5fad8`), not actually a pending task. **What's left is not code — it's a human/Editor
-   look:** the shadow tune, and today's control-hint chrome move, are both batchmode-green but not
-   Play-verified. Neither has been claimed as fully done for that reason.
+   logged above, `bd5fad8`), not actually a pending task. **2026-08-18: human Play-approved** the shadow
+   tune and the control-hint chrome move — both now fully closed, no further verification owed.
 2. Atmosphere's Sunny mode (parked) and Character's carousel feature (separate workstream) remain uncommitted-or-unmerged in their worktrees, unchanged — their branches were pushed to origin as-is for safekeeping (human switching machines), not merged into master. Cards' branch was also pushed as-is; it's stale against master and would need real reconciliation, not a fast merge, before it could land.
 
 ## Tomorrow
