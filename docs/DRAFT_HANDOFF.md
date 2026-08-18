@@ -62,6 +62,18 @@ via Aftermath, Bandage-only round 2, scrub across the Healed second). **Batchmod
 closed:** EditMode 188/188, PlayMode 60/60 (one `BoardWeatherPocketPlayModeTests` flake on an earlier run
 — unrelated file, clean on immediate rerun, not caused by this change).
 
+**2026-08-18 (restaffing pass): Cards docs rebase closed + Character Select carousel merged.**
+Cards' `feat/cards-collection-docs` rebased onto master with zero diff on real doc content (already
+folded in earlier); only STATUS.md pulled forward (`47baf50`). Character's `feat/char-select-motion`
+(the 2-item center/flank carousel, `CharacterSelectView.cs`/`UiMotion.cs`, Kenney CharSelect chrome)
+rebased clean and was human-approved to merge (`9472783`) despite the branch's own later commits
+recording that Character Select UI ownership had shifted to the UI department — landed as-is; **UI
+department now owns this code going forward**, not Character. `ArchetypeOf(pawnId)` InfoBar reader
+remains unwired (Match-Shell/UI scope, untouched by this branch). Batchmode-verified fresh on `master`
+post-merge, Editor closed: **EditMode 190/190, PlayMode 63/63** (the +1 is
+`CharacterSelectNextRotatesArchetypeAfterCrossfade`). Cards and Character worktrees can go idle;
+Atmosphere stays parked (Sunny mode, blocked on human decision).
+
 **Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (C63/C67 gear carve-out).
 **Integrator tip:** `master` — **camera control-hint moved to real UI chrome** (see 2026-08-18 notes above, this is the last backlog item), on top of dead Bandage/Storm board-tap prune, Storm per-match counter `6d17776`, Healed presenter `c81aa3e`, and Camera merge `e594c51`. Batchmode-verified independently on master post-commit (EditMode 190/190, PlayMode 62/62). **Not yet Play-verified** — see "Still unfinished."
 **Active wave: this dispatch round is closed.** Match Shell Layout, Map, and Camera are all merged to master. Camera landed via human hands-on iteration during the actual re-test — the human found the control-hint overlay's rotate-only right-drag didn't feel right and iterated on it live: first to a combined pan+rotate gesture (`169a55f`), then further to right-drag doing pitch tilt between top/front view rather than pan (`2e2d022`, `CAMERA_VERTICAL_DRAG_PAN_BRIEF.md`). Integrator re-ran batchmode fresh against each commit as it landed and again on `master` after the merge — every pass green. No paused dept work outstanding.

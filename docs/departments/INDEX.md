@@ -21,8 +21,8 @@ work outstanding. Plan: [`../ui/MATCH_SHELL_LAYOUT.md`](../ui/MATCH_SHELL_LAYOUT
 |------|-----------|---------------------|-------------|--------|
 | **Integrator** | `logiCard` | `D:\projects\Game\logiCard` | `master` @ `e594c51` — Match Shell + Map + Camera merged | [`core/STATUS.md`](core/STATUS.md) |
 | **Atmosphere** | `logiCard-atmosphere` | `logiCard-atmosphere-stylized` | Docs contribution merged; worktree still holds its own uncommitted, explicitly-parked Sunny-mood code; branch pushed to origin for safekeeping | [`atmosphere/STATUS.md`](atmosphere/STATUS.md) |
-| **Cards** | `logiCard-cards` | `logiCard-cards-collection` | Docs contribution merged; idle; branch pushed to origin (stale vs. master, needs reconciliation before it can merge) | [`cards/STATUS.md`](cards/STATUS.md) |
-| **Character** | `logiCard-character` | `logiCard-char-select-motion` | Docs + decision sheet merged; worktree still holds its own older, larger, unmerged Char Select carousel feature (separate workstream); branch pushed to origin for safekeeping | [`character/STATUS.md`](character/STATUS.md) |
+| **Cards** | `logiCard-cards` | `logiCard-cards-collection` | Rebased + fully reconciled onto master (`47baf50`); idle | [`cards/STATUS.md`](cards/STATUS.md) |
+| **Character** | `logiCard-character` | `logiCard-char-select-motion` | Carousel feature rebased + merged to master (`9472783`); **UI dept now owns this code going forward**, not Character; idle | [`character/STATUS.md`](character/STATUS.md) |
 | **UI** | `logiCard-ui` | `logiCard-modal-restyle` | Fully merged to master (`e1c80fb`); idle | [`ui/STATUS.md`](ui/STATUS.md) |
 | **Map** | `logiCard-map` | `D:\projects\Game\logiCard-map` | **Fully merged to master** (`07501d7`); idle | [`map/STATUS.md`](map/STATUS.md) |
 | **Camera** | — | `logiCard-camera-control` | `2e2d022` — **fully merged to master** (`e594c51`); idle | — |
