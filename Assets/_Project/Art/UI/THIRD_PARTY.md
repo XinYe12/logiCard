@@ -32,7 +32,7 @@ traceable.
   |---|---|---|
   | `panel_brown.png` | `Resources/CharSelect/panel_brown` | Scout card face (9-slice) |
   | `panel_brown_dark.png` | `Resources/CharSelect/panel_brown_dark` | Juggernaut card face (9-slice) |
-  | `button_brown.png` | `Resources/CharSelect/button_brown` | Prev/Next nav buttons (9-slice) |
+  | `button_brown.png` | `Resources/CharSelect/button_brown` | ~~Prev/Next nav buttons~~ — **unused since 2026-08-18**; the shell chrome pass moved Prev/Next onto `UiFactory.CreateShellButton` so every shell button in the game is one family. File kept imported: it is the only warm 9-slice button art on hand if a future screen wants it back. |
 
 - **Import tooling:** `Assets/_Project/Art/UI/Editor/UiKenneyImportTool.cs` (batchmode
   `-executeMethod LogiCard.Art.Editor.UiKenneyImportTool.Run` or menu
@@ -45,3 +45,27 @@ traceable.
   Revisit this list if/when other screens adopt the same pack (see `docs/UI_TOOLKIT_MIGRATION_PROPOSAL.md`
   for the broader "should the rest of the UI move off hand-rolled chrome too" question — a separate,
   Integrator-level call, not decided by this file).
+
+---
+
+## Iomanoid (display font) — imported (2026-08-18)
+
+- **Author / source:** Raymond Larabie. Collected by the human into
+  `docs/ui-collection/fonts/iomanoid/` (catalog bucket 6 in `docs/UI_CHROME_COLLECTION.md`).
+- **License:** CC0 1.0 Universal (`docs/ui-collection/fonts/iomanoid/license.txt`). No attribution
+  required; recorded here for provenance only.
+- **Date sourced:** 2026-08-13 (collection) / imported to `Assets/` 2026-08-18 for the shell chrome
+  restyle (`docs/ui/UI_SHELL_CHROME.md`).
+- **Assets in use:**
+
+  | File | Runtime path | Role |
+  |---|---|---|
+  | `Iomanoid.otf` | `Resources/Fonts/Iomanoid` | Shell display/headline face (`UiFactory.Display`) |
+
+- **Not imported:** the `Front` / `Back` / `Shine` layered variants. Those are meant to be stacked as
+  three separately-coloured text layers for a chromed arcade read — worth revisiting if headlines ever
+  want that treatment, but the shell restyle gets its depth from a uGUI `Shadow` component on the
+  single base face instead, which stays in sync automatically when label text changes at runtime.
+- **Body copy is deliberately NOT Iomanoid** — it stays on Unity's `LegacyRuntime.ttf`. Iomanoid is a
+  wide display face; at 20–26pt paragraph sizes it loses legibility fast. Display face for headlines,
+  neutral face for everything you actually read.

@@ -29,6 +29,8 @@ If you're building this kind of control and haven't read that doc in this sessio
 
 **Read `docs/UI_CHROME_COLLECTION.md`.** Human supplies resources/code; UI seat categorizes into the buckets there. Do not Asset-Store-shop a Link’s Awakening–like pack shortlist — keep collecting until that doc says the minimum bar is met. Target: same toy/diorama UI language for lobby shell and in-match HUD.
 
+**Before touching any non-HUD shell screen (Boot / Character Select / Map Select / Lobby / Match End), also read `docs/ui/UI_SHELL_CHROME.md`.** It holds the shell's chrome contract — the `UiFactory.CreateShell*` helpers, the display-font-vs-body-font split, which element names PlayMode tests depend on, and two traps that already cost a rebuild (`SetAsFirstSibling` buries you under the backdrop; `WaitForEndOfFrame` hangs forever in batchmode). It also documents the screenshot harness: **a shell visual change is not done until you have looked at a render**, because every batchmode test passed on a build where Character Select rendered completely empty.
+
 ## Docs are the source of truth for *why*, not just *what*
 
 This project's `docs/` folder carries decisions and their reasoning (`CONTINUOUS_PIVOT_PLAN.md`, `PRODUCT_MEMORY.md`, `CORE_LOOP.md`, etc.) — when a change touches an area with a doc, check it before assuming the code alone tells the whole story. When you land a decision or convention future sessions need to follow (not just a one-off fix), write it into a doc under `docs/` and, if it's something every session should know before starting related work, add a pointer here. A doc nobody's told to read doesn't do anything — the pointer is not optional.
