@@ -1,11 +1,11 @@
 # Departments — Active Index
 
-**Updated:** 2026-08-17 — **Match Shell Layout, Map, and Camera all merged. Dispatch round closed.**
-Camera landed via human hands-on iteration during the actual re-test: control-hint overlay, then a
-combined pan+rotate gesture (`169a55f`), then right-drag doing pitch tilt between top/front view
-(`2e2d022`). Integrator re-ran batchmode fresh against each commit and again on `master` after
-merging with `--no-ff` (`e594c51`) — **EditMode 188/188, PlayMode 59/59, both green.** No paused dept
-work outstanding. Plan: [`../ui/MATCH_SHELL_LAYOUT.md`](../ui/MATCH_SHELL_LAYOUT.md).
+**Updated:** 2026-08-19 — **Dispatch round closed, all seats idle.** Since the 2026-08-17 Match
+Shell/Map/Camera merge: the full 2026-08-17 backlog (Healed presenter, Storm per-match counter, dead
+Bandage/Storm board-tap prune, IMGUI control-hint → real UI chrome) landed 2026-08-18 and was human
+Play-approved; a restaffing pass the same day closed Cards' docs rebase and merged Character's Select
+carousel (now owned by UI dept). See merge gates 6-10 below for detail. Only Atmosphere's Sunny mode
+remains open, blocked on a human decision. Plan: [`../ui/MATCH_SHELL_LAYOUT.md`](../ui/MATCH_SHELL_LAYOUT.md).
 
 **Ops constitution:** [`../PARALLEL_OPS.md`](../PARALLEL_OPS.md) · human-side playbook: [`../DIRECTING_AGENTS.md`](../DIRECTING_AGENTS.md)
 **Contracts:** [`../contracts/CURRENT.md`](../contracts/CURRENT.md) · Playback: [`../core/PLAYBACK_CONTRACT.md`](../core/PLAYBACK_CONTRACT.md)
@@ -19,7 +19,7 @@ work outstanding. Plan: [`../ui/MATCH_SHELL_LAYOUT.md`](../ui/MATCH_SHELL_LAYOUT
 
 | Seat | Canonical | **Live folder now** | Tip / state | STATUS |
 |------|-----------|---------------------|-------------|--------|
-| **Integrator** | `logiCard` | `D:\projects\Game\logiCard` | `master` @ `e594c51` — Match Shell + Map + Camera merged | [`core/STATUS.md`](core/STATUS.md) |
+| **Integrator** | `logiCard` | `D:\projects\Game\logiCard` | `master` @ `bb6fcdf` — everything through the 2026-08-18 restaffing pass (Cards rebase + Character carousel) merged | [`core/STATUS.md`](core/STATUS.md) |
 | **Atmosphere** | `logiCard-atmosphere` | `logiCard-atmosphere-stylized` | Docs contribution merged; worktree still holds its own uncommitted, explicitly-parked Sunny-mood code; branch pushed to origin for safekeeping | [`atmosphere/STATUS.md`](atmosphere/STATUS.md) |
 | **Cards** | `logiCard-cards` | `logiCard-cards-collection` | Rebased + fully reconciled onto master (`47baf50`); idle | [`cards/STATUS.md`](cards/STATUS.md) |
 | **Character** | `logiCard-character` | `logiCard-char-select-motion` | Carousel feature rebased + merged to master (`9472783`); **UI dept now owns this code going forward**, not Character; idle | [`character/STATUS.md`](character/STATUS.md) |
@@ -47,5 +47,6 @@ work outstanding. Plan: [`../ui/MATCH_SHELL_LAYOUT.md`](../ui/MATCH_SHELL_LAYOUT
 6. ~~Healed presenter~~ — **landed on `master` directly (2026-08-18, no dispatch needed)** — one-shot banner only (`RoundPlayback.Report`); no board-splat leg, since `Healed` can only ever clear a wound carried in from a prior round, and this round's own wound splats are built only from this round's own Wounded/Killed events (see `PLAYBACK_CONTRACT.md` §3). Batchmode green: EditMode 188/188, PlayMode 60/60.
 7. ~~Storm per-match counter~~ — **landed on `master` directly (2026-08-18, no dispatch needed)** — `RoundPlayback.StormCastCountOf` + `GhostResolver`-side enforcement, mirroring Bandage's `BandageChargeOf`/charge-gate shape exactly; `RegisterMatchState` grew a third delegate. Closes the deviation flagged in C69/`contracts/CURRENT.md`'s Storm contract.
 8. ~~Dead Bandage/Storm board-tap paths~~ — **pruned on `master` directly (2026-08-18)** — `BoardInputController.TryTapPoint`'s two unreachable branches + the `ResolveBandageExecuteTime` helper they alone called, removed. Batchmode counts unchanged (190/190, 61/61), confirming it was dead code.
-9. ~~IMGUI control-hint → real UI chrome~~ — **landed on `master` directly (2026-08-18, last backlog item)** — `BoardCameraRig.OnGUI()` removed; `ProgramHud` now owns a live `CameraControlHint` label (consolidated with a static duplicate label that already existed) driven by new `BoardCameraRig.ControlHintText` via `ProgramHud.RegisterCameraRig`. Batchmode green: EditMode 190/190, PlayMode 62/62. **Not yet human/Editor-verified.**
-10. Atmosphere Sunny decision (parked, not scheduled) — unchanged backlog. All 2026-08-17 backlog items are now closed; what remains needs a human Play pass (shadow tune + control-hint chrome), not more code. This dispatch round is closed — no coding-hot seats remain.
+9. ~~IMGUI control-hint → real UI chrome~~ — **landed on `master` directly (2026-08-18, last backlog item)** — `BoardCameraRig.OnGUI()` removed; `ProgramHud` now owns a live `CameraControlHint` label (consolidated with a static duplicate label that already existed) driven by new `BoardCameraRig.ControlHintText` via `ProgramHud.RegisterCameraRig`. Batchmode green: EditMode 190/190, PlayMode 62/62. **Human Play-approved 2026-08-18** — closed, no further verification owed.
+10. ~~Cards docs rebase + Character Select carousel~~ — **landed on `master` directly (2026-08-18 restaffing pass)** — Cards' branch reconciled with zero real-content diff (`47baf50`); Character's 2-item carousel (`CharacterSelectView.cs`/`UiMotion.cs`, Kenney chrome) merged as-is (`9472783`) — **UI dept now owns this code**, not Character. Batchmode green: EditMode 190/190, PlayMode 63/63.
+11. Atmosphere Sunny decision (parked, not scheduled) remains the only genuinely open item — blocked on a human merge/drop call, not code. **New flag (2026-08-19):** `CHARACTER_FANTASY.md` §4.1's `ArchetypeOf(pawnId)` InfoBar reader is still unwired — investigated and found entangled with C73's larger, not-yet-authorized "Character Select → live attrs wiring" contract (`GameBootstrap` hardcodes both pawns' archetype today, ignoring `SelectedArchetype` entirely) and with an unconfirmed InfoBar two-column layout recommendation (Character STATUS's own "Waiting on human" item 5) — not started, see `DRAFT_HANDOFF.md`'s matching note for the full reasoning. This dispatch round is closed — no coding-hot seats remain.

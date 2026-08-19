@@ -92,13 +92,15 @@ Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [
 
 ## Live folders
 
+**(Table below reflects 2026-08-17 state; superseded by `departments/INDEX.md`'s Live Folders table, which the 2026-08-18 restaffing pass kept current — Cards and Character are merged/idle there, not pending as this older snapshot still reads.)**
+
 | Seat | Folder | Tip / state |
 |------|--------|-------------|
-| Integrator | `logiCard` | `master` @ `e594c51` — Match Shell + Map + Camera all merged, batchmode-verified (see Verification) |
+| Integrator | `logiCard` | `master` @ `bb6fcdf` — everything through the 2026-08-18 restaffing pass merged, batchmode-verified (see Verification) |
 | **UI** | `logiCard-modal-restyle` | `feat/modal-restyle` @ `e1c80fb` — fully merged to master; worktree can resync/idle |
 | Atmosphere | `logiCard-atmosphere-stylized` | Docs contribution merged; worktree still carries its own uncommitted Sunny-mood code + stray `Assets/_Recovery` scene — **not** merged, stays parked per human decision; branch pushed to origin for safekeeping |
-| Cards | `logiCard-cards-collection` | Docs contribution merged; worktree otherwise idle; branch pushed to origin for safekeeping (branch itself is stale vs. master — do not merge as-is) |
-| Character | `logiCard-char-select-motion` | Docs + decision sheet merged; worktree still carries its own large, older, unmerged Character Select carousel feature (12 commits) — separate workstream, untouched; branch pushed to origin for safekeeping |
+| Cards | `logiCard-cards-collection` | **Rebased + fully reconciled onto master** (`47baf50`, 2026-08-18); worktree idle |
+| Character | `logiCard-char-select-motion` | **Carousel feature rebased + merged to master** (`9472783`, 2026-08-18); UI dept now owns this code going forward, not Character; worktree idle |
 | Map | `logiCard-map` | **Fully merged to master** (`07501d7`) — fence-shadow fix + Hall/Vault material tweaks; worktree idle |
 | Camera | `logiCard-camera-control` | `feat/camera-freecam-tps` @ `2e2d022` — **fully merged to master** (`e594c51`); worktree idle |
 
@@ -124,7 +126,8 @@ Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [
    listed here is now closed; the URP shadow-tune item turned out to already be committed (correction
    logged above, `bd5fad8`), not actually a pending task. **2026-08-18: human Play-approved** the shadow
    tune and the control-hint chrome move — both now fully closed, no further verification owed.
-2. Atmosphere's Sunny mode (parked) and Character's carousel feature (separate workstream) remain uncommitted-or-unmerged in their worktrees, unchanged — their branches were pushed to origin as-is for safekeeping (human switching machines), not merged into master. Cards' branch was also pushed as-is; it's stale against master and would need real reconciliation, not a fast merge, before it could land.
+2. **Correction (2026-08-19):** this item was stale — Character's carousel merged (`9472783`) and Cards' branch rebased/reconciled (`47baf50`) in the 2026-08-18 restaffing pass (see entry above); both worktrees are idle, not pending. Only Atmosphere's Sunny mode remains genuinely parked (uncommitted in its worktree, blocked on a human merge/drop decision, branch pushed to origin for safekeeping).
+3. **New flag (2026-08-19):** `CHARACTER_FANTASY.md` §4.1's `ArchetypeOf(pawnId)` InfoBar reader is still unwired (Character STATUS confirms, carried forward through their 2026-08-18 rebase without touching it). Investigated: this is entangled with C73's larger "Character Select → live attrs wiring gap" — `GameBootstrap` currently hardcodes both pawns' archetype (`PawnBuild.Scout`/`attackerSecondsPerTile = 1f` for the attacker, `PawnBuild.Juggernaut`/`DefenderSecondsPerTile = 2f` for the defender) rather than reading `AppFlowController.SelectedArchetype` or a real `CharacterData` asset at all — so a reader built today would honestly always report "Scout"/"Juggernaut" regardless of what the player picks at Char Select, and would need rework once C73's attrs contract actually lands. Also: `CHARACTER_FANTASY.md` §4.1's recommended two-column (Attacker\|Defender) InfoBar layout is an explicit "Waiting on human" item in Character's own STATUS.md (item 5, "Confirm or override InfoBar §4.1 recommendations") — not yet confirmed, so building real layout for it now would be presuming an undecided design, the same class of call this session has been checking with the human on rather than assuming. Not started; flagging rather than guessing.
 
 ## Tomorrow
 
