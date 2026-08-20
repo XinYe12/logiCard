@@ -1,6 +1,22 @@
 # Draft Handoff — 2026-08-20
 
-**2026-08-20 (latest): C36 geometry-breach + Bomber wall-only verb — Sim layer landed on master,
+**2026-08-20 (latest): Atmosphere's "storm rolling in" transition merged to master (`ecf0093`).**
+Picked up the `STORM_TRANSITION_AGENT_BRIEF.md` brief from a fresh `feat/storm-transition` worktree
+(correctly forked off current `master`, not the stale `feat/atmosphere-stylized`, exactly as the brief
+asked). Fair/Storm weather modules now slide in over 1.1s (ease-out quad) via a rigid translation of the
+finished module back to origin, instead of popping in instantly — placement itself untouched, so the
+locked Zap-to-cloud-shelf glue (`b62b48a`) stays intact. Real course-correction along the way: a first
+scale-based version broke an existing test because Zap `ConeVolume.shape.length` is a raw local number,
+not scale-adjusted, so it desynced from the shrunk live CloudBank bounds; switched to translation, which
+has no such gap since every position *relative to* CloudBank stays correct at every instant of the
+slide. `ClearWeather`'s existing `StopAllCoroutines()` clears any in-flight transition before the next
+module builds, so PLAYBACK_CONTRACT rule 4 (no per-tick restart) holds — covered by a new test that
+scrubs across a mood boundary and rewinds. Also caught and reverted an incidental `.meta` deletion
+(same class of Editor-opens-project noise this session has hit before) before committing — didn't let it
+ride along. Clean merge (zero file overlap with the C36/Bomber work that landed after this branch
+forked); independently re-verified, not just trusted: **EditMode 196/196, PlayMode 67/67.**
+
+**2026-08-20 (earlier): C36 geometry-breach + Bomber wall-only verb — Sim layer landed on master,
 human-directed ("character, GO").** First core-gameplay work since the Phase 2/Net pause began; scoped
 narrowly (Sim primitive only, see below) rather than the whole feature, given the size. Scope check
 first surfaced an inefficiency worth naming: asked the human to confirm three scope questions (wall-only
@@ -160,7 +176,7 @@ post-merge, Editor closed: **EditMode 190/190, PlayMode 63/63** (the +1 is
 Atmosphere stays parked (Sunny mode, blocked on human decision).
 
 **Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (C63/C67 gear carve-out).
-**Integrator tip:** `master` — **C36 geometry-breach + Bomber wall-only verb (Sim layer) landed** (see 2026-08-20 note above), on top of the UI shell-chrome restyle, TPS camera-wiggle fix, Sunny weather mood, camera control-hint UI chrome, dead Bandage/Storm board-tap prune, Storm per-match counter, Healed presenter, and Camera merge. Batchmode-verified independently: EditMode 196/196, PlayMode 66/66. Nothing else in flight off `master` right now.
+**Integrator tip:** `master` @ `ecf0093` — **Atmosphere's storm-rolling-in transition merged** (see 2026-08-20 note above), on top of C36/Bomber wall-only verb (Sim layer), the UI shell-chrome restyle, TPS camera-wiggle fix, Sunny weather mood, camera control-hint UI chrome, dead Bandage/Storm board-tap prune, Storm per-match counter, Healed presenter, and Camera merge. Batchmode-verified independently: EditMode 196/196, PlayMode 67/67. Nothing else in flight off `master` right now.
 **Active wave: this dispatch round is closed.** Match Shell Layout, Map, and Camera are all merged to master. Camera landed via human hands-on iteration during the actual re-test — the human found the control-hint overlay's rotate-only right-drag didn't feel right and iterated on it live: first to a combined pan+rotate gesture (`169a55f`), then further to right-drag doing pitch tilt between top/front view rather than pan (`2e2d022`, `CAMERA_VERTICAL_DRAG_PAN_BRIEF.md`). Integrator re-ran batchmode fresh against each commit as it landed and again on `master` after the merge — every pass green. No paused dept work outstanding.
 Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [`docs/contracts/CURRENT.md`](contracts/CURRENT.md).
 
