@@ -273,6 +273,48 @@ namespace LogiCard.Tests.PlayMode
             yield return null;
         }
 
+        /// <summary>Optional DoD #3 — "storm rolling in" build-in. Re-deriving mood while scrubbing
+        /// (rewind past the mood change, then forward again) must replay the roll-in cleanly: no
+        /// stale coroutine from the interrupted first Storm module left driving the fresh one's
+        /// scale, and no double-fire once it settles.</summary>
+        [UnityTest]
+        public IEnumerator ModuleRollInSettlesAtFullScaleAfterRepeatedRewindAndReplay()
+        {
+            var weather = Object.FindAnyObjectByType<BoardWeatherPocket>();
+            Assert.That(weather, Is.Not.Null);
+
+            weather.ApplyWeather(BoardWeatherMood.Fair);
+            yield return null;
+
+            // Scrub forward into Storm, back to Fair, forward into Storm again — same shape as
+            // RoundPlayback.SyncWeatherToSeconds re-deriving mood while the scrubber moves.
+            weather.ApplyWeather(BoardWeatherMood.Storm);
+            Transform firstStormModule = weather.transform.Find("Weather_Storm");
+            Assert.That(firstStormModule, Is.Not.Null);
+
+            weather.ApplyWeather(BoardWeatherMood.Fair);
+            weather.ApplyWeather(BoardWeatherMood.Storm);
+            Transform module = weather.transform.Find("Weather_Storm");
+            Assert.That(module, Is.Not.Null);
+            Assert.That(module == firstStormModule, Is.False,
+                "Re-entering Storm after leaving it must rebuild a fresh module, not reuse the torn-down one.");
+
+            // Roll-in in progress — starts offset, not an instant pop to its resting position.
+            Assert.That(module.localPosition, Is.Not.EqualTo(Vector3.zero),
+                "Module should start offset and slide in, not appear at rest instantly.");
+
+            yield return new WaitForSeconds(1.5f);
+
+            Assert.That(module.localPosition, Is.EqualTo(Vector3.zero),
+                "Roll-in must settle at the module's resting position and not leave stale/partial transition state.");
+            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Storm));
+
+            // No orphaned coroutine from the interrupted first Storm apply still nudging position.
+            yield return new WaitForSeconds(0.5f);
+            Assert.That(module.localPosition, Is.EqualTo(Vector3.zero),
+                "Position must not change again after settling — would indicate a leftover roll-in coroutine.");
+        }
+
         private static Light FindBootstrapKeyLight()
         {
             Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
