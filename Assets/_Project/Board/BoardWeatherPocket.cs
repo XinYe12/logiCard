@@ -199,6 +199,7 @@ namespace LogiCard.Board
             }
 
             PlaceLightning(width, depth);
+            PlayModuleRollIn(_moduleRoot, width);
             RefreshWeatherToggleLabel();
         }
 
@@ -249,6 +250,60 @@ namespace LogiCard.Board
         }
 
         private Transform ModuleParent => _moduleRoot != null ? _moduleRoot : transform;
+
+        /// <summary>"Storm rolling in" build-in (optional DoD #3). Purely a post-build presentation
+        /// layer: all placement above already ran at the module's true local origin, so every
+        /// world-space measurement taken during placement (cloud envelope bounds, lightning
+        /// glue-to-CloudBank height — <c>b62b48a</c>) is already locked in. This only offsets the
+        /// finished <paramref name="module"/> transform and slides it back to origin — a rigid
+        /// translation moves clouds/rain/mist/energize/lightning together, so every position
+        /// <b>relative</b> to the CloudBank (which is all any presenter or test reads) stays exactly
+        /// what it was computed to be at every instant of the slide, not just once it settles. An
+        /// earlier scale-based version broke this: shrinking the module left Zap ConeVolume
+        /// <c>shape.length</c> (a raw local number, not adjusted by parent scale) mismatched against
+        /// the now-shrunk live CloudBank bounds a test measures synchronously. Translation has no such
+        /// gap. One coroutine per real <see cref="ApplyWeather"/> call: same-mood calls early-out
+        /// before reaching here, and <see cref="ClearWeather"/> always <c>StopAllCoroutines</c>es
+        /// before the next module is built, so a mood change mid-transition cleanly replaces it — no
+        /// stacking, no stale offset left behind (PLAYBACK_CONTRACT §2 rule 4 — no per-tick restart,
+        /// and scrub back/forward must replay consistently).</summary>
+        private const float ModuleRollInDurationSeconds = 1.1f;
+        /// <summary>Horizontal start offset as a fraction of board width — clouds arrive from off
+        /// the sky pocket's edge rather than materializing centered.</summary>
+        private const float ModuleRollInHorizontalFactor = 0.85f;
+        private const float ModuleRollInDropUnits = 2.2f;
+
+        private void PlayModuleRollIn(Transform module, float width)
+        {
+            if (module == null)
+            {
+                return;
+            }
+
+            var startOffset = new Vector3(width * ModuleRollInHorizontalFactor, -ModuleRollInDropUnits, 0f);
+            module.localPosition = startOffset;
+            StartCoroutine(ModuleRollInCoroutine(module, startOffset));
+        }
+
+        private IEnumerator ModuleRollInCoroutine(Transform module, Vector3 startOffset)
+        {
+            float elapsed = 0f;
+            while (elapsed < ModuleRollInDurationSeconds)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / ModuleRollInDurationSeconds);
+                float eased = 1f - (1f - t) * (1f - t); // ease-out quad — fast gather, soft settle
+                if (module == null)
+                {
+                    yield break;
+                }
+
+                module.localPosition = Vector3.Lerp(startOffset, Vector3.zero, eased);
+                yield return null;
+            }
+
+            module.localPosition = Vector3.zero;
+        }
 
         /// <summary>
         /// Cloud height — contained shelf over the chunk. 1.7 kept after human height notes
