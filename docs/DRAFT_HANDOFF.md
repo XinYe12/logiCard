@@ -1,4 +1,34 @@
-# Draft Handoff — 2026-08-18
+# Draft Handoff — 2026-08-20
+
+**2026-08-20: Atmosphere's Sunny weather mood merged to master (`0857b80`).** Human called Sunny "ok to
+merge" after a Play look at the `feat/atmosphere-stylized` worktree. `BoardWeatherMood.Sunny` lands as a
+third mood alongside Fair/Storm, sharing a new lighting-override subsystem
+(`CaptureLightingBaseline`/`RestoreLightingIfOverridden`) with Storm's dim. **Boot default deliberately
+stays Fair** — that was a specific C67 design call (Storm card needs something to visibly change on
+cast), not something this merge should silently override; Sunny is reachable via `ApplyWeather`/
+`ToggleSunnyStorm`. Real engineering finding along the way: git's automatic 3-way merge produced two
+separate cases of silent corruption — a call to a method that no longer exists in
+`BoardWeatherPocket.cs` (master and the branch had each independently rewritten the same lighting-restore
+system under different names; the line-based merge spliced a call from the wrong side into the wrong
+function, *outside* any marked conflict) and literal leftover conflict markers baked into
+`Assets/ExplosiveLLC.meta`'s content after a rename/rename conflict. Both caught by hand-verifying the
+merge result against each branch's clean version rather than trusting `git merge`'s silent regions —
+worth remembering for any future merge of a long-diverged branch. Dropped the branch's stray
+`Assets/_Recovery` scene (junk); resolved a root-level `MATCH_SHELL_LAYOUT_AGENT_BRIEF.md` naming
+collision by relocating the branch's differently-scoped brief into `docs/departments/atmosphere/`.
+Batchmode-verified fresh, Editor closed: **EditMode 190/190, PlayMode 65/65.**
+
+**2026-08-19: dispatched a UI shell-chrome restyle** (Character Select, Play/Confirm buttons, Boot/
+Lobby/Map Select/Match End — explicitly not the in-match HUD) after the human called the current look
+"totally unacceptable." Drew from the human's collected `docs/UI_CHROME_COLLECTION.md`/`docs/ui-collection/`
+resources (Uiverse card/button references, CC0 Iomanoid display font, clay-icon style lock). Landed on
+its own worktree (`logiCard-ui-restyle`, branch `worktree-agent-a035c5b8c7a5428af`), **not yet merged to
+master** — human is reviewing live in the Editor before that call. New `UiFactory.CreateShell*` helper
+family + `ShellButton.cs`; new `docs/ui/UI_SHELL_CHROME.md` chrome contract (pointed to from root
+`CLAUDE.md`). Caught a real bug via its own screenshot harness that every batchmode test missed
+(Character Select rendered completely empty — a sibling-ordering bug buried content behind the new
+backdrop). Batchmode on that worktree: EditMode 190/190, PlayMode 64/64 (independently re-verified, not
+just self-reported).
 
 **2026-08-18 (last item on the backlog): camera control-hint moved off IMGUI onto real UI chrome.**
 `BoardCameraRig.OnGUI()` (the always-on IMGUI legend, a deliberate stopgap since 2026-08-16 per its own
@@ -75,7 +105,7 @@ post-merge, Editor closed: **EditMode 190/190, PlayMode 63/63** (the +1 is
 Atmosphere stays parked (Sunny mode, blocked on human decision).
 
 **Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (C63/C67 gear carve-out).
-**Integrator tip:** `master` — **camera control-hint moved to real UI chrome** (see 2026-08-18 notes above, this is the last backlog item), on top of dead Bandage/Storm board-tap prune, Storm per-match counter `6d17776`, Healed presenter `c81aa3e`, and Camera merge `e594c51`. Batchmode-verified independently on master post-commit (EditMode 190/190, PlayMode 62/62). **Not yet Play-verified** — see "Still unfinished."
+**Integrator tip:** `master` @ `0857b80` — **Atmosphere's Sunny weather mood merged** (see 2026-08-20 note above), on top of camera control-hint UI chrome, dead Bandage/Storm board-tap prune, Storm per-match counter, Healed presenter, and Camera merge. Batchmode-verified independently on master post-merge: EditMode 190/190, PlayMode 65/65. **In flight, not yet on master:** UI shell-chrome restyle, sitting on `logiCard-ui-restyle` pending human review.
 **Active wave: this dispatch round is closed.** Match Shell Layout, Map, and Camera are all merged to master. Camera landed via human hands-on iteration during the actual re-test — the human found the control-hint overlay's rotate-only right-drag didn't feel right and iterated on it live: first to a combined pan+rotate gesture (`169a55f`), then further to right-drag doing pitch tilt between top/front view rather than pan (`2e2d022`, `CAMERA_VERTICAL_DRAG_PAN_BRIEF.md`). Integrator re-ran batchmode fresh against each commit as it landed and again on `master` after the merge — every pass green. No paused dept work outstanding.
 Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [`docs/contracts/CURRENT.md`](contracts/CURRENT.md).
 
@@ -98,7 +128,8 @@ Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [
 |------|--------|-------------|
 | Integrator | `logiCard` | `master` @ `bb6fcdf` — everything through the 2026-08-18 restaffing pass merged, batchmode-verified (see Verification) |
 | **UI** | `logiCard-modal-restyle` | `feat/modal-restyle` @ `e1c80fb` — fully merged to master; worktree can resync/idle |
-| Atmosphere | `logiCard-atmosphere-stylized` | Docs contribution merged; worktree still carries its own uncommitted Sunny-mood code + stray `Assets/_Recovery` scene — **not** merged, stays parked per human decision; branch pushed to origin for safekeeping |
+| Atmosphere | `logiCard-atmosphere-stylized` | **Sunny weather mood merged to master** (`0857b80`, 2026-08-20) — stray `Assets/_Recovery` scene dropped, not carried over; worktree idle |
+| **UI (restyle)** | `logiCard-ui-restyle` | `worktree-agent-a035c5b8c7a5428af` — shell-chrome restyle (Character Select/buttons/lobby), **not yet merged**, pending human Editor review |
 | Cards | `logiCard-cards-collection` | **Rebased + fully reconciled onto master** (`47baf50`, 2026-08-18); worktree idle |
 | Character | `logiCard-char-select-motion` | **Carousel feature rebased + merged to master** (`9472783`, 2026-08-18); UI dept now owns this code going forward, not Character; worktree idle |
 | Map | `logiCard-map` | **Fully merged to master** (`07501d7`) — fence-shadow fix + Hall/Vault material tweaks; worktree idle |
