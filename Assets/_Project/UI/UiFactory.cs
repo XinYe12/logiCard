@@ -12,12 +12,38 @@ namespace LogiCard.UI
     {
         public Font Font { get; }
 
+        /// <summary>
+        /// Display/headline face — Iomanoid (CC0, Raymond Larabie), see
+        /// <c>Assets/_Project/Art/UI/THIRD_PARTY.md</c>. Falls back to <see cref="Font"/> if the
+        /// Resources import is missing, so a broken/absent font asset degrades to plain type instead
+        /// of throwing during HUD construction.
+        /// Body copy deliberately stays on <see cref="Font"/> — Iomanoid is a wide display face and is
+        /// not legible at paragraph sizes.
+        /// </summary>
+        public Font Display { get; }
+
+        private const string DisplayFontResource = "Fonts/Iomanoid";
+        private static Font _displayFontCache;
+        private static bool _displayFontProbed;
+
         public UiFactory(Font font)
         {
             _font = font != null
                 ? font
                 : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             Font = _font;
+            Display = LoadDisplayFont() ?? _font;
+        }
+
+        private static Font LoadDisplayFont()
+        {
+            if (!_displayFontProbed)
+            {
+                _displayFontProbed = true;
+                _displayFontCache = Resources.Load<Font>(DisplayFontResource);
+            }
+
+            return _displayFontCache;
         }
 
         private readonly Font _font;
@@ -84,6 +110,195 @@ namespace LogiCard.UI
             lip.GetComponent<Image>().raycastTarget = false;
 
             return faceRect;
+        }
+
+        // ------------------------------------------------------------------------------------------
+        // Shell chrome (SHELL_CHROME restyle, 2026-08-18) — see docs/ui/UI_SHELL_CHROME.md.
+        // These are for the non-HUD shell (Boot / Character Select / Map Select / Lobby / Match End).
+        // The in-match HUD keeps CreateBackingPanel + CreateButton; do not swap it onto these.
+        // ------------------------------------------------------------------------------------------
+
+        /// <summary>
+        /// How many sibling layers <see cref="CreateShellBackdrop"/> occupies at the head of a screen's
+        /// child list. Anything that re-orders itself with <c>SetSiblingIndex</c> afterwards must offset
+        /// by this or it will be painted over by the backdrop — that is exactly how the Character Select
+        /// carousel briefly vanished during the 2026-08-18 chrome pass (<c>SetAsFirstSibling</c> put the
+        /// ghost headline and the card stage *behind* the void layer).
+        /// </summary>
+        public const int ShellBackdropLayerCount = 4;
+
+        /// <summary>
+        /// Paints a shell screen's ground: warm void, a stretched radial light pool, a tiled paper
+        /// mottle, and an edge vignette — four raycast-transparent layers inserted at the bottom of
+        /// <paramref name="parent"/>. Replaces the old "fill the whole screen with one flat Color"
+        /// approach, which is exactly what read as programmer art.
+        /// Returns the light-pool <see cref="Image"/> so a screen can re-tint its mood at runtime
+        /// (Character Select lerps it across the archetype crossfade).
+        /// </summary>
+        public Image CreateShellBackdrop(RectTransform parent, Color glowTint)
+        {
+            RectTransform baseLayer = CreatePanel(parent, "BackdropVoid", UiStyle.ShellVoid, Vector2.zero, Vector2.one);
+            baseLayer.GetComponent<Image>().raycastTarget = false;
+
+            // Oversized so the falloff's outer ring lands off-screen and the pool reads as light,
+            // not as a visible ellipse pasted on the page.
+            RectTransform glow = CreatePanel(parent, "BackdropGlow", glowTint, Vector2.zero, Vector2.one, UiStyle.RadialSprite);
+            glow.offsetMin = new Vector2(-360f, -300f);
+            glow.offsetMax = new Vector2(360f, 300f);
+            Image glowImage = glow.GetComponent<Image>();
+            glowImage.raycastTarget = false;
+
+            RectTransform grain = CreatePanel(parent, "BackdropGrain", UiStyle.ShellGrain, Vector2.zero, Vector2.one,
+                UiStyle.GrainSprite, Image.Type.Tiled);
+            grain.GetComponent<Image>().raycastTarget = false;
+
+            RectTransform vignette = CreatePanel(parent, "BackdropVignette", UiStyle.ShellVignette, Vector2.zero, Vector2.one,
+                UiStyle.VignetteSprite);
+            vignette.GetComponent<Image>().raycastTarget = false;
+
+            baseLayer.SetSiblingIndex(0);
+            glow.SetSiblingIndex(1);
+            grain.SetSiblingIndex(2);
+            vignette.SetSiblingIndex(3);
+            return glowImage;
+        }
+
+        /// <summary>
+        /// Headline in the display face with a hard warm offset shadow. The shadow is a uGUI
+        /// <see cref="Shadow"/> component rather than a second <see cref="Text"/> object on purpose —
+        /// several shell headlines (Match End, Round Result) have their text reassigned at runtime, and
+        /// a duplicated Text would silently desync.
+        /// </summary>
+        public Text CreateHeadline(
+            RectTransform parent,
+            string name,
+            string content,
+            int size,
+            Color ink,
+            UiTextOverflow overflow = UiTextOverflow.SingleLine,
+            float shadowDistance = 4f)
+        {
+            Text text = CreateText(parent, name, content, size, TextAnchor.MiddleCenter, ink, overflow);
+            text.font = Display;
+            text.raycastTarget = false;
+
+            var shadow = text.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = UiStyle.ShellTitleShadow;
+            shadow.effectDistance = new Vector2(shadowDistance, -shadowDistance);
+            return text;
+        }
+
+        /// <summary>Short accent rule used to sit a headline on something instead of floating it.</summary>
+        public RectTransform CreateRule(RectTransform parent, string name, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            RectTransform rule = CreatePanel(parent, name, UiStyle.ShellRule, anchorMin, anchorMax,
+                UiStyle.PillSprite, Image.Type.Sliced);
+            rule.GetComponent<Image>().raycastTarget = false;
+            return rule;
+        }
+
+        /// <summary>
+        /// Parchment card for shell copy — the same layered lift/contact/inset-lip stack the HUD dock
+        /// panels use, retinted to the Modal* cardstock family that <see cref="ModalDialog"/> already
+        /// ships. Returns the face; parent content under it.
+        /// </summary>
+        public RectTransform CreateShellPlate(RectTransform parent, string name, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            return CreateBackingPanel(parent, name, anchorMin, anchorMax, 0f, 0f,
+                UiStyle.ModalCard, UiStyle.ModalCardBorder, UiStyle.ModalShadow, UiStyle.ModalCardInsetLip);
+        }
+
+        /// <summary>Warm dark counterpart to <see cref="CreateShellPlate"/> for panels that must not be paper.</summary>
+        public RectTransform CreateShellSlate(RectTransform parent, string name, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            return CreateBackingPanel(parent, name, anchorMin, anchorMax, 0f, 0f,
+                UiStyle.ShellSlateFace, UiStyle.ShellSlateBorder, UiStyle.ModalShadow, UiStyle.DockPanelInsetLip);
+        }
+
+        /// <summary>
+        /// Chunky "toy" button: contact shadow, a riser giving the button visible thickness, and a face
+        /// that drops into that shadow when pressed (<see cref="ShellButton"/>). Ported from
+        /// docs/ui-collection/button-gradient-pill.css (Uiverse.io by Codecite, MIT).
+        ///
+        /// The <see cref="Button"/> lives on the returned object named <paramref name="name"/> and owns
+        /// the placement rect, so existing <c>FindByName&lt;Button&gt;(...)</c> lookups and
+        /// <c>Stretch(button.GetComponent&lt;RectTransform&gt;(), ...)</c> call sites keep working
+        /// unchanged. Selectable transition is None — <see cref="ShellButton"/> owns hover/press so the
+        /// default colour-tint multiply does not fight the face colour.
+        /// </summary>
+        public Button CreateShellButton(
+            RectTransform parent,
+            string name,
+            string label,
+            ShellButtonTone tone,
+            int fontSize,
+            UnityAction onClick,
+            float riser = UiStyle.ShellButtonRiser)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button), typeof(ShellButton));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(parent, false);
+
+            // Transparent hit plate: one raycast target for the whole control, so hover/press never
+            // flickers as the pointer crosses between riser and face.
+            var hit = go.GetComponent<Image>();
+            hit.color = new Color(0f, 0f, 0f, 0f);
+            hit.raycastTarget = true;
+
+            RectTransform shadow = CreatePanel(rt, "Shadow", UiStyle.ShellButtonShadow, Vector2.zero, Vector2.one,
+                UiStyle.PillSprite, Image.Type.Sliced);
+            shadow.offsetMin = new Vector2(2f, -(riser + 3f));
+            shadow.offsetMax = new Vector2(-2f, -(riser + 3f));
+            Image shadowImage = shadow.GetComponent<Image>();
+            shadowImage.raycastTarget = false;
+
+            var bodyGo = new GameObject("Body", typeof(RectTransform));
+            var body = bodyGo.GetComponent<RectTransform>();
+            body.SetParent(rt, false);
+            Stretch(body, Vector2.zero, Vector2.one);
+
+            RectTransform riserRect = CreatePanel(body, "Riser", UiStyle.ShellPrimaryRiser, Vector2.zero, Vector2.one,
+                UiStyle.PillSprite, Image.Type.Sliced);
+            Image riserImage = riserRect.GetComponent<Image>();
+            riserImage.raycastTarget = false;
+
+            RectTransform face = CreatePanel(body, "Face", UiStyle.ShellPrimaryFace, Vector2.zero, Vector2.one,
+                UiStyle.PillSprite, Image.Type.Sliced);
+            face.offsetMin = new Vector2(0f, riser);
+            Image faceImage = face.GetComponent<Image>();
+            faceImage.raycastTarget = false;
+
+            // Lit top rim. The whole shell is lit from above (see CreateShellBackdrop); without this a
+            // face is a single flat colour and reads as a coloured rectangle no matter how good the
+            // shadow under it is.
+            RectTransform highlight = CreatePanel(face, "FaceHighlight", new Color(1f, 1f, 1f, 0.16f),
+                new Vector2(0f, 1f), Vector2.one, UiStyle.PillSprite, Image.Type.Sliced);
+            highlight.offsetMin = new Vector2(6f, -7f);
+            highlight.offsetMax = new Vector2(-6f, -2f);
+            highlight.GetComponent<Image>().raycastTarget = false;
+
+            // Body face, bold — deliberately NOT Display. Iomanoid is an outlined art-deco display face:
+            // beautiful at 50pt+ headline sizes, but at a 22–36pt button label its strokes go thin and
+            // low-contrast against a saturated face colour. Headlines get the character, controls get
+            // read at a glance.
+            Text text = CreateText(face, "Label", label, fontSize, TextAnchor.MiddleCenter, UiStyle.ShellPrimaryText,
+                UiTextOverflow.Button);
+            text.fontStyle = FontStyle.Bold;
+            text.raycastTarget = false;
+            Stretch(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(10f, 0f), new Vector2(-10f, 0f));
+
+            var button = go.GetComponent<Button>();
+            button.targetGraphic = hit;
+            button.transition = Selectable.Transition.None;
+            if (onClick != null)
+            {
+                button.onClick.AddListener(onClick);
+            }
+
+            var shell = go.GetComponent<ShellButton>();
+            shell.Bind(body, faceImage, riserImage, shadowImage, text, riser);
+            shell.ApplyTone(tone);
+            return button;
         }
 
         public Text CreateText(

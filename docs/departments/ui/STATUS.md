@@ -1,5 +1,51 @@
 # UI — STATUS
 
+## Done — Shell Chrome restyle (2026-08-18) — **Ready for Integrator/human review**
+
+**Worktree:** `.claude/worktrees/agent-a035c5b8c7a5428af` (not pushed, not merged).
+**Doc:** `docs/ui/UI_SHELL_CHROME.md` (new; pointer added to root `CLAUDE.md` — Integrator please
+sanity-check that one root-file edit, it is the only file outside this seat's mandate).
+**Trigger:** human called the shell "totally unacceptable", specifically Character Select — flat muddy
+brown fill, plain rectangles, generic orange rectangle CTA.
+
+Visual chrome only, matching the Match Shell Layout wave's discipline: no screen added/removed, no
+button behaviour changed, no gameplay. In-match HUD (`ProgramHud`, `GearHandView`) untouched.
+
+- **Screens are lit backdrops, not colour fills.** New `UiFactory.CreateShellBackdrop` = warm void +
+  stretched radial light pool + tiled paper mottle + edge vignette. `CharSelectBg*` tokens repurposed
+  from "the flat colour of the whole page" into "the tint of that screen's light pool".
+- **New shell chrome API on `UiFactory`:** `CreateShellButton` (chunky riser + face + contact shadow,
+  three tones, with `ShellButton.cs` driving the press-into-shadow motion), `CreateHeadline`,
+  `CreateRule`, `CreateShellPlate`, `CreateShellSlate`. New procedural sprites on `UiStyle`:
+  `PillSprite`, `RadialSprite`, `VignetteSprite`, `GrainSprite`.
+- **Iomanoid imported** (CC0, collection bucket 6 → `Resources/Fonts/Iomanoid`) as the display face for
+  headlines/monograms only; body + button labels stay on `LegacyRuntime.ttf`. Provenance recorded in
+  `Assets/_Project/Art/UI/THIRD_PARTY.md`. **This closes bucket 6's "confirm Iomanoid for titles" —
+  bucket 6 remains open for a body/companion face.**
+- **Character Select rebuilt:** lit backdrop that lerps per archetype, display headline + accent rule,
+  cards with contact shadow / emblem well + monogram / dark name plate / red role caption, Prev-Next on
+  the shared button family, detail copy on a parchment plate.
+- **Map Select / Lobby / Boot / Round Result / Match End / Waiting-Reveal** all rebuilt on the same
+  family. `SelectionGrid` options are now `ShellButton`s; selection is a tone swap, not an `Image`
+  recolour. `ModalDialog` divider nudged off the buttons it was drawing through.
+- **Screenshot harness added** — `Assets/_Project/Tests/PlayMode/ShellChromeScreenshotTests.cs`, no-op
+  unless `LOGICARD_SHOT_DIR` is set. Nine 1920×1080 captures of the full click-through. **Extend it when
+  you add a shell screen.**
+- **Verified:** EditMode 190/190, PlayMode 64/64 (63 prior + the gated harness). Nine screenshots taken
+  and inspected; two rounds of visual fixes came out of that — including a bug where the entire
+  Character Select carousel rendered *behind* the backdrop and the screen came up empty **while every
+  batchmode test still passed**. That is the concrete case for the harness.
+- **Element names preserved** — no PlayMode `FindByName` lookup changed; test files untouched apart from
+  the new harness.
+
+**Open / handed forward:** archetype cards want real portrait art in the emblem well (monogram is a
+placeholder); collection bucket 8 (lobby/shell *layout* refs) still thin — this pass built from the
+material language, not from reference screens, so layout specifically is worth a human eye. If approved,
+`UI_CHROME_COLLECTION.md` can promote `normal-card` + `button-gradient-pill` to the locked default
+family and this becomes a `PRODUCT_MEMORY` row.
+
+---
+
 **Wave / Day:** Match Shell Layout (2026-08-15, `MATCH_SHELL_LAYOUT_AGENT_BRIEF.md` /
 `docs/ui/MATCH_SHELL_LAYOUT.md`) — **Ready for Integrator/human review**; supersedes the HUD Chrome
 Ship Pass below (that chrome pass is not merging alone — this layout absorbs it, per the brief).

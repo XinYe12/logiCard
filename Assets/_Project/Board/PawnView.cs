@@ -30,7 +30,19 @@ namespace LogiCard.Board
         /// assumed and must be normalized per-import. Roughly matches the old primitive pawns' overall
         /// height (BodyHeight torso + head) so the board's camera framing doesn't need retuning.
         /// </summary>
-        private const float TargetVisualHeight = 1.0f;
+        public const float TargetVisualHeight = 1.0f;
+
+        /// <summary>
+        /// The team tints a match actually spawns its two pawns with (<c>GameBootstrap.BuildPawns</c>).
+        /// They live here, on the lowest assembly both the composition root and the UI can see, so
+        /// Character Select's 3D card preview tints its figures with the *same* colors the board will —
+        /// a preview in a different colour than the pawn you get is the same class of lie as a preview
+        /// of a different mesh.
+        /// </summary>
+        public static readonly Color AttackerTint = new Color(0.90f, 0.35f, 0.28f);
+
+        /// <inheritdoc cref="AttackerTint"/>
+        public static readonly Color DefenderTint = new Color(0.32f, 0.58f, 0.86f);
 
         private BoardView _board;
         private Transform _visual;
@@ -46,8 +58,7 @@ namespace LogiCard.Board
             visual.transform.SetParent(transform, false);
             _visual = visual.transform;
 
-            string resourcePath = build == PawnBuild.Juggernaut ? "Juggernaut/Juggernaut" : "Scout/Scout";
-            if (!TryBuildImported(_visual, resourcePath, color))
+            if (TryInstantiateArchetypeVisual(_visual, build, color) == null)
             {
                 // Fallback while an archetype's imported CC0 mesh isn't landed yet (staged rollout,
                 // docs/PAWN_ART_REWORK_PLAN.md's verification loop) — never leaves a pawn invisible.
@@ -75,20 +86,33 @@ namespace LogiCard.Board
         private const string TintedPartNameMarker = "Body";
 
         /// <summary>
-        /// Loads an archetype's imported CC0 mesh (docs/PAWN_ART_REWORK_PLAN.md) from
-        /// <c>Resources/&lt;resourcePath&gt;.prefab</c> and instantiates it under <paramref name="parent"/>,
-        /// rescaled to <see cref="TargetVisualHeight"/> and tinted with the team color on its torso part
-        /// only (<see cref="TintedPartNameMarker"/>). Returns false (no side effects) if that archetype
-        /// hasn't been imported yet, so callers can fall back to the primitive assembly. Doesn't mutate
-        /// the prefab's material asset — team tint goes through a per-renderer
-        /// <see cref="MaterialPropertyBlock"/> instead (plan step 4).
+        /// <c>Resources</c> path of an archetype's imported CC0 mesh prefab
+        /// (docs/PAWN_ART_REWORK_PLAN.md). Single source of truth: the Character Select 3D preview
+        /// (<c>LogiCard.UI.CharacterPreviewRig</c>) shows the *same* prefab a match spawns, so what the
+        /// player picks is honestly what they get on the board.
         /// </summary>
-        private static bool TryBuildImported(Transform parent, string resourcePath, Color color)
+        public static string ResourcePathFor(PawnBuild build) =>
+            build == PawnBuild.Juggernaut ? "Juggernaut/Juggernaut" : "Scout/Scout";
+
+        /// <summary>
+        /// Loads an archetype's imported CC0 mesh (docs/PAWN_ART_REWORK_PLAN.md) from
+        /// <c>Resources/</c> (see <see cref="ResourcePathFor"/>) and instantiates it under
+        /// <paramref name="parent"/>, rescaled to <see cref="TargetVisualHeight"/> and tinted with the
+        /// team color on its torso part only (<see cref="TintedPartNameMarker"/>). Returns
+        /// <c>null</c> (no side effects) if that archetype hasn't been imported yet, so callers can fall
+        /// back to the primitive assembly. Doesn't mutate the prefab's material asset — team tint goes
+        /// through a per-renderer <see cref="MaterialPropertyBlock"/> instead (plan step 4).
+        ///
+        /// Public because Character Select's live 3D card preview instantiates the identical figure;
+        /// keep every archetype-mesh instantiation on this one path rather than re-deriving the
+        /// load/normalize/tint sequence per call site.
+        /// </summary>
+        public static GameObject TryInstantiateArchetypeVisual(Transform parent, PawnBuild build, Color color)
         {
-            var prefab = Resources.Load<GameObject>(resourcePath);
+            var prefab = Resources.Load<GameObject>(ResourcePathFor(build));
             if (prefab == null)
             {
-                return false;
+                return null;
             }
 
             GameObject instance = Object.Instantiate(prefab, parent, false);
@@ -98,7 +122,7 @@ namespace LogiCard.Board
             if (renderers.Length == 0)
             {
                 Object.Destroy(instance);
-                return false;
+                return null;
             }
 
             Bounds bounds = renderers[0].bounds;
@@ -126,7 +150,7 @@ namespace LogiCard.Board
                 renderer.SetPropertyBlock(block);
             }
 
-            return true;
+            return instance;
         }
 
         /// <summary>

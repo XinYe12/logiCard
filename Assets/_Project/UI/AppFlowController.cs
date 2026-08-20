@@ -78,7 +78,7 @@ namespace LogiCard.UI
         public void Init(RectTransform canvasRoot, Font font)
         {
             _ui = new UiFactory(font);
-            _root = _ui.CreatePanel(canvasRoot, "AppFlow", UiStyle.PanelDark, Vector2.zero, Vector2.one);
+            _root = _ui.CreatePanel(canvasRoot, "AppFlow", UiStyle.ShellVoid, Vector2.zero, Vector2.one);
             _root.SetAsLastSibling();
 
             _boot = BuildBoot();
@@ -175,33 +175,40 @@ namespace LogiCard.UI
 
         private GameObject BuildBoot()
         {
-            GameObject screen = CreateScreen("BootTitle");
+            GameObject screen = CreateScreen("BootTitle", UiStyle.ShellGlowDefault);
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            Text title = _ui.CreateText(rt, "Title", "logiCard", 72, TextAnchor.MiddleCenter, UiStyle.Accent);
-            UiFactory.Stretch(title.rectTransform, new Vector2(0.1f, 0.55f), new Vector2(0.9f, 0.8f));
+            Text title = _ui.CreateHeadline(rt, "Title", "logiCard", 104, UiStyle.ShellTitleInk,
+                UiTextOverflow.SingleLine, shadowDistance: 6f);
+            UiFactory.Stretch(title.rectTransform, new Vector2(0.08f, 0.58f), new Vector2(0.92f, 0.80f));
 
-            Text tag = _ui.CreateText(rt, "Tag", "Landscape desktop tactics — programmed movement", 28,
-                TextAnchor.MiddleCenter, UiStyle.Ink);
-            UiFactory.Stretch(tag.rectTransform, new Vector2(0.15f, 0.42f), new Vector2(0.85f, 0.55f));
+            _ui.CreateRule(rt, "TitleRule", new Vector2(0.44f, 0.552f), new Vector2(0.56f, 0.562f));
 
-            Button play = _ui.CreateButton(rt, "TitlePlayButton", "PLAY", UiStyle.Accent, UiStyle.InkDark, 40,
-                () => Show(Screen.CharacterSelect));
-            UiFactory.Stretch(play.GetComponent<RectTransform>(), new Vector2(0.35f, 0.22f), new Vector2(0.65f, 0.36f));
+            Text tag = _ui.CreateText(rt, "Tag", "LANDSCAPE DESKTOP TACTICS  ·  PROGRAMMED MOVEMENT", 22,
+                TextAnchor.MiddleCenter, UiStyle.ShellBodyInk, UiTextOverflow.SingleLine);
+            UiFactory.Stretch(tag.rectTransform, new Vector2(0.1f, 0.47f), new Vector2(0.9f, 0.535f));
+
+            Button play = _ui.CreateShellButton(rt, "TitlePlayButton", "PLAY", ShellButtonTone.Primary, 36,
+                () => Show(Screen.CharacterSelect), riser: 10f);
+            UiFactory.Stretch(play.GetComponent<RectTransform>(), new Vector2(0.39f, 0.235f), new Vector2(0.61f, 0.35f));
+
+            Text footer = _ui.CreateText(rt, "BootFooter", "PROTOTYPE BUILD", 16, TextAnchor.MiddleCenter,
+                UiStyle.ShellMutedInk, UiTextOverflow.SingleLine);
+            UiFactory.Stretch(footer.rectTransform, new Vector2(0.1f, 0.06f), new Vector2(0.9f, 0.11f));
             return screen;
         }
 
         private GameObject BuildCharacterSelect()
         {
-            GameObject screen = CreateScreen("CharacterSelect");
+            GameObject screen = CreateScreen("CharacterSelect", UiStyle.CharSelectBgScout);
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            _characterSelectView = CharacterSelectView.Build(_ui, rt);
+            _characterSelectView = CharacterSelectView.Build(_ui, rt, FindBackdropGlow(rt));
             _characterSelectView.SelectionChanged += OnCharacterSelectionChanged;
 
-            Button confirm = _ui.CreateButton(rt, "ConfirmCharacter", "CONFIRM", UiStyle.Accent, UiStyle.InkDark, 32,
+            Button confirm = _ui.CreateShellButton(rt, "ConfirmCharacter", "CONFIRM", ShellButtonTone.Primary, 30,
                 () => Show(Screen.MapSelect));
-            UiFactory.Stretch(confirm.GetComponent<RectTransform>(), new Vector2(0.34f, 0.03f), new Vector2(0.66f, 0.12f));
+            UiFactory.Stretch(confirm.GetComponent<RectTransform>(), new Vector2(0.37f, 0.035f), new Vector2(0.63f, 0.135f));
 
             OnCharacterSelectionChanged(_characterSelectView.SelectedId);
             return screen;
@@ -209,12 +216,13 @@ namespace LogiCard.UI
 
         private GameObject BuildMapSelect()
         {
-            GameObject screen = CreateScreen("MapSelect");
+            GameObject screen = CreateScreen("MapSelect", UiStyle.ShellGlowDefault);
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            Text title = _ui.CreateText(rt, "Title", "MAP SELECT", 44, TextAnchor.MiddleCenter, UiStyle.Accent,
-                UiTextOverflow.SingleLine);
-            UiFactory.Stretch(title.rectTransform, new Vector2(0.1f, 0.84f), new Vector2(0.9f, 0.95f));
+            Text title = _ui.CreateHeadline(rt, "Title", "MAP SELECT", 52, UiStyle.ShellTitleInk);
+            UiFactory.Stretch(title.rectTransform, new Vector2(0.1f, 0.855f), new Vector2(0.9f, 0.955f));
+
+            _ui.CreateRule(rt, "TitleRule", new Vector2(0.46f, 0.833f), new Vector2(0.54f, 0.842f));
 
             _mapGrid = SelectionGrid.Build(
                 _ui,
@@ -225,22 +233,25 @@ namespace LogiCard.UI
                     new SelectionOption(MapId.RailPlatform.ToString(), "RAIL PLATFORM"),
                     new SelectionOption(MapId.VaultComplex.ToString(), "VAULT COMPLEX"),
                 },
-                new Vector2(0.14f, 0.50f),
-                new Vector2(0.86f, 0.78f),
+                new Vector2(0.12f, 0.48f),
+                new Vector2(0.88f, 0.78f),
                 columns: 3,
-                fontSize: 28);
+                fontSize: 26);
             _mapGrid.SelectionChanged += OnMapSelectionChanged;
 
-            _mapDetail = _ui.CreateText(rt, "MapDetail", string.Empty, 22, TextAnchor.MiddleCenter, UiStyle.Ink);
-            UiFactory.Stretch(_mapDetail.rectTransform, new Vector2(0.12f, 0.30f), new Vector2(0.88f, 0.46f));
+            RectTransform detailPlate = _ui.CreateShellPlate(rt, "MapDetailPlate",
+                new Vector2(0.17f, 0.28f), new Vector2(0.83f, 0.42f));
+            _mapDetail = _ui.CreateText(detailPlate, "MapDetail", string.Empty, 22, TextAnchor.MiddleCenter,
+                UiStyle.ModalInk);
+            UiFactory.Stretch(_mapDetail.rectTransform, new Vector2(0.05f, 0.12f), new Vector2(0.95f, 0.92f));
 
-            Button confirm = _ui.CreateButton(rt, "ConfirmMap", "CONFIRM", UiStyle.Accent, UiStyle.InkDark, 32,
+            Button confirm = _ui.CreateShellButton(rt, "ConfirmMap", "CONFIRM", ShellButtonTone.Primary, 30,
                 () =>
                 {
                     MapSelected?.Invoke(_selectedMapId);
                     Show(Screen.Lobby);
                 });
-            UiFactory.Stretch(confirm.GetComponent<RectTransform>(), new Vector2(0.34f, 0.10f), new Vector2(0.66f, 0.24f));
+            UiFactory.Stretch(confirm.GetComponent<RectTransform>(), new Vector2(0.38f, 0.085f), new Vector2(0.62f, 0.195f));
 
             OnMapSelectionChanged(_mapGrid.SelectedId);
             return screen;
@@ -248,70 +259,83 @@ namespace LogiCard.UI
 
         private GameObject BuildLobby()
         {
-            GameObject screen = CreateScreen("LobbyFindMatch");
+            GameObject screen = CreateScreen("LobbyFindMatch", UiStyle.ShellGlowLobby);
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            Text title = _ui.CreateText(rt, "Title", "LOBBY", 48, TextAnchor.MiddleCenter, UiStyle.Accent);
-            UiFactory.Stretch(title.rectTransform, new Vector2(0.1f, 0.78f), new Vector2(0.9f, 0.92f));
+            Text title = _ui.CreateHeadline(rt, "Title", "LOBBY", 56, UiStyle.ShellTitleInk);
+            UiFactory.Stretch(title.rectTransform, new Vector2(0.1f, 0.815f), new Vector2(0.9f, 0.93f));
 
-            _lobbyStatus = _ui.CreateText(rt, "LobbyStatus", "1v1 Lobby — Find Match or play Local.", 26,
-                TextAnchor.MiddleCenter, UiStyle.Ink);
-            UiFactory.Stretch(_lobbyStatus.rectTransform, new Vector2(0.1f, 0.58f), new Vector2(0.9f, 0.74f));
+            _ui.CreateRule(rt, "TitleRule", new Vector2(0.46f, 0.792f), new Vector2(0.54f, 0.801f));
 
-            Text roles = _ui.CreateText(rt, "Roles", "Labels: Attacker / Defender (spawn only)", 22,
-                TextAnchor.MiddleCenter, UiStyle.Ink);
-            UiFactory.Stretch(roles.rectTransform, new Vector2(0.1f, 0.48f), new Vector2(0.9f, 0.58f));
+            RectTransform plate = _ui.CreateShellPlate(rt, "LobbyPlate",
+                new Vector2(0.23f, 0.51f), new Vector2(0.77f, 0.73f));
 
-            Button find = _ui.CreateButton(rt, "FindMatchButton", "FIND MATCH", UiStyle.Accent, UiStyle.InkDark, 32,
+            _lobbyStatus = _ui.CreateText(plate, "LobbyStatus", "1v1 Lobby — Find Match or play Local.", 26,
+                TextAnchor.MiddleCenter, UiStyle.ModalInk);
+            UiFactory.Stretch(_lobbyStatus.rectTransform, new Vector2(0.06f, 0.45f), new Vector2(0.94f, 0.9f));
+
+            _ui.CreatePanel(plate, "PlateDivider", UiStyle.ModalDivider,
+                new Vector2(0.2f, 0.4f), new Vector2(0.8f, 0.415f), UiStyle.PillSprite, Image.Type.Sliced);
+
+            Text roles = _ui.CreateText(plate, "Roles", "Attacker / Defender — spawn labels only", 20,
+                TextAnchor.MiddleCenter, UiStyle.ModalInk);
+            UiFactory.Stretch(roles.rectTransform, new Vector2(0.06f, 0.12f), new Vector2(0.94f, 0.37f));
+
+            Button find = _ui.CreateShellButton(rt, "FindMatchButton", "FIND MATCH", ShellButtonTone.Primary, 30,
                 () => StartCoroutine(FindMatchStub()));
-            UiFactory.Stretch(find.GetComponent<RectTransform>(), new Vector2(0.18f, 0.28f), new Vector2(0.48f, 0.42f));
+            UiFactory.Stretch(find.GetComponent<RectTransform>(), new Vector2(0.21f, 0.30f), new Vector2(0.475f, 0.42f));
 
-            Button local = _ui.CreateButton(rt, "LocalPlayButton", "LOCAL PLAY", UiStyle.PanelMid, UiStyle.Ink, 32,
+            Button local = _ui.CreateShellButton(rt, "LocalPlayButton", "LOCAL PLAY", ShellButtonTone.Secondary, 30,
                 () => EnterMatch(viaRelay: false));
-            UiFactory.Stretch(local.GetComponent<RectTransform>(), new Vector2(0.52f, 0.28f), new Vector2(0.82f, 0.42f));
+            UiFactory.Stretch(local.GetComponent<RectTransform>(), new Vector2(0.525f, 0.30f), new Vector2(0.79f, 0.42f));
 
             Text note = _ui.CreateText(rt, "Note",
                 "Find Match connects to a resolve relay on 127.0.0.1:7777 — start one manually for now " +
-                "(real matchmaking is still open, C52). Local stays same-process for testing.", 20,
-                TextAnchor.MiddleCenter, UiStyle.Ink);
-            UiFactory.Stretch(note.rectTransform, new Vector2(0.1f, 0.12f), new Vector2(0.9f, 0.24f));
+                "(real matchmaking is still open, C52). Local stays same-process for testing.", 18,
+                TextAnchor.MiddleCenter, UiStyle.ShellMutedInk);
+            UiFactory.Stretch(note.rectTransform, new Vector2(0.18f, 0.12f), new Vector2(0.82f, 0.25f));
             return screen;
         }
 
         private GameObject BuildRoundResult()
         {
-            GameObject screen = CreateScreen("RoundResult");
+            GameObject screen = CreateScreen("RoundResult", UiStyle.ShellGlowDefault);
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            _roundResultLabel = _ui.CreateText(rt, "RoundResultLabel", "ROUND COMPLETE", 44, TextAnchor.MiddleCenter,
-                UiStyle.Accent);
-            UiFactory.Stretch(_roundResultLabel.rectTransform, new Vector2(0.1f, 0.45f), new Vector2(0.9f, 0.7f));
+            _roundResultLabel = _ui.CreateHeadline(rt, "RoundResultLabel", "ROUND COMPLETE", 52, UiStyle.ShellTitleInk,
+                UiTextOverflow.Body);
+            UiFactory.Stretch(_roundResultLabel.rectTransform, new Vector2(0.1f, 0.48f), new Vector2(0.9f, 0.68f));
 
-            Button cont = _ui.CreateButton(rt, "ContinueButton", "CONTINUE", UiStyle.Accent, UiStyle.InkDark, 34,
+            _ui.CreateRule(rt, "TitleRule", new Vector2(0.455f, 0.455f), new Vector2(0.545f, 0.464f));
+
+            Button cont = _ui.CreateShellButton(rt, "ContinueButton", "CONTINUE", ShellButtonTone.Primary, 32,
                 () => Show(Screen.None));
-            UiFactory.Stretch(cont.GetComponent<RectTransform>(), new Vector2(0.35f, 0.22f), new Vector2(0.65f, 0.36f));
+            UiFactory.Stretch(cont.GetComponent<RectTransform>(), new Vector2(0.385f, 0.25f), new Vector2(0.615f, 0.36f));
             return screen;
         }
 
         private GameObject BuildMatchEnd()
         {
-            GameObject screen = CreateScreen("MatchEnd");
+            GameObject screen = CreateScreen("MatchEnd", UiStyle.ShellGlowVerdict);
             RectTransform rt = screen.GetComponent<RectTransform>();
 
-            _matchEndLabel = _ui.CreateText(rt, "MatchEndLabel", "MATCH OVER", 48, TextAnchor.MiddleCenter, UiStyle.Accent);
-            UiFactory.Stretch(_matchEndLabel.rectTransform, new Vector2(0.1f, 0.55f), new Vector2(0.9f, 0.78f));
+            _matchEndLabel = _ui.CreateHeadline(rt, "MatchEndLabel", "MATCH OVER", 64, UiStyle.ShellTitleInk,
+                UiTextOverflow.Body, shadowDistance: 5f);
+            UiFactory.Stretch(_matchEndLabel.rectTransform, new Vector2(0.08f, 0.55f), new Vector2(0.92f, 0.77f));
 
-            Button rematch = _ui.CreateButton(rt, "RematchButton", "REMATCH", UiStyle.Accent, UiStyle.InkDark, 32,
+            _ui.CreateRule(rt, "TitleRule", new Vector2(0.45f, 0.525f), new Vector2(0.55f, 0.535f));
+
+            Button rematch = _ui.CreateShellButton(rt, "RematchButton", "REMATCH", ShellButtonTone.Primary, 30,
                 () =>
                 {
                     ShowLobby();
                     RematchRequested?.Invoke();
                 });
-            UiFactory.Stretch(rematch.GetComponent<RectTransform>(), new Vector2(0.18f, 0.28f), new Vector2(0.48f, 0.42f));
+            UiFactory.Stretch(rematch.GetComponent<RectTransform>(), new Vector2(0.21f, 0.30f), new Vector2(0.475f, 0.42f));
 
-            Button quit = _ui.CreateButton(rt, "QuitToTitleButton", "QUIT", UiStyle.PanelMid, UiStyle.Ink, 32,
+            Button quit = _ui.CreateShellButton(rt, "QuitToTitleButton", "QUIT", ShellButtonTone.Quiet, 30,
                 ConfirmQuitToTitle);
-            UiFactory.Stretch(quit.GetComponent<RectTransform>(), new Vector2(0.52f, 0.28f), new Vector2(0.82f, 0.42f));
+            UiFactory.Stretch(quit.GetComponent<RectTransform>(), new Vector2(0.525f, 0.30f), new Vector2(0.79f, 0.42f));
             return screen;
         }
 
@@ -340,10 +364,11 @@ namespace LogiCard.UI
 
         private GameObject BuildMessageScreen(string name, string message)
         {
-            GameObject screen = CreateScreen(name);
+            GameObject screen = CreateScreen(name, UiStyle.ShellGlowDefault);
             RectTransform rt = screen.GetComponent<RectTransform>();
-            Text label = _ui.CreateText(rt, "Message", message, 52, TextAnchor.MiddleCenter, UiStyle.Accent);
-            UiFactory.Stretch(label.rectTransform, new Vector2(0.1f, 0.35f), new Vector2(0.9f, 0.65f));
+            Text label = _ui.CreateHeadline(rt, "Message", message, 58, UiStyle.ShellTitleInk);
+            UiFactory.Stretch(label.rectTransform, new Vector2(0.1f, 0.44f), new Vector2(0.9f, 0.62f));
+            _ui.CreateRule(rt, "MessageRule", new Vector2(0.455f, 0.415f), new Vector2(0.545f, 0.424f));
             return screen;
         }
 
@@ -403,15 +428,29 @@ namespace LogiCard.UI
             MapSelected?.Invoke(_selectedMapId);
         }
 
-        private GameObject CreateScreen(string name)
+        /// <summary>
+        /// A shell screen is a lit backdrop with objects on it, not a flat colour fill — the screen
+        /// root's own Image is only the input blocker (fully transparent), and
+        /// <see cref="UiFactory.CreateShellBackdrop"/> paints void + light pool + grain + vignette
+        /// underneath everything the screen adds afterwards.
+        /// </summary>
+        private GameObject CreateScreen(string name, Color glowTint)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image));
             var rt = go.GetComponent<RectTransform>();
             rt.SetParent(_root, false);
             UiFactory.Stretch(rt, Vector2.zero, Vector2.one);
-            go.GetComponent<Image>().color = UiStyle.PanelDark;
+            go.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
+            _ui.CreateShellBackdrop(rt, glowTint);
             go.SetActive(false);
             return go;
+        }
+
+        /// <summary>The re-tintable light pool <see cref="UiFactory.CreateShellBackdrop"/> put on a screen.</summary>
+        private static Image FindBackdropGlow(RectTransform screenRoot)
+        {
+            Transform glow = screenRoot.Find("BackdropGlow");
+            return glow != null ? glow.GetComponent<Image>() : null;
         }
 
         private static void SetActive(GameObject go, bool active)

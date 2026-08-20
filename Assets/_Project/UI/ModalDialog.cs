@@ -91,7 +91,9 @@ namespace LogiCard.UI
             Text bodyText = ui.CreateText(card, "Body", body ?? string.Empty, 22, TextAnchor.MiddleCenter, UiStyle.ModalInk);
             UiFactory.Stretch(bodyText.rectTransform, new Vector2(0.1f, 0.36f), new Vector2(0.9f, 0.68f));
 
-            ui.CreatePanel(card, "Divider", UiStyle.ModalDivider, new Vector2(0.12f, 0.29f), new Vector2(0.88f, 0.31f), UiStyle.RoundSprite, Image.Type.Sliced);
+            // Sits above the action row, not through it — at 0.29–0.31 this rule ran straight across the
+            // top of the 0.10–0.30 buttons.
+            ui.CreatePanel(card, "Divider", UiStyle.ModalDivider, new Vector2(0.12f, 0.335f), new Vector2(0.88f, 0.35f), UiStyle.RoundSprite, Image.Type.Sliced);
 
             bool hasSecondary = !string.IsNullOrEmpty(secondaryLabel);
             if (hasSecondary)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using LogiCard.Board;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,8 +10,16 @@ namespace LogiCard.UI
     /// Character Select carousel: 2-item center/flank role crossfade (~650ms) matching the
     /// Reference 1 feel in <c>docs/UI_CHARACTER_SELECT_ANIMATION_REF.md</c> — not a React port.
     /// Card hit targets keep PlayMode names <c>Pick_Scout</c> / <c>Pick_Juggernaut</c>.
-    /// Card and nav-button chrome is Kenney "UI Pack - Adventure" (CC0) 9-slice sprites, not
-    /// hand-drawn flat rects — see <c>Assets/_Project/Art/UI/THIRD_PARTY.md</c> for provenance/why.
+    /// Card faces are Kenney "UI Pack - Adventure" (CC0) 9-slice sprites — see
+    /// <c>Assets/_Project/Art/UI/THIRD_PARTY.md</c> for provenance/why. Everything around them (the lit
+    /// backdrop, headline, nav buttons, detail plate) is shell chrome from <see cref="UiFactory"/>;
+    /// see <c>docs/ui/UI_SHELL_CHROME.md</c>.
+    ///
+    /// Each card's emblem well holds a *live 3D render of that archetype's real match model*
+    /// (<see cref="CharacterPreviewRig"/>), not an illustration — the monogram it replaced was only ever
+    /// a placeholder. Both rigs stay alive at once and each card is permanently bound to its own
+    /// archetype's RenderTexture, so the carousel crossfade needs no swap logic at all: the Scout card
+    /// shows the Scout because it *is* the Scout card, in the centre and on the flank alike.
     /// </summary>
     public sealed class CharacterSelectView : MonoBehaviour
     {
@@ -34,10 +43,14 @@ namespace LogiCard.UI
         public event Action<string> SelectionChanged;
 
         /// <summary>
-        /// Builds the carousel under an existing Character Select screen root (full-bleed panel).
+        /// Builds the carousel under an existing Character Select screen root.
         /// Confirm is owned by the host so navigation stays in <see cref="AppFlowController"/>.
+        /// <paramref name="backdropGlow"/> is the screen's light-pool Image from
+        /// <see cref="UiFactory.CreateShellBackdrop"/> — the archetype crossfade re-tints *that*, not a
+        /// flat full-screen fill. (Before the 2026-08-18 shell chrome pass this lerped the screen root's
+        /// own Image, which is why Character Select read as one muddy solid brown rectangle.)
         /// </summary>
-        public static CharacterSelectView Build(UiFactory ui, RectTransform screenRoot)
+        public static CharacterSelectView Build(UiFactory ui, RectTransform screenRoot, Image backdropGlow = null)
         {
             if (ui == null)
             {
@@ -56,61 +69,75 @@ namespace LogiCard.UI
             }
 
             view._ui = ui;
-            view._bg = screenRoot.GetComponent<Image>();
+            view._bg = backdropGlow;
             view.BuildChrome(screenRoot);
             view.ApplyRolesInstant();
             view.NotifySelection();
+            // The screen root is normally still inactive here (AppFlowController.CreateScreen deactivates
+            // it before handing it over), so OnEnable hasn't run and couldn't have seen the rigs anyway.
+            // Sync explicitly rather than relying on that ordering holding forever.
+            view.SetRigsShowing(view.isActiveAndEnabled);
             return view;
         }
 
         private void BuildChrome(RectTransform root)
         {
-            Text brand = _ui.CreateText(root, "Brand", "LOGICARD", 18, TextAnchor.UpperLeft, UiStyle.Ink,
-                UiTextOverflow.SingleLine);
-            brand.fontStyle = FontStyle.Bold;
-            UiFactory.Stretch(brand.rectTransform, new Vector2(0.04f, 0.92f), new Vector2(0.4f, 0.98f));
+            // Defensive: a second Build on the same root would otherwise strand the first pass's preview
+            // rigs (a camera + RenderTexture each) alive off-screen forever.
+            OnDestroy();
 
-            Text title = _ui.CreateText(root, "Title", "CHARACTER SELECT", 28, TextAnchor.MiddleCenter, UiStyle.Ink,
+            Text brand = _ui.CreateText(root, "Brand", "LOGICARD", 18, TextAnchor.MiddleLeft, UiStyle.ShellMutedInk,
                 UiTextOverflow.SingleLine);
-            title.fontStyle = FontStyle.Bold;
-            UiFactory.Stretch(title.rectTransform, new Vector2(0.2f, 0.88f), new Vector2(0.8f, 0.96f));
+            brand.font = _ui.Display;
+            UiFactory.Stretch(brand.rectTransform, new Vector2(0.045f, 0.925f), new Vector2(0.4f, 0.975f));
 
-            _ghost = _ui.CreateText(root, "GhostHeadline", "SCOUT", 120, TextAnchor.MiddleCenter, UiStyle.CharSelectGhost,
+            Text title = _ui.CreateHeadline(root, "Title", "CHARACTER SELECT", 40, UiStyle.ShellTitleInk);
+            UiFactory.Stretch(title.rectTransform, new Vector2(0.2f, 0.885f), new Vector2(0.8f, 0.975f));
+
+            _ui.CreateRule(root, "TitleRule", new Vector2(0.47f, 0.868f), new Vector2(0.53f, 0.876f));
+
+            _ghost = _ui.CreateText(root, "GhostHeadline", "SCOUT", 190, TextAnchor.MiddleCenter, UiStyle.CharSelectGhost,
                 UiTextOverflow.SingleLine);
-            _ghost.fontStyle = FontStyle.Bold;
+            _ghost.font = _ui.Display;
             _ghost.raycastTarget = false;
-            UiFactory.Stretch(_ghost.rectTransform, new Vector2(0.02f, 0.28f), new Vector2(0.98f, 0.78f));
-            _ghost.transform.SetAsFirstSibling();
+            UiFactory.Stretch(_ghost.rectTransform, new Vector2(0.02f, 0.30f), new Vector2(0.98f, 0.80f));
+            // Just above the backdrop, below everything else — NOT SetAsFirstSibling, which would bury
+            // it (and the stage) under the backdrop's own void/glow/grain/vignette layers.
+            _ghost.transform.SetSiblingIndex(UiFactory.ShellBackdropLayerCount);
 
+            // Stage floor sits above the detail plate (top edge 0.255) — the centre card is ~0.52 of the
+            // frame tall, so a lower floor buries its name plate behind the parchment.
             RectTransform stage = _ui.CreatePanel(root, "CarouselStage", new Color(0f, 0f, 0f, 0f),
-                new Vector2(0f, 0.18f), new Vector2(1f, 0.88f));
-            stage.SetSiblingIndex(1);
+                new Vector2(0f, 0.29f), new Vector2(1f, 0.90f));
+            stage.GetComponent<Image>().raycastTarget = false;
+            stage.SetSiblingIndex(UiFactory.ShellBackdropLayerCount + 1);
 
             // Glow rings sit behind both cards (created first = lowest sibling index in stage) and
             // always track whichever card is currently the center, so the halo rides the crossfade.
             _glowRings = new[]
             {
-                CreateGlowRing(stage, "GlowOuter", padding: 60f, maxAlpha: 0.16f),
-                CreateGlowRing(stage, "GlowInner", padding: 26f, maxAlpha: 0.30f),
+                CreateGlowRing(stage, "GlowOuter", padding: 90f, maxAlpha: 0.22f),
+                CreateGlowRing(stage, "GlowInner", padding: 34f, maxAlpha: 0.34f),
             };
 
             _cards = new[]
             {
-                CreateCard(stage, "Scout", "SCOUT"),
-                CreateCard(stage, "Juggernaut", "JUGGERNAUT"),
+                CreateCard(stage, "Scout", "SCOUT", "RECON"),
+                CreateCard(stage, "Juggernaut", "JUGGERNAUT", "BREACHER"),
             };
 
-            Sprite navSprite = LoadSprite("button_brown");
-            Button prev = _ui.CreateButton(root, "CharSelectPrev", "<", Color.white, UiStyle.InkDark, 36,
-                () => Navigate(-1), navSprite, Image.Type.Sliced);
-            UiFactory.Stretch(prev.GetComponent<RectTransform>(), new Vector2(0.06f, 0.28f), new Vector2(0.14f, 0.40f));
+            Button prev = _ui.CreateShellButton(root, "CharSelectPrev", "PREV", ShellButtonTone.Quiet, 22,
+                () => Navigate(-1), riser: 6f);
+            UiFactory.Stretch(prev.GetComponent<RectTransform>(), new Vector2(0.055f, 0.44f), new Vector2(0.145f, 0.53f));
 
-            Button next = _ui.CreateButton(root, "CharSelectNext", ">", Color.white, UiStyle.InkDark, 36,
-                () => Navigate(1), navSprite, Image.Type.Sliced);
-            UiFactory.Stretch(next.GetComponent<RectTransform>(), new Vector2(0.86f, 0.28f), new Vector2(0.94f, 0.40f));
+            Button next = _ui.CreateShellButton(root, "CharSelectNext", "NEXT", ShellButtonTone.Quiet, 22,
+                () => Navigate(1), riser: 6f);
+            UiFactory.Stretch(next.GetComponent<RectTransform>(), new Vector2(0.855f, 0.44f), new Vector2(0.945f, 0.53f));
 
-            _detail = _ui.CreateText(root, "Detail", string.Empty, 22, TextAnchor.MiddleCenter, UiStyle.Ink);
-            UiFactory.Stretch(_detail.rectTransform, new Vector2(0.12f, 0.14f), new Vector2(0.88f, 0.24f));
+            RectTransform detailPlate = _ui.CreateShellPlate(root, "DetailPlate",
+                new Vector2(0.17f, 0.155f), new Vector2(0.83f, 0.255f));
+            _detail = _ui.CreateText(detailPlate, "Detail", string.Empty, 21, TextAnchor.MiddleCenter, UiStyle.ModalInk);
+            UiFactory.Stretch(_detail.rectTransform, new Vector2(0.04f, 0.14f), new Vector2(0.96f, 0.92f));
 
             _activeIndex = 0;
         }
@@ -122,10 +149,56 @@ namespace LogiCard.UI
         /// </summary>
         private static Sprite LoadSprite(string name) => Resources.Load<Sprite>(SpriteResourceRoot + name);
 
+        /// <summary>
+        /// Screen lifecycle. <see cref="AppFlowController.Show"/> shows/hides a screen by toggling its
+        /// root GameObject, so this component's own enable/disable IS the screen's lifecycle — the
+        /// preview cameras render live while Character Select is up and stop dead the moment it isn't,
+        /// rather than burning a camera per frame for the whole session.
+        /// </summary>
+        private void OnEnable() => SetRigsShowing(true);
+
+        private void OnDisable() => SetRigsShowing(false);
+
+        private void OnDestroy()
+        {
+            if (_cards == null)
+            {
+                return;
+            }
+
+            foreach (Card card in _cards)
+            {
+                CharacterPreviewRig.Dispose(card?.Rig);
+            }
+        }
+
+        private void SetRigsShowing(bool showing)
+        {
+            if (_cards == null)
+            {
+                return;
+            }
+
+            foreach (Card card in _cards)
+            {
+                if (card?.Rig != null)
+                {
+                    card.Rig.SetShowing(showing);
+                }
+            }
+        }
+
         private static Sprite CardSpriteFor(string id) =>
             LoadSprite(id == "Juggernaut" ? "panel_brown_dark" : "panel_brown");
 
-        private Card CreateCard(RectTransform stage, string id, string label)
+        /// <summary>
+        /// One archetype card. The Kenney 9-slice wood/parchment face stays (real texture, correct warm
+        /// family), but the card is no longer "one enormous word on a panel": it gets a contact shadow
+        /// so it lifts off the backdrop, a sunken emblem well holding a live 3D render of the archetype's
+        /// real match model, a dark name plate, and a small role line. That silhouette — shadowed panel,
+        /// figure in a well, plate, caption — is the toy/diorama read the shell is aiming for.
+        /// </summary>
+        private Card CreateCard(RectTransform stage, string id, string label, string role)
         {
             var go = new GameObject($"Pick_{id}", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(Button));
             var rt = go.GetComponent<RectTransform>();
@@ -135,21 +208,82 @@ namespace LogiCard.UI
             rt.anchorMax = new Vector2(0.5f, 0.04f);
             rt.sizeDelta = new Vector2(220f, 360f);
 
+            // Kenney's panel_brown face is a cool grey-tan; untinted it reads washed-out and out-of-family
+            // against the warm backdrop, while panel_brown_dark is already warm. Tint per sprite so both
+            // cards land in the same cardstock family.
+            Color baseTint = id == "Juggernaut"
+                ? new Color(1f, 0.98f, 0.95f, 1f)
+                : new Color(1f, 0.94f, 0.83f, 1f);
+
             var image = go.GetComponent<Image>();
-            image.color = Color.white;
+            image.color = baseTint;
             image.sprite = CardSpriteFor(id);
             image.type = Image.Type.Sliced;
 
             var group = go.GetComponent<CanvasGroup>();
             group.alpha = 1f;
 
-            Text text = _ui.CreateText(rt, "Label", label, 34, TextAnchor.MiddleCenter, UiStyle.InkDark,
+            // Contact shadow as a child (not a sibling) so it inherits the card's own role lerp —
+            // position, size and scale all ride the crossfade for free.
+            RectTransform shadow = _ui.CreatePanel(rt, "CardShadow", UiStyle.ShellButtonShadow,
+                Vector2.zero, Vector2.one, UiStyle.RoundSprite, Image.Type.Sliced);
+            shadow.offsetMin = new Vector2(-8f, -20f);
+            shadow.offsetMax = new Vector2(8f, -8f);
+            shadow.GetComponent<Image>().raycastTarget = false;
+            shadow.SetAsFirstSibling();
+
+            // Emblem well: soft radial pool, now the backing for the live 3D portrait rather than a
+            // monogram's background. Taller than the original square well so a standing figure fits with
+            // head/foot air instead of being cropped or shrunk to a speck.
+            RectTransform well = _ui.CreatePanel(rt, "EmblemWell", new Color(0.24f, 0.15f, 0.08f, 0.32f),
+                new Vector2(0.14f, 0.40f), new Vector2(0.86f, 0.90f), UiStyle.RadialSprite);
+            well.GetComponent<Image>().raycastTarget = false;
+
+            // Monogram: the pre-2026-08-20 placeholder. Kept — and only shown — as the fallback for an
+            // archetype whose mesh isn't in Resources, so the card is never an empty hole.
+            Text monogram = _ui.CreateText(well, "Monogram", label.Substring(0, 1), 96, TextAnchor.MiddleCenter,
+                UiStyle.ShellTitleInk, UiTextOverflow.SingleLine);
+            monogram.font = _ui.Display;
+            monogram.raycastTarget = false;
+            monogram.resizeTextForBestFit = true;
+            monogram.resizeTextMinSize = 28;
+            monogram.resizeTextMaxSize = 110;
+            UiFactory.Stretch(monogram.rectTransform, new Vector2(0.18f, 0.14f), new Vector2(0.82f, 0.86f));
+            var monogramShadow = monogram.gameObject.AddComponent<Shadow>();
+            monogramShadow.effectColor = UiStyle.ShellTitleShadow;
+            monogramShadow.effectDistance = new Vector2(3f, -3f);
+
+            // The real model. A mesh can't be parented under a RectTransform, so the archetype's actual
+            // match prefab is rendered off-screen by CharacterPreviewRig and shown here through its
+            // RenderTexture.
+            CharacterPreviewRig rig = CharacterPreviewRig.Create(BuildFor(id), TeamTintFor(id));
+            RawImage portrait = null;
+            if (rig != null)
+            {
+                portrait = CreatePortrait(well, rig.Texture);
+                monogram.gameObject.SetActive(false);
+            }
+
+            RectTransform plate = _ui.CreatePanel(rt, "NamePlate", UiStyle.ShellSlateFace,
+                new Vector2(0.08f, 0.245f), new Vector2(0.92f, 0.395f), UiStyle.PillSprite, Image.Type.Sliced);
+            plate.GetComponent<Image>().raycastTarget = false;
+
+            // Body face for the name/role captions — same display-vs-read split as button labels
+            // (see UiFactory.CreateShellButton); the Display face is reserved for the monogram here.
+            Text text = _ui.CreateText(plate, "Label", label, 26, TextAnchor.MiddleCenter, UiStyle.ShellTitleInk,
                 UiTextOverflow.Button);
             text.fontStyle = FontStyle.Bold;
+            text.raycastTarget = false;
             text.resizeTextForBestFit = true;
-            text.resizeTextMinSize = 18;
-            text.resizeTextMaxSize = 40;
-            UiFactory.Stretch(text.rectTransform, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.92f));
+            text.resizeTextMinSize = 12;
+            text.resizeTextMaxSize = 28;
+            UiFactory.Stretch(text.rectTransform, new Vector2(0.06f, 0.1f), new Vector2(0.94f, 0.9f));
+
+            Text roleText = _ui.CreateText(rt, "Role", role, 16, TextAnchor.MiddleCenter, UiStyle.ShellAccent,
+                UiTextOverflow.SingleLine);
+            roleText.fontStyle = FontStyle.Bold;
+            roleText.raycastTarget = false;
+            UiFactory.Stretch(roleText.rectTransform, new Vector2(0.08f, 0.14f), new Vector2(0.92f, 0.225f));
 
             var button = go.GetComponent<Button>();
             button.targetGraphic = image;
@@ -163,8 +297,44 @@ namespace LogiCard.UI
                 Root = rt,
                 Group = group,
                 FaceImage = image,
+                BaseTint = baseTint,
+                Portrait = portrait,
+                Rig = rig,
             };
         }
+
+        /// <summary>
+        /// The portrait surface: a RawImage filling the emblem well, showing one rig's live texture.
+        /// Bound once and never reassigned — see the class doc on why the crossfade needs no swap.
+        /// The texture is portrait-aspect and the well is close to it, so a plain stretch is honest
+        /// enough; the figure sits well inside the frame either way.
+        /// </summary>
+        private static RawImage CreatePortrait(RectTransform well, Texture texture)
+        {
+            var go = new GameObject("Portrait", typeof(RectTransform), typeof(RawImage));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(well, false);
+            UiFactory.Stretch(rt, new Vector2(0.02f, 0.02f), new Vector2(0.98f, 0.98f));
+
+            var raw = go.GetComponent<RawImage>();
+            raw.texture = texture;
+            raw.color = Color.white;
+            raw.raycastTarget = false;
+            return raw;
+        }
+
+        /// <summary>Archetype id → the same <see cref="PawnBuild"/> a match spawns for it.</summary>
+        private static PawnBuild BuildFor(string id) =>
+            id == "Juggernaut" ? PawnBuild.Juggernaut : PawnBuild.Scout;
+
+        /// <summary>
+        /// Team tint the board actually gives that build today (<c>GameBootstrap.BuildPawns</c> spawns
+        /// the Scout as attacker and the Juggernaut as defender). Read from
+        /// <see cref="PawnView"/>'s shared tokens rather than re-picked here, so the preview can't drift
+        /// into a different colour than the pawn.
+        /// </summary>
+        private static Color TeamTintFor(string id) =>
+            id == "Juggernaut" ? PawnView.DefenderTint : PawnView.AttackerTint;
 
         private GlowRing CreateGlowRing(RectTransform stage, string name, float padding, float maxAlpha)
         {
@@ -176,8 +346,10 @@ namespace LogiCard.UI
             rt.anchorMax = new Vector2(0.5f, 0.04f);
 
             var image = go.GetComponent<Image>();
-            image.sprite = UiStyle.RoundSprite;
-            image.type = Image.Type.Sliced;
+            // Radial falloff, not a sliced rounded rect — a hard-edged tinted rectangle behind the card
+            // reads as a second panel, which is half of what made this screen look like placeholder art.
+            image.sprite = UiStyle.RadialSprite;
+            image.type = Image.Type.Simple;
             image.raycastTarget = false;
             image.color = new Color(1f, 1f, 1f, 0f);
 
@@ -241,7 +413,7 @@ namespace LogiCard.UI
             Role toCenter = Role.Center;
             Role toFlank = Role.Flank(flankAnchorX);
 
-            Color bgFrom = _bg != null ? _bg.color : UiStyle.PanelDark;
+            Color bgFrom = _bg != null ? _bg.color : UiStyle.ShellGlowDefault;
             Color bgTo = BackgroundFor(center.Id);
             string ghostFrom = _ghost != null ? _ghost.text : center.Label;
             string ghostTo = center.Label;
@@ -413,7 +585,15 @@ namespace LogiCard.UI
             // wood/parchment color toward grey rather than tinting a flat fill, so the flank still
             // reads as "the same card, dimmer," not a different material.
             float mul = Mathf.Lerp(0.72f, 1f, Mathf.InverseLerp(0.75f, 1f, role.Alpha));
-            card.FaceImage.color = new Color(mul, mul, mul, 1f);
+            Color tint = card.BaseTint;
+            card.FaceImage.color = new Color(tint.r * mul, tint.g * mul, tint.b * mul, 1f);
+
+            // The 3D portrait rides the same dim, so a flank figure sits back into the card instead of
+            // staying fully lit on a dimmed face. (Its overall fade is the CanvasGroup's job already.)
+            if (card.Portrait != null)
+            {
+                card.Portrait.color = new Color(mul, mul, mul, 1f);
+            }
         }
 
         private sealed class Card
@@ -423,6 +603,15 @@ namespace LogiCard.UI
             public RectTransform Root;
             public CanvasGroup Group;
             public Image FaceImage;
+
+            /// <summary>Per-sprite warm correction; the flank dim multiplies this rather than white.</summary>
+            public Color BaseTint;
+
+            /// <summary>Live 3D portrait surface; null when this archetype fell back to the monogram.</summary>
+            public RawImage Portrait;
+
+            /// <summary>Off-screen rig feeding <see cref="Portrait"/>; null on the monogram fallback.</summary>
+            public CharacterPreviewRig Rig;
         }
 
         private readonly struct GlowRing

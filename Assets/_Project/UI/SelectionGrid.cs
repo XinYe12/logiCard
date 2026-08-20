@@ -55,6 +55,15 @@ namespace LogiCard.UI
             _selectedId = id;
             foreach (KeyValuePair<string, Button> pair in _buttons)
             {
+                // Shell chrome pass: options are chunky ShellButtons, so "selected" is a tone swap on
+                // the whole face/riser/label stack (red clay vs. dark slate), not a flat Image recolour.
+                var shell = pair.Value.GetComponent<ShellButton>();
+                if (shell != null)
+                {
+                    shell.ApplyTone(pair.Key == _selectedId ? ShellButtonTone.Primary : ShellButtonTone.Quiet);
+                    continue;
+                }
+
                 pair.Value.GetComponent<Image>().color =
                     pair.Key == _selectedId ? UiStyle.Accent : UiStyle.PanelMid;
             }
@@ -109,12 +118,11 @@ namespace LogiCard.UI
 
                 // Inset so neighboring cells don't share an edge (readable mouse targets).
                 const float inset = 0.04f;
-                Button button = ui.CreateButton(
+                Button button = ui.CreateShellButton(
                     root,
                     $"Pick_{option.Id}",
                     option.Label,
-                    UiStyle.PanelMid,
-                    UiStyle.Ink,
+                    ShellButtonTone.Quiet,
                     fontSize,
                     null);
 
