@@ -535,8 +535,8 @@ namespace LogiCard.Boot
 
             // Speeds already match the Scout/Juggernaut CharacterData presets (1s vs 2s per tile) —
             // the visual build follows the same archetype so silhouette and movement read together.
-            PawnView attacker = SpawnPawn("Pawn_Attacker", new Color(0.90f, 0.35f, 0.28f), attackerHome, attackerSecondsPerTile, PawnBuild.Scout);
-            PawnView defender = SpawnPawn("Pawn_Defender", new Color(0.32f, 0.58f, 0.86f), defenderSpawn, DefenderSecondsPerTile, PawnBuild.Juggernaut);
+            PawnView attacker = SpawnPawn("Pawn_Attacker", PawnView.AttackerTint, attackerHome, attackerSecondsPerTile, PawnBuild.Scout);
+            PawnView defender = SpawnPawn("Pawn_Defender", PawnView.DefenderTint, defenderSpawn, DefenderSecondsPerTile, PawnBuild.Juggernaut);
             _attackerView = attacker;
             _defenderView = defender;
 
@@ -733,6 +733,11 @@ namespace LogiCard.Boot
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.06f, 0.055f, 0.06f);
 
+            // Character Select's live 3D card preview parks real archetype models on their own layer
+            // (LogiCard.UI.CharacterPreviewRig) — the board camera must never see them, even though the
+            // rig is also thousands of units away and switched off outside that screen.
+            cam.cullingMask &= ~CharacterPreviewRig.LayerBit;
+
             // Pitch/distance/position are BoardCameraRig's job now (yaw rotation, C48) — it owns the
             // same Euler(52,0,0)-from-center-minus-forward*14 shape this used to set directly.
             _cameraRig = cam.GetComponent<BoardCameraRig>();
@@ -779,7 +784,7 @@ namespace LogiCard.Boot
 
         private void BuildLighting()
         {
-            if (FindFirstObjectByType<Light>() != null)
+            if (SceneIsAlreadyLit())
             {
                 return;
             }
@@ -821,6 +826,29 @@ namespace LogiCard.Boot
             RenderSettings.ambientLight = new Color(0.58f, 0.62f, 0.70f);
 
             BuildDioramaVolume();
+        }
+
+        /// <summary>
+        /// "Has someone already lit this scene?" — the guard that keeps <see cref="BuildLighting"/> from
+        /// stacking a second key/fill set onto a hand-lit scene. Character Select's 3D card preview owns
+        /// private directional lights on its own layer, and those must NOT count: they are switched off
+        /// whenever that screen is hidden, so counting them would leave a match board completely unlit
+        /// on the one code path that builds it.
+        /// </summary>
+        private static bool SceneIsAlreadyLit()
+        {
+            int previewLayerBit = CharacterPreviewRig.LayerBit;
+            foreach (Light light in FindObjectsByType<Light>(FindObjectsSortMode.None))
+            {
+                if (previewLayerBit != 0 && (1 << light.gameObject.layer) == previewLayerBit)
+                {
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         private void PlacePracticalPoint(string name, PlanarPosition planar, float height, float range, float intensity)

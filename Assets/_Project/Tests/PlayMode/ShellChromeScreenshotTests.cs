@@ -63,6 +63,9 @@ namespace LogiCard.Tests.PlayMode
             cam.orthographic = false;
             cam.nearClipPlane = 0.1f;
             cam.farClipPlane = 100f;
+            // Character Select's 3D card previews render themselves, into their own RenderTextures; this
+            // camera only ever wants the canvas plane.
+            cam.cullingMask &= ~CharacterPreviewRig.LayerBit;
 
             RenderMode previousMode = canvas.renderMode;
             Camera previousCamera = canvas.worldCamera;
@@ -84,6 +87,13 @@ namespace LogiCard.Tests.PlayMode
             next.onClick.Invoke();
             yield return new WaitForSecondsRealtime(0.8f);
             yield return Capture(cam, rt, outputDir, "03-character-select-juggernaut");
+
+            // Back across the carousel: the two card portraits are separate live rigs bound to separate
+            // RenderTextures, so this is the shot that catches them ever showing the wrong model — or a
+            // preview that only renders for whichever archetype happened to be centred first.
+            FindByName<Button>("CharSelectPrev").onClick.Invoke();
+            yield return new WaitForSecondsRealtime(0.8f);
+            yield return Capture(cam, rt, outputDir, "03b-character-select-back-to-scout");
 
             FindByName<Button>("ConfirmCharacter").onClick.Invoke();
             yield return Capture(cam, rt, outputDir, "04-map-select");

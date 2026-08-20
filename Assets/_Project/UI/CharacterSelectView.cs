@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using LogiCard.Board;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,6 +14,12 @@ namespace LogiCard.UI
     /// <c>Assets/_Project/Art/UI/THIRD_PARTY.md</c> for provenance/why. Everything around them (the lit
     /// backdrop, headline, nav buttons, detail plate) is shell chrome from <see cref="UiFactory"/>;
     /// see <c>docs/ui/UI_SHELL_CHROME.md</c>.
+    ///
+    /// Each card's emblem well holds a *live 3D render of that archetype's real match model*
+    /// (<see cref="CharacterPreviewRig"/>), not an illustration — the monogram it replaced was only ever
+    /// a placeholder. Both rigs stay alive at once and each card is permanently bound to its own
+    /// archetype's RenderTexture, so the carousel crossfade needs no swap logic at all: the Scout card
+    /// shows the Scout because it *is* the Scout card, in the centre and on the flank alike.
     /// </summary>
     public sealed class CharacterSelectView : MonoBehaviour
     {
@@ -66,11 +73,19 @@ namespace LogiCard.UI
             view.BuildChrome(screenRoot);
             view.ApplyRolesInstant();
             view.NotifySelection();
+            // The screen root is normally still inactive here (AppFlowController.CreateScreen deactivates
+            // it before handing it over), so OnEnable hasn't run and couldn't have seen the rigs anyway.
+            // Sync explicitly rather than relying on that ordering holding forever.
+            view.SetRigsShowing(view.isActiveAndEnabled);
             return view;
         }
 
         private void BuildChrome(RectTransform root)
         {
+            // Defensive: a second Build on the same root would otherwise strand the first pass's preview
+            // rigs (a camera + RenderTexture each) alive off-screen forever.
+            OnDestroy();
+
             Text brand = _ui.CreateText(root, "Brand", "LOGICARD", 18, TextAnchor.MiddleLeft, UiStyle.ShellMutedInk,
                 UiTextOverflow.SingleLine);
             brand.font = _ui.Display;
@@ -134,15 +149,54 @@ namespace LogiCard.UI
         /// </summary>
         private static Sprite LoadSprite(string name) => Resources.Load<Sprite>(SpriteResourceRoot + name);
 
+        /// <summary>
+        /// Screen lifecycle. <see cref="AppFlowController.Show"/> shows/hides a screen by toggling its
+        /// root GameObject, so this component's own enable/disable IS the screen's lifecycle — the
+        /// preview cameras render live while Character Select is up and stop dead the moment it isn't,
+        /// rather than burning a camera per frame for the whole session.
+        /// </summary>
+        private void OnEnable() => SetRigsShowing(true);
+
+        private void OnDisable() => SetRigsShowing(false);
+
+        private void OnDestroy()
+        {
+            if (_cards == null)
+            {
+                return;
+            }
+
+            foreach (Card card in _cards)
+            {
+                CharacterPreviewRig.Dispose(card?.Rig);
+            }
+        }
+
+        private void SetRigsShowing(bool showing)
+        {
+            if (_cards == null)
+            {
+                return;
+            }
+
+            foreach (Card card in _cards)
+            {
+                if (card?.Rig != null)
+                {
+                    card.Rig.SetShowing(showing);
+                }
+            }
+        }
+
         private static Sprite CardSpriteFor(string id) =>
             LoadSprite(id == "Juggernaut" ? "panel_brown_dark" : "panel_brown");
 
         /// <summary>
         /// One archetype card. The Kenney 9-slice wood/parchment face stays (real texture, correct warm
         /// family), but the card is no longer "one enormous word on a panel": it gets a contact shadow
-        /// so it lifts off the backdrop, a sunken emblem well with the archetype monogram, a dark name
-        /// plate, and a small role line. That silhouette — shadowed panel, round well, plate, caption —
-        /// is the toy/diorama read the shell is aiming for.
+        /// so it lifts off the backdrop, a sunken emblem well holding a live 3D render of the archetype's
+        /// real match model, a dark name plate, and a small role line. That silhouette — shadowed panel,
+        /// figure in a well, plate, caption — is the toy/diorama read the shell is aiming for.
         /// </summary>
         private Card CreateCard(RectTransform stage, string id, string label, string role)
         {
@@ -178,13 +232,15 @@ namespace LogiCard.UI
             shadow.GetComponent<Image>().raycastTarget = false;
             shadow.SetAsFirstSibling();
 
-            // Emblem well: soft radial pool + monogram, standing in for a portrait until real archetype
-            // art exists. Deliberately not one of docs/ui-collection/icons/ — those ship as JPEGs on
-            // flat white with no alpha yet, so they would paste a white square onto the card.
+            // Emblem well: soft radial pool, now the backing for the live 3D portrait rather than a
+            // monogram's background. Taller than the original square well so a standing figure fits with
+            // head/foot air instead of being cropped or shrunk to a speck.
             RectTransform well = _ui.CreatePanel(rt, "EmblemWell", new Color(0.24f, 0.15f, 0.08f, 0.32f),
-                new Vector2(0.16f, 0.44f), new Vector2(0.84f, 0.88f), UiStyle.RadialSprite);
+                new Vector2(0.14f, 0.40f), new Vector2(0.86f, 0.90f), UiStyle.RadialSprite);
             well.GetComponent<Image>().raycastTarget = false;
 
+            // Monogram: the pre-2026-08-20 placeholder. Kept — and only shown — as the fallback for an
+            // archetype whose mesh isn't in Resources, so the card is never an empty hole.
             Text monogram = _ui.CreateText(well, "Monogram", label.Substring(0, 1), 96, TextAnchor.MiddleCenter,
                 UiStyle.ShellTitleInk, UiTextOverflow.SingleLine);
             monogram.font = _ui.Display;
@@ -196,6 +252,17 @@ namespace LogiCard.UI
             var monogramShadow = monogram.gameObject.AddComponent<Shadow>();
             monogramShadow.effectColor = UiStyle.ShellTitleShadow;
             monogramShadow.effectDistance = new Vector2(3f, -3f);
+
+            // The real model. A mesh can't be parented under a RectTransform, so the archetype's actual
+            // match prefab is rendered off-screen by CharacterPreviewRig and shown here through its
+            // RenderTexture.
+            CharacterPreviewRig rig = CharacterPreviewRig.Create(BuildFor(id), TeamTintFor(id));
+            RawImage portrait = null;
+            if (rig != null)
+            {
+                portrait = CreatePortrait(well, rig.Texture);
+                monogram.gameObject.SetActive(false);
+            }
 
             RectTransform plate = _ui.CreatePanel(rt, "NamePlate", UiStyle.ShellSlateFace,
                 new Vector2(0.08f, 0.245f), new Vector2(0.92f, 0.395f), UiStyle.PillSprite, Image.Type.Sliced);
@@ -231,8 +298,43 @@ namespace LogiCard.UI
                 Group = group,
                 FaceImage = image,
                 BaseTint = baseTint,
+                Portrait = portrait,
+                Rig = rig,
             };
         }
+
+        /// <summary>
+        /// The portrait surface: a RawImage filling the emblem well, showing one rig's live texture.
+        /// Bound once and never reassigned — see the class doc on why the crossfade needs no swap.
+        /// The texture is portrait-aspect and the well is close to it, so a plain stretch is honest
+        /// enough; the figure sits well inside the frame either way.
+        /// </summary>
+        private static RawImage CreatePortrait(RectTransform well, Texture texture)
+        {
+            var go = new GameObject("Portrait", typeof(RectTransform), typeof(RawImage));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(well, false);
+            UiFactory.Stretch(rt, new Vector2(0.02f, 0.02f), new Vector2(0.98f, 0.98f));
+
+            var raw = go.GetComponent<RawImage>();
+            raw.texture = texture;
+            raw.color = Color.white;
+            raw.raycastTarget = false;
+            return raw;
+        }
+
+        /// <summary>Archetype id → the same <see cref="PawnBuild"/> a match spawns for it.</summary>
+        private static PawnBuild BuildFor(string id) =>
+            id == "Juggernaut" ? PawnBuild.Juggernaut : PawnBuild.Scout;
+
+        /// <summary>
+        /// Team tint the board actually gives that build today (<c>GameBootstrap.BuildPawns</c> spawns
+        /// the Scout as attacker and the Juggernaut as defender). Read from
+        /// <see cref="PawnView"/>'s shared tokens rather than re-picked here, so the preview can't drift
+        /// into a different colour than the pawn.
+        /// </summary>
+        private static Color TeamTintFor(string id) =>
+            id == "Juggernaut" ? PawnView.DefenderTint : PawnView.AttackerTint;
 
         private GlowRing CreateGlowRing(RectTransform stage, string name, float padding, float maxAlpha)
         {
@@ -485,6 +587,13 @@ namespace LogiCard.UI
             float mul = Mathf.Lerp(0.72f, 1f, Mathf.InverseLerp(0.75f, 1f, role.Alpha));
             Color tint = card.BaseTint;
             card.FaceImage.color = new Color(tint.r * mul, tint.g * mul, tint.b * mul, 1f);
+
+            // The 3D portrait rides the same dim, so a flank figure sits back into the card instead of
+            // staying fully lit on a dimmed face. (Its overall fade is the CanvasGroup's job already.)
+            if (card.Portrait != null)
+            {
+                card.Portrait.color = new Color(mul, mul, mul, 1f);
+            }
         }
 
         private sealed class Card
@@ -497,6 +606,12 @@ namespace LogiCard.UI
 
             /// <summary>Per-sprite warm correction; the flank dim multiplies this rather than white.</summary>
             public Color BaseTint;
+
+            /// <summary>Live 3D portrait surface; null when this archetype fell back to the monogram.</summary>
+            public RawImage Portrait;
+
+            /// <summary>Off-screen rig feeding <see cref="Portrait"/>; null on the monogram fallback.</summary>
+            public CharacterPreviewRig Rig;
         }
 
         private readonly struct GlowRing

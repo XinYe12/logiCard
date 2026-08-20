@@ -1,6 +1,7 @@
 # Shell chrome — Boot / Character Select / Map Select / Lobby / Match End
 
-**Status:** Landed 2026-08-18 on the shell-chrome worktree. Awaiting human/Integrator review.
+**Status:** Landed 2026-08-18 on the shell-chrome worktree; Character Select's live 3D card portrait
+landed 2026-08-20 on the same worktree. Awaiting human/Integrator review.
 **Scope fence:** *visual chrome only.* Same discipline as the Match Shell Layout wave ("layout / region
 geometry only"). No screen was added or removed, no button's behaviour changed, no new gameplay.
 
@@ -8,6 +9,11 @@ geometry only"). No screen was added or removed, no button's behaviour changed, 
 InfoBar / MapViewport / HandBand / ToolBar / TimelineSchedule stack). That is already built and
 human-signed-off; it keeps its own `CreateBackingPanel` + `CreateButton` chrome. Do **not** swap shell
 helpers onto it without a fresh brief.
+
+The 2026-08-20 card-portrait pass is the one place this reaches outside `Assets/_Project/UI/`: it makes
+`PawnView`'s archetype-mesh load/normalise/tint the shared entry point both the board and the preview call,
+and adds two isolation lines to `GameBootstrap` (culling mask, lighting probe). No pawn, board or match
+behaviour changed — see that section for why the sharing is the point rather than a shortcut.
 
 ## Why this exists
 
@@ -60,6 +66,67 @@ Unity's builtin extra resources silently return null in batchmode and in a real 
 is built at **1 pixel-per-unit** so one `Image.Type.Tiled` tile is 128 UI units; at the default 100 ppu it
 would tile ~15,000 times across a 1920-wide canvas.
 
+## The Character Select card portrait is a live 3D render (2026-08-20)
+
+The human looked at the restyle above and asked for one thing by name: *"I'd like to see the actual model
+of the character be placed inside the character card."* The monogram in the emblem well is gone (kept only
+as a fallback); each card now shows a **live 3D render of that archetype's real match prefab**.
+
+**The rule this is built on:** the preview loads the *same* `Resources` prefab, at the *same* normalised
+height, with the *same* team tint that a match spawns — via `PawnView.TryInstantiateArchetypeVisual`,
+which is now the single public entry point for instantiating an archetype mesh (`PawnView.Init` and the
+preview rig are both callers; `PawnView.ResourcePathFor` owns the path, `PawnView.AttackerTint` /
+`DefenderTint` own the colours `GameBootstrap.BuildPawns` uses). **Do not give Character Select its own
+preview asset, its own scale, or its own tint.** The moment a preview shows something other than what the
+board will show, the screen is lying to the player about their own pick — the same failure mode
+`UI_BOARD_ANCHORED_COMPONENTS.md` bans for door controls ("live state, read from the authoritative model,
+never inferred").
+
+**How it works** (`Assets/_Project/UI/CharacterPreviewRig.cs`). A mesh cannot be parented under a
+`RectTransform`, so this is the standard render-texture route:
+
+| Piece | Choice made | Why |
+|---|---|---|
+| Where the model lives | An "island" at `y = -4000`, one per rig, 40 units apart | Nowhere near the arena, and nothing else is within reach of the preview camera's 12-unit far clip |
+| Isolation | Layer **`CharacterPreview`** (TagManager index 8); preview camera's `cullingMask` is only that layer, and `GameBootstrap.ConfigureCamera` masks it *out* of the board camera | Three independent guards (distance, mask, far clip) because this rig is alive in the same scene as a real match |
+| Lighting | The rig owns three private directional lights (warm key, cool fill, back rim) | Character Select happens **before** `GameBootstrap.BuildLighting` has lit anything — a rig that borrows scene lighting renders a black cutout on the very screen it's for |
+| Texture | 768×896 `ARGB32`, `antiAliasing = 1`, downsampled by the `RawImage` | Supersampling instead of RT MSAA, which URP renegotiates against the pipeline asset |
+| Background | `SolidColor` with **alpha 0** | The card's own emblem well stays the backing; an opaque clear pastes a hard rectangle onto the cardstock |
+| Framing | fov 28, 6° down-tilt, 1.14 world units of height framed, aimed at y 0.54 | Tuned by looking at renders, not derived — 1.24 read small and adrift in the well |
+| Motion | Model yaw sways ±13° around a −22° three-quarter base | Reads as live 3D rather than a baked image, without spinning the face away |
+
+**Carousel swapping needs no code at all.** Both rigs stay alive and each card is permanently bound to its
+own archetype's `RenderTexture` — the Scout card shows the Scout because it *is* the Scout card, centre or
+flank. A destroy/instantiate swap on the centre card was the alternative and was rejected: it adds state
+that can desync from `_activeIndex` mid-crossfade, to save one small camera on a menu screen.
+
+**Lifecycle:** `CharacterSelectView`'s own `OnEnable`/`OnDisable` *is* the screen lifecycle, because
+`AppFlowController.Show` shows and hides screens by toggling their root GameObject. The rigs (cameras,
+lights, models) switch off with the screen; `OnDestroy` releases the RenderTextures.
+
+**A third trap, for the list below:** under `-batchmode -nographics` there is no graphics device, so
+`RenderTexture.Create` fails and URP logs a burst of `Unable to find surface for attachment 0` errors —
+which the test framework counts as unhandled log errors and **fails an unrelated Character Select test**
+(`AppFlowPlayModeTests.CharacterSelectNextRotatesArchetypeAfterCrossfade`, which merely activates the
+screen). `CharacterPreviewRig.Create` therefore declines to build when
+`SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null`, and the card falls back to its monogram. Any
+future off-screen render rig needs the same guard. Note the shape of this: the headless suite went red for
+a *rendering* reason, which is the mirror image of trap 1 below — headless green never proved the pixels,
+and here headless red didn't mean the pixels were wrong either. Only the screenshot run settles it.
+
+**A trap this created, already defused:** `GameBootstrap.BuildLighting` used to bail out on
+`FindFirstObjectByType<Light>() != null`. The preview rig's private lights would have tripped that and
+left a match board completely unlit. It now uses `SceneIsAlreadyLit()`, which skips lights on the
+`CharacterPreview` layer. If you add another off-screen rig with its own lights, put it on that layer or
+teach that method about it.
+
+**What the previews immediately exposed** (pre-existing board bugs, *not* preview bugs — do not "fix" them
+in the preview, fix the pawn art):
+- `PawnView.TintedPartNameMarker` is `"Body"`, which on these imported meshes is the **skin**, not the
+  torso — so the Scout has a bright orange face and hands, and always has had on the board.
+- The Juggernaut prefab ships with its **bunny-ears hat mesh enabled**, so the "breacher" wears rabbit
+  ears. Invisible at top-down board scale; unmissable at card scale.
+
 ## Two traps that already bit once
 
 1. **`SetAsFirstSibling` after a backdrop buries you.** The backdrop occupies the first
@@ -83,8 +150,10 @@ LOGICARD_SHOT_DIR=/tmp/shots "$UNITY" -batchmode -projectPath <path> \
   -testResults /tmp/shot.xml -logFile /tmp/shot.txt
 ```
 
-It walks Boot → Character Select (both archetypes) → Map Select → Lobby → Round Result → Match End →
-Quit modal and writes nine 1920×1080 PNGs. It temporarily flips the Canvas from `ScreenSpaceOverlay` to
+It walks Boot → Character Select (Scout, Juggernaut, then back to Scout) → Map Select → Lobby → Round
+Result → Match End → Quit modal and writes ten 1920×1080 PNGs. The extra swap-back shot exists because the
+two card portraits are separate live rigs: it is the frame that would catch a card showing the wrong
+archetype's model, or a preview that only renders for whichever archetype happened to be centred first. It temporarily flips the Canvas from `ScreenSpaceOverlay` to
 `ScreenSpaceCamera` against a RenderTexture — an Overlay canvas cannot be read back at all, and the
 RenderTexture also pins captures to the CanvasScaler's reference resolution rather than whatever window
 size batchmode picks.
@@ -126,7 +195,14 @@ reason, and update the tests in the same commit.
 
 ## Open / next
 
-- Archetype art: the emblem well wants a real portrait or clay figure, not a monogram.
+- ~~Archetype art: the emblem well wants a real portrait or clay figure, not a monogram.~~ Done
+  2026-08-20 — the well now holds a live 3D render of the archetype's real match model (section above).
+- Pawn art, *surfaced* by that preview and still open: the `"Body"`-named renderer that
+  `PawnView` team-tints is the skin (orange-faced Scout), and the Juggernaut prefab's bunny-ears hat mesh
+  is enabled. Both are board-side art bugs; fix them on the pawn, not in Character Select.
+- The imported meshes have an `Animator` with no controller, so both the board and the card show the
+  bind pose (arms out). A one-clip idle would lift the card a lot; it belongs on the pawn art track so
+  the board gets it too.
 - The collection's bucket 8 (lobby/shell layout refs) is still thin — this pass built from the shared
   material language rather than from reference screens. Worth a human look specifically at layout, not
   just colour.
