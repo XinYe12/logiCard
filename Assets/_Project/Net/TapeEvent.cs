@@ -27,6 +27,19 @@ namespace LogiCard.Net
         /// weather mood is Storm from this event's Seconds onward for the rest of the round; no
         /// wound/charge effect.</summary>
         StormCast = 8,
+
+        /// <summary>C36/C71 — a Bomber attached a bomb to a designed breach point (Position = the
+        /// point's segment midpoint). No geometry change; persists an attached-bomb flag on that
+        /// point (RoundPlayback presenter follow-up, not yet wired — see 2026-08-20 Sim-layer note).
+        /// Presenter not yet built (Sim-layer-only slice); reserved in
+        /// TapeEventPlaybackCoverageTests until it lands.</summary>
+        BombAttached = 9,
+
+        /// <summary>C36/C71 — a Bomber detonated an attached bomb. Continuous presenter (mirrors
+        /// DoorOpened/Closed): that breach point's geometry is Breached from this event's Seconds
+        /// onward — walls-only v1, straight Intact→Breached, no Damaged intermediate. Presenter not
+        /// yet built (Sim-layer-only slice); reserved in TapeEventPlaybackCoverageTests until it lands.</summary>
+        GeometryBreached = 10,
     }
 
     /// <summary>

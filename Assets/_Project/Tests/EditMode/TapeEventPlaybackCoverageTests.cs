@@ -37,6 +37,15 @@ namespace LogiCard.Tests.EditMode
         private static readonly HashSet<TapeEventType> ReservedNoPresenterYet = new HashSet<TapeEventType>
         {
             TapeEventType.Invalid,
+
+            // C36/C71 — Bomber wall-only v1 (2026-08-20). Sim-layer-only slice: GhostResolver emits
+            // both events correctly (see GhostResolverBombTests), but RoundPlayback presenter wiring,
+            // BoardView breach-point visuals, and map authoring of real breach points are explicit
+            // follow-up work, not built yet. Move to PresentedAtScrubber once RoundPlayback wires them
+            // (GeometryBreached should mirror DoorOpened/Closed exactly; BombAttached likely stays a
+            // one-shot banner or board-anchored marker, no continuous geometry change of its own).
+            TapeEventType.BombAttached,
+            TapeEventType.GeometryBreached,
         };
 
         [Test]

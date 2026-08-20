@@ -381,6 +381,11 @@ namespace LogiCard.Net
                 }
                 else
                 {
+                    // BombAttach/BombDetonate (C36/C71) fall through to here too — both are handled
+                    // entirely in ResolveShots' chronological scratch-board sweep (mirrors Door
+                    // exactly), not here. Resolve() stays a pure function of (board, inputs) — nothing
+                    // in CompileTrack ever mutates _board directly; only ReplayTape's returned events
+                    // describe what happened, same discipline Door already holds to.
                     currentTime = node.ExecuteTime;
                 }
 
@@ -396,6 +401,7 @@ namespace LogiCard.Net
         {
             var shots = new List<ShotIntent>();
             var doorToggles = new List<DoorToggleIntent>();
+            var bombToggles = new List<BombToggleIntent>();
             for (int i = 0; i < order.Count; i++)
             {
                 GhostTrack track = tracks[order[i]];
@@ -423,6 +429,19 @@ namespace LogiCard.Net
                             doorToggles.Add(new DoorToggleIntent(order[i], node.ExecuteTime, door, node.Position, node.Door));
                         }
                     }
+                    else if (node.Verb == ActionVerb.BombAttach || node.Verb == ActionVerb.BombDetonate)
+                    {
+                        // C36/C71 — same exact-match lookup shape as Door above. Both Attach and
+                        // Detonate on the same BreachPoint share one chronological sweep so a same-
+                        // round "attach then detonate" (or "detonate an already-attached-from-a-prior-
+                        // round bomb") sees the correct up-to-date attached-bomb flag either way —
+                        // Resolve() never mutates _board directly (stays a pure function of
+                        // (board, inputs)), only this round-local scratch clone.
+                        if (_board.TryGetBreachPoint(node.Position, out BreachPoint point))
+                        {
+                            bombToggles.Add(new BombToggleIntent(order[i], node.ExecuteTime, point, node.Position, node.Verb));
+                        }
+                    }
                 }
             }
 
@@ -433,24 +452,31 @@ namespace LogiCard.Net
                 : a.ShooterId.CompareTo(b.ShooterId));
 
             // Door toggles land before same-instant shots resolve (Day 7 research note §H5): a
-            // door closing at the exact second a shot completes blocks that shot.
+            // door closing at the exact second a shot completes blocks that shot. Bomb detonates get
+            // the same precedence, same reasoning — a wall breaching at the exact second a shot
+            // completes should already have opened LoS for that shot.
             doorToggles.Sort((a, b) => a.ExecuteTime != b.ExecuteTime
                 ? a.ExecuteTime.CompareTo(b.ExecuteTime)
                 : a.PawnId.CompareTo(b.PawnId));
+            bombToggles.Sort((a, b) => a.ExecuteTime != b.ExecuteTime
+                ? a.ExecuteTime.CompareTo(b.ExecuteTime)
+                : a.PawnId.CompareTo(b.PawnId));
 
-            // Resolve-local scratch board (Day 7, Option 1): doors mutate this copy in ExecuteTime
-            // order as the sweep below reaches them, never the shared _board instance.
+            // Resolve-local scratch board (Day 7, Option 1): doors/bombs mutate this copy in
+            // ExecuteTime order as the sweep below reaches them, never the shared _board instance.
             ArenaBoard scratch = _board.Clone();
 
             var hits = new List<ResolvedHit>();
             int shotIndex = 0;
             int doorIndex = 0;
-            while (shotIndex < shots.Count || doorIndex < doorToggles.Count)
+            int bombIndex = 0;
+            while (shotIndex < shots.Count || doorIndex < doorToggles.Count || bombIndex < bombToggles.Count)
             {
-                bool doorNext = doorIndex < doorToggles.Count
-                    && (shotIndex >= shots.Count || doorToggles[doorIndex].ExecuteTime <= shots[shotIndex].CompleteSeconds);
+                float nextDoorTime = doorIndex < doorToggles.Count ? doorToggles[doorIndex].ExecuteTime : float.MaxValue;
+                float nextBombTime = bombIndex < bombToggles.Count ? bombToggles[bombIndex].ExecuteTime : float.MaxValue;
+                float nextShotTime = shotIndex < shots.Count ? shots[shotIndex].CompleteSeconds : float.MaxValue;
 
-                if (doorNext)
+                if (nextDoorTime <= nextShotTime && nextDoorTime <= nextBombTime)
                 {
                     int doorGroupEnd = doorIndex + 1;
                     while (doorGroupEnd < doorToggles.Count
@@ -462,6 +488,21 @@ namespace LogiCard.Net
 
                     ApplyDoorGroup(doorToggles, doorIndex, doorGroupEnd, scratch, events);
                     doorIndex = doorGroupEnd;
+                    continue;
+                }
+
+                if (nextBombTime <= nextShotTime)
+                {
+                    int bombGroupEnd = bombIndex + 1;
+                    while (bombGroupEnd < bombToggles.Count
+                           && ReferenceEquals(bombToggles[bombGroupEnd].Point, bombToggles[bombIndex].Point)
+                           && bombToggles[bombGroupEnd].ExecuteTime - bombToggles[bombIndex].ExecuteTime <= _simultaneityEpsilon)
+                    {
+                        bombGroupEnd++;
+                    }
+
+                    ApplyBombGroup(bombToggles, bombIndex, bombGroupEnd, scratch, events);
+                    bombIndex = bombGroupEnd;
                     continue;
                 }
 
@@ -484,6 +525,47 @@ namespace LogiCard.Net
                 }
 
                 shotIndex = shotGroupEnd;
+            }
+        }
+
+        /// <summary>
+        /// Applies every Attach/Detonate toggle in a same-instant, same-point group to
+        /// <paramref name="scratch"/>. Attaches apply first within the group (so a same-instant
+        /// "attach then detonate" — an unusual but not illegal draft — still detonates), each logging
+        /// its own <see cref="TapeEventType.BombAttached"/>. Detonates then apply: straight
+        /// Intact→Breached, no Damaged intermediate (C71 wall-only v1), logging
+        /// <see cref="TapeEventType.GeometryBreached"/> — but only for attempts where a bomb was
+        /// actually attached at that moment. A Detonate on an unattached point is silently a no-op, no
+        /// event (permissive resolver, same shape as an already-Storm-cast re-cast — HUD owns the real
+        /// legality gate); the first successful Detonate in the group consumes the bomb, so a second
+        /// simultaneous Detonate on the same already-Breached point is also a no-op.
+        /// </summary>
+        private static void ApplyBombGroup(
+            List<BombToggleIntent> toggles, int start, int end, ArenaBoard scratch, List<TapeEvent> events)
+        {
+            BreachPoint point = toggles[start].Point;
+
+            for (int i = start; i < end; i++)
+            {
+                if (toggles[i].Verb != ActionVerb.BombAttach)
+                {
+                    continue;
+                }
+
+                scratch.SetAttachedBomb(point, true);
+                events.Add(new TapeEvent(toggles[i].ExecuteTime, toggles[i].PawnId, TapeEventType.BombAttached, toggles[i].Position));
+            }
+
+            for (int i = start; i < end; i++)
+            {
+                if (toggles[i].Verb != ActionVerb.BombDetonate || !scratch.HasAttachedBomb(point))
+                {
+                    continue;
+                }
+
+                scratch.SetAttachedBomb(point, false);
+                scratch.SetBreachState(point, BreachState.Breached);
+                events.Add(new TapeEvent(toggles[i].ExecuteTime, toggles[i].PawnId, TapeEventType.GeometryBreached, toggles[i].Position));
             }
         }
 
@@ -859,6 +941,32 @@ namespace LogiCard.Net
                 Door = door;
                 Position = position;
                 Action = action;
+            }
+        }
+
+        /// <summary>C36/C71 — mirrors <see cref="DoorToggleIntent"/>; <see cref="Verb"/> distinguishes
+        /// <see cref="ActionVerb.BombAttach"/> from <see cref="ActionVerb.BombDetonate"/> instead of a
+        /// Door-style Action enum, since these are two different <see cref="ActionVerb"/> values, not
+        /// one verb with a sub-action.</summary>
+        private readonly struct BombToggleIntent
+        {
+            public int PawnId { get; }
+
+            public float ExecuteTime { get; }
+
+            public BreachPoint Point { get; }
+
+            public PlanarPosition Position { get; }
+
+            public ActionVerb Verb { get; }
+
+            public BombToggleIntent(int pawnId, float executeTime, BreachPoint point, PlanarPosition position, ActionVerb verb)
+            {
+                PawnId = pawnId;
+                ExecuteTime = executeTime;
+                Point = point;
+                Position = position;
+                Verb = verb;
             }
         }
 

@@ -1,5 +1,40 @@
 # Draft Handoff — 2026-08-20
 
+**2026-08-20 (latest): C36 geometry-breach + Bomber wall-only verb — Sim layer landed on master,
+human-directed ("character, GO").** First core-gameplay work since the Phase 2/Net pause began; scoped
+narrowly (Sim primitive only, see below) rather than the whole feature, given the size. Scope check
+first surfaced an inefficiency worth naming: asked the human to confirm three scope questions (wall-only
+vs floor-drop, designed points vs freeform, one node vs two) that **C71** (2026-08-16) had already
+locked — should have read `PRODUCT_MEMORY.md` before asking. Answers matched C71 exactly, no harm done,
+just a wasted round-trip.
+
+**What landed:** `BreachPoint`/`BreachState` (mirrors `Door`/`DoorState` exactly — registration, exact-
+match + radius lookup, `IsBlocking`/`TryGetNearestBlockPoint`/`Clone` all extended so an Intact/Damaged
+point blocks Move/Shoot exactly like a wall, only Breached opens it). `ActionVerb.BombAttach`/
+`BombDetonate`, `TapeEventType.BombAttached`/`GeometryBreached`. `PawnProgram.TryQueueBombAttach`/
+`TryQueueBombDetonate` (same `InteractRadius`/board-tap shape as `TryQueueDoor`). `GhostResolver`'s
+`ResolveShots` gained a third interleaved chronological stream (alongside shots and door toggles) so a
+same-round Detonate correctly opens Shoot LoS for shots *after* it while leaving earlier shots blocked,
+and a same-round Attach is visible to a later-same-round Detonate on the same point. **Resolve() never
+mutates its own `ArenaBoard` input** — verified by test, same purity discipline Door already holds to;
+persisting Attach/Detonate to the real board across rounds is presenter work, not resolver work, exactly
+how Door state already persists (via `RoundPlayback` applying tape events during Execute, never via the
+resolver mutating its input). Full frozen signatures + documented deviations:
+`docs/contracts/CURRENT.md`'s new C36/Bomber section.
+
+**Deliberately NOT built this wave — a Sim-layer-only slice, not the whole feature:** RoundPlayback
+presenter (both new `TapeEventType`s are `ReservedNoPresenterYet`), `BoardView` visuals, any actual
+map-authored `BreachPoint` (no map calls `RegisterBreachPoint` yet — needs a real per-map content
+decision, not just code), the HUD board-anchored prompt (explicitly UI seat's slot per
+`CHARACTER_BOMBER_AGENT_BRIEF.md` §6), and Character-gating (any pawn can currently queue these verbs).
+This was a scope call, not an oversight — floor-drop/per-floor-occupancy was already ruled out by C71,
+and building presenter+visuals+map-authoring+HUD blind in the same pass this session risked exactly the
+kind of unverified, un-reviewable pile-up the rest of this session has been careful to avoid.
+
+Batchmode-verified fresh, Editor closed: **EditMode 196/196** (188 baseline + 6 new
+`GhostResolverBombTests`, including the two "Resolve() stays pure" cases and the same-round chronological
+ordering case), **PlayMode 66/66** (unaffected — no PlayMode coverage this wave, by design).
+
 **2026-08-20 (later): UI shell-chrome restyle merged to master (`546ba31`), human-approved "as is."**
 Two commits: the full non-HUD restyle (Boot/Character Select/Map Select/Lobby/Match End — lit backdrops,
 `ShellButton` family, Iomanoid display font) plus a live 3D character-model preview inside each
@@ -125,7 +160,7 @@ post-merge, Editor closed: **EditMode 190/190, PlayMode 63/63** (the +1 is
 Atmosphere stays parked (Sunny mode, blocked on human decision).
 
 **Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (C63/C67 gear carve-out).
-**Integrator tip:** `master` @ `546ba31` — **UI shell-chrome restyle merged** (human-approved as-is), on top of the TPS camera-wiggle fix, Sunny weather mood, camera control-hint UI chrome, dead Bandage/Storm board-tap prune, Storm per-match counter, Healed presenter, and Camera merge. Batchmode-verified independently on master post-merge: EditMode 190/190, PlayMode 66/66. Nothing in flight off `master` right now.
+**Integrator tip:** `master` — **C36 geometry-breach + Bomber wall-only verb (Sim layer) landed** (see 2026-08-20 note above), on top of the UI shell-chrome restyle, TPS camera-wiggle fix, Sunny weather mood, camera control-hint UI chrome, dead Bandage/Storm board-tap prune, Storm per-match counter, Healed presenter, and Camera merge. Batchmode-verified independently: EditMode 196/196, PlayMode 66/66. Nothing else in flight off `master` right now.
 **Active wave: this dispatch round is closed.** Match Shell Layout, Map, and Camera are all merged to master. Camera landed via human hands-on iteration during the actual re-test — the human found the control-hint overlay's rotate-only right-drag didn't feel right and iterated on it live: first to a combined pan+rotate gesture (`169a55f`), then further to right-drag doing pitch tilt between top/front view rather than pan (`2e2d022`, `CAMERA_VERTICAL_DRAG_PAN_BRIEF.md`). Integrator re-ran batchmode fresh against each commit as it landed and again on `master` after the merge — every pass green. No paused dept work outstanding.
 Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [`docs/contracts/CURRENT.md`](contracts/CURRENT.md).
 

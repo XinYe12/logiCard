@@ -44,6 +44,14 @@ namespace LogiCard.Timeline
         /// </summary>
         public const float StormSeconds = 0f;
 
+        /// <summary>Bomb Attach Time Resource cost (C36/C71). Placeholder, playtest-tunable per C71
+        /// — not locked.</summary>
+        public const float BombAttachSeconds = 3f;
+
+        /// <summary>Bomb Detonate Time Resource cost (C36/C71). Placeholder, playtest-tunable per C71
+        /// — not locked.</summary>
+        public const float BombDetonateSeconds = 1f;
+
         private readonly List<ActionNode> _nodes = new List<ActionNode>();
         private readonly List<PlanarPosition> _draftWaypoints = new List<PlanarPosition>();
         private readonly List<PlanarPosition> _pathBuffer = new List<PlanarPosition>();
@@ -463,6 +471,90 @@ namespace LogiCard.Timeline
             _committedStepHistory.Add(beforeReserve);
             PlanarPosition doorPosition = PlanarPosition.Lerp(door.Segment.A, door.Segment.B, 0.5f);
             _nodes.Add(new ActionNode(ActionVerb.Door, UsedSeconds, doorPosition, CurrentStance, doorAction: action));
+            rejectionReason = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Books an <see cref="ActionVerb.BombAttach"/> node on <paramref name="point"/> (C36/C71) —
+        /// same radius-interact model as <see cref="TryQueueDoor"/> (Decision 4), same board-tap
+        /// placement shape. Character-gate (only a Bomber may attach) and "already has a live attached
+        /// bomb here" legality are HUD-side gates, same split every other gear/verb card uses — this
+        /// stays permissive, matching Door/Bandage/Storm precedent.
+        /// </summary>
+        public bool TryQueueBombAttach(BreachPoint point, out string rejectionReason)
+        {
+            if (HasDraft && !TryCommitDraft(out rejectionReason))
+            {
+                return false;
+            }
+
+            if (point == null)
+            {
+                rejectionReason = "No breach point to attach to.";
+                return false;
+            }
+
+            if (point.Segment.DistanceToPoint(CurrentPosition) > InteractRadius)
+            {
+                rejectionReason = "Breach point is out of interaction range.";
+                return false;
+            }
+
+            var beforeReserve = new CommittedStepSnapshot(_nodes.Count, UsedSeconds, CurrentPosition, CurrentStance);
+            if (!TryReserve(BombAttachSeconds, out rejectionReason))
+            {
+                return false;
+            }
+
+            _committedStepHistory.Add(beforeReserve);
+            PlanarPosition breachPosition = PlanarPosition.Lerp(point.Segment.A, point.Segment.B, 0.5f);
+            _nodes.Add(new ActionNode(ActionVerb.BombAttach, UsedSeconds, breachPosition, CurrentStance));
+            rejectionReason = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Books an <see cref="ActionVerb.BombDetonate"/> node on <paramref name="point"/> (C36/C71) —
+        /// same shape as <see cref="TryQueueBombAttach"/>. Whether a bomb is actually attached there
+        /// (and by whom) is a resolve-time question, same permissive split as every other verb here —
+        /// see <c>GhostResolver</c>'s Bomb handling.
+        ///
+        /// <b>Documented assumption, not settled by C71:</b> requires the same <see cref="InteractRadius"/>
+        /// proximity as Attach (mirrors Door Open/Close exactly, the explicit design precedent). C71
+        /// doesn't say whether detonate should instead be remote/no-proximity (a real detonator
+        /// wouldn't require walking back to the bomb) — if that's wanted, this is a one-line change
+        /// (drop the range check below), not an architecture change. Flagging rather than guessing
+        /// silently.
+        /// </summary>
+        public bool TryQueueBombDetonate(BreachPoint point, out string rejectionReason)
+        {
+            if (HasDraft && !TryCommitDraft(out rejectionReason))
+            {
+                return false;
+            }
+
+            if (point == null)
+            {
+                rejectionReason = "No breach point to detonate.";
+                return false;
+            }
+
+            if (point.Segment.DistanceToPoint(CurrentPosition) > InteractRadius)
+            {
+                rejectionReason = "Breach point is out of interaction range.";
+                return false;
+            }
+
+            var beforeReserve = new CommittedStepSnapshot(_nodes.Count, UsedSeconds, CurrentPosition, CurrentStance);
+            if (!TryReserve(BombDetonateSeconds, out rejectionReason))
+            {
+                return false;
+            }
+
+            _committedStepHistory.Add(beforeReserve);
+            PlanarPosition breachPosition = PlanarPosition.Lerp(point.Segment.A, point.Segment.B, 0.5f);
+            _nodes.Add(new ActionNode(ActionVerb.BombDetonate, UsedSeconds, breachPosition, CurrentStance));
             rejectionReason = null;
             return true;
         }

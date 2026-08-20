@@ -1,13 +1,98 @@
 # Cross-Dept Contracts — Current Wave
 
-**Updated:** 2026-08-17 by Integrator — **Match Shell Layout, Map, and Camera waves all CLOSED**, merged
-to master (`c9925b1`/`a21b29c` Match Shell, `07501d7` Map, `e594c51` Camera `--no-ff`). Camera reconciled
-`feat/camera-freecam-tps` against the Match Shell `ProgramHud.MapViewport` rect, added a control-hint
-overlay, then iterated its right-drag gesture live with the human during re-test (combined pan+rotate,
-then pitch-tilt between top/front view). Post-merge batchmode independently re-verified on master
-(EditMode 188/188, PlayMode 59/59). **No seat is coding-hot right now** — this dispatch round is closed.
+**Updated:** 2026-08-20 by Integrator — **C36 geometry-breach + Bomber wall-only verb (Sim layer only)
+landed directly on master**, human-directed ("character, GO") per C71's already-locked scope. See the
+section below. Match Shell Layout, Map, and Camera waves remain CLOSED per the 2026-08-17 note preserved
+below. **No seat is coding-hot right now.**
 **Rule:** Only Integrator edits this file after a merge. Workers implement against the frozen signatures
 below.
+
+## Open — C36 geometry-breach + Bomber wall-only verb, Sim layer (opened + landed 2026-08-20)
+
+**Human ask:** "character, GO" — resume C36/Bomber work, explicitly paused since the Phase 5 art
+priority began. Scope confirmed against **C71** (already locked 2026-08-16, human accepted every
+recommendation — re-confirmed via a redundant AskUserQuestion pass that matched C71 exactly): wall-only
+first (no floor-drop/per-floor-occupancy this wave), designed breach points only (not freeform), Attach
++ Detonate as two scheduled nodes mirroring Door Open/Close.
+
+**Landed (Sim layer, fully tested):**
+
+```csharp
+// Sim
+public enum BreachState { Intact, Damaged, Breached }  // Damaged reserved, unexercised by wall-only v1
+public sealed class BreachPoint { Segment Segment; BreachState InitialState; string DisplayName; }
+
+// ArenaBoard — mirrors Door's API exactly
+void RegisterBreachPoint(BreachPoint point);
+bool TryGetBreachPoint(PlanarPosition point, out BreachPoint breachPoint);       // exact-match, mirrors TryGetDoor
+bool TryGetNearestBreachPoint(PlanarPosition point, float maxDistance, out BreachPoint breachPoint);
+BreachState GetBreachState(BreachPoint point);
+void SetBreachState(BreachPoint point, BreachState state);
+bool HasAttachedBomb(BreachPoint point);
+void SetAttachedBomb(BreachPoint point, bool attached);
+// IsBlocking / TryGetNearestBlockPoint / Clone extended: an Intact or Damaged breach point blocks
+// Move/Shoot exactly like a wall; only Breached opens it.
+
+// Net
+ActionVerb.BombAttach      // Position = target BreachPoint's segment midpoint (mirrors Door)
+ActionVerb.BombDetonate    // same targeting shape
+TapeEventType.BombAttached     // one-shot; no geometry effect
+TapeEventType.GeometryBreached // continuous, mirrors DoorOpened/Closed — Breached from this Seconds on
+
+// Timeline (PawnProgram) — same InteractRadius/board-tap shape as TryQueueDoor
+bool TryQueueBombAttach(BreachPoint point, out string rejectionReason);   // BombAttachSeconds = 3f (C71 strawman)
+bool TryQueueBombDetonate(BreachPoint point, out string rejectionReason); // BombDetonateSeconds = 1f (C71 strawman)
+```
+
+**GhostResolver:** `ResolveShots` gained a third interleaved chronological stream (alongside shots and
+door toggles) — Attach/Detonate toggles on the same `BreachPoint` apply in strict time order against
+the round's scratch board, same precedence-over-same-instant-shots rule doors already use. A same-round
+Attach is visible to a later-same-round Detonate on the same point. **Resolve() never mutates its own
+`ArenaBoard` input** (verified by test — `GhostResolverBombTests`'s two "stays a pure function" cases) —
+same discipline Door already holds to; persistence to the real board across rounds is a presenter's job,
+not the resolver's.
+
+**Deviations, documented not hidden:**
+1. **Detonate requires the same `InteractRadius` proximity as Attach** (mirrors Door exactly) — C71
+   never actually settled whether detonation should instead be remote/no-proximity (a real detonator
+   wouldn't require walking back). Flagged in `PawnProgram.TryQueueBombDetonate`'s doc comment as a
+   one-line change if remote detonation is wanted later, not an architecture decision.
+2. **No same-round dynamic movement re-routing through a newly-breached wall** — a Move leg drafted
+   before a detonation cannot benefit from geometry that opens later in the same round (unlike Door,
+   which the resolver does dynamically re-check mid-leg). Deliberate simplification: nothing at draft
+   time would have told the player this wall could open, so the draft-time pathfinder never offers that
+   route anyway — this loses no real capability, just the Door-equivalent machinery for it. Shoot LoS
+   *is* fully dynamic (verified) since that's evaluated at resolve time, not draft time.
+3. **Attach has no charge/count limit** — C71 locks costs (3s/1s strawman) but never states a
+   per-match Bomber charge count the way Bandage/Storm have one. Left genuinely unlimited rather than
+   inventing a number; revisit if the human wants one.
+
+**Explicitly NOT built this wave (Sim-layer-only slice, by design — see `DRAFT_HANDOFF.md`'s 2026-08-20
+note for the full reasoning on why this was scoped down rather than attempted whole):**
+
+- **RoundPlayback presenter** — `BombAttached`/`GeometryBreached` are `ReservedNoPresenterYet` in
+  `TapeEventPlaybackCoverageTests`. `GeometryBreached` should mirror `DoorOpened`/`DoorClosed` exactly
+  (continuous, `SyncBreachToSeconds`); `BombAttached` likely a one-shot banner or board marker.
+- **BoardView visuals** — no breach-point rendering (wall material/mesh change on Breach) exists yet.
+- **Map authoring** — no map has an actual designed `BreachPoint` registered. `GhostResolverBombTests`
+  builds its own scratch `ArenaBoard`; nothing in `GameBootstrap`/the three shipped maps calls
+  `RegisterBreachPoint` yet. This needs a real per-map content decision (which wall, which map first —
+  Freight Yard is the obvious candidate as the primary map), not just code.
+- **HUD** — no board-anchored prompt (`UI_BOARD_ANCHORED_COMPONENTS.md` applies once built), no mode
+  button, no scrubber markers. Per `CHARACTER_BOMBER_AGENT_BRIEF.md` §6, this is UI seat's slot once the
+  Sim contract is frozen — it now is.
+- **Bomber Character grant** — nothing gates `BombAttach`/`BombDetonate` to a specific archetype yet
+  (any pawn can currently queue them); Character-gating is a HUD/legality concern per the brief, same
+  split as everything else.
+
+**Batchmode:** EditMode 196/196 (188 baseline + 6 new `GhostResolverBombTests`), PlayMode 66/66
+(unaffected — no PlayMode/scene coverage this wave, by design, see above). Editor closed on `master`'s
+own path for every run.
+
+**Next real step, when picked up again:** map authoring (pick a wall on Freight Yard, register a
+`BreachPoint`), then the RoundPlayback presenter + a real PlayMode test exercising the whole
+Program→Resolve→Playback loop, then UI's HUD slot. Not blocked on anything further design-wise — C71
+already answered every open question that mattered for this slice.
 
 ## Closed — Match Shell Layout (opened 2026-08-15, closed 2026-08-16)
 

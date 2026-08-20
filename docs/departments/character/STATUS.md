@@ -75,8 +75,13 @@ what this pass touched.
 
 ## In progress
 
-- Nothing — decision sheet is done. Next real step is Integrator opening the actual C36 geometry-breach
-  contract (both Bomber and Time Player depend on it per C70/A1's build order), not a Character task.
+- Nothing. ~~Next real step is Integrator opening the actual C36 geometry-breach contract~~ — **done
+  2026-08-20** ("character, GO"): C36 primitive + Bomber wall-only verb Sim layer landed on master, see
+  `docs/contracts/CURRENT.md`'s open C36/Bomber section. Still not a Character task — RoundPlayback
+  presenter, map authoring, and HUD are the next pieces, owned by Integrator/UI respectively; Bomber's
+  own Sim resolve body (attach/detonate legality, Character-gating) is Character's slot once a Sim
+  carve-out exists for it specifically (the primitive landing doesn't auto-open that). Time Player still
+  depends on this same C36 primitive per C70/A1's build order and is otherwise untouched.
 
 ## Backlog — pawn art bugs found 2026-08-20 (human: log and move on, not urgent)
 
