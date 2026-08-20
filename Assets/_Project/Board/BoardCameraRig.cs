@@ -139,6 +139,12 @@ namespace LogiCard.Board
         /// snapping to a near-zero, noisy direction.</summary>
         public const float TpsFacingUpdateThreshold = 0.01f;
 
+        /// <summary>Max degrees/second <see cref="ApplyTpsLock"/> turns the actual follow facing toward
+        /// its threshold-gated target — a low-pass filter that kills per-frame direction noise (see the
+        /// 2026-08-20 bug note on <see cref="ApplyTpsLock"/>) while still reaching a real direction
+        /// change within a frame or two; 480°/s covers more than a full turn in under a second.</summary>
+        public const float TpsFacingTurnDegreesPerSecond = 480f;
+
         /// <summary>Degrees of yaw per pixel of horizontal mouse drag.</summary>
         public const float DegreesPerPixel = 0.25f;
 
@@ -230,6 +236,7 @@ namespace LogiCard.Board
         private int _tpsTargetIndex = -1;
         private Transform _tpsPawnTransform;
         private Vector3 _tpsFacing = Vector3.forward;
+        private Vector3 _tpsFacingTarget = Vector3.forward;
         private Vector3 _tpsLastPawnPosition;
 
         public float YawDegrees => _yawDegrees;
@@ -435,6 +442,7 @@ namespace LogiCard.Board
             _tpsPawnTransform = pawnTransform;
             _tpsLastPawnPosition = pawnTransform.position;
             _tpsFacing = Vector3.forward;
+            _tpsFacingTarget = Vector3.forward;
             _mode = CameraMode.TpsLock;
             _camera.orthographic = false;
             _camera.fieldOfView = TpsFieldOfViewDegrees;
@@ -718,6 +726,17 @@ namespace LogiCard.Board
         /// presenters (PawnView.ApplyTime already drives that transform from the scrubber; this never
         /// starts its own timer/tween). Facing comes from recent ground-plane movement since
         /// <see cref="PawnView"/> never stores a rotation of its own.
+        ///
+        /// BUG FOUND 2026-08-20 (human playtest: "camera wiggle/shake"): <c>_tpsFacing</c> used to snap
+        /// instantly to each frame's raw position delta. That raw per-frame delta is inherently noisy —
+        /// <c>Time.deltaTime</c> varies frame to frame and a multi-waypoint <c>ScheduledPath</c> isn't
+        /// perfectly straight, so the direction between two adjacent sampled points jitters even along
+        /// an intentional, smooth path, and the eye point (offset from the pawn at
+        /// <see cref="TpsFollowDistance"/>) amplifies that angular noise into visible positional shake.
+        /// Fix: keep the same threshold-gated *target* direction, but turn <c>_tpsFacing</c> toward it
+        /// at a bounded rate instead of snapping — this is a low-pass filter on facing, not a new
+        /// follow-lag mechanic; over any real turn it still reaches the target well within a frame or
+        /// two at <see cref="TpsFacingTurnDegreesPerSecond"/>.
         /// </summary>
         private void ApplyTpsLock()
         {
@@ -732,10 +751,13 @@ namespace LogiCard.Board
             delta.y = 0f;
             if (delta.sqrMagnitude > TpsFacingUpdateThreshold * TpsFacingUpdateThreshold)
             {
-                _tpsFacing = delta.normalized;
+                _tpsFacingTarget = delta.normalized;
             }
 
             _tpsLastPawnPosition = pawnPos;
+            _tpsFacing = Vector3.RotateTowards(
+                _tpsFacing, _tpsFacingTarget,
+                TpsFacingTurnDegreesPerSecond * Mathf.Deg2Rad * Time.deltaTime, float.MaxValue).normalized;
 
             Vector3 eyePoint = pawnPos - (_tpsFacing * TpsFollowDistance) + (Vector3.up * TpsFollowHeight);
             Vector3 lookPoint = pawnPos + (Vector3.up * TpsLookHeightOffset);
