@@ -32,20 +32,22 @@ namespace LogiCard.Tests.EditMode
             // before this round's own ResolveShots pass runs), and BuildHitVfx only ever splats this
             // round's own Wounded/Killed events. See TapeEvent.cs's doc comment on this value.
             TapeEventType.Healed,
+
+            // C36/C71 — Bomber wall-only v1 presenter (2026-08-20, landed after the Sim-layer-only
+            // slice). BombAttached: one-shot banner only (RoundPlayback.Report), same shape as Healed.
+            // GeometryBreached: continuous presenter mirroring DoorOpened/Closed exactly
+            // (RoundPlayback.SyncBreachToSeconds) — breach point is Breached from this event's Seconds
+            // onward, rewind-safe via the same arm-snapshot-plus-forward-scan shape SyncDoorsToSeconds
+            // uses. BoardView breach-point visuals and map authoring of real breach points remain
+            // separate follow-up work (see docs/contracts/CURRENT.md's C36 section) — the board model
+            // is fully live, nothing renders it yet.
+            TapeEventType.BombAttached,
+            TapeEventType.GeometryBreached,
         };
 
         private static readonly HashSet<TapeEventType> ReservedNoPresenterYet = new HashSet<TapeEventType>
         {
             TapeEventType.Invalid,
-
-            // C36/C71 — Bomber wall-only v1 (2026-08-20). Sim-layer-only slice: GhostResolver emits
-            // both events correctly (see GhostResolverBombTests), but RoundPlayback presenter wiring,
-            // BoardView breach-point visuals, and map authoring of real breach points are explicit
-            // follow-up work, not built yet. Move to PresentedAtScrubber once RoundPlayback wires them
-            // (GeometryBreached should mirror DoorOpened/Closed exactly; BombAttached likely stays a
-            // one-shot banner or board-anchored marker, no continuous geometry change of its own).
-            TapeEventType.BombAttached,
-            TapeEventType.GeometryBreached,
         };
 
         [Test]

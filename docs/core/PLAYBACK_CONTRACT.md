@@ -52,14 +52,23 @@ Rules:
 | `Wounded` / `Killed` | Wound splat + banner | Splat yes / banner one-shot | `UpdateHitVfx` / `Report` |
 | `MoveArrive` | Footstep foley | One-shot forward | `Report` |
 | `Healed` | Banner only | One-shot forward | `Report` |
-| `BombAttached` | Reserved (C36/Bomber, 2026-08-20 — Sim layer only) | — | None yet |
-| `GeometryBreached` | Reserved (C36/Bomber, 2026-08-20) — planned: mirror `DoorOpened`/`DoorClosed` exactly | — | None yet |
+| `BombAttached` | Banner only | One-shot forward | `Report` |
+| `GeometryBreached` | Board breach-point geometry state (no visuals yet) | Yes | `SyncBreachToSeconds` |
 | `Invalid` | Reserved (Otherwise Stop — post-demo) | — | None yet |
 
 Vent/Breach are `DoorKind`s on the same Door tape path — not a separate Playback system. **Not the same
 thing as `BombAttached`/`GeometryBreached` above** — those are the new C36 geometry-destruction system
 (a `BreachPoint`, not a `Door`); same English word, unrelated concepts, see
 `CHARACTER_BOMBER_AGENT_BRIEF.md` §2 for the naming collision this doc already warned about.
+
+**`GeometryBreached` presenter (2026-08-20, `RoundPlayback.SyncBreachToSeconds`):** same shape as
+`SyncDoorsToSeconds` — an arm-time snapshot of every registered `BreachPoint`'s state plus a forward
+scan of `BombAttached`/`GeometryBreached` events up to the scrubber second, reapplied to
+`ArenaBoard.SetBreachState`/`SetAttachedBomb` on every `ApplyTime` tick (same-second guarded, so no
+redundant writes). Rewind-safe: scrubbing before a Detonate's `Seconds` restores `Intact`. **No
+BoardView visual exists yet** — the board model is fully live (blocks Move/Shoot correctly at any
+scrubber position) but nothing renders the state change; that's still open, see
+`docs/contracts/CURRENT.md`'s C36 section.
 
 **`Healed` has no splat leg by design, not oversight (2026-08-18):** `GhostResolver.CompileTrack`
 resolves a Bandage node's heal from `GhostInput.StartingWounds` (carried in from a prior round) before

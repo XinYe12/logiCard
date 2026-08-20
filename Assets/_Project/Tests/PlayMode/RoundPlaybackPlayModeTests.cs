@@ -226,6 +226,93 @@ namespace LogiCard.Tests.PlayMode
             Assert.That(AnyVisible(Object.FindObjectsByType<WoundSplatView>(FindObjectsSortMode.None)), Is.False);
         }
 
+        /// <summary>
+        /// C36/Bomber — the real Program→Resolve→Playback loop the contract's "next real step" note
+        /// asked for: no map has an authored <see cref="BreachPoint"/> yet (deliberately deferred, a
+        /// human content decision), so this test registers its own directly on the live
+        /// <see cref="BoardView.Model"/>, the same way <c>GhostResolverBombTests</c> builds its own
+        /// scratch board for the Sim layer. Attach then Detonate in one round: geometry stays Intact
+        /// until the Detonate's own second, flips to Breached exactly there, and rewinding past it
+        /// restores Intact (PLAYBACK_CONTRACT rule 2/4 — pure function of scrubber seconds, no restart).
+        /// </summary>
+        [Test]
+        public void AttachThenDetonateBreachesTheWallAtItsSecondAndRewindRestoresIt()
+        {
+            var point = new BreachPoint(
+                new Segment(new PlanarPosition(Home.X - 1f, Home.Y), new PlanarPosition(Home.X + 1f, Home.Y)),
+                BreachState.Intact,
+                "Test Breach");
+            BoardVisual.Model.RegisterBreachPoint(point);
+
+            Assert.That(AttackerInput.Program.TryQueueBombAttach(point, out string attachReason), Is.True, attachReason);
+            Assert.That(AttackerInput.Program.TryQueueBombDetonate(point, out string detonateReason), Is.True, detonateReason);
+            AttackerInput.CommitToPlayback();
+            Playback.ResolveAndArm();
+            Clock.Pause();
+
+            TapeEvent? attached = FirstEventOfType(Playback.Tape, TapeEventType.BombAttached);
+            TapeEvent? breached = FirstEventOfType(Playback.Tape, TapeEventType.GeometryBreached);
+            Assert.That(attached.HasValue, Is.True, "Queued BombAttach must emit a BombAttached event.");
+            Assert.That(breached.HasValue, Is.True, "Queued BombDetonate on an attached point must emit GeometryBreached.");
+
+            Clock.SetSeconds(Mathf.Max(0f, breached.Value.Seconds - 0.05f));
+            Assert.That(BoardVisual.Model.GetBreachState(point), Is.EqualTo(BreachState.Intact),
+                "Wall must stay Intact before the Detonate's own second.");
+
+            Clock.SetSeconds(breached.Value.Seconds);
+            Assert.That(BoardVisual.Model.GetBreachState(point), Is.EqualTo(BreachState.Breached),
+                "Wall must be Breached at the Detonate's own second.");
+
+            Clock.SetSeconds(0f);
+            Assert.That(BoardVisual.Model.GetBreachState(point), Is.EqualTo(BreachState.Intact),
+                "Rewind to round-start must restore Intact.");
+
+            Clock.SetSeconds(breached.Value.Seconds);
+            Assert.That(BoardVisual.Model.GetBreachState(point), Is.EqualTo(BreachState.Breached),
+                "Scrubbing forward again must re-apply the breach.");
+        }
+
+        /// <summary>
+        /// C36/Bomber — an Attach committed in round 1 must persist (the real bug class door persistence
+        /// already fixed, C33's carry-across-rounds discipline) so round 2's Detonate on the same point,
+        /// with no new Attach queued, still succeeds — proves <c>SyncBreachToSeconds</c>'s final
+        /// authoritative apply in <c>CommitRoundState</c> actually writes the attached-bomb flag back
+        /// onto the shared <see cref="ArenaBoard"/>, not just a scrubber-local view.
+        /// </summary>
+        [Test]
+        public void BombAttachedInRoundOnePersistsSoRoundTwoCanDetonateWithoutReattaching()
+        {
+            var point = new BreachPoint(
+                new Segment(new PlanarPosition(Home.X - 1f, Home.Y), new PlanarPosition(Home.X + 1f, Home.Y)),
+                BreachState.Intact,
+                "Test Breach");
+            BoardVisual.Model.RegisterBreachPoint(point);
+
+            Assert.That(AttackerInput.Program.TryQueueBombAttach(point, out string attachReason), Is.True, attachReason);
+            AttackerInput.CommitToPlayback();
+            Playback.ResolveAndArm();
+            Clock.SetSeconds(Playback.Tape.EndSeconds);
+
+            Phase.GoTo(RoundPhase.Aftermath);
+            Assert.That(BoardVisual.Model.HasAttachedBomb(point), Is.True,
+                "Attach must be committed onto the real board at Aftermath, same as doors/wounds.");
+
+            Bootstrap.RequestNextRound();
+            Assert.That(Bootstrap.BeginRound(DefaultRoundSeconds), Is.True);
+
+            Assert.That(AttackerInput.Program.TryQueueBombDetonate(point, out string detonateReason), Is.True, detonateReason);
+            AttackerInput.CommitToPlayback();
+            Playback.ResolveAndArm();
+            Clock.Pause();
+
+            TapeEvent? breached = FirstEventOfType(Playback.Tape, TapeEventType.GeometryBreached);
+            Assert.That(breached.HasValue, Is.True,
+                "Round 2's Detonate must succeed against the bomb attached in round 1 — resolver reads HasAttachedBomb from the real board.");
+
+            Clock.SetSeconds(breached.Value.Seconds);
+            Assert.That(BoardVisual.Model.GetBreachState(point), Is.EqualTo(BreachState.Breached));
+        }
+
         private static bool AnyVisible(ShotTracerView[] views)
         {
             for (int i = 0; i < views.Length; i++)

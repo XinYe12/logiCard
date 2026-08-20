@@ -40,6 +40,8 @@ namespace LogiCard.Boot
         private readonly List<MuzzleFlashEntry> _muzzleFlashes = new List<MuzzleFlashEntry>();
         private readonly List<WoundSplatEntry> _woundSplats = new List<WoundSplatEntry>();
         private readonly Dictionary<Door, DoorState> _doorStateAtArm = new Dictionary<Door, DoorState>();
+        private readonly Dictionary<BreachPoint, BreachState> _breachStateAtArm = new Dictionary<BreachPoint, BreachState>();
+        private readonly Dictionary<BreachPoint, bool> _bombAttachedAtArm = new Dictionary<BreachPoint, bool>();
 
         private BoardView _board;
         private TimeResourceClockDriver _clock;
@@ -50,6 +52,7 @@ namespace LogiCard.Boot
         private int _eventCursor;
         private float _lastAppliedSeconds;
         private float _doorsSyncedToSeconds = float.NaN;
+        private float _breachSyncedToSeconds = float.NaN;
         private bool _anyoneDead;
 
         private BoardWeatherPocket _weatherPocket;
@@ -169,6 +172,9 @@ namespace LogiCard.Boot
             _anyoneDead = false;
             _doorStateAtArm.Clear();
             _doorsSyncedToSeconds = float.NaN;
+            _breachStateAtArm.Clear();
+            _bombAttachedAtArm.Clear();
+            _breachSyncedToSeconds = float.NaN;
 
             // C67 — a fresh match starts on the ambient Fair mood, not whatever a prior match's
             // Storm cast left the board in.
@@ -187,6 +193,14 @@ namespace LogiCard.Boot
                 }
 
                 _board.RefreshDoorVisuals();
+
+                IReadOnlyList<BreachPoint> breachPoints = _board.Model.BreachPoints;
+                for (int i = 0; i < breachPoints.Count; i++)
+                {
+                    BreachPoint point = breachPoints[i];
+                    _board.Model.SetBreachState(point, point.InitialState);
+                    _board.Model.SetAttachedBomb(point, false);
+                }
             }
 
             for (int i = 0; i < _pawns.Count; i++)
@@ -299,6 +313,7 @@ namespace LogiCard.Boot
             BuildTracers();
             BuildHitVfx();
             SnapshotDoorStatesAtArm();
+            SnapshotBreachStatesAtArm();
             SnapshotWeatherAtArm();
 
             Debug.Log($"[logiCard] Ghost resolve: {_tape.Events.Count} event(s), " +
@@ -339,6 +354,7 @@ namespace LogiCard.Boot
 
             // Final authoritative apply (covers Aftermath without scrubbing to the tape end).
             SyncDoorsToSeconds(float.PositiveInfinity);
+            SyncBreachToSeconds(float.PositiveInfinity);
             SyncWeatherToSeconds(float.PositiveInfinity);
         }
 
@@ -367,6 +383,26 @@ namespace LogiCard.Boot
             {
                 Door door = doors[i];
                 _doorStateAtArm[door] = _board.Model.GetDoorState(door);
+            }
+        }
+
+        /// <summary>
+        /// C36/Bomber — snapshot every registered <see cref="BreachPoint"/>'s geometry state and
+        /// attached-bomb flag at Lock In, same shape as <see cref="SnapshotDoorStatesAtArm"/>: scrubbing
+        /// back to round-start must restore whatever a prior round's Detonate/Attach already left the
+        /// board in, not each point's <see cref="BreachPoint.InitialState"/>.
+        /// </summary>
+        private void SnapshotBreachStatesAtArm()
+        {
+            _breachStateAtArm.Clear();
+            _bombAttachedAtArm.Clear();
+            _breachSyncedToSeconds = float.NaN;
+            IReadOnlyList<BreachPoint> breachPoints = _board.Model.BreachPoints;
+            for (int i = 0; i < breachPoints.Count; i++)
+            {
+                BreachPoint point = breachPoints[i];
+                _breachStateAtArm[point] = _board.Model.GetBreachState(point);
+                _bombAttachedAtArm[point] = _board.Model.HasAttachedBomb(point);
             }
         }
 
@@ -425,6 +461,64 @@ namespace LogiCard.Boot
             // restarted every ApplyTime tick (playtest 2026-08-12: all opens finished at reveal end).
             _board.RefreshDoorVisuals();
             _doorsSyncedToSeconds = seconds;
+        }
+
+        /// <summary>
+        /// C36/Bomber — continuous presenter for <see cref="TapeEventType.BombAttached"/> /
+        /// <see cref="TapeEventType.GeometryBreached"/>, same shape as <see cref="SyncDoorsToSeconds"/>:
+        /// re-derives every registered <see cref="BreachPoint"/>'s attached-bomb flag and geometry
+        /// state from the arm snapshot plus tape events up to <paramref name="seconds"/>, so rewinding
+        /// past a Detonate restores the wall and rewinding past an Attach clears the flag. No BoardView
+        /// visual refresh yet — breach-point rendering is explicit follow-up work
+        /// (<c>docs/contracts/CURRENT.md</c>'s C36 section), same "board model only" scope every other
+        /// gap in that list documents.
+        /// </summary>
+        private void SyncBreachToSeconds(float seconds)
+        {
+            if (_breachSyncedToSeconds == seconds)
+            {
+                return;
+            }
+
+            foreach (KeyValuePair<BreachPoint, BreachState> pair in _breachStateAtArm)
+            {
+                _board.Model.SetBreachState(pair.Key, pair.Value);
+            }
+
+            foreach (KeyValuePair<BreachPoint, bool> pair in _bombAttachedAtArm)
+            {
+                _board.Model.SetAttachedBomb(pair.Key, pair.Value);
+            }
+
+            if (_tape != null)
+            {
+                for (int i = 0; i < _tape.Events.Count; i++)
+                {
+                    TapeEvent tapeEvent = _tape.Events[i];
+                    // Events are sorted by Seconds (GhostResolver.CompareEvents).
+                    if (tapeEvent.Seconds > seconds)
+                    {
+                        break;
+                    }
+
+                    if (tapeEvent.Type == TapeEventType.BombAttached)
+                    {
+                        if (_board.Model.TryGetBreachPoint(tapeEvent.Position, out BreachPoint point))
+                        {
+                            _board.Model.SetAttachedBomb(point, true);
+                        }
+                    }
+                    else if (tapeEvent.Type == TapeEventType.GeometryBreached)
+                    {
+                        if (_board.Model.TryGetBreachPoint(tapeEvent.Position, out BreachPoint point))
+                        {
+                            _board.Model.SetBreachState(point, BreachState.Breached);
+                        }
+                    }
+                }
+            }
+
+            _breachSyncedToSeconds = seconds;
         }
 
         /// <summary>
@@ -531,6 +625,7 @@ namespace LogiCard.Boot
             UpdateTracers(seconds);
             UpdateHitVfx(seconds);
             SyncDoorsToSeconds(seconds);
+            SyncBreachToSeconds(seconds);
             SyncWeatherToSeconds(seconds);
 
             if (seconds < _lastAppliedSeconds)
@@ -588,6 +683,11 @@ namespace LogiCard.Boot
                     // wound this round never built a splat for in the first place (BuildHitVfx only
                     // splats this round's own Wounded/Killed events). Nothing on the board to touch.
                     OutcomeReported?.Invoke($"HEALED  P{tapeEvent.PawnId}  @{tapeEvent.Seconds:0.0}s");
+                    break;
+                case TapeEventType.BombAttached:
+                    // One-shot banner only, same shape as Healed — the continuous geometry change
+                    // (and the flag this reads later) is SyncBreachToSeconds's job, not this cursor's.
+                    OutcomeReported?.Invoke($"BOMB ATTACHED  P{tapeEvent.PawnId}  @{tapeEvent.Seconds:0.0}s");
                     break;
             }
         }

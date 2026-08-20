@@ -67,12 +67,25 @@ not the resolver's.
    per-match Bomber charge count the way Bandage/Storm have one. Left genuinely unlimited rather than
    inventing a number; revisit if the human wants one.
 
-**Explicitly NOT built this wave (Sim-layer-only slice, by design — see `DRAFT_HANDOFF.md`'s 2026-08-20
-note for the full reasoning on why this was scoped down rather than attempted whole):**
+**RoundPlayback presenter — landed 2026-08-20 (this session), still on `master`, no map/HUD work
+touched:** `RoundPlayback.SyncBreachToSeconds` mirrors `SyncDoorsToSeconds` exactly — arm-time snapshot
+of every registered `BreachPoint`'s state + attached-bomb flag, plus a forward scan of
+`BombAttached`/`GeometryBreached` tape events up to the scrubber second, reapplied to
+`ArenaBoard.SetBreachState`/`SetAttachedBomb` on every `ApplyTime` tick (rewind-safe, same-second
+guarded). `BombAttached` is a one-shot banner via `Report` (`"BOMB ATTACHED  P{id}  @{s}s"`), same shape
+as `Healed`. `CommitRoundState` calls `SyncBreachToSeconds(float.PositiveInfinity)` so an Attach commits
+onto the real board the same way doors/wounds already do — verified by a new PlayMode test
+(`BombAttachedInRoundOnePersistsSoRoundTwoCanDetonateWithoutReattaching`) that a round-1 Attach lets
+round 2 Detonate with no re-Attach. Both events moved from `ReservedNoPresenterYet` to
+`PresentedAtScrubber` in `TapeEventPlaybackCoverageTests`; `PLAYBACK_CONTRACT.md` §3's matrix updated.
+No map has a registered `BreachPoint` yet (still deferred — see below), so the new PlayMode tests
+register their own directly on the live `BoardView.Model`, same pattern `GhostResolverBombTests` uses
+for its own scratch `ArenaBoard`. **Still no BoardView visual** — the board model is fully live (blocks
+Move/Shoot correctly at any scrubber position) but nothing renders the state change yet.
 
-- **RoundPlayback presenter** — `BombAttached`/`GeometryBreached` are `ReservedNoPresenterYet` in
-  `TapeEventPlaybackCoverageTests`. `GeometryBreached` should mirror `DoorOpened`/`DoorClosed` exactly
-  (continuous, `SyncBreachToSeconds`); `BombAttached` likely a one-shot banner or board marker.
+**Explicitly NOT built this wave (by design — see `DRAFT_HANDOFF.md`'s 2026-08-20 note for the full
+reasoning on why the Sim-layer slice was originally scoped down rather than attempted whole):**
+
 - **BoardView visuals** — no breach-point rendering (wall material/mesh change on Breach) exists yet.
 - **Map authoring** — no map has an actual designed `BreachPoint` registered. `GhostResolverBombTests`
   builds its own scratch `ArenaBoard`; nothing in `GameBootstrap`/the three shipped maps calls
@@ -85,14 +98,15 @@ note for the full reasoning on why this was scoped down rather than attempted wh
   (any pawn can currently queue them); Character-gating is a HUD/legality concern per the brief, same
   split as everything else.
 
-**Batchmode:** EditMode 196/196 (188 baseline + 6 new `GhostResolverBombTests`), PlayMode 66/66
-(unaffected — no PlayMode/scene coverage this wave, by design, see above). Editor closed on `master`'s
-own path for every run.
+**Batchmode (Sim-layer-only landing):** EditMode 196/196 (188 baseline + 6 new `GhostResolverBombTests`),
+PlayMode 66/66 (unaffected — no PlayMode/scene coverage that wave, by design). **Batchmode (this
+session's presenter landing):** see the bottom of this section for the fresh run — Editor closed on
+`master`'s own path for every run.
 
-**Next real step, when picked up again:** map authoring (pick a wall on Freight Yard, register a
-`BreachPoint`), then the RoundPlayback presenter + a real PlayMode test exercising the whole
-Program→Resolve→Playback loop, then UI's HUD slot. Not blocked on anything further design-wise — C71
-already answered every open question that mattered for this slice.
+**Next real step, when picked up again:** map authoring (pick a wall — human explicitly deferred this
+decision 2026-08-20, asked to decide it themselves rather than have an agent pick), then UI's HUD slot.
+Not blocked on anything further design-wise — C71 already answered every open question that mattered for
+this slice.
 
 ## Closed — Match Shell Layout (opened 2026-08-15, closed 2026-08-16)
 
