@@ -1,5 +1,25 @@
 # Draft Handoff — 2026-08-20
 
+**2026-08-20 (later): UI shell-chrome restyle merged to master (`546ba31`), human-approved "as is."**
+Two commits: the full non-HUD restyle (Boot/Character Select/Map Select/Lobby/Match End — lit backdrops,
+`ShellButton` family, Iomanoid display font) plus a live 3D character-model preview inside each
+Character Select card (`CharacterPreviewRig.cs`, render-texture based, shares the exact same
+`Resources` prefab/tint the match itself spawns via `PawnView.TryInstantiateArchetypeVisual`). Clean
+auto-merge — hand-verified anyway given the corruption class found in the Atmosphere merge, plus a
+repo-wide conflict-marker sweep; nothing found. Batchmode: **EditMode 190/190, PlayMode 66/66.** Worktree
+`logiCard-ui-restyle` removed post-merge.
+
+**Two real board-art bugs surfaced by the card preview, logged not fixed (human: "log and move on"):**
+Scout's face/hands render bright orange-red (`PawnView`'s team-tint targets a mesh part named `"Body"`,
+which on this model is skin, not torso) and Juggernaut's prefab has a bunny-ears hat mesh enabled — both
+always true on the actual board, just invisible at top-down scale. See
+`docs/departments/character/STATUS.md`'s new Backlog section.
+
+**Also 2026-08-20: fixed a real camera bug** (`70745f3`) — TPS-lock follow camera wiggled/shook during
+pawn movement. Root cause: `BoardCameraRig.ApplyTpsLock` snapped its facing direction instantly to each
+frame's raw (noisy) position delta; fixed by turning toward the target at a bounded rate instead of
+snapping. Batchmode: EditMode 190/190, PlayMode 65/65.
+
 **2026-08-20: Atmosphere's Sunny weather mood merged to master (`0857b80`).** Human called Sunny "ok to
 merge" after a Play look at the `feat/atmosphere-stylized` worktree. `BoardWeatherMood.Sunny` lands as a
 third mood alongside Fair/Storm, sharing a new lighting-override subsystem
@@ -105,7 +125,7 @@ post-merge, Editor closed: **EditMode 190/190, PlayMode 63/63** (the +1 is
 Atmosphere stays parked (Sunny mode, blocked on human decision).
 
 **Milestone:** Phase 5 Commercial Art Bar (active). Phase 2 Net paused (C63/C67 gear carve-out).
-**Integrator tip:** `master` @ `0857b80` — **Atmosphere's Sunny weather mood merged** (see 2026-08-20 note above), on top of camera control-hint UI chrome, dead Bandage/Storm board-tap prune, Storm per-match counter, Healed presenter, and Camera merge. Batchmode-verified independently on master post-merge: EditMode 190/190, PlayMode 65/65. **In flight, not yet on master:** UI shell-chrome restyle, sitting on `logiCard-ui-restyle` pending human review.
+**Integrator tip:** `master` @ `546ba31` — **UI shell-chrome restyle merged** (human-approved as-is), on top of the TPS camera-wiggle fix, Sunny weather mood, camera control-hint UI chrome, dead Bandage/Storm board-tap prune, Storm per-match counter, Healed presenter, and Camera merge. Batchmode-verified independently on master post-merge: EditMode 190/190, PlayMode 66/66. Nothing in flight off `master` right now.
 **Active wave: this dispatch round is closed.** Match Shell Layout, Map, and Camera are all merged to master. Camera landed via human hands-on iteration during the actual re-test — the human found the control-hint overlay's rotate-only right-drag didn't feel right and iterated on it live: first to a combined pan+rotate gesture (`169a55f`), then further to right-drag doing pitch tilt between top/front view rather than pan (`2e2d022`, `CAMERA_VERTICAL_DRAG_PAN_BRIEF.md`). Integrator re-ran batchmode fresh against each commit as it landed and again on `master` after the merge — every pass green. No paused dept work outstanding.
 Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [`docs/contracts/CURRENT.md`](contracts/CURRENT.md).
 
@@ -129,7 +149,7 @@ Plan: [`docs/ui/MATCH_SHELL_LAYOUT.md`](ui/MATCH_SHELL_LAYOUT.md) · contract: [
 | Integrator | `logiCard` | `master` @ `bb6fcdf` — everything through the 2026-08-18 restaffing pass merged, batchmode-verified (see Verification) |
 | **UI** | `logiCard-modal-restyle` | `feat/modal-restyle` @ `e1c80fb` — fully merged to master; worktree can resync/idle |
 | Atmosphere | `logiCard-atmosphere-stylized` | **Sunny weather mood merged to master** (`0857b80`, 2026-08-20) — stray `Assets/_Recovery` scene dropped, not carried over; worktree idle |
-| **UI (restyle)** | `logiCard-ui-restyle` | `worktree-agent-a035c5b8c7a5428af` — shell-chrome restyle (Character Select/buttons/lobby), **not yet merged**, pending human Editor review |
+| **UI (restyle)** | — | **Merged to master** (`546ba31`, 2026-08-20), human-approved; worktree removed |
 | Cards | `logiCard-cards-collection` | **Rebased + fully reconciled onto master** (`47baf50`, 2026-08-18); worktree idle |
 | Character | `logiCard-char-select-motion` | **Carousel feature rebased + merged to master** (`9472783`, 2026-08-18); UI dept now owns this code going forward, not Character; worktree idle |
 | Map | `logiCard-map` | **Fully merged to master** (`07501d7`) — fence-shadow fix + Hall/Vault material tweaks; worktree idle |
