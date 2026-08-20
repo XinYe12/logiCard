@@ -78,6 +78,24 @@ what this pass touched.
 - Nothing — decision sheet is done. Next real step is Integrator opening the actual C36 geometry-breach
   contract (both Bomber and Time Player depend on it per C70/A1's build order), not a Character task.
 
+## Backlog — pawn art bugs found 2026-08-20 (human: log and move on, not urgent)
+
+Exposed by the new Character Select card preview (`docs/ui/UI_SHELL_CHROME.md`'s render-texture rig —
+close-up card scale shows what top-down board scale always hid). Real board bugs, not UI bugs:
+
+1. **Scout's face/hands render bright orange-red.** `PawnView`'s team-tint targets a mesh part named
+   `"Body"` (`TintedPartNameMarker`), but on this model `"Body"` is the *skin*, not the jacket/torso —
+   the tint always hits Scout's skin on the actual board too, just unnoticed at board scale.
+2. **Juggernaut's prefab has a rabbit-ears hat mesh enabled.** The "Breacher" archetype visibly wears
+   bunny ears. Same story — invisible top-down, obvious close-up.
+3. Also noted in passing: both prefabs carry an `Animator` with no controller, so board and card both
+   show the bind/T-pose. Not logged as a bug (no idle animation was ever promised), but a one-clip idle
+   would read a lot better in the card and belongs on this same pawn-art track since the board would
+   benefit too.
+
+Human said "log and move on" (2026-08-20) — not urgent, pick up whenever this seat is next restaffed
+for pawn art.
+
 ## Done this session (Match Shell Layout — docs)
 
 - **InfoBar field sheet** appended to [`CHARACTER_FANTASY.md`](../../CHARACTER_FANTASY.md) **§4.1**.

@@ -37,12 +37,12 @@ tuning / lighting grade — not a revert-to-photo-PBR problem.
 
 ### Candidate tweaks (for human review — do not auto-apply)
 
-1. ~~**Fence soft-shadow “black burst” (Map-owned, high priority).**~~ **Fixed 2026-08-16** — see
-   "Done — fence shadow-acne fix" below. Still awaiting human visual sign-off.
-2. ~~**Yard vs Hall chroma separation (Map-owned, low).**~~ **Fixed 2026-08-16** — see "Done — Hall
-   chroma + Vault smoothness fix" below. Still awaiting human visual sign-off.
-3. ~~**Vault floor smoothness (Map-owned, low).**~~ **Fixed 2026-08-16** — see "Done — Hall chroma +
-   Vault smoothness fix" below. Still awaiting human visual sign-off.
+1. ~~**Fence soft-shadow "black burst" (Map-owned, high priority).**~~ **Fixed 2026-08-16, human visual
+   sign-off given 2026-08-20** — see "Done — fence shadow-acne fix" below. Closed.
+2. ~~**Yard vs Hall chroma separation (Map-owned, low).**~~ **Fixed 2026-08-16, human visual sign-off
+   given 2026-08-20** — see "Done — Hall chroma + Vault smoothness fix" below. Closed.
+3. ~~**Vault floor smoothness (Map-owned, low).**~~ **Fixed 2026-08-16, human visual sign-off given
+   2026-08-20** — see "Done — Hall chroma + Vault smoothness fix" below. Closed.
 4. **Warm lamp radial wash (Integrator-owned, already flagged).** Soft point-light gradients on flat
    floors fight the “painted miniature” read. Map materials are correct; this is still the optional
    `BuildLighting` / `BuildDioramaVolume` re-pass after C65 — not a Map material regress.
@@ -113,9 +113,9 @@ passed, 0 failed, 0 inconclusive, 0 skipped.
 
 ## In progress
 
-- None — seat idle pending human visual sign-off on all three landed fixes above (shadow-acne, Hall
-  chroma, Vault smoothness). No further candidate tweaks outstanding from the 2026-08-15 look-check
-  except #4 (Integrator-owned lighting re-pass, optional) and #5 (doc-only Moodboard update).
+- None — **human visual sign-off given 2026-08-20** on all three landed fixes above (shadow-acne, Hall
+  chroma, Vault smoothness). Seat idle. No further candidate tweaks outstanding from the 2026-08-15
+  look-check except #4 (Integrator-owned lighting re-pass, optional) and #5 (doc-only Moodboard update).
 
 ## Done — Match Shell Layout docs recommendation (2026-08-15)
 
