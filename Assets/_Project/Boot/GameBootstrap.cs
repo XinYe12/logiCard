@@ -838,8 +838,8 @@ namespace LogiCard.Boot
         }
 
         /// <summary>
-        /// Contained stormy sky + rain above the board (C53). Sits in the space above the existing
-        /// chunk; does not replace the dark void or change camera clear flags.
+        /// Contained weather pocket above the board (C53). Modular moods via
+        /// <see cref="BoardWeatherPocket.ApplyWeather"/> — Sunny by default for the current look pass.
         /// </summary>
         private void BuildWeatherPocket()
         {
@@ -848,6 +848,9 @@ namespace LogiCard.Boot
             // Modular weather host — the Storm card (C67) calls ApplyWeather(Storm) via
             // RoundPlayback's StormCast presenter. Bootstrap mounts the calmer Fair look so the
             // card has something to visibly change; Storm is no longer the permanent boot mood.
+            // Sunny (Sunshine / 万里无云, merged 2026-08-19) is a third available mood via
+            // ApplyWeather/ToggleSunnyStorm — boot default deliberately stays Fair rather than
+            // silently switching the game's default look; revisit if a human wants Sunny as boot.
             _weatherPocket = weatherGo.AddComponent<BoardWeatherPocket>();
             _weatherPocket.Build(_board, BoardWeatherMood.Fair);
             _playback.SetWeatherPocket(_weatherPocket);

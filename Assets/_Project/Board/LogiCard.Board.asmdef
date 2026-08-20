@@ -5,7 +5,9 @@
         "LogiCard.Sim",
         "LogiCard.Net",
         "LogiCard.Timeline",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

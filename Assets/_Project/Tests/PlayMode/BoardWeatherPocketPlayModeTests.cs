@@ -8,7 +8,9 @@ namespace LogiCard.Tests.PlayMode
 {
     /// <summary>
     /// Smoke: WeatherPocket binds + applies a modular weather child (Storm module structure) with
-    /// centered clay CloudBank + rim mist — not a full-board fog slab.
+    /// centered clay CloudBank + rim mist — not a full-board fog slab. Sunny (merged 2026-08-19 from
+    /// Atmosphere's branch) is a third available mood alongside Fair/Storm — boot default stays Fair
+    /// (C67), so Sunny tests below request it explicitly rather than relying on the boot mood.
     /// </summary>
     [TestFixture]
     public sealed class BoardWeatherPocketPlayModeTests : SliceSceneFixture
@@ -124,6 +126,85 @@ namespace LogiCard.Tests.PlayMode
                 Assert.That(fitted, Is.GreaterThanOrEqualTo(1),
                     $"{zap.name} should expose ConeVolume bolt layers fitted to cloud height.");
             }
+
+            yield return null;
+        }
+
+        /// <summary>
+        /// Sunny (merged from Atmosphere's branch, 2026-08-19) — cloudless, mood-owned sun rig, no
+        /// Storm-only children. Requests it explicitly rather than relying on it being the boot mood
+        /// (boot default deliberately stays Fair — see this class's doc comment).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator WeatherPocketSunnyModuleBuildsWithoutThrow()
+        {
+            var weather = Object.FindAnyObjectByType<BoardWeatherPocket>();
+            Assert.That(weather, Is.Not.Null, "Bootstrap built no BoardWeatherPocket.");
+
+            weather.ApplyWeather(BoardWeatherMood.Sunny);
+            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Sunny),
+                "ApplyWeather(Sunny) should mount the Sunny module.");
+
+            Transform module = weather.transform.Find("Weather_Sunny");
+            Assert.That(module, Is.Not.Null, "Expected Weather_Sunny module child (card-swappable).");
+            Assert.That(module.Find("SunnySky"), Is.Not.Null, "Sunny module should expose SunnySky marker.");
+            Assert.That(module.Find("CloudBank"), Is.Null, "Sunny must be cloudless — no CloudBank.");
+            Assert.That(module.Find("LightningStorm"), Is.Null, "Sunny must not spawn LightningStorm.");
+            Assert.That(module.Find("CloudEnergize"), Is.Null, "Sunny must not spawn CloudEnergize.");
+            Assert.That(module.Find("RimMist"), Is.Null, "Sunny must not spawn RimMist.");
+
+            // Mood lighting: clear-sky ambient lift (Atmosphere-owned override).
+            Assert.That(RenderSettings.ambientLight.g, Is.GreaterThan(0.7f),
+                "Sunny ambient should be punched open (not desk-lamp dim).");
+
+            Transform sunnySky = module.Find("SunnySky");
+            Assert.That(sunnySky.Find("SunnySun"), Is.Not.Null, "Expected mood-owned SunnySun directional.");
+            Assert.That(sunnySky.Find("SunnySkyFill"), Is.Not.Null, "Expected mood-owned SunnySkyFill.");
+            var sun = sunnySky.Find("SunnySun").GetComponent<Light>();
+            Assert.That(sun, Is.Not.Null);
+            Assert.That(sun.enabled, Is.True);
+            Assert.That(sun.intensity, Is.GreaterThan(2f), "SunnySun should punch harder than desk-lamp Key.");
+
+            Assert.That(weather.transform.Find("WeatherToggleUi"), Is.Not.Null,
+                "Look-pass Sunny/Storm toggle should live on the weather host.");
+
+            yield return null;
+        }
+
+        /// <summary>Look-pass authoring toggle (merged from Atmosphere's branch, 2026-08-19) flips
+        /// cleanly between Sunny and Storm in both directions.</summary>
+        [UnityTest]
+        public IEnumerator WeatherToggleFlipsSunnyAndStorm()
+        {
+            var weather = Object.FindAnyObjectByType<BoardWeatherPocket>();
+            Assert.That(weather, Is.Not.Null);
+
+            weather.ApplyWeather(BoardWeatherMood.Sunny);
+            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Sunny));
+
+            weather.ToggleSunnyStorm();
+            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Storm));
+            Assert.That(weather.transform.Find("Weather_Storm"), Is.Not.Null);
+            Assert.That(weather.transform.Find("Weather_Storm/CloudBank"), Is.Not.Null);
+
+            var drifts = weather.GetComponentsInChildren<MonoBehaviour>(true);
+            int driftCount = 0;
+            for (int i = 0; i < drifts.Length; i++)
+            {
+                if (drifts[i] != null && drifts[i].GetType().Name == "ClayCloudDrift")
+                {
+                    driftCount++;
+                }
+            }
+
+            Assert.That(driftCount, Is.GreaterThanOrEqualTo(4),
+                "Storm CloudBank masses should carry ClayCloudDrift (Phase A motion).");
+
+            weather.ToggleSunnyStorm();
+            Assert.That(weather.ActiveMood, Is.EqualTo(BoardWeatherMood.Sunny));
+            Assert.That(weather.transform.Find("Weather_Sunny"), Is.Not.Null);
+            Assert.That(weather.transform.Find("WeatherToggleUi"), Is.Not.Null,
+                "Toggle UI must survive ClearWeather module teardown.");
 
             yield return null;
         }
