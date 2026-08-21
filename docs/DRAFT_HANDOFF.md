@@ -1,21 +1,52 @@
-# Draft Handoff — 2026-08-20
+# Draft Handoff — 2026-08-21
 
 ## STATE (update every session — this is the first thing to read)
 
 - **Current phase:** Phase 5 (Commercial Art Bar) is nominal top priority per `SCHEDULE.md`; Phase 2 (Net)
   stays paused except an explicit narrow carve-out for C36/Bomber core-gameplay work (human-directed
   "character, GO", 2026-08-20).
-- **Current checkpoint:** C36/Bomber — Sim layer landed (`c86ec79`), RoundPlayback presenter for
-  BombAttached/GeometryBreached just landed (`b6da502`). Still open on this slice: `BoardView` visuals,
-  a real map-authored `BreachPoint` (per-map content decision), HUD board-anchored prompt (UI seat),
-  Character-gating. See "Still unfinished" below for the full list.
-- **Next single action:** decide whether to continue the C36/Bomber slice (BoardView visuals next) or
-  return to Phase 5 (next unclaimed item: human Play-pass over the shadow tune + control-hint chrome,
-  both batchmode-green but not yet eyeballed — see `docs/core/SCHEDULE.md` Phase 5 row).
+- **Current checkpoint:** C36/Bomber — Sim layer, RoundPlayback presenter, and now **BoardView visuals**
+  are all landed and merged to `master` (`6a10534`, 2026-08-21). `feat/bomber-hud` (HUD board-anchored
+  prompt) is built and batchmode-green in its own worktree, **not yet merged** — Integrator needs to
+  verify and merge it next. Still open after that: a real map-authored `BreachPoint` (Map's
+  `C36_FIRST_BREACH_POINT_PROPOSAL.md` recommends Rail Platform Pocket north wall, awaiting human
+  sign-off — parked in worktree `agent-a53cde266d5a5ec90`), Character-gating.
+- **Next single action:** verify + merge `feat/bomber-hud` from worktree `logiCard-bomber-hud`. Three
+  completed docs-only recommendations are also awaiting human sign-off and are not yet actioned: Flashbang
+  mechanic (worktree `agent-acb1b1a5ded3b2ead`), Time Player C36-readiness two-question gate (worktree
+  `agent-af74d30717fa4309c`), and the breach-point map pick above.
 - **If this block looks stale** (doesn't match the dated entries directly below it), trust the dated
   entries and fix this block — it's a summary of them, not an independent source of truth.
 
 ---
+
+**2026-08-21 (latest): C36/Bomber `BoardView` breach-point visuals merged to master (`6a10534`).**
+Picked up `docs/map/BREACH_VISUALS_AGENT_BRIEF.md` from `feat/breach-visuals`. `BoardView.RefreshBreachVisuals`
+mirrors `RefreshDoorVisuals` exactly: Intact/Damaged both render as the ordinary wall (unchanged
+`PlaceWallFence`), Breached hides it and shows scorched end stubs + floor rubble, an attached-but-not-
+yet-detonated bomb shows a charge marker straddling the wall (a one-face-mounted first pass was
+invisible from the camera's opposite orbit angle — caught by looking at a render, not by batchmode; see
+`breach-02-bomb-attached.png`/`breach-03-breached.png`). Driven from `BoardView.LateUpdate` re-deriving
+straight from `ArenaBoard` every frame, **not** a `RoundPlayback` hook — `RoundPlayback` is frozen/
+Integrator-owned, so this reads the same already-scrubber-pure model one layer further out instead of
+adding a second consumer to the frozen presenter class; flagged by the agent as an explicit architectural
+deviation from the Door pattern and accepted as-is (Door itself has no `_board.Refresh…()` call at the
+`RoundPlayback` layer either — `BoardView` deriving visuals from live model state each frame is the
+existing shape, not a new one). `docs/core/PLAYBACK_CONTRACT.md` §3 and `docs/contracts/CURRENT.md`'s
+C36 section both updated to record this landing and to document the earlier, previously-unrecorded
+Detonate-consumes-the-attached-bomb fix (`6c7990a`) alongside it. Independently re-verified on `master`
+after the merge, Editor closed: **EditMode 196/196, PlayMode 73/73** — exact match to the agent's
+self-report. Worktree `logiCard-breach-visuals` and branch `feat/breach-visuals` removed post-merge.
+
+**2026-08-21: UI's Bomber HUD prompt built, batchmode-green, awaiting Integrator merge.** Agent report
+(worktree `logiCard-bomber-hud`, branch `feat/bomber-hud`, not yet merged): `ProgramHud` gained a
+`Mode_Bomber` button/context row and a board-anchored `BuildBombPrompt`/`RefreshBombPrompt` mirroring the
+Door prompt's identity/live-state/explicit-confirm shape per `UI_BOARD_ANCHORED_COMPONENTS.md`.
+Deliberately added `PawnProgram.ScheduledBreachState`/`ScheduledHasAttachedBomb` (scheduled-state reads,
+not live-`ArenaBoard` reads) — same reasoning as `ScheduledDoorState`: a live-only read would let a
+player queue and pay for Attach twice before the resolver ever runs. Self-reported: EditMode 196/196,
+PlayMode 74/74 (the +1 over the breach-visuals merge's 73 is a new bomb-prompt test). **Not yet
+independently re-verified by Integrator or merged** — next action.
 
 **2026-08-20 (latest): Atmosphere's "storm rolling in" transition merged to master (`ecf0093`).**
 Picked up the `STORM_TRANSITION_AGENT_BRIEF.md` brief from a fresh `feat/storm-transition` worktree

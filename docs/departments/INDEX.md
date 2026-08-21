@@ -25,8 +25,9 @@ remains open, blocked on a human decision. Plan: [`../ui/MATCH_SHELL_LAYOUT.md`]
 | **Cards** | `logiCard-cards` | `logiCard-cards-collection` | Rebased + fully reconciled onto master (`47baf50`); idle | [`cards/STATUS.md`](cards/STATUS.md) |
 | **Character** | `logiCard-character` | `logiCard-char-select-motion` | Carousel feature rebased + merged to master (`9472783`); **UI dept now owns this code going forward**, not Character; idle | [`character/STATUS.md`](character/STATUS.md) |
 | **UI** | `logiCard-ui` | `logiCard-modal-restyle` | Fully merged to master (`e1c80fb`); idle | [`ui/STATUS.md`](ui/STATUS.md) |
-| **Map** | `logiCard-map` | `D:\projects\Game\logiCard-map` | **Fully merged to master** (`07501d7`); idle | [`map/STATUS.md`](map/STATUS.md) |
+| **Map** | `logiCard-map` | — | **C36 `BoardView` breach visuals merged to master** (`6a10534`, 2026-08-21); worktree `logiCard-breach-visuals` removed post-merge; idle | [`map/STATUS.md`](map/STATUS.md) |
 | **Camera** | — | `logiCard-camera-control` | `2e2d022` — **fully merged to master** (`e594c51`); idle | — |
+| **UI (bomber HUD)** | — | `logiCard-bomber-hud` | `feat/bomber-hud` — HUD board-anchored bomb prompt built, batchmode-green (196/196, 74/74 self-reported), **not yet merged** — Integrator to verify + merge next | [`ui/STATUS.md`](ui/STATUS.md) |
 
 ## Ownership matrix (write locks)
 
@@ -34,7 +35,7 @@ remains open, blocked on a human decision. Plan: [`../ui/MATCH_SHELL_LAYOUT.md`]
 |----------------|-----------|
 | `docs/ui/MATCH_SHELL_LAYOUT.md`, `docs/contracts/CURRENT.md`, `DRAFT_HANDOFF`, INDEX | **Integrator** |
 | `ProgramHud` / `GearHandView` / match shell bands / `UiStyle` dock tokens | **Integrator** (merged; UI idle unless restaffed) |
-| `Assets/_Project/Board/BoardSurfaceMaterials.cs`, `BoardView.cs` fence code | **Integrator** (Map merged; idle unless restaffed) |
+| `Assets/_Project/Board/BoardSurfaceMaterials.cs`, `BoardView.cs` fence + breach-point code | **Integrator** (Map merged; idle unless restaffed) |
 | `BoardCameraRig` / `GameBootstrap.ConfigureCamera` | **Integrator** (Camera merged; idle unless restaffed) |
 | Sim/Net/Timeline resolve | **Integrator** — frozen; UI calls only |
 
@@ -47,6 +48,7 @@ remains open, blocked on a human decision. Plan: [`../ui/MATCH_SHELL_LAYOUT.md`]
 5. ~~Camera~~ — **merged `e594c51`** (`--no-ff`), human-tested and hands-on iterated live during re-test (combined pan+rotate, then pitch-tilt right-drag), batchmode green on master post-merge (188/188, 59/59).
 6. ~~Healed presenter~~ — **landed on `master` directly (2026-08-18, no dispatch needed)** — one-shot banner only (`RoundPlayback.Report`); no board-splat leg, since `Healed` can only ever clear a wound carried in from a prior round, and this round's own wound splats are built only from this round's own Wounded/Killed events (see `PLAYBACK_CONTRACT.md` §3). Batchmode green: EditMode 188/188, PlayMode 60/60.
 7. ~~Storm per-match counter~~ — **landed on `master` directly (2026-08-18, no dispatch needed)** — `RoundPlayback.StormCastCountOf` + `GhostResolver`-side enforcement, mirroring Bandage's `BandageChargeOf`/charge-gate shape exactly; `RegisterMatchState` grew a third delegate. Closes the deviation flagged in C69/`contracts/CURRENT.md`'s Storm contract.
+8. ~~C36/Bomber `BoardView` breach visuals~~ — **merged `6a10534`** (2026-08-21), batchmode green on master post-merge (196/196, 73/73). `feat/bomber-hud` (HUD prompt) is built and self-reported green but **still awaiting Integrator verify + merge**.
 8. ~~Dead Bandage/Storm board-tap paths~~ — **pruned on `master` directly (2026-08-18)** — `BoardInputController.TryTapPoint`'s two unreachable branches + the `ResolveBandageExecuteTime` helper they alone called, removed. Batchmode counts unchanged (190/190, 61/61), confirming it was dead code.
 9. ~~IMGUI control-hint → real UI chrome~~ — **landed on `master` directly (2026-08-18, last backlog item)** — `BoardCameraRig.OnGUI()` removed; `ProgramHud` now owns a live `CameraControlHint` label (consolidated with a static duplicate label that already existed) driven by new `BoardCameraRig.ControlHintText` via `ProgramHud.RegisterCameraRig`. Batchmode green: EditMode 190/190, PlayMode 62/62. **Human Play-approved 2026-08-18** — closed, no further verification owed.
 10. ~~Cards docs rebase + Character Select carousel~~ — **landed on `master` directly (2026-08-18 restaffing pass)** — Cards' branch reconciled with zero real-content diff (`47baf50`); Character's 2-item carousel (`CharacterSelectView.cs`/`UiMotion.cs`, Kenney chrome) merged as-is (`9472783`) — **UI dept now owns this code**, not Character. Batchmode green: EditMode 190/190, PlayMode 63/63.
