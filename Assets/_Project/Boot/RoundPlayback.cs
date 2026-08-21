@@ -513,6 +513,10 @@ namespace LogiCard.Boot
                         if (_board.Model.TryGetBreachPoint(tapeEvent.Position, out BreachPoint point))
                         {
                             _board.Model.SetBreachState(point, BreachState.Breached);
+                            // Detonate consumes the attached bomb (mirrors GhostResolver.
+                            // ApplyBombToggleGroup) — without this, a spent bomb reads as still
+                            // attached across rounds, letting Detonate be re-queued for free.
+                            _board.Model.SetAttachedBomb(point, false);
                         }
                     }
                 }

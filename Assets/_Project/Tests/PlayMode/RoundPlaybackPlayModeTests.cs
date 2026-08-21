@@ -311,6 +311,13 @@ namespace LogiCard.Tests.PlayMode
 
             Clock.SetSeconds(breached.Value.Seconds);
             Assert.That(BoardVisual.Model.GetBreachState(point), Is.EqualTo(BreachState.Breached));
+            Assert.That(BoardVisual.Model.HasAttachedBomb(point), Is.False,
+                "Detonate must consume the attached bomb, same as GhostResolver.ApplyBombToggleGroup — " +
+                "otherwise a spent bomb would read as still attached and a third round could Detonate again for free.");
+
+            Phase.GoTo(RoundPhase.Aftermath);
+            Assert.That(BoardVisual.Model.HasAttachedBomb(point), Is.False,
+                "The consumed flag must also persist through CommitRoundState's authoritative apply, not just the live scrub.");
         }
 
         private static bool AnyVisible(ShotTracerView[] views)
