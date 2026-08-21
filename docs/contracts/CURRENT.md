@@ -80,13 +80,27 @@ round 2 Detonate with no re-Attach. Both events moved from `ReservedNoPresenterY
 `PresentedAtScrubber` in `TapeEventPlaybackCoverageTests`; `PLAYBACK_CONTRACT.md` §3's matrix updated.
 No map has a registered `BreachPoint` yet (still deferred — see below), so the new PlayMode tests
 register their own directly on the live `BoardView.Model`, same pattern `GhostResolverBombTests` uses
-for its own scratch `ArenaBoard`. **Still no BoardView visual** — the board model is fully live (blocks
-Move/Shoot correctly at any scrubber position) but nothing renders the state change yet.
+for its own scratch `ArenaBoard`. **Fix (2026-08-21, `6c7990a`):** the presenter now correctly consumes
+the attached-bomb flag on a successful Detonate — without this a spent bomb read as still attached
+across rounds and Detonate could be re-queued for free; covered through `CommitRoundState`'s apply, not
+just the live scrub.
 
-**Explicitly NOT built this wave (by design — see `DRAFT_HANDOFF.md`'s 2026-08-20 note for the full
+**BoardView visuals — landed 2026-08-21 (Map seat, `898aa1c`):** `BoardView.RefreshBreachVisuals` mirrors
+`RefreshDoorVisuals` exactly (same `DisplayedState` skip-guard the door-hinge-restart fix uses). Intact
+and Damaged both render as the ordinary wall (`PlaceWallFence`, unchanged); Breached hides it and shows
+scorched end stubs + floor rubble; `HasAttachedBomb` shows a charge marker straddling the wall (a
+one-face marker was invisible from the orbiting camera's back side — caught by an actual look, not by
+batchmode). Driven from `BoardView.LateUpdate` re-deriving fresh from `ArenaBoard` every frame, not a
+`RoundPlayback` hook — `RoundPlayback` is frozen/Integrator-owned and has no `_board.Refresh…()` call for
+doors either at the board layer; this keeps the same "pure function of the model" rewind-safety one
+layer further out instead of adding a second consumer to the frozen presenter. No timed FX (burst/puff)
+by design — that's exactly the door-hinge/Healed-presenter trap this doc warns about; noted in code for
+whoever adds one later. New `BoardViewBreachVisualsPlayModeTests` (4 tests) exercise the full
+Program→Attach→Detonate→scrub-and-rewind loop against a scratch `BreachPoint`.
+
+**Explicitly NOT built yet (by design — see `DRAFT_HANDOFF.md`'s 2026-08-20 note for the full
 reasoning on why the Sim-layer slice was originally scoped down rather than attempted whole):**
 
-- **BoardView visuals** — no breach-point rendering (wall material/mesh change on Breach) exists yet.
 - **Map authoring** — no map has an actual designed `BreachPoint` registered. `GhostResolverBombTests`
   builds its own scratch `ArenaBoard`; nothing in `GameBootstrap`/the three shipped maps calls
   `RegisterBreachPoint` yet. This needs a real per-map content decision (which wall, which map first —

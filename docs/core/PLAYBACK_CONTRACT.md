@@ -53,7 +53,7 @@ Rules:
 | `MoveArrive` | Footstep foley | One-shot forward | `Report` |
 | `Healed` | Banner only | One-shot forward | `Report` |
 | `BombAttached` | Banner only | One-shot forward | `Report` |
-| `GeometryBreached` | Board breach-point geometry state (no visuals yet) | Yes | `SyncBreachToSeconds` |
+| `GeometryBreached` | Board breach-point geometry state + wall mesh open/closed | Yes | `SyncBreachToSeconds` → `BoardView.RefreshBreachVisuals` |
 | `Invalid` | Reserved (Otherwise Stop — post-demo) | — | None yet |
 
 Vent/Breach are `DoorKind`s on the same Door tape path — not a separate Playback system. **Not the same
@@ -65,10 +65,14 @@ thing as `BombAttached`/`GeometryBreached` above** — those are the new C36 geo
 `SyncDoorsToSeconds` — an arm-time snapshot of every registered `BreachPoint`'s state plus a forward
 scan of `BombAttached`/`GeometryBreached` events up to the scrubber second, reapplied to
 `ArenaBoard.SetBreachState`/`SetAttachedBomb` on every `ApplyTime` tick (same-second guarded, so no
-redundant writes). Rewind-safe: scrubbing before a Detonate's `Seconds` restores `Intact`. **No
-BoardView visual exists yet** — the board model is fully live (blocks Move/Shoot correctly at any
-scrubber position) but nothing renders the state change; that's still open, see
-`docs/contracts/CURRENT.md`'s C36 section.
+redundant writes). Rewind-safe: scrubbing before a Detonate's `Seconds` restores `Intact`.
+**`BoardView.RefreshBreachVisuals` landed 2026-08-21** — Intact/Damaged render as the ordinary wall,
+Breached opens it (scorched stubs + floor rubble), an attached bomb shows a charge marker. Driven from
+`BoardView.LateUpdate` re-deriving straight from `ArenaBoard` every frame (not a `RoundPlayback` hook —
+that class is frozen/Integrator-owned, so the visual reads the same model `SyncBreachToSeconds` already
+made scrubber-pure, one layer further out), which keeps it rewind-safe by the same "pure function of the
+model" logic without adding a second board-state consumer to the frozen presenter. No map has a real
+`BreachPoint` registered yet — see `docs/contracts/CURRENT.md`'s C36 section for what's still open.
 
 **`Healed` has no splat leg by design, not oversight (2026-08-18):** `GhostResolver.CompileTrack`
 resolves a Bandage node's heal from `GhostInput.StartingWounds` (carried in from a prior round) before

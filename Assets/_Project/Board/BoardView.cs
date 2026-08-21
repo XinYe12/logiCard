@@ -42,8 +42,21 @@ namespace LogiCard.Board
         private static readonly Color VoidApronColor = new Color(0.13f, 0.11f, 0.10f); // was (0.05, 0.045, 0.055)
         private static readonly Color VoidClutterColor = new Color(0.20f, 0.16f, 0.12f); // was (0.11, 0.09, 0.08)
 
+        // C36 breach points. Intact/Damaged draw the ordinary wall fence; Breached hides it and shows
+        // scorched end stubs + rubble so the gap reads as blown open, not as a wall that was never
+        // there. Deliberately no timed FX (no burst/puff): a breach is re-derived from the board model
+        // every frame, and a timed animation here would be the PLAYBACK_CONTRACT §2 rule-4 door-hinge
+        // bug class. If one is ever added, gate it on the DisplayedState change like the hinge does.
+        //
+        // Scorch is charred, not void-black: the first look-check capture ran it at (0.16, 0.13, 0.12)
+        // and the stubs read as holes cut in the floor against the sunny C65 palette.
+        private static readonly Color BreachScorchColor = new Color(0.26f, 0.21f, 0.18f);
+        private static readonly Color BreachRubbleColor = new Color(0.52f, 0.47f, 0.42f);
+        private static readonly Color BombBodyColor = new Color(0.20f, 0.18f, 0.17f);
+
         private ArenaBoard _model;
         private readonly List<DoorVisual> _doorVisuals = new List<DoorVisual>();
+        private readonly List<BreachVisual> _breachVisuals = new List<BreachVisual>();
 
         public ArenaBoard Model => _model;
 
@@ -70,6 +83,7 @@ namespace LogiCard.Board
             _model = model;
             Layout = layout;
             _doorVisuals.Clear();
+            _breachVisuals.Clear();
 
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
@@ -93,6 +107,8 @@ namespace LogiCard.Board
                 ApplyDoorVisualState(visual, model.GetDoorState(door), animate: false);
                 _doorVisuals.Add(visual);
             }
+
+            RefreshBreachVisuals();
         }
 
         /// <summary>Back-compat overload — colors ignored; C53 surfaces own the palette.</summary>
@@ -126,6 +142,227 @@ namespace LogiCard.Board
                     : _model.GetDoorState(visual.Door);
                 ApplyDoorVisualState(visual, state, animate: true);
             }
+        }
+
+        /// <summary>
+        /// C36 breach points — the presentation half of the geometry-breach primitive whose Sim/
+        /// <see cref="LogiCard.Boot.RoundPlayback"/> layers already landed. Re-derives every registered
+        /// <see cref="BreachPoint"/>'s look from the authoritative board model
+        /// (<see cref="ArenaBoard.GetBreachState"/> / <see cref="ArenaBoard.HasAttachedBomb"/>), which
+        /// <c>RoundPlayback.SyncBreachToSeconds</c> keeps a pure function of the scrubber second.
+        ///
+        /// PLAYBACK_CONTRACT §2 rule 2/4: this is a continuous presenter, never a one-shot fired on an
+        /// event crossing — scrubbing back before a Detonate restores the wall because the model says
+        /// Intact again, not because anything replays in reverse. Driven from
+        /// <see cref="LateUpdate"/> (after <c>ApplyTime</c>'s model writes for the frame) rather than
+        /// from <c>RoundPlayback</c> itself, which is frozen and has no BoardView hook of its own for
+        /// breach; public so EditMode/PlayMode tests can pump it deterministically.
+        /// </summary>
+        public void RefreshBreachVisuals()
+        {
+            if (_model == null)
+            {
+                return;
+            }
+
+            SyncBreachVisualRoster();
+
+            for (int i = 0; i < _breachVisuals.Count; i++)
+            {
+                BreachVisual visual = _breachVisuals[i];
+                if (visual.Root == null)
+                {
+                    continue;
+                }
+
+                ApplyBreachVisualState(
+                    visual,
+                    _model.GetBreachState(visual.Point),
+                    _model.HasAttachedBomb(visual.Point));
+            }
+        }
+
+        private void LateUpdate()
+        {
+            // Late so this frame's RoundPlayback.ApplyTime model writes are already in.
+            RefreshBreachVisuals();
+        }
+
+        /// <summary>
+        /// Builds visuals for any breach point registered since the last pass. Breach points are only
+        /// ever appended to <see cref="ArenaBoard.BreachPoints"/> (there is no unregister), and — until
+        /// a human picks a wall for a real map — the only ones that exist are registered by tests
+        /// *after* <see cref="Build(ArenaBoard, MapLayout)"/> has already run, so the roster cannot be
+        /// a build-time-only snapshot the way <see cref="_doorVisuals"/> is.
+        /// </summary>
+        private void SyncBreachVisualRoster()
+        {
+            IReadOnlyList<BreachPoint> points = _model.BreachPoints;
+            for (int i = _breachVisuals.Count; i < points.Count; i++)
+            {
+                _breachVisuals.Add(PlaceBreachMesh($"Breach_{i}", points[i]));
+            }
+        }
+
+        /// <summary>
+        /// Mirrors <see cref="PlaceDoorMesh"/>: build every piece once, then swap visibility per state.
+        /// The Intact body is literally <see cref="PlaceWallFence"/> — the same mesh/material any other
+        /// wall segment gets — because C36 says an Intact (and, this wave, a Damaged) breach point must
+        /// be indistinguishable from a wall. Note a registered breach point draws no wall at all today
+        /// without this: it is not in <see cref="ArenaBoard.Walls"/>, so it blocks Move/Shoot while
+        /// rendering as thin air.
+        /// </summary>
+        private BreachVisual PlaceBreachMesh(string name, BreachPoint point)
+        {
+            Segment segment = point.Segment;
+            GameObject wall = PlaceWallFence(name + "_Wall", segment);
+
+            float dx = segment.B.X - segment.A.X;
+            float dy = segment.B.Y - segment.A.Y;
+            float length = Mathf.Sqrt((dx * dx) + (dy * dy));
+            if (length < 1e-4f)
+            {
+                length = SegmentThickness;
+            }
+
+            PlanarPosition mid = PlanarPosition.Lerp(segment.A, segment.B, 0.5f);
+            float yaw = Mathf.Atan2(-dy, dx) * Mathf.Rad2Deg;
+
+            var root = new GameObject(name);
+            root.transform.SetParent(transform, false);
+            root.transform.localPosition = LocalFromPlanar(mid);
+            root.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+
+            GameObject rubble = PlaceBreachRubble(root.transform, length * WorldScale);
+            GameObject bombMarker = PlaceBombMarker(root.transform);
+
+            return new BreachVisual(point, root, wall, rubble, bombMarker);
+        }
+
+        /// <summary>Blown-open dressing: two scorched wall stubs at the segment ends plus low debris,
+        /// so a Breached point reads as a hole punched through a wall rather than a wall that was
+        /// never built. Deliberately low (≈a third of fence height) so the opening is obviously
+        /// see-through — the whole gameplay point of a breach.</summary>
+        private GameObject PlaceBreachRubble(Transform parent, float worldLength)
+        {
+            var group = new GameObject("BreachedDressing");
+            group.transform.SetParent(parent, false);
+
+            float fenceH = WallHeight * 0.78f;
+            float stubH = fenceH * 0.32f;
+            float postW = Mathf.Max(SegmentThickness * WorldScale * 1.35f, 0.11f);
+            float postDepth = Mathf.Max(SegmentThickness * WorldScale * 1.5f, 0.12f);
+            float halfLen = worldLength * 0.5f;
+            Material scorch = PrimitiveMaterialFactory.Tinted(BreachScorchColor);
+            Material rubbleMat = PrimitiveMaterialFactory.Tinted(BreachRubbleColor);
+
+            PlaceFencePart(
+                group.transform, "Stub_A",
+                new Vector3(-halfLen + (postW * 0.5f), stubH * 0.5f, 0f),
+                new Vector3(postW, stubH, postDepth),
+                scorch,
+                castShadows: false);
+            PlaceFencePart(
+                group.transform, "Stub_B",
+                new Vector3(halfLen - (postW * 0.5f), stubH * 0.5f, 0f),
+                new Vector3(postW, stubH, postDepth),
+                scorch,
+                castShadows: false);
+
+            // Three chunks of blown-out panel on the floor, offset to both sides of the wall line.
+            PlaceFencePart(
+                group.transform, "Rubble_0",
+                new Vector3(-halfLen * 0.45f, 0.055f, postDepth * 0.9f),
+                new Vector3(worldLength * 0.22f, 0.11f, postDepth * 1.2f),
+                rubbleMat,
+                castShadows: false);
+            GameObject rubbleB = PlaceFencePart(
+                group.transform, "Rubble_1",
+                new Vector3(halfLen * 0.25f, 0.045f, -postDepth * 1.1f),
+                new Vector3(worldLength * 0.18f, 0.09f, postDepth * 1.0f),
+                rubbleMat,
+                castShadows: false);
+            GameObject rubbleC = PlaceFencePart(
+                group.transform, "Rubble_2",
+                new Vector3(0f, 0.04f, 0f),
+                new Vector3(worldLength * 0.3f, 0.08f, postDepth * 0.8f),
+                scorch,
+                castShadows: false);
+
+            // Scatter yaw so the debris doesn't read as three tidy wall-aligned bricks.
+            rubbleB.transform.localRotation = Quaternion.Euler(0f, 18f, 0f);
+            rubbleC.transform.localRotation = Quaternion.Euler(0f, -26f, 0f);
+
+            group.SetActive(false);
+            return group;
+        }
+
+        /// <summary>Attached-bomb marker (<see cref="ArenaBoard.HasAttachedBomb"/>): a charge on the
+        /// wall face with a red indicator. Static by design — completeness pass on the Sim work, not an
+        /// art pass, and a pulsing/timed marker is the FX-restart trap PLAYBACK_CONTRACT warns about.</summary>
+        private GameObject PlaceBombMarker(Transform parent)
+        {
+            var group = new GameObject("BombMarker");
+            group.transform.SetParent(parent, false);
+
+            // Straddles the wall (thicker than the panel) instead of sitting on one face, and carries
+            // its indicator above the top rail: the board camera orbits (BoardCameraRig yaw), so a
+            // single-face marker is invisible from the other side — it was, in the first look-check.
+            float fenceH = WallHeight * 0.78f;
+            float straddle = Mathf.Max(SegmentThickness * WorldScale * 2.4f, 0.2f);
+
+            PlaceFencePart(
+                group.transform, "Charge",
+                new Vector3(0f, fenceH * 0.5f, 0f),
+                new Vector3(0.26f * WorldScale, fenceH * 0.5f, straddle),
+                PrimitiveMaterialFactory.Tinted(BombBodyColor),
+                castShadows: false);
+            PlaceFencePart(
+                group.transform, "Indicator",
+                new Vector3(0f, fenceH + (0.06f * WorldScale), 0f),
+                new Vector3(0.12f * WorldScale, 0.12f * WorldScale, 0.12f * WorldScale),
+                BoardSurfaceMaterials.BombIndicator,
+                castShadows: false);
+
+            group.SetActive(false);
+            return group;
+        }
+
+        /// <summary>
+        /// The breach equivalent of <see cref="ApplyDoorVisualState"/>, including its skip-when-unchanged
+        /// guard: identical state must not re-touch the scene graph on every one of the many
+        /// <c>ApplyTime</c>/LateUpdate ticks a single scrubber second can produce.
+        /// </summary>
+        private static void ApplyBreachVisualState(BreachVisual visual, BreachState state, bool bombAttached)
+        {
+            if (visual.DisplayedState == state && visual.DisplayedBomb == bombAttached)
+            {
+                return;
+            }
+
+            // Damaged is reserved by C36 and unexercised by the wall-only v1 verb; it deliberately
+            // renders exactly like Intact rather than inventing a look for a state nothing can reach.
+            bool breached = state == BreachState.Breached;
+
+            if (visual.Wall != null)
+            {
+                visual.Wall.SetActive(!breached);
+            }
+
+            if (visual.BreachedDressing != null)
+            {
+                visual.BreachedDressing.SetActive(breached);
+            }
+
+            if (visual.BombMarker != null)
+            {
+                // A detonation consumes the bomb (RoundPlayback.SyncBreachToSeconds), so the marker
+                // clears itself via the flag — no separate "hide on breach" rule needed.
+                visual.BombMarker.SetActive(bombAttached);
+            }
+
+            visual.DisplayedState = state;
+            visual.DisplayedBomb = bombAttached;
         }
 
         public Vector3 LocalFromPlanar(PlanarPosition p)
@@ -1043,8 +1280,10 @@ namespace LogiCard.Board
         /// <summary>
         /// C65 fence presentation — Sim wall segments stay as-authored; we draw posts + rails + a short
         /// cream panel instead of one tall coral brick slab so walls match the toy-floor palette.
+        /// Returns the segment root so C36 breach points can reuse the identical wall body and just
+        /// hide it when Breached (see <see cref="PlaceBreachMesh"/>).
         /// </summary>
-        private void PlaceWallFence(string name, Segment segment)
+        private GameObject PlaceWallFence(string name, Segment segment)
         {
             float dx = segment.B.X - segment.A.X;
             float dy = segment.B.Y - segment.A.Y;
@@ -1121,9 +1360,11 @@ namespace LogiCard.Board
                     new Vector3(postW * 0.85f, fenceH * 0.96f, postDepth * 0.9f),
                     BoardSurfaceMaterials.FencePost);
             }
+
+            return root;
         }
 
-        private static void PlaceFencePart(
+        private static GameObject PlaceFencePart(
             Transform parent,
             string name,
             Vector3 localPosition,
@@ -1146,6 +1387,48 @@ namespace LogiCard.Board
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
             StripCollider(part);
+            return part;
+        }
+
+        /// <summary>
+        /// One registered <see cref="BreachPoint"/>'s scene pieces, built once and swapped by state —
+        /// the breach analogue of <see cref="DoorVisual"/>, including its last-displayed fields so an
+        /// unchanged state is a no-op (PLAYBACK_CONTRACT §2 rule 4).
+        /// </summary>
+        private sealed class BreachVisual
+        {
+            public BreachPoint Point { get; }
+
+            public GameObject Root { get; }
+
+            /// <summary>Ordinary wall fence body — shown for Intact/Damaged, hidden when Breached.</summary>
+            public GameObject Wall { get; }
+
+            /// <summary>Scorched stubs + rubble — the inverse of <see cref="Wall"/>.</summary>
+            public GameObject BreachedDressing { get; }
+
+            /// <summary>Charge marker for <see cref="ArenaBoard.HasAttachedBomb"/>.</summary>
+            public GameObject BombMarker { get; }
+
+            public BreachState? DisplayedState { get; set; }
+
+            public bool? DisplayedBomb { get; set; }
+
+            public BreachVisual(
+                BreachPoint point,
+                GameObject root,
+                GameObject wall,
+                GameObject breachedDressing,
+                GameObject bombMarker)
+            {
+                Point = point;
+                Root = root;
+                Wall = wall;
+                BreachedDressing = breachedDressing;
+                BombMarker = bombMarker;
+                DisplayedState = null;
+                DisplayedBomb = null;
+            }
         }
 
         private sealed class DoorVisual
