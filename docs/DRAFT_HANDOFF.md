@@ -5,16 +5,21 @@
 - **Current phase:** Phase 5 (Commercial Art Bar) is nominal top priority per `SCHEDULE.md`; Phase 2 (Net)
   stays paused except an explicit narrow carve-out for C36/Bomber core-gameplay work (human-directed
   "character, GO", 2026-08-20).
-- **Current checkpoint:** C36/Bomber — Sim layer, RoundPlayback presenter, and now **BoardView visuals**
-  are all landed and merged to `master` (`6a10534`, 2026-08-21). `feat/bomber-hud` (HUD board-anchored
-  prompt) is built and batchmode-green in its own worktree, **not yet merged** — Integrator needs to
-  verify and merge it next. Still open after that: a real map-authored `BreachPoint` (Map's
-  `C36_FIRST_BREACH_POINT_PROPOSAL.md` recommends Rail Platform Pocket north wall, awaiting human
-  sign-off — parked in worktree `agent-a53cde266d5a5ec90`), Character-gating.
-- **Next single action:** verify + merge `feat/bomber-hud` from worktree `logiCard-bomber-hud`. Three
-  completed docs-only recommendations are also awaiting human sign-off and are not yet actioned: Flashbang
-  mechanic (worktree `agent-acb1b1a5ded3b2ead`), Time Player C36-readiness two-question gate (worktree
-  `agent-af74d30717fa4309c`), and the breach-point map pick above.
+- **Current checkpoint:** C36/Bomber — Sim layer, RoundPlayback presenter, `BoardView` visuals, and now
+  the HUD board-anchored ATTACH/DETONATE prompt are all landed and merged to `master` (`67838a6`,
+  2026-08-21). Still open: a real map-authored `BreachPoint` (Map's `C36_FIRST_BREACH_POINT_PROPOSAL.md`
+  recommends Rail Platform Pocket north wall, awaiting human sign-off — parked in worktree
+  `agent-a53cde266d5a5ec90`), Character-gating. **One thing needs a human look, not just a decision:**
+  the bomb prompt's rendered captures (`screenshots/bomber-hud/`) show it overlapping the LOCK IN/Rewind
+  buttons — the positioning code correctly mirrors the proven Door prompt pipeline, and this is very
+  likely an artifact of the synthetic test's arbitrary off-board coordinate rather than a real bug, but
+  it hasn't been checked against an actual map-placed breach point (none exists yet) — worth a glance
+  once the map pick above is approved and wired in.
+- **Next single action:** three completed docs-only recommendations are awaiting human sign-off and are
+  not yet actioned: Flashbang mechanic (worktree `agent-acb1b1a5ded3b2ead`), Time Player C36-readiness
+  two-question gate (worktree `agent-af74d30717fa4309c`), and the breach-point map pick
+  (`agent-a53cde266d5a5ec90`). Surface these three to the human; nothing else is blocking further C36
+  work until at least one lands.
 - **If this block looks stale** (doesn't match the dated entries directly below it), trust the dated
   entries and fix this block — it's a summary of them, not an independent source of truth.
 
@@ -44,9 +49,13 @@ self-report. Worktree `logiCard-breach-visuals` and branch `feat/breach-visuals`
 Door prompt's identity/live-state/explicit-confirm shape per `UI_BOARD_ANCHORED_COMPONENTS.md`.
 Deliberately added `PawnProgram.ScheduledBreachState`/`ScheduledHasAttachedBomb` (scheduled-state reads,
 not live-`ArenaBoard` reads) — same reasoning as `ScheduledDoorState`: a live-only read would let a
-player queue and pay for Attach twice before the resolver ever runs. Self-reported: EditMode 196/196,
-PlayMode 74/74 (the +1 over the breach-visuals merge's 73 is a new bomb-prompt test). **Not yet
-independently re-verified by Integrator or merged** — next action.
+player queue and pay for Attach twice before the resolver ever runs. Merged to `master` (`67838a6`),
+independently re-verified by Integrator, Editor closed: **EditMode 196/196, PlayMode 78/78** on the
+merge result itself (not just the worktree in isolation). Worktree `logiCard-bomber-hud` and branch
+`feat/bomber-hud` removed post-merge. Rendered captures (`screenshots/bomber-hud/*.png`) confirm the
+content contract (identity + live state + explicit single-option confirm, options correctly withheld
+once Breached) — see the STATE block above for the one thing in those captures worth a human glance
+before calling this fully done (prompt overlapping LOCK IN/Rewind in the synthetic test scene).
 
 **2026-08-20 (latest): Atmosphere's "storm rolling in" transition merged to master (`ecf0093`).**
 Picked up the `STORM_TRANSITION_AGENT_BRIEF.md` brief from a fresh `feat/storm-transition` worktree
