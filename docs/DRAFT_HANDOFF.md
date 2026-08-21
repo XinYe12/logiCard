@@ -1,5 +1,22 @@
 # Draft Handoff — 2026-08-20
 
+## STATE (update every session — this is the first thing to read)
+
+- **Current phase:** Phase 5 (Commercial Art Bar) is nominal top priority per `SCHEDULE.md`; Phase 2 (Net)
+  stays paused except an explicit narrow carve-out for C36/Bomber core-gameplay work (human-directed
+  "character, GO", 2026-08-20).
+- **Current checkpoint:** C36/Bomber — Sim layer landed (`c86ec79`), RoundPlayback presenter for
+  BombAttached/GeometryBreached just landed (`b6da502`). Still open on this slice: `BoardView` visuals,
+  a real map-authored `BreachPoint` (per-map content decision), HUD board-anchored prompt (UI seat),
+  Character-gating. See "Still unfinished" below for the full list.
+- **Next single action:** decide whether to continue the C36/Bomber slice (BoardView visuals next) or
+  return to Phase 5 (next unclaimed item: human Play-pass over the shadow tune + control-hint chrome,
+  both batchmode-green but not yet eyeballed — see `docs/core/SCHEDULE.md` Phase 5 row).
+- **If this block looks stale** (doesn't match the dated entries directly below it), trust the dated
+  entries and fix this block — it's a summary of them, not an independent source of truth.
+
+---
+
 **2026-08-20 (latest): Atmosphere's "storm rolling in" transition merged to master (`ecf0093`).**
 Picked up the `STORM_TRANSITION_AGENT_BRIEF.md` brief from a fresh `feat/storm-transition` worktree
 (correctly forked off current `master`, not the stale `feat/atmosphere-stylized`, exactly as the brief

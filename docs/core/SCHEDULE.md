@@ -28,15 +28,72 @@ Must have to ship:
 
 ## Phase table
 
-| Phase | Theme | Exit criteria (what must be true to start the next phase) | Status |
-|-------|-------|-------------------------------------------------------------|--------|
-| **Phase 0** | Pivot Lock (docs) | This docs rewrite fully landed: `PRODUCT_MEMORY.md` C46–C51 confirmed, `SCOPE`/`RISKS`/`GDD`/`CORE_LOOP` updated, `MONETIZATION`/`NETWORKING_DESIGN`/`AI_FALLBACK_BOT` exist (even with OPEN numerics). No code work starts before this gate — same "docs before code" discipline as the original pre-implementation gate. | **Done** (2026-08-08) |
-| **Phase 1** | Landscape Desktop UI | `UI_FLOW.md`'s new layout implemented; playable mouse+keyboard only; PlayMode tests updated/green against landscape geometry. | **Mechanical bar met** (2026-08-09, `feat/phase1-landscape-ui` merged) — `ProgramHud`/`AppFlowController` landscape rework + click-through Boot→Match End shell, EditMode 108/108 + PlayMode 32/32 on `master` post-merge. Still wants a human Editor look (dock overlap, readability at real window size) before calling the *visual* bar done — same gate this project has used for every prior presentation change. |
-| **Phase 2** | Real Networking Foundation | `NETWORKING_DESIGN.md`'s transport/topology decided and its first slice built — a real, two-process, real-transport tape-synced match replacing the same-process `GhostResolver` stand-in; host-integrity question has an explicit answer. | **Paused (2026-08-09)** — not abandoned, already-landed work stays merged (transport+host-integrity locked **C52**; `IMatchResolver`/`RelayMatchResolver`/relay process merged and wired live). Human call: stop advancing core gameplay/networking until look-and-feel and UI (Phase 5 + UI work below) are in a good place. Resume when told to. |
-| **Phase 3** | Matchmaking Fallback Bot | `AI_FALLBACK_BOT.md`'s bot substitutes in behind the same interfaces Phase 2 built, invisibly, meeting its defined difficulty/behavior bounds. | Not started (depends on Phase 2, which is paused). |
-| **Phase 4** | Monetization Foundation | `MONETIZATION.md`'s economy model implemented at skeleton depth — at least one earned and one purchasable cosmetic wired through Steam's IAP sandbox; no-pay-to-win guardrails enforced in code, not just docs. | Not started. |
-| **Phase 5** | Commercial Art Bar | `ART_DIRECTION.md`'s raised bar met for the shipped roster — placeholder Quaternius meshes replaced/substantially reworked; a cold observer calls it "a real game," not "a prototype." | **Active, top priority.** Env checkpoints 1-3 (weather/lighting, Poly Haven PBR surfaces, Quaternius door/prop meshes), URP post-processing (Volume Profile/SSAO/MSAA/soft shadows + photo-mode), camera rotation, and smooth pawn animation (**C55**) all landed. Scout re-outfitted to fix a genre-clash (**C56**). **2026-08-10 (later same day): a real screenshot caught two of these as visually broken despite every batchmode check passing** — reflection probes read as unchanged (root cause: probe `clearFlags` never set, rendering the wrong environment) and clouds rendered as solid black rectangles (root cause: particle material never configured for alpha blending). Both fixed and verified via disposable-worktree batchmode; a third, related bug (window glass also opaque, silently blocking checkpoint 3's "lit window" glow dressing) was found proactively via code audit and fixed too — first attempt used the wrong shader keyword, caught by inspecting the regenerated asset before shipping it. `orthographicSize` resolved analytically (projection math confirms ~79% vertical board coverage, matching its documented calibration target) — no change needed. **Character material fidelity gap deliberately left open** — no textures exist in the source pack to wire up, closing it means either sourcing new assets (a real art-direction call) or blind procedural tuning with no way to verify it during a human-unavailable window; logged as a conscious "don't guess" decision, not an oversight. **Still open before calling this phase's bar met:** an actual human/Editor look at everything above — none of today's fixes have been visually confirmed, only verified as "correct by direct inspection of serialized state." **See `DRAFT_HANDOFF.md`'s "⚠️ Awaiting human review" section (top of file) for the exact parked checklist** — kept unmonitored per explicit human instruction, not forgotten. Core gameplay stays paused until this phase is genuinely done, not just improved. |
-| **Phase 6** | Steam Certification & Ship | Steamworks integration complete, store page live, cert/review passed, `SHIP_README_DRAFT.md`/`CAPTURE_CHECKLIST.md` produced for the real product. | Not started. |
+Each phase's exit criteria are a literal checklist — check a box only when it's genuinely true, not
+"mostly true" or "batchmode-verified but not eyeballed." Prose detail on how/when each item landed moves
+to that phase's dated log entry below the table, not into the checklist itself — the checklist should
+stay scannable in one glance.
+
+### Phase 0 — Pivot Lock (docs) — **Done (2026-08-08)**
+
+- [x] `PRODUCT_MEMORY.md` C46–C51 confirmed
+- [x] `SCOPE`/`RISKS`/`GDD`/`CORE_LOOP` updated
+- [x] `MONETIZATION`/`NETWORKING_DESIGN`/`AI_FALLBACK_BOT` exist (even with OPEN numerics)
+
+### Phase 1 — Landscape Desktop UI — **Mechanical bar met (2026-08-09); visual bar open**
+
+- [x] `UI_FLOW.md`'s new layout implemented (`feat/phase1-landscape-ui` merged)
+- [x] Playable mouse+keyboard only
+- [x] PlayMode tests updated/green against landscape geometry (EditMode 108/108, PlayMode 32/32 at merge)
+- [ ] Human Editor look at real window size (dock overlap, readability) — same visual-confirm gate every
+      presentation change in this project uses
+
+### Phase 2 — Real Networking Foundation — **Paused (2026-08-09); narrow carve-outs only**
+
+- [x] Transport/topology decided, host-integrity question answered (**C52**)
+- [x] `IMatchResolver`/`RelayMatchResolver`/relay process merged and wired live
+- [ ] Real, two-process, real-transport tape-synced match replacing the same-process `GhostResolver`
+      stand-in — **not started, phase paused**
+
+Human call (2026-08-09): stop advancing core gameplay/networking broadly until Phase 5 + UI work are in
+a good place. **Standing carve-out (2026-08-20):** narrowly-scoped core-gameplay slices can land when the
+human explicitly directs it (e.g. C36/Bomber, human said "character, GO") — this is per-slice permission,
+not a phase resume. Resume the phase itself only when told to.
+
+### Phase 3 — Matchmaking Fallback Bot — **Not started** (depends on Phase 2)
+
+- [ ] Bot substitutes in behind Phase 2's interfaces, invisibly, meeting `AI_FALLBACK_BOT.md`'s
+      difficulty/behavior bounds
+
+### Phase 4 — Monetization Foundation — **Not started**
+
+- [ ] At least one earned and one purchasable cosmetic wired through Steam's IAP sandbox
+- [ ] No-pay-to-win guardrails enforced in code, not just docs
+
+### Phase 5 — Commercial Art Bar — **Active, top priority**
+
+- [x] Env checkpoints 1–3 (weather/lighting, Poly Haven PBR surfaces, Quaternius door/prop meshes)
+- [x] URP post-processing (Volume Profile/SSAO/MSAA/soft shadows + photo-mode)
+- [x] Camera rotation
+- [x] Smooth pawn animation (**C55**)
+- [x] Scout re-outfitted to fix genre-clash (**C56**)
+- [x] Reflection-probe / cloud-alpha / window-glass render bugs found by real screenshot, fixed and
+      re-verified (2026-08-10)
+- [ ] **A cold observer calls the shipped roster "a real game," not "a prototype"** — the actual phase
+      exit criterion; nothing below has been visually confirmed against it yet
+- [ ] Human/Editor look at everything checked above — currently only "correct by direct inspection of
+      serialized state," not eyeballed. See `DRAFT_HANDOFF.md` STATE block for the live parked checklist.
+- [ ] Character material fidelity gap — deliberately left open, needs an art-direction call (source new
+      textures) or explicit sign-off to blind-tune; not a blocker for the bar, tracked so it isn't lost
+
+Core gameplay stays paused (Phase 2 rule above) until this phase's unchecked boxes are genuinely
+checked, not just improved.
+
+### Phase 6 — Steam Certification & Ship — **Not started**
+
+- [ ] Steamworks integration complete
+- [ ] Store page live
+- [ ] Cert/review passed
+- [ ] `SHIP_README_DRAFT.md`/`CAPTURE_CHECKLIST.md` produced for the real product
 
 Phases 1, 2, and 5 have no hard interdependency and can run as parallel worker slices per `PARALLEL_OPS.md`.
 Phase 3 depends on Phase 2's interfaces. Phase 4 and 6 depend on Steam integration groundwork that can start
