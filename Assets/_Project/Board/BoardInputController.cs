@@ -17,6 +17,14 @@ namespace LogiCard.Board
     {
         private const float DoorPickRadius = 0.55f;
 
+        /// <summary>
+        /// Board-tap pick radius for a designed <see cref="BreachPoint"/> (C36/C71). Same value as
+        /// <see cref="DoorPickRadius"/> and deliberately a separate constant, not a shared one: a
+        /// breach point is a wall segment the player has no door leaf to aim at, so this is the number
+        /// most likely to need independent playtest tuning of the two.
+        /// </summary>
+        private const float BreachPickRadius = 0.55f;
+
         private PawnView _pawn;
         private RoundPhaseController _phase;
         private PlanarPosition _origin;
@@ -29,8 +37,17 @@ namespace LogiCard.Board
         private StanceType _preferredStance = StanceType.Walk;
         private ShootMode _preferredShootMode = ShootMode.SnapShot;
         private Door _pendingDoor;
+        private BreachPoint _pendingBreachPoint;
         private PathPreviewView _pathPreview;
 
+        /// <summary>
+        /// The drafting verb a board tap applies. <see cref="ActionVerb.BombAttach"/> doubles as the
+        /// single "BOMBER" mode sentinel for both bomb verbs — a tap in that mode only *selects* a
+        /// <see cref="BreachPoint"/>, and ATTACH/DETONATE are separate explicit confirms
+        /// (<see cref="TryConfirmPendingBombAttach"/> / <see cref="TryConfirmPendingBombDetonate"/>),
+        /// exactly like Door mode's one sentinel and two confirms. <see cref="ActionVerb.BombDetonate"/>
+        /// is never assigned here.
+        /// </summary>
         public ActionVerb Mode { get; set; } = ActionVerb.Move;
 
         /// <summary>Read-only access for the HUD to describe actual door state (not just the player's selected action).</summary>
@@ -80,6 +97,16 @@ namespace LogiCard.Board
         /// while the tap actually booked a Close). Null once confirmed, rejected, or cancelled.
         /// </summary>
         public Door PendingDoor => _pendingDoor;
+
+        /// <summary>
+        /// The <see cref="BreachPoint"/> a board tap in BOMBER mode most recently selected, awaiting an
+        /// explicit ATTACH/DETONATE confirm — the exact analogue of <see cref="PendingDoor"/>, and for
+        /// the same reason: selecting a target must never book anything on its own
+        /// (<c>docs/ui/UI_BOARD_ANCHORED_COMPONENTS.md</c>, content-contract leg 3). Null once cancelled
+        /// or the round resets; a confirm deliberately keeps it so the prompt can show the new
+        /// scheduled state.
+        /// </summary>
+        public BreachPoint PendingBreachPoint => _pendingBreachPoint;
 
         public event Action<PawnProgram> QueueChanged;
 
@@ -266,6 +293,7 @@ namespace LogiCard.Board
             Program.SetShootMode(_preferredShootMode);
             _locked = false;
             _pendingDoor = null;
+            _pendingBreachPoint = null;
             RefreshPreview();
             QueueChanged?.Invoke(Program);
         }
@@ -357,7 +385,7 @@ namespace LogiCard.Board
                 return false;
             }
 
-            if (Mode == ActionVerb.Shoot || Mode == ActionVerb.Door)
+            if (Mode == ActionVerb.Shoot || Mode == ActionVerb.Door || Mode == ActionVerb.BombAttach)
             {
                 TryCommitDraftPath();
             }
@@ -375,6 +403,10 @@ namespace LogiCard.Board
             else if (Mode == ActionVerb.Door)
             {
                 queued = TrySelectOrCancelDoor(point, out reason);
+            }
+            else if (Mode == ActionVerb.BombAttach)
+            {
+                queued = TrySelectOrCancelBreachPoint(point, out reason);
             }
             else
             {
@@ -452,6 +484,102 @@ namespace LogiCard.Board
         public void CancelPendingDoor()
         {
             _pendingDoor = null;
+        }
+
+        /// <summary>
+        /// BOMBER mode's first tap: selects the nearest designed <see cref="BreachPoint"/> as
+        /// <see cref="PendingBreachPoint"/> without booking anything — the same select-then-confirm
+        /// split <see cref="TrySelectOrCancelDoor"/> uses, for the same reason. A tap that lands near
+        /// nothing cancels the pending selection, so tapping elsewhere is how the player backs out.
+        ///
+        /// An already-<see cref="BreachState.Breached"/> point stays selectable on purpose: the prompt
+        /// then shows "BREACHED" with no options rather than the tap reading as "nothing there",
+        /// which is the honest answer for a wall that has already been blown open.
+        /// </summary>
+        private bool TrySelectOrCancelBreachPoint(PlanarPosition point, out string reason)
+        {
+            if (_board != null && _board.TryGetNearestBreachPoint(point, BreachPickRadius, out BreachPoint breachPoint))
+            {
+                _pendingBreachPoint = breachPoint;
+                reason = null;
+                return true;
+            }
+
+            bool hadPending = _pendingBreachPoint != null;
+            _pendingBreachPoint = null;
+            reason = hadPending ? null : "No breach point near tap.";
+            return hadPending;
+        }
+
+        /// <summary>
+        /// The HUD's ATTACH button — the only path that books a <see cref="ActionVerb.BombAttach"/>
+        /// node, against whatever <see cref="TrySelectOrCancelBreachPoint"/> last selected. Kept as two
+        /// separate methods rather than one taking an action enum, so each labelled control maps to its
+        /// own call and nothing can silently substitute the other verb (the door prompt's 2026-08-06
+        /// action-flipping bug class).
+        /// </summary>
+        public bool TryConfirmPendingBombAttach(out string reason)
+        {
+            if (!CanConfirmPendingBomb(out reason))
+            {
+                return false;
+            }
+
+            if (!Program.TryQueueBombAttach(_pendingBreachPoint, out reason))
+            {
+                ActionRejected?.Invoke(reason);
+                return false;
+            }
+
+            // Selection survives the confirm so the prompt can immediately show the new scheduled
+            // state (bomb now attached → DETONATE offered), same as the door prompt does after OPEN.
+            RefreshPreview();
+            QueueChanged?.Invoke(Program);
+            return true;
+        }
+
+        /// <inheritdoc cref="TryConfirmPendingBombAttach"/>
+        public bool TryConfirmPendingBombDetonate(out string reason)
+        {
+            if (!CanConfirmPendingBomb(out reason))
+            {
+                return false;
+            }
+
+            if (!Program.TryQueueBombDetonate(_pendingBreachPoint, out reason))
+            {
+                ActionRejected?.Invoke(reason);
+                return false;
+            }
+
+            RefreshPreview();
+            QueueChanged?.Invoke(Program);
+            return true;
+        }
+
+        private bool CanConfirmPendingBomb(out string reason)
+        {
+            if (_locked || Program == null)
+            {
+                reason = "Round is locked.";
+                ActionRejected?.Invoke(reason);
+                return false;
+            }
+
+            if (_pendingBreachPoint == null)
+            {
+                reason = "No breach point selected — tap near one first.";
+                ActionRejected?.Invoke(reason);
+                return false;
+            }
+
+            reason = null;
+            return true;
+        }
+
+        public void CancelPendingBreachPoint()
+        {
+            _pendingBreachPoint = null;
         }
 
         /// <summary>

@@ -143,6 +143,174 @@ namespace LogiCard.Tests.PlayMode
                 "Live passability still waits for Aftermath.");
         }
 
+        /// <summary>
+        /// No map authors a <see cref="BreachPoint"/> yet (a deferred human content decision — see
+        /// <c>docs/contracts/CURRENT.md</c>), so the Bomber HUD tests register a scratch one directly on
+        /// the live board, exactly the way <c>RoundPlaybackPlayModeTests</c>' C36 cases do. Placed 0.4m
+        /// north of the pawn's start: inside both the 0.55m board-tap pick radius and
+        /// <c>PawnProgram.InteractRadius</c> (0.7m), so a tap on Home selects it and a confirm is in
+        /// range without needing a Move first.
+        /// </summary>
+        private BreachPoint RegisterBreachPointBesideHome()
+        {
+            var point = new BreachPoint(
+                new Segment(
+                    new PlanarPosition(Home.X - 1f, Home.Y + 0.4f),
+                    new PlanarPosition(Home.X + 1f, Home.Y + 0.4f)),
+                BreachState.Intact,
+                "Test Breach");
+            BoardVisual.Model.RegisterBreachPoint(point);
+            return point;
+        }
+
+        /// <summary>
+        /// Bomber's mode button + select-then-confirm split (C36/C71), the same contract the door
+        /// prompt holds: a board tap only *selects* a breach point, and neither ATTACH nor DETONATE
+        /// books anything without its own explicit press
+        /// (<c>docs/ui/UI_BOARD_ANCHORED_COMPONENTS.md</c>, content-contract leg 3).
+        /// </summary>
+        [Test]
+        public void BomberModeSelectsABreachPointThenRequiresExplicitConfirm()
+        {
+            BreachPoint point = RegisterBreachPointBesideHome();
+
+            Button bomber = FindByName<Button>("Mode_Bomber");
+            Button attach = FindByName<Button>("Bomb_Attach");
+            Button detonate = FindByName<Button>("Bomb_Detonate");
+            Assert.That(bomber, Is.Not.Null, "HUD has no Mode_Bomber button.");
+            Assert.That(attach, Is.Not.Null, "HUD has no Bomb_Attach button.");
+            Assert.That(detonate, Is.Not.Null, "HUD has no Bomb_Detonate button.");
+
+            bomber.onClick.Invoke();
+            Assert.That(AttackerInput.Mode, Is.EqualTo(ActionVerb.BombAttach),
+                "BOMBER mode uses BombAttach as its single sentinel verb for both bomb actions.");
+            Assert.That(AttackerInput.PendingBreachPoint, Is.Null, "Nothing should be selected before a tap.");
+
+            attach.onClick.Invoke();
+            Assert.That(AttackerInput.Program.Nodes, Is.Empty, "Confirming with nothing selected must not book anything.");
+
+            Assert.That(AttackerInput.TryTapPoint(Home), Is.True);
+            Assert.That(AttackerInput.PendingBreachPoint, Is.SameAs(point), "Tapping near the point should select it.");
+            Assert.That(AttackerInput.Program.Nodes, Is.Empty, "Selecting a breach point must not book anything by itself.");
+
+            Assert.That(AttackerInput.TryTapPoint(new PlanarPosition(Home.X, Home.Y + 3f)), Is.True);
+            Assert.That(AttackerInput.PendingBreachPoint, Is.Null,
+                "A tap away from any breach point should cancel the pending selection.");
+        }
+
+        /// <summary>
+        /// The board-anchored prompt's visibility/label contract across a point's whole life: identity +
+        /// live (scheduled) state every refresh, ATTACH only while unarmed, DETONATE only once armed,
+        /// neither once Breached — that last leg being the one-way-permanent rule <c>DoorKind.Breach</c>
+        /// doors already follow. State is read back out of <c>PawnProgram.ScheduledBreachState</c>, never
+        /// remembered from which button was pressed, so the prompt cannot drift from the model the way
+        /// the door prompt's live-only read did (playtest 2026-08-07).
+        /// </summary>
+        [Test]
+        public void BombPromptOffersAttachThenDetonateAndNeitherOnceBreached()
+        {
+            BreachPoint point = RegisterBreachPointBesideHome();
+
+            Button bomber = FindByName<Button>("Mode_Bomber");
+            Button attach = FindByName<Button>("Bomb_Attach");
+            Button detonate = FindByName<Button>("Bomb_Detonate");
+            Text promptLabel = FindByName<Text>("BombPromptLabel");
+            Assert.That(promptLabel, Is.Not.Null, "HUD has no BombPromptLabel.");
+
+            bomber.onClick.Invoke();
+            Assert.That(promptLabel.gameObject.activeInHierarchy, Is.False,
+                "Prompt must stay hidden until a breach point is actually selected.");
+
+            Assert.That(AttackerInput.TryTapPoint(Home), Is.True);
+
+            Assert.That(promptLabel.gameObject.activeInHierarchy, Is.True, "Selecting a point must show the prompt.");
+            Assert.That(promptLabel.text, Does.Contain("Test Breach"), "Prompt must name what it is acting on.");
+            Assert.That(promptLabel.text, Does.Contain("INTACT"), "Prompt must show live state.");
+            Assert.That(promptLabel.text, Does.Not.Contain("BOMB SET"));
+            Assert.That(attach.gameObject.activeInHierarchy, Is.True, "ATTACH is the only option on an unarmed point.");
+            Assert.That(detonate.gameObject.activeInHierarchy, Is.False, "Nothing to detonate before a bomb is attached.");
+            Assert.That(attach.GetComponentInChildren<Text>().text, Does.Contain($"{PawnProgram.BombAttachSeconds:0}s"),
+                "ATTACH must carry its Time Resource cost on the control itself.");
+
+            attach.onClick.Invoke();
+
+            Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(1));
+            Assert.That(AttackerInput.Program.Nodes[0].Verb, Is.EqualTo(ActionVerb.BombAttach));
+            Assert.That(AttackerInput.Program.UsedSeconds, Is.EqualTo(PawnProgram.BombAttachSeconds).Within(0.0001f));
+            Assert.That(AttackerInput.PendingBreachPoint, Is.SameAs(point),
+                "Selection must stay so the prompt can show the new scheduled state.");
+            Assert.That(promptLabel.text, Does.Contain("BOMB SET"));
+            Assert.That(attach.gameObject.activeInHierarchy, Is.False, "A second ATTACH on an armed point must not be offered.");
+            Assert.That(detonate.gameObject.activeInHierarchy, Is.True, "DETONATE becomes the option once armed.");
+            Assert.That(detonate.GetComponentInChildren<Text>().text, Does.Contain($"{PawnProgram.BombDetonateSeconds:0}s"));
+
+            detonate.onClick.Invoke();
+
+            Assert.That(AttackerInput.Program.Nodes.Count, Is.EqualTo(2));
+            Assert.That(AttackerInput.Program.Nodes[1].Verb, Is.EqualTo(ActionVerb.BombDetonate));
+            Assert.That(AttackerInput.Program.UsedSeconds,
+                Is.EqualTo(PawnProgram.BombAttachSeconds + PawnProgram.BombDetonateSeconds).Within(0.0001f));
+            Assert.That(promptLabel.text, Does.Contain("BREACHED"));
+            Assert.That(attach.gameObject.activeInHierarchy, Is.False, "A breached wall offers nothing further.");
+            Assert.That(detonate.gameObject.activeInHierarchy, Is.False, "A breached wall offers nothing further.");
+
+            Assert.That(BoardVisual.Model.GetBreachState(point), Is.EqualTo(BreachState.Intact),
+                "Drafting must not mutate the live board — the real transition is the resolver's at Execute.");
+            Assert.That(BoardVisual.Model.HasAttachedBomb(point), Is.False,
+                "Drafting must not mutate the live board's attached-bomb flag either.");
+        }
+
+        /// <summary>
+        /// Lifecycle cases 2 and 3 from <c>docs/ui/UI_BOARD_ANCHORED_COMPONENTS.md</c> — the two the
+        /// door prompt originally shipped without and got stuck on screen for. Leaving BOMBER mode and
+        /// leaving Program must each hide the prompt on their own.
+        /// </summary>
+        [Test]
+        public void BombPromptHidesOnModeSwitchAndOnLeavingProgram()
+        {
+            RegisterBreachPointBesideHome();
+
+            Button bomber = FindByName<Button>("Mode_Bomber");
+            Button move = FindByName<Button>("Mode_Move");
+            Text promptLabel = FindByName<Text>("BombPromptLabel");
+
+            bomber.onClick.Invoke();
+            Assert.That(AttackerInput.TryTapPoint(Home), Is.True);
+            Assert.That(promptLabel.gameObject.activeInHierarchy, Is.True);
+
+            move.onClick.Invoke();
+            Assert.That(promptLabel.gameObject.activeInHierarchy, Is.False, "Leaving BOMBER mode must hide the prompt.");
+            Assert.That(AttackerInput.PendingBreachPoint, Is.Null, "Leaving BOMBER mode must drop the selection too.");
+
+            bomber.onClick.Invoke();
+            Assert.That(AttackerInput.TryTapPoint(Home), Is.True);
+            Assert.That(promptLabel.gameObject.activeInHierarchy, Is.True);
+
+            Phase.GoTo(RoundPhase.Reveal);
+            Assert.That(promptLabel.gameObject.activeInHierarchy, Is.False,
+                "A prompt left up through Reveal/Execute would float stale, already-locked actions over playback.");
+        }
+
+        /// <summary>
+        /// The TimelineSchedule band already draws one per-verb tick per booked node (Move/Shoot/Door);
+        /// bomb nodes get their own so a detonation does not read as a move on the timeline.
+        /// </summary>
+        [Test]
+        public void BombNodesGetTheirOwnScrubberMarkers()
+        {
+            RegisterBreachPointBesideHome();
+
+            FindByName<Button>("Mode_Bomber").onClick.Invoke();
+            Assert.That(AttackerInput.TryTapPoint(Home), Is.True);
+            FindByName<Button>("Bomb_Attach").onClick.Invoke();
+            FindByName<Button>("Bomb_Detonate").onClick.Invoke();
+
+            Assert.That(FindByName<RectTransform>($"ScrubberMark_0_{ActionVerb.BombAttach}"), Is.Not.Null,
+                "Booked BombAttach must place a scrubber marker.");
+            Assert.That(FindByName<RectTransform>($"ScrubberMark_1_{ActionVerb.BombDetonate}"), Is.Not.Null,
+                "Booked BombDetonate must place a scrubber marker.");
+        }
+
         [Test]
         public void ShootModeButtonsSelectSnapAndHold()
         {

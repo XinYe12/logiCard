@@ -1,5 +1,38 @@
 # UI — STATUS
 
+## Done — Bomber HUD: BOMBER mode + board-anchored ATTACH/DETONATE prompt (2026-08-21) — **Ready for Integrator/human review**
+
+**Worktree:** `logiCard-bomber-hud`, branch `feat/bomber-hud` (committed, **not pushed, not merged**).
+**Brief:** `docs/ui/BOMBER_HUD_AGENT_BRIEF.md`. **Contract:** `docs/contracts/CURRENT.md` §C36 —
+Sim/Net/Playback were already frozen and tested; this closes that section's "HUD — no board-anchored
+prompt, no mode button, no scrubber markers" gap. Nothing in `Sim/`, `Net/`, `RoundPlayback.cs`,
+`BoardView.cs`, `GameBootstrap.cs` or `MapDefinitions.cs` was touched.
+
+- **`Mode_Bomber`** joins MOVE/SHOOT/DOOR (verb row is now 4 equal cells). `ActionVerb.BombAttach` is
+  the single mode sentinel for both bomb verbs, exactly as `ActionVerb.Door` is for Open/Close.
+- **`BombPrompt`** — board-anchored cluster beside the selected `BreachPoint`: identity
+  (`BreachPoint.DisplayName`), live scheduled state (`INTACT`/`BREACHED` + `BOMB SET`), and exactly one
+  offered option at a time (`ATTACH 3s` while unarmed, `DETONATE 1s` once armed, neither once Breached).
+  Mirrors `BuildDoorPrompt`/`RefreshDoorPrompt` including the anchor/pivot rule.
+- **`PawnProgram.ScheduledBreachState`/`ScheduledHasAttachedBomb`** added (read-only, mirrors
+  `ScheduledDoorState`; deliberately NOT wired into `BoardForPathfinding`, per C36 deviation 2).
+  `BoardInputController` gains `PendingBreachPoint` + two explicit confirms.
+- **Scrubber markers:** Door already had per-verb ticks, so bomb nodes got their own colour rather
+  than reading as a Move on the timeline.
+- **Character-gating deliberately absent** — no archetype gate exists at any layer yet; the prompt
+  works for any pawn, matching what the Sim layer allows today.
+- **Docs:** `docs/ui/UI_BOARD_ANCHORED_COMPONENTS.md` gains a second worked example, the
+  "scheduled-not-live state applies to every interactable" generalisation, and a button-label
+  truncation gotcha found by rendering a capture.
+- **Batchmode (Editor closed on this worktree's own path):** EditMode 196/196, PlayMode 74/74
+  (69 baseline + 4 new behavioural tests + 1 opt-in screenshot harness that no-ops without
+  `LOGICARD_SHOT_DIR`).
+
+**Needs a human design call, not an agent guess:** which wall on which map gets the first authored
+`BreachPoint` (still parked); whether DETONATE should be remote instead of proximity-gated (C36
+deviation 1); whether Attach should have a per-match charge count (C36 deviation 3); and whether
+BOMBER belongs in the always-visible verb row at all once character-gating exists.
+
 ## Done — Shell Chrome restyle (2026-08-18) — **Ready for Integrator/human review**
 
 **Worktree:** `.claude/worktrees/agent-a035c5b8c7a5428af` (not pushed, not merged).
