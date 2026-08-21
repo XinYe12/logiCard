@@ -81,6 +81,34 @@ Ordered touchpoints to **add or change** a map at tip `b32eda2`. Every item name
 
 Do not add stance-gated vents (would need `StanceType` through `ContinuousPathfinder`) without a separate product lock — C57 explicitly deferred that.
 
+### Breach points (C36 — a `BreachPoint`, *not* `DoorKind.Breach`)
+
+Same English word, unrelated concept (see `BreachPoint`'s own doc comment): `DoorKind.Breach` is a shipped
+one-way *door*; a `BreachPoint` is a wall segment a Bomber can blow open with Attach → Detonate.
+
+- Author it like a door gap: leave the segment **out of** `RegisterWall`, then
+  `RegisterBreachPoint(new BreachPoint(segment, BreachState.Intact, displayName))`. Registering a segment
+  as both a wall and a breach point would leave the wall blocking (and drawn) after a detonation.
+- **`BoardView` draws the wall body for the breach point itself** (`PlaceBreachMesh` → the ordinary
+  `PlaceWallFence` geometry) — that is why the segment must not also be a registered wall, and why a
+  breach point registered before this presenter existed was an invisible blocker. Nothing else needs
+  authoring for the visual.
+- Presentation states (`BoardView.RefreshBreachVisuals`): **Intact** and **Damaged** both draw the plain
+  wall (Damaged is reserved by C36, unexercised by the wall-only v1 verb); **Breached** hides the wall and
+  shows scorched end stubs + floor rubble; `HasAttachedBomb` adds a charge marker with a red arming light.
+  The marker straddles the wall rather than sitting on one face — the board camera orbits (`BoardCameraRig`
+  yaw), so a one-face marker is invisible from the other side (caught in the 2026-08-21 look-check).
+- That refresh runs from `BoardView.LateUpdate` and re-derives everything from `ArenaBoard.GetBreachState`
+  / `HasAttachedBomb` each frame, because `RoundPlayback.SyncBreachToSeconds` — which owns the model state
+  at any scrubber second — is frozen and has no BoardView hook of its own for breach the way it has
+  `RefreshDoorVisuals` for doors. Keep it a pure function of the model: a one-shot detonation FX fired on
+  the event crossing would be the door-hinge / "Healed presenter" bug class
+  (`docs/core/PLAYBACK_CONTRACT.md` §2 rules 2/4). Any FX added later must be gated on the displayed-state
+  change, the way `ApplyDoorVisualState` gates the hinge swing.
+- **No map registers one yet** — which wall on which map is an open human content decision, deliberately
+  deferred. Tests register a scratch point directly on the live board
+  (`BoardViewBreachVisualsPlayModeTests`, `RoundPlaybackPlayModeTests`, `GhostResolverBombTests`).
+
 ### Pathfinding (high level)
 
 `ContinuousPathfinder` builds a visibility graph over obstacle endpoints and runs Dijkstra. More doors/walls = denser graph; keep gaps consistent (door width ~0.4–0.5 for Vent/Standard as in existing maps). No new Sim types, no navmesh, no grid rediscretization.

@@ -24,6 +24,7 @@ namespace LogiCard.Board
         private static Material _propCrate;
         private static Material _propMetal;
         private static Material _warmGlass;
+        private static Material _bombIndicator;
         private static Material _doorLeaf;
         private static Material _propBody;
         private static Material _propAccent;
@@ -66,6 +67,12 @@ namespace LogiCard.Board
         public static Material PropMetal => _propMetal ??= Solid(new Color(0.42f, 0.48f, 0.58f), 0.35f, metallic: 0.35f);
 
         public static Material WarmGlass => _warmGlass ??= Emissive(new Color(1f, 0.72f, 0.38f), 2.4f);
+
+        /// <summary>C36 attached-bomb indicator — the one emissive on a breach charge, so an armed
+        /// point reads at diorama camera distance without an art pass.</summary>
+        /// Intensity is deliberately low next to <see cref="WarmGlass"/>'s 2.4: at 3.2 the look-check
+        /// capture showed it clipped to white and stopped reading as a red arming light at all.
+        public static Material BombIndicator => _bombIndicator ??= Emissive(new Color(1f, 0.18f, 0.14f), 1.3f);
 
         /// <summary>Door leaf base before open/closed state tint — nappin GradientBrown when present.</summary>
         public static Material DoorLeaf => _doorLeaf ??= LoadInteriorGradient("GradientBrown")

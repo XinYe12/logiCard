@@ -137,6 +137,37 @@ center rect (not full window). Docs only, no code touched.
 Not implemented: no edits to `ProgramHud`, `BoardCameraRig`, or `GameBootstrap.ConfigureCamera` — per
 brief, Camera slice / Integrator own that code.
 
+## Done — C36 breach-point visuals (2026-08-21, branch `feat/breach-visuals`)
+
+Per `docs/map/BREACH_VISUALS_AGENT_BRIEF.md`. C36's Sim layer and `RoundPlayback.SyncBreachToSeconds`
+presenter were already on master and tested; the gap was that a Breached wall opened for Move/Shoot but
+still rendered as solid — and an Intact breach point rendered as *nothing at all*, since it is not in
+`ArenaBoard.Walls` and nothing drew it.
+
+- `BoardView.RefreshBreachVisuals()` + `BreachVisual` mirror the `RefreshDoorVisuals()` / `DoorVisual`
+  mechanism: build every piece once, keep a last-displayed field, swap on state change only, skip
+  identical refreshes. Intact/Damaged draw the ordinary `PlaceWallFence` body; Breached hides it and
+  shows scorched end stubs + rubble; `HasAttachedBomb` shows a straddling charge with a red arming light.
+- Driven from `BoardView.LateUpdate`, not from `RoundPlayback` (frozen, Integrator-owned, and it has no
+  BoardView call for breach the way it has `RefreshDoorVisuals` for doors) — so the visual is a pure
+  function of `GetBreachState`/`HasAttachedBomb` re-derived every frame and is rewind-safe by
+  construction (`PLAYBACK_CONTRACT.md` §2 rules 2/4). No timed FX at all, deliberately.
+- `BoardSurfaceMaterials.BombIndicator` added (low-intensity red emissive).
+- 4 new PlayMode tests (`BoardViewBreachVisualsPlayModeTests`) registering a scratch `BreachPoint` on the
+  live `BoardView.Model`. No `RegisterBreachPoint` added to `GameBootstrap`/`MapDefinitions` — map
+  authoring stays parked on a human picking the wall.
+- Authoring rules written up in `MAP_AUTHORING.md` §3 ("Breach points").
+
+**Look-check:** `screenshots/lookcheck/breach/` — 4 captures (intact / bomb attached / breached /
+rewound-to-intact) from a throwaway harness modelled on `ShellChromeScreenshotTests`, removed after use
+the same way the 2026-08-15 `MapLookCheckCapture` was. Two tuning fixes came out of actually looking: the
+arming light clipped to white at emission 3.2 (now 1.3), and the scorch read as void-black holes punched
+in the floor (lightened). **Not a human sign-off** — an agent look-check.
+
+**Needs Integrator, not this seat:** `docs/core/PLAYBACK_CONTRACT.md` §3's `GeometryBreached` row and
+`docs/contracts/CURRENT.md`'s C36 section both still say "no BoardView visual" / "no visuals yet". Both
+files are Integrator-owned, so they are untouched here and go stale at merge.
+
 ## Blocked / follow-ups (not Map-owned)
 
 - Optional Integrator lighting/`BuildDioramaVolume` re-pass (human already likes Play look).
