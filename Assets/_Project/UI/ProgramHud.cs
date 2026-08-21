@@ -109,6 +109,9 @@ namespace LogiCard.UI
         private static readonly Color ShootMarkerColor = new Color(0.95f, 0.35f, 0.30f, 1f);
         private static readonly Color DoorMarkerColor = new Color(0.55f, 0.85f, 0.55f, 1f);
 
+        /// <summary>Bomb Attach/Detonate scrubber ticks (C36/C71) — hot orange, distinct from Door's green.</summary>
+        private static readonly Color BombMarkerColor = new Color(0.95f, 0.62f, 0.22f, 1f);
+
         // Day 9 — cardstock Time Card (paper in the HUD dock) vs AR scrubber (cool contrast on clay).
         private static readonly Color CardstockPaper = new Color(0.93f, 0.88f, 0.78f, 1f);
         private static readonly Color CardstockPaperDeep = new Color(0.86f, 0.78f, 0.64f, 1f);
@@ -140,6 +143,7 @@ namespace LogiCard.UI
         private Button _moveModeButton;
         private Button _shootModeButton;
         private Button _doorModeButton;
+        private Button _bomberModeButton;
         private Button _sprintButton;
         private Button _walkButton;
         private Button _crawlButton;
@@ -149,12 +153,16 @@ namespace LogiCard.UI
         private Button _holdButton;
         private Button _openDoorButton;
         private Button _closeDoorButton;
+        private Button _attachBombButton;
+        private Button _detonateBombButton;
         private GameObject _moveStanceControls;
         private GameObject _shootModeControls;
         private GameObject _doorModeControls;
+        private GameObject _bomberModeControls;
         private Text _stanceLabel;
         private Text _shootModeLabel;
         private Text _doorModeLabel;
+        private Text _bomberModeLabel;
         private GearHandView _gearHand;
         private Func<int> _woundsOf;
         private Func<int> _bandageChargeOf;
@@ -167,6 +175,9 @@ namespace LogiCard.UI
         private GameObject _doorPromptRoot;
         private RectTransform _doorPromptRect;
         private Text _doorPromptLabel;
+        private GameObject _bombPromptRoot;
+        private RectTransform _bombPromptRect;
+        private Text _bombPromptLabel;
         private Text _queueText;
         private Text _outcomeLabel;
         private GameObject _programControls;
@@ -248,6 +259,7 @@ namespace LogiCard.UI
             BuildBottomStack(_matchChrome);
             BuildOutcomeBanner(_matchChrome);
             BuildDoorPrompt(_matchChrome);
+            BuildBombPrompt(_matchChrome);
 
             _appFlow = gameObject.AddComponent<AppFlowController>();
             _appFlow.Init(root, _font);
@@ -750,17 +762,30 @@ namespace LogiCard.UI
             _nextRoundButtonLabel = _nextRoundButton.GetComponentInChildren<Text>();
         }
 
-        /// <summary>MOVE / SHOOT / DOOR split the controls column into three equal mouse targets (C48).</summary>
+        /// <summary>
+        /// MOVE / SHOOT / DOOR / BOMBER split the controls column into four equal mouse targets
+        /// (C48; BOMBER added 2026-08-21 for C36/C71's wall-only bomb verb). BOMBER is one mode for
+        /// both bomb verbs — <see cref="ActionVerb.BombAttach"/> is the sentinel, and ATTACH/DETONATE
+        /// are separate confirms on the board-anchored prompt, exactly like DOOR's OPEN/CLOSE.
+        ///
+        /// Deliberately NOT character-gated: no archetype gate for who may queue bomb verbs exists
+        /// anywhere yet (docs/contracts/CURRENT.md, C36 §"Explicitly NOT built"), so gating it here
+        /// would be the UI inventing a rule the Sim layer does not hold — that gate is its own item.
+        /// </summary>
         private void BuildVerbRow(RectTransform zone, ref float cursor)
         {
             _moveModeButton = _ui.CreateButton(zone, "Mode_Move", "MOVE", PanelMid, Ink, 24, () => SetMode(ActionVerb.Move));
-            UiFactory.PlaceSplitCell(_moveModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 0, 3);
+            UiFactory.PlaceSplitCell(_moveModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 0, 4);
 
             _shootModeButton = _ui.CreateButton(zone, "Mode_Shoot", "SHOOT", PanelMid, Ink, 24, () => SetMode(ActionVerb.Shoot));
-            UiFactory.PlaceSplitCell(_shootModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 1, 3);
+            UiFactory.PlaceSplitCell(_shootModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 1, 4);
 
             _doorModeButton = _ui.CreateButton(zone, "Mode_Door", "DOOR", PanelMid, Ink, 24, () => SetMode(ActionVerb.Door));
-            UiFactory.PlaceSplitCell(_doorModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 2, 3);
+            UiFactory.PlaceSplitCell(_doorModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 2, 4);
+
+            _bomberModeButton = _ui.CreateButton(zone, "Mode_Bomber", "BOMBER", PanelMid, Ink, 22,
+                () => SetMode(ActionVerb.BombAttach));
+            UiFactory.PlaceSplitCell(_bomberModeButton.GetComponent<RectTransform>(), cursor, VerbRowHeight, 3, 4);
 
             cursor -= VerbRowHeight + RowGap;
             RefreshModeButtons();
@@ -832,6 +857,19 @@ namespace LogiCard.UI
             _doorModeLabel = _ui.CreateText(doorRt, "DoorModeLabel", "DOOR — click near a door to select it", 16, TextAnchor.MiddleLeft, Ink,
                 UiTextOverflow.SingleLine);
             UiFactory.PlaceRow(_doorModeLabel.rectTransform, ref doorCursor, ContextLabelHeight, ContextLabelGap);
+
+            _bomberModeControls = new GameObject("BomberModeControls", typeof(RectTransform));
+            var bomberRt = _bomberModeControls.GetComponent<RectTransform>();
+            bomberRt.SetParent(zone, false);
+            UiFactory.Stretch(bomberRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            float bomberCursor = rowTop;
+            // Same shape as DOOR: ATTACH/DETONATE live on the board-anchored prompt beside the wall
+            // (BuildBombPrompt/RefreshBombPrompt), never as a fixed dock row disconnected from the
+            // breach point being blown (docs/ui/UI_BOARD_ANCHORED_COMPONENTS.md).
+            _bomberModeLabel = _ui.CreateText(bomberRt, "BomberModeLabel", "BOMBER — click near a breach point to select it", 16,
+                TextAnchor.MiddleLeft, Ink, UiTextOverflow.SingleLine);
+            UiFactory.PlaceRow(_bomberModeLabel.rectTransform, ref bomberCursor, ContextLabelHeight, ContextLabelGap);
 
             // Bandage/Storm no longer have a Mode-driven context row here (Hand Deck Drag Play
             // brief, 2026-08-15): both play by dragging the Gear_Bandage/Gear_Storm card out of the
@@ -964,6 +1002,43 @@ namespace LogiCard.UI
             promptGo.SetActive(false);
         }
 
+        /// <summary>
+        /// Board-anchored ATTACH/DETONATE cluster for the selected <see cref="BreachPoint"/> (C36/C71) —
+        /// built once, hidden until BOMBER mode selects a point, then repositioned beside it. Structure
+        /// is deliberately identical to <see cref="BuildDoorPrompt"/> (anchor at the canvas's own centre
+        /// reference point, own pivot at left-centre so it renders *beside* the wall rather than on top
+        /// of it) — see <c>docs/ui/UI_BOARD_ANCHORED_COMPONENTS.md</c> for the pipeline and the
+        /// anchor/pivot pitfall this shape exists to avoid.
+        /// </summary>
+        private void BuildBombPrompt(RectTransform root)
+        {
+            var promptGo = new GameObject("BombPrompt", typeof(RectTransform), typeof(Image));
+            _bombPromptRoot = promptGo;
+            _bombPromptRect = promptGo.GetComponent<RectTransform>();
+            _bombPromptRect.SetParent(root, false);
+            _bombPromptRect.anchorMin = new Vector2(0.5f, 0.5f);
+            _bombPromptRect.anchorMax = new Vector2(0.5f, 0.5f);
+            _bombPromptRect.pivot = new Vector2(0f, 0.5f);
+            _bombPromptRect.sizeDelta = new Vector2(168f, 116f);
+            promptGo.GetComponent<Image>().color = PanelDark;
+
+            // Identity + live state legs of the content contract — "<name> · INTACT · BOMB SET".
+            _bombPromptLabel = _ui.CreateText(_bombPromptRect, "BombPromptLabel", string.Empty, 13, TextAnchor.MiddleCenter, Ink);
+            UiFactory.Anchor(_bombPromptLabel.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(6f, -26f), new Vector2(-6f, -2f));
+
+            // Cost sits on the same line as the verb, not on a second line: these buttons are 42px tall
+            // and UiTextOverflow.Button truncates vertically, so a two-line "ATTACH\n3s" renders as
+            // "ATTACH" alone and the cost the content contract requires never reaches the screen
+            // (confirmed in a rendered capture, 2026-08-21).
+            _attachBombButton = _ui.CreateButton(_bombPromptRect, "Bomb_Attach", "ATTACH", PanelMid, Ink, 18, ConfirmBombAttach);
+            UiFactory.Anchor(_attachBombButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(6f, 48f), new Vector2(-6f, 90f));
+
+            _detonateBombButton = _ui.CreateButton(_bombPromptRect, "Bomb_Detonate", "DETONATE", PanelMid, Ink, 18, ConfirmBombDetonate);
+            UiFactory.Anchor(_detonateBombButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(6f, 4f), new Vector2(-6f, 46f));
+
+            promptGo.SetActive(false);
+        }
+
         private void CreatePhaseButton(RectTransform parent, string label, RoundPhase phase, int index, float cursor, int count)
         {
             Button b = _ui.CreateButton(parent, $"Phase_{label}", label, PanelMid, Ink, 24, () => SwitchPhase(phase));
@@ -1007,6 +1082,11 @@ namespace LogiCard.UI
             if (mode != ActionVerb.Door)
             {
                 _input.CancelPendingDoor();
+            }
+
+            if (mode != ActionVerb.BombAttach)
+            {
+                _input.CancelPendingBreachPoint();
             }
 
             _input.Mode = mode;
@@ -1113,6 +1193,26 @@ namespace LogiCard.UI
             RefreshVerbContextControls(_input.Program);
         }
 
+        private void ConfirmBombAttach()
+        {
+            if (!_input.TryConfirmPendingBombAttach(out string reason))
+            {
+                Debug.Log($"[logiCard] Bomb attach confirm rejected: {reason}");
+            }
+
+            RefreshVerbContextControls(_input.Program);
+        }
+
+        private void ConfirmBombDetonate()
+        {
+            if (!_input.TryConfirmPendingBombDetonate(out string reason))
+            {
+                Debug.Log($"[logiCard] Bomb detonate confirm rejected: {reason}");
+            }
+
+            RefreshVerbContextControls(_input.Program);
+        }
+
         private void RefreshModeButtons()
         {
             if (_moveModeButton == null || _input == null)
@@ -1123,6 +1223,10 @@ namespace LogiCard.UI
             _moveModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.Move ? Accent : PanelMid;
             _shootModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.Shoot ? Accent : PanelMid;
             _doorModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.Door ? Accent : PanelMid;
+            if (_bomberModeButton != null)
+            {
+                _bomberModeButton.GetComponent<Image>().color = _input.Mode == ActionVerb.BombAttach ? Accent : PanelMid;
+            }
         }
 
         /// <summary>
@@ -1156,12 +1260,25 @@ namespace LogiCard.UI
                 _doorModeControls.SetActive(mode == ActionVerb.Door);
             }
 
+            if (_bomberModeControls != null)
+            {
+                _bomberModeControls.SetActive(mode == ActionVerb.BombAttach);
+            }
+
             // The floating door prompt only makes sense in Door mode — hide it unconditionally here
             // so leaving Door mode always clears it, regardless of which refresh path got here
             // (RefreshDoorModeControls only re-shows it when there's still something pending).
             if (mode != ActionVerb.Door && _doorPromptRoot != null)
             {
                 _doorPromptRoot.SetActive(false);
+            }
+
+            // Same explicit hide for the bomb prompt when leaving BOMBER mode — lifecycle case 2 in
+            // docs/ui/UI_BOARD_ANCHORED_COMPONENTS.md, the one the door prompt originally shipped
+            // without and got stuck on screen for.
+            if (mode != ActionVerb.BombAttach && _bombPromptRoot != null)
+            {
+                _bombPromptRoot.SetActive(false);
             }
 
             if (mode == ActionVerb.Shoot)
@@ -1171,6 +1288,10 @@ namespace LogiCard.UI
             else if (mode == ActionVerb.Door)
             {
                 RefreshDoorModeControls(program);
+            }
+            else if (mode == ActionVerb.BombAttach)
+            {
+                RefreshBomberModeControls(program);
             }
             else
             {
@@ -1303,6 +1424,120 @@ namespace LogiCard.UI
             _doorPromptRoot.SetActive(true);
         }
 
+        /// <summary>
+        /// BOMBER mode's dock context row — the identity/state summary; the actual ATTACH/DETONATE
+        /// controls live on the board-anchored prompt (<see cref="RefreshBombPrompt"/>). Mirrors
+        /// <see cref="RefreshDoorModeControls"/> exactly.
+        /// </summary>
+        private void RefreshBomberModeControls(PawnProgram program)
+        {
+            if (_bomberModeLabel == null || _input == null)
+            {
+                return;
+            }
+
+            BreachPoint pending = _input.PendingBreachPoint;
+
+            // Scheduled, not live-only (PawnProgram.ScheduledBreachState) — the same reason the door
+            // prompt reads ScheduledDoorState: right after booking ATTACH the live board still says
+            // "no bomb here", so a live-only read would keep offering ATTACH and let the player book
+            // it twice for 6s of Time Resource.
+            string stateLabel = null;
+            bool attached = false;
+            if (pending != null && program != null)
+            {
+                stateLabel = StateLabelFor(program.ScheduledBreachState(pending));
+                attached = program.ScheduledHasAttachedBomb(pending);
+            }
+
+            // Identity leg — falls back to a generic label for a BreachPoint with no DisplayName.
+            string targetName = pending?.DisplayName ?? "BREACH POINT";
+
+            _bomberModeLabel.text = stateLabel != null
+                ? $"{targetName} · {stateLabel}{(attached ? " · BOMB SET" : string.Empty)} — use board prompt"
+                : "BOMBER — click near a breach point to select it";
+
+            RefreshBombPrompt(pending, targetName, stateLabel, attached);
+        }
+
+        private static string StateLabelFor(BreachState state)
+        {
+            return state == BreachState.Breached ? "BREACHED"
+                : state == BreachState.Damaged ? "DAMAGED"
+                : "INTACT";
+        }
+
+        /// <summary>
+        /// Board-anchored ATTACH/DETONATE cluster beside the selected breach point — same projection
+        /// pipeline as <see cref="RefreshDoorPrompt"/> (<c>WorldFromPlanar</c> → <c>WorldToScreenPoint</c>
+        /// → <c>ScreenPointToLocalPointInRectangle</c> against the overlay canvas, camera argument
+        /// null), recomputed on selection/mode/rotation change rather than every frame.
+        ///
+        /// Which options are offered is driven entirely by the scheduled model state, never by what the
+        /// player last pressed: ATTACH only while no bomb is set, DETONATE only once one is, and both
+        /// hidden once the point is Breached — the one-way-permanent rule <c>DoorKind.Breach</c> doors
+        /// already use, and stronger here since a blown wall can never be un-blown at all.
+        /// </summary>
+        private void RefreshBombPrompt(BreachPoint pending, string targetName, string stateLabel, bool attached)
+        {
+            if (_bombPromptRoot == null)
+            {
+                return;
+            }
+
+            if (pending == null || _input.BoardView == null || Camera.main == null)
+            {
+                _bombPromptRoot.SetActive(false);
+                return;
+            }
+
+            PlanarPosition mid = PlanarPosition.Lerp(pending.Segment.A, pending.Segment.B, 0.5f);
+            Vector3 worldPoint = _input.BoardView.WorldFromPlanar(mid);
+            Vector3 screenPoint = Camera.main.WorldToScreenPoint(worldPoint);
+
+            if (screenPoint.z <= 0f)
+            {
+                _bombPromptRoot.SetActive(false);
+                return;
+            }
+
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRoot, screenPoint, null, out Vector2 local);
+            _bombPromptRect.anchoredPosition = local + new Vector2(18f, 0f);
+
+            if (_bombPromptLabel != null)
+            {
+                _bombPromptLabel.text = attached
+                    ? $"{targetName} · {stateLabel} · BOMB SET"
+                    : $"{targetName} · {stateLabel}";
+            }
+
+            Text attachLabel = _attachBombButton.GetComponentInChildren<Text>();
+            Text detonateLabel = _detonateBombButton.GetComponentInChildren<Text>();
+            if (attachLabel != null)
+            {
+                attachLabel.text = $"ATTACH  {PawnProgram.BombAttachSeconds:0}s";
+            }
+
+            if (detonateLabel != null)
+            {
+                detonateLabel.text = $"DETONATE  {PawnProgram.BombDetonateSeconds:0}s";
+            }
+
+            // Once Breached there is nothing left to do to this wall — offer neither option rather
+            // than a dead-but-visible button (same reasoning as hideClose on a Breach door).
+            bool breached = stateLabel == "BREACHED";
+            _attachBombButton.gameObject.SetActive(!breached && !attached);
+            _detonateBombButton.gameObject.SetActive(!breached && attached);
+
+            // Highlight the action that would actually change state — exactly one is ever offered
+            // here, so the offered one is always the accented one. (Door's prompt shows both at once
+            // and had to pick; this prompt's states are mutually exclusive.)
+            _attachBombButton.GetComponent<Image>().color = Accent;
+            _detonateBombButton.GetComponent<Image>().color = Accent;
+
+            _bombPromptRoot.SetActive(true);
+        }
+
         private void RefreshStanceControls(PawnProgram program)
         {
             if (_stanceLabel == null || program == null)
@@ -1398,6 +1633,12 @@ namespace LogiCard.UI
                     // value on a Door node — printing something like "(Walk)" for a door toggle.
                     detail = node.Door == DoorAction.Close ? "Close" : "Open";
                 }
+                else if (node.Verb == ActionVerb.BombAttach || node.Verb == ActionVerb.BombDetonate)
+                {
+                    // Same reason as Door above — a bomb node's Stance is a leftover value, so
+                    // printing "(Walk)" beside a detonation would be noise, not information.
+                    detail = node.Verb == ActionVerb.BombAttach ? "Attach" : "Detonate";
+                }
                 else
                 {
                     detail = StanceMath.Label(node.Stance);
@@ -1445,8 +1686,12 @@ namespace LogiCard.UI
             {
                 ActionNode node = program.Nodes[i];
                 float t = Mathf.Clamp01(node.ExecuteTime / program.BudgetSeconds);
+                // Bomb Attach/Detonate get their own tick color (C36/C71) — the band already marks
+                // every booked operation per verb, so leaving them on MoveMarkerColor would have read
+                // as a move on the timeline.
                 Color color = node.Verb == ActionVerb.Shoot ? ShootMarkerColor
                     : node.Verb == ActionVerb.Door ? DoorMarkerColor
+                    : node.Verb == ActionVerb.BombAttach || node.Verb == ActionVerb.BombDetonate ? BombMarkerColor
                     : MoveMarkerColor;
 
                 var markerGo = new GameObject($"ScrubberMark_{i}_{node.Verb}", typeof(RectTransform), typeof(Image));
@@ -1718,6 +1963,12 @@ namespace LogiCard.UI
             if (_doorPromptRoot != null && phase != RoundPhase.Program)
             {
                 _doorPromptRoot.SetActive(false);
+            }
+
+            // Same for the bomb prompt — lifecycle case 3 (phase leaves the state it is valid in).
+            if (_bombPromptRoot != null && phase != RoundPhase.Program)
+            {
+                _bombPromptRoot.SetActive(false);
             }
 
             if (_allotPanel != null)

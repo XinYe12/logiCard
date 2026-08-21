@@ -704,6 +704,71 @@ namespace LogiCard.Timeline
         }
 
         /// <summary>
+        /// Breach state for Program UI (C36/C71), the exact analogue of <see cref="ScheduledDoorState"/>:
+        /// round-start live state, then this program's own booked Attach/Detonate nodes on that point
+        /// applied in order. Read-only — never mutates the shared <see cref="ArenaBoard"/>, so Lock In
+        /// still arms from round-start and the real transition is the resolver's.
+        ///
+        /// Same "live-only read makes the prompt look dead" bug the door prompt hit (playtest
+        /// 2026-08-07) applies here: after booking Attach, a live-only <c>HasAttachedBomb</c> read
+        /// would still say "no bomb", so the prompt would keep offering ATTACH and the player could
+        /// book it twice. Toggle semantics mirror <c>GhostResolver.ApplyBombGroup</c> exactly —
+        /// Detonate only fires against an actually-attached bomb, consumes it, and takes the point
+        /// straight Intact→Breached (no Damaged intermediate in wall-only v1).
+        ///
+        /// Unlike doors, scheduled breach state is deliberately NOT fed into
+        /// <see cref="BoardForPathfinding"/>: C36's landed contract has no same-round re-routing
+        /// through a wall that opens later in the round (deviation 2 in
+        /// <c>docs/contracts/CURRENT.md</c>), and drafting a path through a not-yet-breached wall
+        /// would promise a route the resolver will not honour.
+        /// </summary>
+        public BreachState ScheduledBreachState(BreachPoint point)
+        {
+            ProjectScheduledBreach(point, out BreachState state, out _);
+            return state;
+        }
+
+        /// <inheritdoc cref="ScheduledBreachState"/>
+        public bool ScheduledHasAttachedBomb(BreachPoint point)
+        {
+            ProjectScheduledBreach(point, out _, out bool attached);
+            return attached;
+        }
+
+        private void ProjectScheduledBreach(BreachPoint point, out BreachState state, out bool attached)
+        {
+            if (point == null)
+            {
+                state = BreachState.Intact;
+                attached = false;
+                return;
+            }
+
+            state = _board != null ? _board.GetBreachState(point) : point.InitialState;
+            attached = _board != null && _board.HasAttachedBomb(point);
+
+            PlanarPosition mid = PlanarPosition.Lerp(point.Segment.A, point.Segment.B, 0.5f);
+            for (int i = 0; i < _nodes.Count; i++)
+            {
+                ActionNode node = _nodes[i];
+                if (mid.SqrDistanceTo(node.Position) > 1e-6f)
+                {
+                    continue;
+                }
+
+                if (node.Verb == ActionVerb.BombAttach)
+                {
+                    attached = true;
+                }
+                else if (node.Verb == ActionVerb.BombDetonate && attached)
+                {
+                    attached = false;
+                    state = BreachState.Breached;
+                }
+            }
+        }
+
+        /// <summary>
         /// Scratch board for Move drafting: same geometry as live, door passability from
         /// <see cref="ScheduledDoorState"/>. Keeps the shared board at round-start for resolve arm.
         /// </summary>

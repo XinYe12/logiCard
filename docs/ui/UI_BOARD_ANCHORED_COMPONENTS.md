@@ -48,6 +48,35 @@ This is the part that's easy to skip when you're focused on getting a button to 
 | State | `"CLOSED"` / `"OPEN"` | `PawnProgram.ScheduledDoorState(door)` during Program (live ⊕ booked toggles); live board after Aftermath |
 | Options | `OPEN 4s`, `CLOSE 4s` | `PawnProgram.DoorInteractSeconds` cost, `BoardInputController.TryConfirmPendingDoor(DoorAction, ...)` per option |
 
+**Second worked example — the Bomber breach point (C36/C71, added 2026-08-21):**
+
+| Contract leg | Breach point's answer | Source |
+|---|---|---|
+| Identity | `"Breach Point #1"` | `BreachPoint.DisplayName` |
+| State | `"INTACT"` / `"BREACHED"` (+ `"BOMB SET"`) | `PawnProgram.ScheduledBreachState` / `ScheduledHasAttachedBomb` during Program; live board after Aftermath |
+| Options | `ATTACH 3s`, `DETONATE 1s` | `PawnProgram.BombAttachSeconds`/`BombDetonateSeconds`, `BoardInputController.TryConfirmPendingBombAttach`/`TryConfirmPendingBombDetonate` |
+
+Two things this second case adds to the pattern, both worth copying:
+
+- **Scheduled state, not live state, is what the prompt shows — for *every* interactable, not just
+  doors.** Attach/Detonate had the same latent trap Open/Close hit in 2026-08-07: right after booking
+  ATTACH, the live `ArenaBoard.HasAttachedBomb` still reads false (the resolver, not the draft, is what
+  mutates the board), so a live-only read keeps offering ATTACH and lets the player book — and pay
+  for — the same action twice. `PawnProgram.ScheduledBreachState`/`ScheduledHasAttachedBomb` mirror
+  `ScheduledDoorState` exactly. If you add a new interactable, add its scheduled projection at the same
+  time as its verb, not after a playtest finds the prompt looking dead.
+- **The options are mutually exclusive, so exactly one is ever shown.** ATTACH only while unarmed,
+  DETONATE only while armed, neither once `Breached` — the same one-way-permanent idea `DoorKind.Breach`
+  uses (`hideClose`), and stronger, since a blown wall can never be un-blown at all. "Highlight the
+  action that would change state" is trivially satisfied when only that action is on screen.
+
+**Sizing gotcha — cost text on a small button truncates silently.** `UiFactory.CreateButton` uses
+`UiTextOverflow.Button` (wrap, then *truncate vertically*). In a 42px-tall prompt button, a two-line
+`"ATTACH\n3s"` renders as `ATTACH` alone: the cost leg of the contract is in the string, passes a
+`Does.Contain("3s")` assertion, and never reaches the player's eyes. Put the cost on the same line
+(`"ATTACH  3s"`) and size the cluster to fit it, or make the button tall enough for two lines. Caught
+only by rendering a capture and looking at it — no batchmode assertion would have found it.
+
 **Minimum shape in code**, if you're modeling a new interactable — doesn't have to be this exact struct, but every new board-anchored prompt's data should be expressible as it:
 
 ```csharp
@@ -107,7 +136,9 @@ Keep the same GameObject/Button names across a relocation if PlayMode tests alre
 
 ## Reference implementation
 
-`ProgramHud.BuildDoorPrompt` (construction) and `ProgramHud.RefreshDoorPrompt` (projection + show/hide) are the worked example — copy their shape for the next board-anchored control rather than re-deriving the pipeline above from scratch.
+`ProgramHud.BuildDoorPrompt` (construction) and `ProgramHud.RefreshDoorPrompt` (projection + show/hide) are the worked example — copy their shape for the next board-anchored control rather than re-deriving the pipeline above from scratch. `ProgramHud.BuildBombPrompt`/`RefreshBombPrompt` (2026-08-21) is that copy, done once already: if you want to see what "mirror the door prompt" actually looks like as a diff, read those two against their door counterparts.
+
+`BomberPromptScreenshotTests` is the rendered-capture harness for this class of control (opt-in via `LOGICARD_SHOT_DIR`, must run **without** `-nographics`). It is how the truncation gotcha above was found; run it, or something like it, before calling a new prompt done. One caveat it documents in its own comments: an Overlay canvas can't be read back into a texture, so the harness flips the canvas to ScreenSpaceCamera, and under that mode the shipped `null`-camera projection lands the cluster off-frame — the harness re-anchors it arithmetically for the capture only. That correction is a property of the capture rig, not a bug in the prompt.
 
 ## Checklist for the next board-anchored interaction control
 
